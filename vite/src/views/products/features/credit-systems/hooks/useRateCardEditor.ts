@@ -24,11 +24,11 @@ export function useRateCardEditor() {
 	const { features } = useFeaturesQuery();
 	const [edit, setEdit] = useState<RateCardEdit | null>(null);
 
-	const summary = rateCardRows({
+	const rows = rateCardRows({
 		override: override?.schema ?? [],
 		creditSystem,
 	});
-	const listedFeatureIds = new Set(summary.rows.map((row) => row.featureId));
+	const listedFeatureIds = new Set(rows.map((row) => row.featureId));
 	const addableFeatures = features.filter(
 		(feature: Feature) =>
 			(feature.type === FeatureType.Metered ||
@@ -42,7 +42,7 @@ export function useRateCardEditor() {
 	return {
 		creditSystem,
 		features,
-		summary,
+		rows,
 		edit,
 		addableFeatures,
 		startEdit: (rate: CreditSchemaItem) =>

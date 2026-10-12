@@ -1,39 +1,41 @@
 import { cn } from "@/lib/utils";
-import { rateChangeParts } from "../../utils/rateCardRows";
+import { previousRateText } from "../../utils/rateCardRows";
 
-/** A rate, with the rate it replaced struck through; `stacked` puts the old rate underneath for narrow rows. */
+/** A rate with the one it replaced struck through: "was 3" beside or under it, or "3 →" before it. */
 export function RateValue({
 	rate,
 	previousRate,
 	muted = false,
-	stacked = false,
+	layout = "inline",
+	className,
 }: {
 	rate: string;
-	previousRate?: string;
+	previousRate?: string | null;
 	muted?: boolean;
-	stacked?: boolean;
+	layout?: "inline" | "stacked" | "arrow";
+	className?: string;
 }) {
-	const parts = previousRate
-		? rateChangeParts({ from: previousRate, to: rate })
-		: null;
+	const from =
+		previousRate && previousRateText({ from: previousRate, to: rate });
 
 	return (
 		<span
 			className={cn(
-				"flex shrink-0 whitespace-nowrap",
-				stacked
+				"flex shrink-0 whitespace-nowrap text-sm",
+				layout === "stacked"
 					? "flex-col-reverse items-end leading-tight"
 					: "items-baseline gap-1.5",
+				className,
 			)}
 		>
-			{parts && (
+			{from && (
 				<span className="text-subtle text-xs line-through">
-					was {parts.from}
+					{layout === "arrow" ? from : `was ${from}`}
 				</span>
 			)}
+			{from && layout === "arrow" && <span className="text-subtle">→</span>}
 			<span
 				className={cn(
-					"text-sm",
 					muted ? "text-tertiary-foreground" : "font-medium text-foreground",
 				)}
 			>

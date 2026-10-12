@@ -5,34 +5,19 @@ import { RateStateBadge } from "@/views/products/features/credit-systems/compone
 import { RateValue } from "@/views/products/features/credit-systems/components/rate-card/RateValue";
 import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
 import {
-	creditRateLabel,
 	type RateCardRow,
+	rowRateLabels,
 } from "@/views/products/features/credit-systems/utils/rateCardRows";
 
-const sourceLabel = ({
-	row,
-	planName,
-	creditSystemName,
-}: {
-	row: RateCardRow;
-	planName: string;
-	creditSystemName: string;
-}) => {
-	if (row.state === "inherited") return `From ${creditSystemName}`;
-	if (row.state === "excluded") return `Removed on ${planName}`;
-	return `Set on ${planName}`;
-};
-
+/** A rate card row on the balance sheet, labelled with where its rate is set. */
 export function BalanceRateCardRow({
 	row,
 	features,
-	planName,
-	creditSystemName,
+	source,
 }: {
 	row: RateCardRow;
 	features: Feature[];
-	planName: string;
-	creditSystemName: string;
+	source: string;
 }) {
 	const setOnPlan = row.state === "changed" || row.state === "added";
 
@@ -68,19 +53,14 @@ export function BalanceRateCardRow({
 							setOnPlan ? "bg-foreground" : "bg-subtle",
 						)}
 					/>
-					{sourceLabel({ row, planName, creditSystemName })}
+					{source}
 				</span>
 			</div>
 			{row.state === "excluded" ? (
 				<RateStateBadge label="Not covered" muted />
 			) : (
 				<RateValue
-					rate={creditRateLabel({ rate: row.rate, features })}
-					previousRate={
-						row.state === "changed"
-							? creditRateLabel({ rate: row.catalogRate, features })
-							: undefined
-					}
+					{...rowRateLabels({ row, features })}
 					muted={row.state === "inherited"}
 				/>
 			)}

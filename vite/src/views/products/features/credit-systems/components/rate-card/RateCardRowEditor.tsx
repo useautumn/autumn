@@ -1,9 +1,7 @@
 import {
 	type CreditSchemaItem,
 	findFeatureById,
-	getFeatureName,
 	hasCreditDimensionRules,
-	isAiCreditSystem,
 } from "@autumn/shared";
 import { Button, FormLabel, InlineAction } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
@@ -16,6 +14,7 @@ import {
 	setRateType,
 	updateTier,
 } from "../../utils/creditSchemaUtils";
+import { rateUnit } from "../../utils/rateCardRows";
 import { CreditBillingUnits } from "../CreditBillingUnits";
 import { CreditNumberInput } from "../CreditNumberInput";
 import { CreditRowDimensions } from "../CreditRowDimensions";
@@ -40,18 +39,14 @@ export function RateCardRowEditor({
 	if (!edit) return null;
 
 	const { draft, featureId } = edit;
-	const feature = findFeatureById({
-		features,
-		featureId: draft.metered_feature_id,
-		errorOnNotFound: false,
+	const { unitName, isAiChild } = rateUnit({
+		feature: findFeatureById({
+			features,
+			featureId: draft.metered_feature_id,
+			errorOnNotFound: false,
+		}),
+		billingUnits: draft.feature_amount,
 	});
-	const isAiChild = isAiCreditSystem(feature?.type);
-	const unitName = isAiChild
-		? "of AI usage"
-		: getFeatureName({
-				feature,
-				plural: (draft.feature_amount ?? 1) !== 1,
-			}) || "units";
 	const isMultiTier = isGraduated(draft) && draft.tiers.length > 1;
 	const showDimensions = dimensionsOpen || hasCreditDimensionRules(draft);
 	const catalogSingleRate = singleRateOf(catalogRate);

@@ -1,4 +1,6 @@
 import {
+	type ApiPlanItemV1,
+	apiFeatureOverrideToDb,
 	type CreditSchemaItem,
 	type CreditSchemaOverrideItem,
 	creditSchemaItemsAreSame,
@@ -7,28 +9,31 @@ import {
 	getFeatureName,
 	isAiCreditSystem,
 	isExcludedCreditSchemaItem,
+	itemsEqual,
+	type PlanItemChangeV0,
 } from "@autumn/shared";
 import { creditRateSummary } from "./creditRateSummary";
-
-export type RateCardRowState = "inherited" | "changed" | "excluded" | "added";
+import { featureDisplayName } from "./featureDisplayName";
 
 /** One feature of a plan's effective rate card and where its rate comes from. */
-export type RateCardRow =
-	| { featureId: string; state: "inherited"; rate: CreditSchemaItem }
-	| {
-			featureId: string;
-			state: "changed";
-			rate: CreditSchemaItem;
-			catalogRate: CreditSchemaItem;
-	  }
-	| { featureId: string; state: "excluded"; catalogRate: CreditSchemaItem }
-	| { featureId: string; state: "added"; rate: CreditSchemaItem };
+export type RateCardRow = { featureId: string } & (
+	| { state: "inherited"; rate: CreditSchemaItem }
+	| { state: "changed"; rate: CreditSchemaItem; catalogRate: CreditSchemaItem }
+	| { state: "excluded"; catalogRate: CreditSchemaItem }
+	| { state: "added"; rate: CreditSchemaItem }
+);
 
-export type RateCardSummary = {
-	rows: RateCardRow[];
-	changedCount: number;
-	addedCount: number;
-	excludedCount: number;
+/** One feature's rate before and after a change; `null` means not covered on that side. */
+export type FeatureRateChange = {
+	featureId: string;
+	label: string;
+	from: string | null;
+	to: string | null;
+};
+
+export type RateCardItemChange = {
+	change: PlanItemChangeV0;
+	rates: FeatureRateChange[];
 };
 
 const classifyCatalogRow = ({
@@ -39,10 +44,12 @@ const classifyCatalogRow = ({
 	overrideRow: CreditSchemaOverrideItem | undefined;
 }): RateCardRow => {
 	const featureId = catalogRate.metered_feature_id;
-	if (!overrideRow) return { featureId, state: "inherited", rate: catalogRate };
-	if (isExcludedCreditSchemaItem(overrideRow))
+	if (overrideRow && isExcludedCreditSchemaItem(overrideRow))
 		return { featureId, state: "excluded", catalogRate };
-	if (creditSchemaItemsAreSame({ left: overrideRow, right: catalogRate }))
+	if (
+		!overrideRow ||
+		creditSchemaItemsAreSame({ left: overrideRow, right: catalogRate })
+	)
 		return { featureId, state: "inherited", rate: catalogRate };
 	return { featureId, state: "changed", rate: overrideRow, catalogRate };
 };
@@ -54,16 +61,14 @@ export const rateCardRows = ({
 }: {
 	override: CreditSchemaOverrideItem[];
 	creditSystem?: Feature;
-}): RateCardSummary => {
+}): RateCardRow[] => {
 	const catalogSchema: CreditSchemaItem[] = creditSystem?.config?.schema ?? [];
 	const overrideByFeature = new Map(
 		override.map((row) => [row.metered_feature_id, row]),
 	);
-	const catalogFeatureIds = new Set(
-		catalogSchema.map((row) => row.metered_feature_id),
-	);
+	const catalogIds = new Set(catalogSchema.map((r) => r.metered_feature_id));
 
-	const rows: RateCardRow[] = [
+	return [
 		...catalogSchema.map((catalogRate) =>
 			classifyCatalogRow({
 				catalogRate,
@@ -71,40 +76,55 @@ export const rateCardRows = ({
 			}),
 		),
 		...override.flatMap((row): RateCardRow[] =>
-			catalogFeatureIds.has(row.metered_feature_id) ||
-			isExcludedCreditSchemaItem(row)
+			catalogIds.has(row.metered_feature_id) || isExcludedCreditSchemaItem(row)
 				? []
 				: [{ featureId: row.metered_feature_id, state: "added", rate: row }],
 		),
 	];
-
-	const countOf = (state: RateCardRowState) =>
-		rows.filter((row) => row.state === state).length;
-
-	return {
-		rows,
-		changedCount: countOf("changed"),
-		addedCount: countOf("added"),
-		excludedCount: countOf("excluded"),
-	};
 };
 
 /** "From Demo credits · 1 changed · 1 not covered", skipping counts that are zero. */
 export const rateCardSubtitle = ({
 	creditSystemName,
-	summary,
+	rows,
 }: {
 	creditSystemName: string;
-	summary: RateCardSummary;
-}) =>
-	[
+	rows: RateCardRow[];
+}) => {
+	const count = (state: RateCardRow["state"], label: string) => {
+		const n = rows.filter((row) => row.state === state).length;
+		return n > 0 && `${n} ${label}`;
+	};
+	return [
 		`From ${creditSystemName}`,
-		summary.changedCount > 0 && `${summary.changedCount} changed`,
-		summary.addedCount > 0 && `${summary.addedCount} added`,
-		summary.excludedCount > 0 && `${summary.excludedCount} not covered`,
+		count("changed", "changed"),
+		count("added", "added"),
+		count("excluded", "not covered"),
 	]
 		.filter(Boolean)
 		.join(" · ");
+};
+
+/** The credit system's own rate for a row, which edits are measured against. */
+export const catalogRateOf = (row: RateCardRow) => {
+	if (row.state === "inherited") return row.rate;
+	return row.state === "added" ? undefined : row.catalogRate;
+};
+
+/** The unit a feature's rate is counted in, e.g. "web searches" or "of AI usage". */
+export const rateUnit = ({
+	feature,
+	billingUnits = 1,
+}: {
+	feature?: Feature;
+	billingUnits?: number;
+}) => {
+	const isAiChild = isAiCreditSystem(feature?.type);
+	const unitName = isAiChild
+		? "of AI usage"
+		: getFeatureName({ feature, plural: billingUnits !== 1 }) || "units";
+	return { unitName, isAiChild };
+};
 
 /** A rate as the rate card reads it, e.g. "2.857 credits" or "3 credits per 10 searches". */
 export const creditRateLabel = ({
@@ -113,41 +133,137 @@ export const creditRateLabel = ({
 }: {
 	rate: CreditSchemaItem;
 	features: Feature[];
-}) => {
-	const feature = findFeatureById({
-		features,
-		featureId: rate.metered_feature_id,
-		errorOnNotFound: false,
+}) =>
+	creditRateSummary({
+		item: rate,
+		...rateUnit({
+			feature: findFeatureById({
+				features,
+				featureId: rate.metered_feature_id,
+				errorOnNotFound: false,
+			}),
+			billingUnits: rate.feature_amount,
+		}),
 	});
-	const isAiChild = isAiCreditSystem(feature?.type);
-	const unitName = isAiChild
-		? "of AI usage"
-		: getFeatureName({
-				feature,
-				plural: (rate.feature_amount ?? 1) !== 1,
-				capitalize: false,
-			}) || "units";
-	return creditRateSummary({ item: rate, unitName, isAiChild });
+
+/** A covered row's rate, and the credit system's rate it replaced when changed. */
+export const rowRateLabels = ({
+	row,
+	features,
+}: {
+	row: Exclude<RateCardRow, { state: "excluded" }>;
+	features: Feature[];
+}) => ({
+	rate: creditRateLabel({ rate: row.rate, features }),
+	previousRate:
+		row.state === "changed"
+			? creditRateLabel({ rate: row.catalogRate, features })
+			: undefined,
+});
+
+/** Old rate with a shared unit dropped, so "3 credits → 2.857 credits" reads "3 → 2.857 credits". */
+export const previousRateText = ({
+	from,
+	to,
+}: {
+	from: string;
+	to: string;
+}) => {
+	const [amount, ...unit] = from.split(" ");
+	return unit.join(" ") === to.split(" ").slice(1).join(" ") ? amount : from;
 };
 
-const splitLeadingAmount = (text: string) => {
-	const [amount, ...rest] = text.split(" ");
-	return { amount, unit: rest.join(" ") };
+const rateLabelsByFeature = ({
+	item,
+	features,
+}: {
+	item: ApiPlanItemV1;
+	features: Feature[];
+}) => {
+	const override = item.feature_override
+		? apiFeatureOverrideToDb(item.feature_override)
+		: undefined;
+	const rows = rateCardRows({
+		override: override?.schema ?? [],
+		creditSystem: findFeatureById({
+			features,
+			featureId: item.feature_id,
+			errorOnNotFound: false,
+		}),
+	});
+	return new Map(
+		rows.map((row) => [
+			row.featureId,
+			row.state === "excluded"
+				? null
+				: creditRateLabel({ rate: row.rate, features }),
+		]),
+	);
 };
 
-/** Old and new rate with a shared unit written once: "3 → 2.857 credits", matching the migration diffs. */
-export const rateChangeParts = ({ from, to }: { from: string; to: string }) => {
-	const before = splitLeadingAmount(from);
-	const after = splitLeadingAmount(to);
-	if (before.unit === after.unit) return { from: before.amount, to };
-	return { from, to };
+/** Effective rates that differ between two items of one credit system, in rate card order. */
+export const diffItemRates = ({
+	previous,
+	next,
+	features,
+}: {
+	previous: ApiPlanItemV1;
+	next: ApiPlanItemV1;
+	features: Feature[];
+}): FeatureRateChange[] => {
+	const before = rateLabelsByFeature({ item: previous, features });
+	const after = rateLabelsByFeature({ item: next, features });
+	return [...new Set([...after.keys(), ...before.keys()])].flatMap(
+		(featureId) => {
+			const from = before.get(featureId) ?? null;
+			const to = after.get(featureId) ?? null;
+			if (from === to) return [];
+			const label = featureDisplayName({ features, featureId });
+			return [{ featureId, label, from, to }];
+		},
+	);
 };
 
-/** The credit system's own rate for a row, which edits are measured against. */
-export const catalogRateOf = (
-	row: RateCardRow,
-): CreditSchemaItem | undefined => {
-	if (row.state === "inherited") return row.rate;
-	if (row.state === "added") return undefined;
-	return row.catalogRate;
+const withoutOverride = (item: ApiPlanItemV1) => ({
+	...item,
+	feature_override: undefined,
+});
+
+/** Pulls out added/removed pairs that differ only in their rate card, so each reads as one change. */
+export const splitRateCardItemChanges = ({
+	itemChanges,
+	features,
+}: {
+	itemChanges: PlanItemChangeV0[];
+	features: Feature[];
+}) => {
+	const paired = new Set<PlanItemChangeV0>();
+	const rateCardChanges = itemChanges.flatMap(
+		(change): RateCardItemChange[] => {
+			if (change.action !== "created") return [];
+			const deleted = itemChanges.find(
+				(candidate) =>
+					candidate.action === "deleted" &&
+					!paired.has(candidate) &&
+					itemsEqual(
+						withoutOverride(change.item),
+						withoutOverride(candidate.item),
+					),
+			);
+			if (!deleted) return [];
+			const rates = diffItemRates({
+				previous: deleted.item,
+				next: change.item,
+				features,
+			});
+			if (rates.length === 0) return [];
+			paired.add(change).add(deleted);
+			return [{ change, rates }];
+		},
+	);
+
+	return {
+		rateCardChanges,
+		otherChanges: itemChanges.filter((change) => !paired.has(change)),
+	};
 };

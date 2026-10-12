@@ -1,8 +1,8 @@
 import type { PlanItemChangeV0 } from "@autumn/shared";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { splitRateCardItemChanges } from "@/views/products/features/credit-systems/utils/rateCardRows";
 import { RateCardChangeRow } from "./RateCardChangeRow";
-import { splitRateCardItemChanges } from "./rateCardItemChanges";
 
 /** Item changes with rate-card-only edits shown once, as a rate card change, instead of an added and removed pair. */
 export function PlanItemChangeList({

@@ -3,14 +3,14 @@ import { InlineAction } from "@autumn/ui";
 import { ArrowCounterClockwiseIcon, CaretUpIcon } from "@phosphor-icons/react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import type { RateCardEditor } from "../../hooks/useRateCardEditor";
 import { featureDisplayName } from "../../utils/featureDisplayName";
 import {
 	catalogRateOf,
-	creditRateLabel,
 	type RateCardRow,
+	rowRateLabels,
 } from "../../utils/rateCardRows";
-import { RateCardFeatureName } from "./RateCardFeatureName";
 import { RateCardRowEditor } from "./RateCardRowEditor";
 import { RateStateBadge } from "./RateStateBadge";
 import { RateValue } from "./RateValue";
@@ -31,14 +31,33 @@ export function OverrideRateCardRow({
 		featureId: row.featureId,
 		errorOnNotFound: false,
 	});
-	const name = featureDisplayName({ features, featureId: row.featureId });
-	const rateLabel = (rate: Parameters<typeof creditRateLabel>[0]["rate"]) =>
-		creditRateLabel({ rate, features });
+	const name = (
+		<span className="flex min-w-0 items-center gap-1.5">
+			{feature && (
+				<span className="shrink-0 text-tertiary-foreground">
+					{
+						getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
+							.icon
+					}
+				</span>
+			)}
+			<span
+				className={cn(
+					"truncate text-sm",
+					row.state === "excluded"
+						? "text-tertiary-foreground"
+						: "font-medium text-foreground",
+				)}
+			>
+				{featureDisplayName({ features, featureId: row.featureId })}
+			</span>
+		</span>
+	);
 
 	if (row.state === "excluded") {
 		return (
 			<li className={cn(TABLE_TRAY_SURFACE_DIVIDER_CLASS, ROW_CLASS)}>
-				<RateCardFeatureName feature={feature} name={name} muted />
+				{name}
 				<RateStateBadge label="Not covered" muted />
 				<InlineAction
 					className="ml-auto px-1.5"
@@ -62,7 +81,7 @@ export function OverrideRateCardRow({
 					onClick={editor.cancel}
 					className={cn(ROW_CLASS, "w-full cursor-pointer pr-3 text-left")}
 				>
-					<RateCardFeatureName feature={feature} name={name} />
+					{name}
 					<CaretUpIcon size={14} className="ml-auto text-tertiary-foreground" />
 				</button>
 				<RateCardRowEditor editor={editor} catalogRate={catalogRateOf(row)} />
@@ -85,17 +104,17 @@ export function OverrideRateCardRow({
 				onClick={() => editor.startEdit(row.rate)}
 				className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
 			>
-				<RateCardFeatureName feature={feature} name={name} />
-				{row.state === "changed" && <RateStateBadge label="Changed" />}
-				{row.state === "added" && <RateStateBadge label="Added" />}
+				{name}
+				{row.state !== "inherited" && (
+					<RateStateBadge
+						label={row.state === "changed" ? "Changed" : "Added"}
+					/>
+				)}
 				<span className="ml-auto">
 					<RateValue
-						rate={rateLabel(row.rate)}
-						previousRate={
-							row.state === "changed" ? rateLabel(row.catalogRate) : undefined
-						}
+						{...rowRateLabels({ row, features })}
 						muted={row.state === "inherited"}
-						stacked
+						layout="stacked"
 					/>
 				</span>
 			</button>

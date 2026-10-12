@@ -1,9 +1,10 @@
 import type { Feature } from "@autumn/shared";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
+import { cn } from "@/lib/utils";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
 import { RateStateBadge } from "@/views/products/features/credit-systems/components/rate-card/RateStateBadge";
-import { FeatureRateChangeRow } from "./FeatureRateChangeRow";
-import type { RateCardItemChange } from "./rateCardItemChanges";
+import { RateValue } from "@/views/products/features/credit-systems/components/rate-card/RateValue";
+import type { RateCardItemChange } from "@/views/products/features/credit-systems/utils/rateCardRows";
 
 /** A plan item whose only change is its rate card: one row, then each feature's old and new rate. */
 export function RateCardChangeRow({
@@ -27,8 +28,29 @@ export function RateCardChangeRow({
 				</div>
 				<RateStateBadge label="Rate card changed" />
 			</div>
-			{itemChange.rates.map((rate) => (
-				<FeatureRateChangeRow key={rate.featureId} rate={rate} />
+			{itemChange.rates.map(({ featureId, label, from, to }) => (
+				<div
+					key={featureId}
+					className="flex items-center justify-between gap-3 border-input border-t py-1.5 text-xs"
+				>
+					<span
+						className={cn(
+							to === null ? "text-tertiary-foreground" : "text-foreground",
+						)}
+					>
+						{label}
+					</span>
+					{to === null ? (
+						<span className="text-tertiary-foreground">Not covered</span>
+					) : (
+						<RateValue
+							rate={to}
+							previousRate={from}
+							layout="arrow"
+							className="text-xs"
+						/>
+					)}
+				</div>
 			))}
 		</div>
 	);
