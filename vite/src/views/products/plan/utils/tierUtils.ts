@@ -2,6 +2,7 @@ import {
 	formatAmount,
 	formatVolumeTierRule,
 	Infinite,
+	isVolumeFlatFeeTiers,
 	type PriceTier,
 	type ProductItem,
 	TierBehavior,
@@ -35,10 +36,6 @@ const zeroedCurrencyEntries = (tier: PriceTier | undefined) =>
 			}))
 		: undefined;
 
-// A new tier keeps the flat-fee field its neighbour has, so Unit + Flat stays selected.
-const zeroedFlatAmount = (tier: PriceTier | undefined) =>
-	tier?.flat_amount != null ? { flat_amount: 0 } : {};
-
 export const addTier = ({
 	item,
 	setItem,
@@ -61,7 +58,6 @@ export const addTier = ({
 				{
 					to: Infinite,
 					amount: 0,
-					...zeroedFlatAmount(firstTier),
 					additional_currencies: zeroedCurrencyEntries(firstTier),
 				}, // Second tier is infinite
 			],
@@ -81,7 +77,6 @@ export const addTier = ({
 		newTiers.push({
 			to: Infinite,
 			amount: 0,
-			...zeroedFlatAmount(lastTier),
 			additional_currencies: zeroedCurrencyEntries(lastTier),
 		});
 		setItem({ ...item, tiers: newTiers });
@@ -205,53 +200,35 @@ export const updateTier = ({
 	setItem({ ...item, tiers: newTiers });
 };
 
-export type VolumePricingMode = "flat" | "per_unit" | "per_unit_and_flat";
+export type VolumePricingMode = "flat" | "per_unit";
 
-/** Reads the mode from tier data, so mixed tiers from the API keep both amounts. */
-/** The base price and every additional-currency price a tier carries. */
-const tierToPriceEntries = (
-	tier: PriceTier,
-): { amount?: number | null; flat_amount?: number | null }[] => [
-	tier,
-	...(tier.additional_currencies ?? []),
-];
-
-export const tiersToVolumePricingMode = ({
-	tiers,
+/** Flat only when every unit rate is 0, so mixed tiers open with their rates visible. */
+export const itemToVolumePricingModeOnOpen = ({
+	item,
 }: {
-	tiers: PriceTier[] | null | undefined;
+	item: ProductItem | null | undefined;
 }): VolumePricingMode => {
-	const entries = (tiers ?? []).flatMap(tierToPriceEntries);
-	const hasUnitAmounts = entries.some((entry) => (entry.amount ?? 0) !== 0);
-	const hasFlatAmounts = entries.some((entry) => entry.flat_amount != null);
-	const hasFlatFee = entries.some((entry) => (entry.flat_amount ?? 0) > 0);
-
-	if (hasUnitAmounts && hasFlatFee) return "per_unit_and_flat";
-	if (hasFlatAmounts && !hasUnitAmounts) return "flat";
+	const isFlatOnly = isVolumeFlatFeeTiers({
+		tierBehavior: item?.tier_behavior,
+		tiers: item?.tiers,
+	});
+	if (isFlatOnly) return "flat";
 	return "per_unit";
 };
 
-/** Whether the tiers still hold the shape `mode` edits, so a stale toggle can't hide a price. */
-export const volumePricingModeFitsTiers = ({
+/** Per Unit commits tiers as stored, so API-authored flat fees survive a save. */
+export const itemToCommittedVolumeItem = ({
+	item,
 	mode,
-	tiers,
 }: {
+	item: ProductItem;
 	mode: VolumePricingMode;
-	tiers: PriceTier[] | null | undefined;
-}): boolean => {
-	if (!tiers) return false;
-	const entries = tiers.flatMap(tierToPriceEntries);
-	if (mode === "flat") {
-		return entries.every((entry) => (entry.amount ?? 0) === 0);
-	}
-	if (mode === "per_unit") {
-		return entries.every((entry) => entry.flat_amount == null);
-	}
-	// Currency flat fees are aligned to the base tier on save, so the base decides.
-	return tiers.every((tier) => tier.flat_amount != null);
+}): ProductItem => {
+	if (mode !== "flat") return item;
+	return itemToVolumePricingMode({ item, mode });
 };
 
-/** Moves each tier's price into the fields `mode` edits; 0 and unset flat fees bill alike. */
+/** An explicit mode switch: moves each tier's price into the fields `mode` edits. */
 export const itemToVolumePricingMode = ({
 	item,
 	mode,
@@ -274,17 +251,10 @@ export const itemToVolumePricingMode = ({
 				additional_currencies,
 			};
 		}
-		if (mode === "per_unit") {
-			return {
-				...tier,
-				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
-				flat_amount: undefined,
-				additional_currencies,
-			};
-		}
 		return {
 			...tier,
-			flat_amount: tier.flat_amount ?? 0,
+			amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
+			flat_amount: undefined,
 			additional_currencies,
 		};
 	});

@@ -7,17 +7,10 @@ import {
 } from "@autumn/shared";
 import { alignTierCurrencyShapes } from "@/views/products/plan/utils/currencyUtils";
 import {
-	addTier,
+	itemToCommittedVolumeItem,
 	itemToVolumePricingMode,
-	tiersToVolumePricingMode,
-	volumePricingModeFitsTiers,
+	itemToVolumePricingModeOnOpen,
 } from "@/views/products/plan/utils/tierUtils";
-
-const commitVolumeTiers = (item: ProductItem): ProductItem =>
-	itemToVolumePricingMode({
-		item,
-		mode: tiersToVolumePricingMode({ tiers: item.tiers }),
-	});
 
 const volumeItem = (tiers: PriceTier[]): ProductItem =>
 	({
@@ -26,242 +19,123 @@ const volumeItem = (tiers: PriceTier[]): ProductItem =>
 		tiers,
 	}) as ProductItem;
 
+/** Opens the item the way the editor does, then commits it with no edits. */
+const openAndSave = (item: ProductItem): ProductItem =>
+	alignTierCurrencyShapes(
+		itemToCommittedVolumeItem({
+			item,
+			mode: itemToVolumePricingModeOnOpen({ item }),
+		}),
+	);
+
+// The seeded qa-volume-usage shape: per-unit rates plus flat fees, in USD and EUR.
 const mixedTiers: PriceTier[] = [
-	{ to: 100, amount: 1, flat_amount: 5 },
-	{ to: Infinite, amount: 0.5, flat_amount: 20 },
+	{
+		to: 400,
+		amount: 0.1,
+		flat_amount: 5,
+		additional_currencies: [{ currency: "eur", amount: 0.09, flat_amount: 4 }],
+	},
+	{
+		to: 1900,
+		amount: 0.08,
+		flat_amount: 10,
+		additional_currencies: [{ currency: "eur", amount: 0.07, flat_amount: 9 }],
+	},
+	{
+		to: Infinite,
+		amount: 0.05,
+		additional_currencies: [{ currency: "eur", amount: 0.045 }],
+	},
 ];
 
-describe("tiersToVolumePricingMode", () => {
-	test("mixed per-unit and flat tiers open in the combined mode", () => {
-		expect(tiersToVolumePricingMode({ tiers: mixedTiers })).toBe(
-			"per_unit_and_flat",
-		);
+describe("opening a volume item", () => {
+	test("mixed per-unit and flat tiers open in Per Unit", () => {
+		expect(
+			itemToVolumePricingModeOnOpen({ item: volumeItem(mixedTiers) }),
+		).toBe("per_unit");
 	});
 
-	test("a flat fee on one tier with per-unit rates is still combined", () => {
+	test("flat-only tiers still open in Flat", () => {
 		expect(
-			tiersToVolumePricingMode({
-				tiers: [
-					{ to: 100, amount: 1 },
-					{ to: Infinite, amount: 0.5, flat_amount: 20 },
-				],
-			}),
-		).toBe("per_unit_and_flat");
-	});
-
-	test("flat-only tiers open in flat mode", () => {
-		expect(
-			tiersToVolumePricingMode({
-				tiers: [
+			itemToVolumePricingModeOnOpen({
+				item: volumeItem([
 					{ to: 100, amount: 0, flat_amount: 5 },
 					{ to: Infinite, amount: 0, flat_amount: 20 },
-				],
+				]),
 			}),
 		).toBe("flat");
 	});
-
-	test("per-unit tiers open in per-unit mode", () => {
-		expect(
-			tiersToVolumePricingMode({
-				tiers: [
-					{ to: 100, amount: 1 },
-					{ to: Infinite, amount: 0.5, flat_amount: 0 },
-				],
-			}),
-		).toBe("per_unit");
-	});
 });
 
-describe("committing volume tiers", () => {
-	test("saving mixed tiers keeps every per-unit and flat amount", () => {
-		const result = commitVolumeTiers(volumeItem(mixedTiers));
-		expect(result.tiers).toEqual(mixedTiers.map((tier) => ({ ...tier })));
+describe("saving with no edits", () => {
+	test("keeps every per-unit rate and flat fee, base and EUR", () => {
+		const saved = openAndSave(volumeItem(mixedTiers));
+		expect(saved.tiers).toEqual(
+			mixedTiers.map((tier) => ({
+				...tier,
+				additional_currencies: tier.additional_currencies?.map((entry) => ({
+					...entry,
+					...(tier.flat_amount != null && {
+						flat_amount: entry.flat_amount ?? 0,
+					}),
+				})),
+			})),
+		);
 	});
 
-	test("saving flat-only tiers keeps the flat fees", () => {
-		const tiers: PriceTier[] = [
-			{ to: 100, amount: 0, flat_amount: 5 },
-			{ to: Infinite, amount: 0, flat_amount: 20 },
-		];
-		const result = commitVolumeTiers(volumeItem(tiers));
-		expect(result.tiers?.map((tier) => tier.flat_amount)).toEqual([5, 20]);
-	});
-});
-
-describe("itemToVolumePricingMode", () => {
-	test("switching per-unit tiers to Unit + Flat keeps the rates and adds fees", () => {
-		const result = itemToVolumePricingMode({
-			item: volumeItem([
-				{ to: 100, amount: 1 },
-				{ to: Infinite, amount: 0.5 },
+	test("keeps a €4 EUR flat fee on a $0 base flat fee", () => {
+		const saved = openAndSave(
+			volumeItem([
+				{
+					to: 100,
+					amount: 1,
+					flat_amount: 0,
+					additional_currencies: [
+						{ currency: "eur", amount: 0.9, flat_amount: 4 },
+					],
+				},
+				{
+					to: Infinite,
+					amount: 0.5,
+					flat_amount: 0,
+					additional_currencies: [
+						{ currency: "eur", amount: 0.45, flat_amount: 0 },
+					],
+				},
 			]),
-			mode: "per_unit_and_flat",
-		});
-		expect(result.tiers).toEqual([
-			{ to: 100, amount: 1, flat_amount: 0, additional_currencies: undefined },
-			{
-				to: Infinite,
-				amount: 0.5,
-				flat_amount: 0,
-				additional_currencies: undefined,
-			},
+		);
+		expect(saved.tiers?.[0]?.additional_currencies).toEqual([
+			{ currency: "eur", amount: 0.9, flat_amount: 4 },
 		]);
 	});
 
-	test("switching to flat moves rates into flat fees", () => {
+	test("flat-only tiers keep their flat fees", () => {
+		const saved = openAndSave(
+			volumeItem([
+				{ to: 100, amount: 0, flat_amount: 5 },
+				{ to: Infinite, amount: 0, flat_amount: 20 },
+			]),
+		);
+		expect(saved.tiers?.map((tier) => tier.flat_amount)).toEqual([5, 20]);
+	});
+});
+
+describe("switching modes explicitly", () => {
+	test("switching to Flat moves rates into flat fees", () => {
 		const result = itemToVolumePricingMode({
 			item: volumeItem([{ to: Infinite, amount: 2 }]),
 			mode: "flat",
 		});
 		expect(result.tiers?.[0]).toMatchObject({ amount: 0, flat_amount: 2 });
 	});
-});
 
-describe("alignTierCurrencyShapes", () => {
-	test("mixed tiers keep their additional-currency per-unit amounts", () => {
-		const item = volumeItem([
-			{
-				to: 100,
-				amount: 1,
-				flat_amount: 5,
-				additional_currencies: [
-					{ currency: "eur", amount: 0.9, flat_amount: 4 },
-				],
-			},
-			{
-				to: Infinite,
-				amount: 0,
-				flat_amount: 20,
-				additional_currencies: [
-					{ currency: "eur", amount: 0, flat_amount: 18 },
-				],
-			},
-		]);
-		const result = alignTierCurrencyShapes(item);
-		expect(result.tiers?.map((tier) => tier.additional_currencies)).toEqual([
-			[{ currency: "eur", amount: 0.9, flat_amount: 4 }],
-			[{ currency: "eur", amount: 0, flat_amount: 18 }],
-		]);
-	});
-
-	test("a flat-only base tier keeps another currency's per-unit rate", () => {
-		const item = volumeItem([
-			{
-				to: Infinite,
-				amount: 0,
-				flat_amount: 5,
-				additional_currencies: [
-					{ currency: "eur", amount: 0.9, flat_amount: 4 },
-				],
-			},
-		]);
-		const result = alignTierCurrencyShapes(item);
-		expect(result.tiers?.[0].additional_currencies).toEqual([
-			{ currency: "eur", amount: 0.9, flat_amount: 4 },
-		]);
-	});
-});
-
-describe("volumePricingModeFitsTiers", () => {
-	test("a Flat toggle no longer fits once a discard restores unit rates", () => {
-		expect(
-			volumePricingModeFitsTiers({
-				mode: "flat",
-				tiers: [{ to: Infinite, amount: 1, flat_amount: 5 }],
-			}),
-		).toBe(false);
-	});
-
-	test("a fresh Unit + Flat pick fits while every amount is still 0", () => {
-		expect(
-			volumePricingModeFitsTiers({
-				mode: "per_unit_and_flat",
-				tiers: [
-					{ to: 100, amount: 0, flat_amount: 0 },
-					{ to: Infinite, amount: 0, flat_amount: 0 },
-				],
-			}),
-		).toBe(true);
-	});
-
-	test("Unit + Flat no longer fits after graduated pricing cleared the flat fees", () => {
-		expect(
-			volumePricingModeFitsTiers({
-				mode: "per_unit_and_flat",
-				tiers: [{ to: Infinite, amount: 1 }],
-			}),
-		).toBe(false);
-	});
-});
-
-describe("addTier", () => {
-	test("a tier added in Unit + Flat mode keeps the flat-fee field, so the mode still fits", () => {
-		let next: ProductItem | undefined;
-		addTier({
-			item: volumeItem([
-				{ to: 100, amount: 1, flat_amount: 0 },
-				{ to: Infinite, amount: 0.5, flat_amount: 0 },
-			]),
-			setItem: (item) => {
-				next = item;
-			},
+	test("switching Flat back to Per Unit moves fees into rates", () => {
+		const result = itemToVolumePricingMode({
+			item: volumeItem([{ to: Infinite, amount: 0, flat_amount: 3 }]),
+			mode: "per_unit",
 		});
-
-		expect(next?.tiers?.[2]?.flat_amount).toBe(0);
-		expect(
-			volumePricingModeFitsTiers({
-				mode: "per_unit_and_flat",
-				tiers: next?.tiers,
-			}),
-		).toBe(true);
-	});
-});
-
-describe("currency flat fees", () => {
-	test("a €4 EUR flat fee survives the save when the base flat fee is 0", () => {
-		const item = volumeItem([
-			{
-				to: 100,
-				amount: 1,
-				flat_amount: 0,
-				additional_currencies: [
-					{ currency: "eur", amount: 0.9, flat_amount: 4 },
-				],
-			},
-			{
-				to: Infinite,
-				amount: 0.5,
-				flat_amount: 0,
-				additional_currencies: [
-					{ currency: "eur", amount: 0.45, flat_amount: 0 },
-				],
-			},
-		]);
-
-		expect(tiersToVolumePricingMode({ tiers: item.tiers })).toBe(
-			"per_unit_and_flat",
-		);
-		const saved = itemToVolumePricingMode({
-			item,
-			mode: tiersToVolumePricingMode({ tiers: item.tiers }),
-		});
-		expect(saved.tiers?.[0]?.additional_currencies?.[0]?.flat_amount).toBe(4);
-	});
-
-	test("Per unit no longer fits once another currency has a flat fee", () => {
-		expect(
-			volumePricingModeFitsTiers({
-				mode: "per_unit",
-				tiers: [
-					{
-						to: Infinite,
-						amount: 1,
-						additional_currencies: [
-							{ currency: "eur", amount: 0.9, flat_amount: 4 },
-						],
-					},
-				],
-			}),
-		).toBe(false);
+		expect(result.tiers?.[0]).toMatchObject({ amount: 3 });
+		expect(result.tiers?.[0]?.flat_amount).toBeUndefined();
 	});
 });

@@ -20,10 +20,10 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
+	itemToCommittedVolumeItem,
 	itemToVolumePricingMode,
-	tiersToVolumePricingMode,
+	itemToVolumePricingModeOnOpen,
 	type VolumePricingMode,
-	volumePricingModeFitsTiers,
 } from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -47,15 +47,7 @@ export function EditPlanFeatureSheet({
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
-	// Tier data can't tell a fresh "Unit + Flat" pick from flat-only while every amount is 0.
-	const [chosenPricingMode, setChosenPricingMode] =
-		useState<VolumePricingMode>();
-	const chosenModeFits =
-		chosenPricingMode !== undefined &&
-		volumePricingModeFitsTiers({ mode: chosenPricingMode, tiers: item?.tiers });
-	const volumePricingMode = chosenModeFits
-		? chosenPricingMode
-		: tiersToVolumePricingMode({ tiers: item?.tiers });
+	const volumePricingMode = itemToVolumePricingModeOnOpen({ item });
 
 	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
 	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
@@ -83,19 +75,12 @@ export function EditPlanFeatureSheet({
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
 		if (!item?.tiers) return;
-		setChosenPricingMode(mode);
 		setItem(itemToVolumePricingMode({ item, mode }));
 	};
 
 	const handleBeforeCommit = () => {
 		if (!isVolumeBased) return;
-		// Keyed off the tier data, never the toggle, so a save can't zero amounts the editor didn't show.
-		setItem(
-			itemToVolumePricingMode({
-				item,
-				mode: tiersToVolumePricingMode({ tiers: item.tiers }),
-			}),
-		);
+		setItem(itemToCommittedVolumeItem({ item, mode: volumePricingMode }));
 	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {

@@ -72,32 +72,13 @@ describe("PriceTiers wording", () => {
 		expect(html).not.toContain("volume:");
 	});
 
-	test("volume tiers drop graduated wording and state the rule", () => {
+	test("volume tiers drop graduated wording", () => {
 		const html = render({
 			item: tieredItem({ tierBehavior: TierBehavior.VolumeBased }),
 			volumePricingMode: "per_unit",
 		});
 		expect(html).not.toContain("then, up to");
 		expect(html).toContain("usage up to");
-		expect(html).toContain(
-			"volume: past 100, all units at the reached tier&#x27;s rate",
-		);
-	});
-
-	test("Unit + Flat mode renders a rate and a flat input per tier", () => {
-		const html = render({
-			item: tieredItem({
-				tierBehavior: TierBehavior.VolumeBased,
-				tiers: [
-					{ to: 100, amount: 1, flat_amount: 5 },
-					{ to: Infinite, amount: 0.5, flat_amount: 20 },
-				],
-			}),
-			volumePricingMode: "per_unit_and_flat",
-		});
-		expect(html.match(/value="1"/g)).toHaveLength(1);
-		expect(html.match(/value="5"/g)).toHaveLength(1);
-		expect(html.match(/value="0.5"/g)).toHaveLength(1);
-		expect(html.match(/value="20"/g)).toHaveLength(1);
+		expect(html).not.toContain("volume:");
 	});
 });
