@@ -43,3 +43,47 @@ describe("pushes to our shadow Atom's queue", () => {
 		expect(target?.queue?.externalId).toBe("autumn-internal-shadow-atom");
 	});
 });
+
+const orgWithAtom = {
+	id: "org_1",
+	atomDeployments: [
+		{
+			id: "atom_0123456789abcdef01234567",
+			status: "ready",
+			deployment_id: "dep_1",
+			endpoint_url: "https://atom.example.com",
+			encrypted_token: "enc_token",
+		},
+	],
+} as Organization;
+
+const noShadowAtom = ShadowAtomConfigSchema.parse({});
+
+describe("pushes to an org's own Atom", () => {
+	test("over the queue, they go to the deployment group its setup started, with no folder", () => {
+		const [target] = orgToAtomTargets({
+			shadowAtomConfig: noShadowAtom,
+			org: orgWithAtom,
+			env: AppEnv.Live,
+			orgAtomsOverQueue: true,
+		});
+		expect(target).toEqual({
+			target: "org",
+			endpointUrl: "https://atom.example.com",
+			encryptedToken: "enc_token",
+			queue: {
+				externalId: "org_1.live.atom_0123456789abcdef01234567",
+				atomId: null,
+			},
+		});
+	});
+
+	test("otherwise they go over HTTP", () => {
+		const [target] = orgToAtomTargets({
+			shadowAtomConfig: noShadowAtom,
+			org: orgWithAtom,
+			env: AppEnv.Live,
+		});
+		expect(target?.queue).toBeNull();
+	});
+});
