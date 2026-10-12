@@ -43,7 +43,7 @@ export function createPeerApp({
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
 	app.use(
-		requestLogMiddleware({ ctx, handleError }),
+		requestLogMiddleware({ ctx, handleError, failuresOnly: true }),
 		requestBodyMiddleware,
 		peerRequestMiddleware({ secret }),
 	);

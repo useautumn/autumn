@@ -50,6 +50,7 @@ export const createReplica = ({
 	dataDir = mkdtempSync(join(tmpdir(), "atom-replica-")),
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
+	logger = quiet,
 }: {
 	address: string;
 	peers: string[];
@@ -57,6 +58,10 @@ export const createReplica = ({
 	dataDir?: string;
 	secret?: string;
 	now?: () => number;
+	logger?: Record<
+		"info" | "warn" | "error",
+		(fields: unknown, message: unknown) => void
+	>;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -84,7 +89,7 @@ export const createReplica = ({
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {
 		auth,
-		logger: quiet,
+		logger,
 		autumnApiUrl: AUTUMN_API_URL,
 		health: {
 			bootedAt: "2026-10-12T00:00:00.000Z",

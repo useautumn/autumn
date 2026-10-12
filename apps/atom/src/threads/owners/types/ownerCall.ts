@@ -2,7 +2,10 @@ import type { CatalogRow } from "@autumn/balance-engine";
 import type { ApiVersion } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
-import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
+import type {
+	CheckAnswer,
+	SubjectSet,
+} from "../../../processor/types/slotProcessor.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -72,6 +75,7 @@ export type OwnerReply =
 			ok: true;
 			value:
 				| CheckAnswer
+				| SubjectSet
 				| boolean
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[];

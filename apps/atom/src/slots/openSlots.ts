@@ -68,8 +68,9 @@ export const openSlots = ({
 	// A miss is decided on the slot's owner thread, so the pulled body is stored there too.
 	const subjectPulls = pulls.subjectPulls.forFolder({
 		tokenHash: pulls.tokenHash,
-		applyPulled: ({ customerId, body }) =>
-			processorFor({ customerId }).setSubject({ customerId, body }),
+		applyPulled: async ({ customerId, body }) =>
+			(await processorFor({ customerId }).setSubject({ customerId, body }))
+				.stored,
 	});
 	const slots = Array.from({ length: slotCount }, (_, slot): OpenedSlot => {
 		const owner = owners.ownerOf({ slot });

@@ -16,11 +16,11 @@ import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
-/** Long polls in flight per receiver, so applying one batch never waits on the next receive. */
+/** Long polls in flight per receiver while the queue has a backlog; one when it has none, as each receive costs an SDK call's CPU. */
 const RECEIVE_LOOPS = 4;
 /** After a failed receive, so an unreachable queue is not polled in a tight loop. */
 const RECEIVE_RETRY_MS = 1_000;
-/** After a receive that came back short, so the next one finds a fuller batch: each receive costs an SDK call's CPU. */
+/** After a receive that came back short, so the next one finds a fuller batch. */
 export const RECEIVE_LINGER_MS = 25;
 /** Pushes received and not yet acked; past this, receiving waits for one to finish. */
 const MAX_PUSHES_IN_FLIGHT = 400;
@@ -165,13 +165,29 @@ export const createPushReceiver = ({
 		}
 	}
 
-	async function receiveUntilStopped(): Promise<void> {
+	/** Settles when a receive comes back full, or on stop: the cue for the extra loops to poll too. */
+	let backlog = Promise.withResolvers<void>();
+	stopped.signal.addEventListener("abort", () => backlog.resolve());
+	let isBacklogged = false;
+
+	function noteBatch({ size }: { size: number }): void {
+		isBacklogged = size === MAX_PUSHES_PER_PULL;
+		if (!isBacklogged || stopped.signal.aborted) return;
+		backlog.resolve();
+		backlog = Promise.withResolvers<void>();
+	}
+
+	async function receiveUntilStopped(loop: number): Promise<void> {
 		while (!stopped.signal.aborted) {
 			while (inFlight.size >= maxPushesInFlight) await Promise.race(inFlight);
+			if (loop > 0 && !isBacklogged) {
+				await backlog.promise;
+				continue;
+			}
 			const messages = await receiveBatch();
+			noteBatch({ size: messages.length });
 			await settleBatch(messages);
-			const isShort =
-				messages.length > 0 && messages.length < MAX_PUSHES_PER_PULL;
+			const isShort = messages.length > 0 && !isBacklogged;
 			if (isShort && !stopped.signal.aborted) await sleep(RECEIVE_LINGER_MS);
 		}
 	}
@@ -180,7 +196,9 @@ export const createPushReceiver = ({
 		/** Resolves once every loop has stopped and every push it received is settled. */
 		run: async () => {
 			await Promise.all(
-				Array.from({ length: RECEIVE_LOOPS }, receiveUntilStopped),
+				Array.from({ length: RECEIVE_LOOPS }, (_, loop) =>
+					receiveUntilStopped(loop),
+				),
 			);
 			await Promise.all(inFlight);
 		},

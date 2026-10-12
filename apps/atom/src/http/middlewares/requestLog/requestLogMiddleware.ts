@@ -25,9 +25,12 @@ const toError = (cause: unknown): Error =>
 export function requestLogMiddleware({
 	ctx,
 	handleError,
+	failuresOnly = false,
 }: {
 	ctx: AtomHttpContext;
 	handleError: ErrorHandler<AtomHttpEnv>;
+	/** Only a failure gets a line: a peer's relays and reads already count on the sender, at one line per push otherwise. */
+	failuresOnly?: boolean;
 }): MiddlewareHandler<AtomHttpEnv> {
 	let allowedChecks = 0;
 
@@ -47,6 +50,7 @@ export function requestLogMiddleware({
 			statusCode,
 			forwarded: forwarded !== undefined,
 		});
+		if (failuresOnly && statusCode < 400) return;
 		const allowed = context.get("allowed") === true;
 		if (allowed) allowedChecks++;
 		const sampled = allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED;

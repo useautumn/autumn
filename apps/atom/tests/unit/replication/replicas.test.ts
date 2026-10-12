@@ -112,6 +112,43 @@ const signedSince = (body: unknown) => {
 	};
 };
 
+describe("the peer port's request lines", () => {
+	test("a relayed push leaves none; a request the peer refuses leaves one", async () => {
+		const lines: string[] = [];
+		const record = (_fields: unknown, message: unknown) =>
+			void lines.push(String(message));
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: [],
+			logger: { info: record, warn: record, error: record },
+		});
+		const body = bodyFor({ customerId: "cus_1", readAt: 1700, balance: 10 });
+		const relayed = {
+			method: "POST",
+			headers: peerRequestHeaders({
+				secret: PEER_SECRET,
+				method: "POST",
+				path: "/v1/subjects.set",
+				customerId: "cus_1",
+				body,
+				headers: { [ATOM_CUSTOMER_ID_HEADER]: "cus_1" },
+			}),
+			body,
+		};
+
+		const applied = await b.peerApp.request("/v1/subjects.set", relayed);
+		const refused = await b.peerApp.request("/v1/subjects.set", {
+			...relayed,
+			headers: { ...relayed.headers, "x-atom-peer-signature": "00" },
+		});
+
+		expect([applied.status, refused.status]).toEqual([200, 401]);
+		expect(lines).toEqual([
+			expect.stringMatching(/^\[401\] POST \/v1\/subjects.set/),
+		]);
+	});
+});
+
 describe("a push one replica receives", () => {
 	test("is applied there, then on every other replica, each counting what it relayed", async () => {
 		const a = createReplica({

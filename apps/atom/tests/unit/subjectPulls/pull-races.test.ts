@@ -150,7 +150,7 @@ test("R11 a pull in flight loses to a newer push that lands first: the push is k
 
 	expect(
 		await atom.push(customerAt({ balance: 7, logOffset: 105n, readAt: 20 })),
-	).toBe(true);
+	).toMatchObject({ stored: true });
 	await atom.calls[0]?.answer(
 		atom.bodyOf(customerAt({ balance: 3, logOffset: 100n, readAt: 10 })),
 	);
@@ -181,7 +181,7 @@ test("R5 an evict lands between a pull's read and its store: the entity is store
 				customerVersion: 140n,
 			}),
 		),
-	).toBe(true);
+	).toMatchObject({ stored: true });
 	await atom.calls[0]?.answer(pulled);
 
 	// The entity's own part is stored (a fill), its customer part refused as older, and 130 < 140 makes it stale.
