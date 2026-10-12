@@ -83,6 +83,7 @@ const createFakeKafka = ({
 			GROUP_JOIN: "consumer.group_join",
 			REBALANCING: "consumer.rebalancing",
 			END_BATCH_PROCESS: "consumer.end_batch_process",
+			FETCH: "consumer.fetch",
 		},
 		on: (event: string, listener: (event: unknown) => void) => {
 			const registered = listeners.get(event) ?? new Set();
@@ -232,7 +233,18 @@ const createFakeKafka = ({
 			},
 		});
 
-	return { kafka, events, deliver, crash, joinGroup, fetchWithoutLanding };
+	const completeFetch = () =>
+		emit("consumer.fetch", { payload: { numberOfBatches: 0, duration: 1 } });
+
+	return {
+		kafka,
+		events,
+		deliver,
+		crash,
+		joinGroup,
+		fetchWithoutLanding,
+		completeFetch,
+	};
 };
 
 const recordType = (payload: unknown) => {
@@ -482,13 +494,70 @@ test("a job that has landed the whole log reports no lag", async () => {
 
 test("a job that has fetched but landed nothing counts its lag from joining the group", async () => {
 	let nowMs = 100 * MINUTE_MS;
-	const { joinGroup, fetchWithoutLanding, consumer } = await startConsumer({
+	const { joinGroup, fetchWithoutLanding, completeFetch, consumer } =
+		await startConsumer({
+			job: { name: "usage-events", handle: async () => {} },
+			now: () => nowMs,
+		});
+	joinGroup();
+	expect(consumer.health().maxLagMs).toBe(0);
+	fetchWithoutLanding({ highWatermark: "100" });
+	nowMs += 35 * MINUTE_MS;
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(35 * MINUTE_MS);
+});
+
+test("a caught-up job whose fetches stop counts its lag from the last fetch", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { deliver, joinGroup, completeFetch, consumer } = await startConsumer({
 		job: { name: "usage-events", handle: async () => {} },
 		now: () => nowMs,
 	});
 	joinGroup();
-	expect(consumer.health().maxLagMs).toBeNull();
-	fetchWithoutLanding({ highWatermark: "100" });
-	nowMs += 35 * MINUTE_MS;
-	expect(consumer.health().maxLagMs).toBe(35 * MINUTE_MS);
+	completeFetch();
+	await deliver({
+		records: [{ ...trackMessage({ offset: "1" }), timestamp: String(nowMs) }],
+		highWatermark: "2",
+	});
+	expect(consumer.health().maxLagMs).toBe(0);
+	nowMs += 40 * MINUTE_MS;
+	expect(consumer.health().maxLagMs).toBe(40 * MINUTE_MS);
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(0);
+});
+
+test("a partition handed back after a rebalance counts its lag from the new join until a record lands", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { deliver, joinGroup, completeFetch, consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	joinGroup();
+	await deliver({
+		records: ["0", "1"].map((offset) => ({
+			...trackMessage({ offset }),
+			timestamp: String(60 * MINUTE_MS),
+		})),
+	});
+	nowMs = 200 * MINUTE_MS;
+	joinGroup();
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(0);
+	nowMs += 5 * MINUTE_MS;
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(5 * MINUTE_MS);
+});
+
+test("a job still joining its group counts its lag from when it started joining", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	nowMs += 45 * MINUTE_MS;
+	expect(consumer.health()).toMatchObject({
+		membership: "joining",
+		partitions: 0,
+		maxLagMs: 45 * MINUTE_MS,
+	});
 });

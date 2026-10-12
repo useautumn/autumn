@@ -22,13 +22,14 @@ export function createJobLagReporter({
 
 	function report(): void {
 		for (const job of ctx.readJobs()) {
-			if (job.partitions === 0) continue;
+			if (job.membership === "idle" || job.membership === "leaving") continue;
 			ctx.logger.info(
 				{
 					type: "herald_job_lag",
 					data: {
 						instanceId,
 						job: job.name,
+						membership: job.membership,
 						partitions: job.partitions,
 						maxLagRecords: job.maxLagRecords,
 						maxLagMs: job.maxLagMs,
