@@ -68,6 +68,30 @@ describe("opening a volume item", () => {
 	});
 });
 
+describe("opening while editing", () => {
+	test("Flat stays selected while every fee is still 0", () => {
+		expect(
+			itemToVolumePricingModeOnOpen({
+				item: volumeItem([
+					{ to: 100, amount: 0, flat_amount: 0 },
+					{ to: Infinite, amount: 0, flat_amount: 0 },
+				]),
+			}),
+		).toBe("flat");
+	});
+
+	test("fresh all-zero tiers without flat fields open in Per Unit", () => {
+		expect(
+			itemToVolumePricingModeOnOpen({
+				item: volumeItem([
+					{ to: 100, amount: 0 },
+					{ to: Infinite, amount: 0 },
+				]),
+			}),
+		).toBe("per_unit");
+	});
+});
+
 describe("saving with no edits", () => {
 	test("keeps every per-unit rate and flat fee, base and EUR", () => {
 		const saved = openAndSave(volumeItem(mixedTiers));

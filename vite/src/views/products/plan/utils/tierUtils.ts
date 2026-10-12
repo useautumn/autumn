@@ -2,7 +2,6 @@ import {
 	formatAmount,
 	formatVolumeTierRule,
 	Infinite,
-	isVolumeFlatFeeTiers,
 	type PriceTier,
 	type ProductItem,
 	TierBehavior,
@@ -202,17 +201,19 @@ export const updateTier = ({
 
 export type VolumePricingMode = "flat" | "per_unit";
 
-/** Flat only when every unit rate is 0, so mixed tiers open with their rates visible. */
+/** Flat only when no tier has a unit rate, so mixed tiers open with their rates visible.
+ * A flat field at 0 still counts, so Flat stays selected while its fees are being entered. */
 export const itemToVolumePricingModeOnOpen = ({
 	item,
 }: {
 	item: ProductItem | null | undefined;
 }): VolumePricingMode => {
-	const isFlatOnly = isVolumeFlatFeeTiers({
-		tierBehavior: item?.tier_behavior,
-		tiers: item?.tiers,
-	});
-	if (isFlatOnly) return "flat";
+	const tiers = item?.tiers ?? [];
+	if (item?.tier_behavior !== TierBehavior.VolumeBased) return "per_unit";
+
+	const hasNoUnitRates = tiers.every((tier) => !tier.amount);
+	const hasFlatField = tiers.some((tier) => tier.flat_amount != null);
+	if (hasNoUnitRates && hasFlatField) return "flat";
 	return "per_unit";
 };
 

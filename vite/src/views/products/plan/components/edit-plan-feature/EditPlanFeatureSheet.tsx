@@ -74,7 +74,8 @@ export function EditPlanFeatureSheet({
 	};
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		if (!item?.tiers) return;
+		// Re-selecting the current mode must not move or clear stored prices.
+		if (!item?.tiers || mode === volumePricingMode) return;
 		setItem(itemToVolumePricingMode({ item, mode }));
 	};
 
