@@ -1,5 +1,5 @@
 import type { AtomMetricsRange, GetAtomMetricsResponse } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -16,24 +16,28 @@ export const useAtomMetricsQuery = ({
 	const axiosInstance = useAxiosInstance();
 	const { basePath, queryKey } = useAtomApi();
 
-	const { data, dataUpdatedAt, isLoading } = useQuery<GetAtomMetricsResponse>({
+	const { data, isLoading } = useQuery({
 		queryKey: [...queryKey, "metrics", range],
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<GetAtomMetricsResponse>(
 				`${basePath}/byoc.get_atom_metrics`,
 				{ range },
 			);
-			return data;
+			return { ...data, range, fetchedAt: Date.now() };
 		},
 		enabled,
+		// A range switch keeps the current charts until the new range lands, rather than blinking to skeletons.
+		placeholderData: keepPreviousData,
 		refetchInterval: REFETCH_INTERVAL_MS,
 	});
 
 	return {
+		/** The range and fetch time the data is for: the previous range's until a switched one lands. */
+		range: data?.range ?? range,
 		periodSeconds: data?.period_seconds ?? 0,
 		points: data?.points ?? [],
 		latest: data?.latest ?? null,
-		fetchedAt: dataUpdatedAt,
+		fetchedAt: data?.fetchedAt ?? 0,
 		isLoading: isLoading || !enabled,
 	};
 };

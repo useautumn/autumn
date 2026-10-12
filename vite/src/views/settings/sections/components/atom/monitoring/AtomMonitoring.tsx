@@ -45,13 +45,13 @@ export const AtomMonitoring = ({
 			...ATOM_METRICS_STATISTICS,
 		]).withDefault("maximum"),
 	);
-	const { points, latest, periodSeconds, fetchedAt, isLoading } =
-		useAtomMetricsQuery({ range, enabled: !isPending });
+	const metrics = useAtomMetricsQuery({ range, enabled: !isPending });
+	const { points, latest, periodSeconds, fetchedAt, isLoading } = metrics;
 	const chartData = toAtomMetricsChartData({
 		points,
 		latest,
 		periodSeconds,
-		range,
+		range: metrics.range,
 		statistic,
 		fetchedAt,
 	});
