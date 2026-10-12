@@ -3,10 +3,7 @@ import { openAuth } from "../auth/openAuth.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
-import {
-	catchUpFromPeers,
-	SETTLE_CATCH_UPS_MS,
-} from "../replication/catchUp/catchUpFromPeers.js";
+import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
@@ -29,10 +26,31 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const counters = openThreadCounters({ buffer: init.stats, index });
 	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
 	const replication =
-		env.ATOM_MODE === "deployed"
-			? openReplication({ env, counters, logger })
+		env.ATOM_MODE === "deployed" && env.ATOM_PEER_SECRET
+			? openReplication({ env, secret: env.ATOM_PEER_SECRET, counters, logger })
 			: undefined;
+	if (env.ATOM_MODE === "deployed" && !replication)
+		logger.warn(
+			{ type: "atom_replication_off" },
+			"ATOM_PEER_SECRET is not set: this replica neither relays to nor catches up from other replicas",
+		);
 	let stopping = false;
+	const slots = auth.slotsFor({ atomId: null });
+	// Built before the thread listens: the point it fell behind at must not move once live relays land.
+	const sync =
+		replication && slots && env.ATOM_PEER_SECRET
+			? createReplicaSync({
+					ctx: {
+						replication,
+						port: env.ATOM_PEER_PORT,
+						secret: env.ATOM_PEER_SECRET,
+						logger,
+						now: Date.now,
+						isStopping: () => stopping,
+					},
+					slots,
+				})
+			: undefined;
 	const server = createAtomServer({
 		ctx: {
 			auth,
@@ -70,23 +88,15 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
 	async function start(): Promise<void> {
 		await server.start();
-		const slots = auth.slotsFor({ atomId: null });
-		if (!replication || !slots) return;
-		const ctx = {
-			replication,
-			port: env.ATOM_PORT,
-			tokenHash: env.ATOM_TOKEN_HASH,
-			logger,
-		};
-		await catchUpFromPeers({ ctx, slots });
-		// Peers learn this replica's address a little after it serves; later passes cover what they relayed elsewhere meanwhile.
-		void (async () => {
-			for (const delayMs of SETTLE_CATCH_UPS_MS) {
-				await Bun.sleep(delayMs);
-				if (stopping) return;
-				await catchUpFromPeers({ ctx, slots });
-			}
-		})();
+		if (!sync) return;
+		await sync.catchUp();
+		const resent = sync.resendRecent();
+		if (resent > 0)
+			logger.info(
+				{ type: "atom_resend", data: { resent } },
+				`Sent ${resent} recently written subjects to the peers again`,
+			);
+		void sync.runPasses();
 	}
 
 	async function stop(): Promise<void> {
@@ -100,10 +110,12 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 /** The pushes this thread applies, on their way to every other replica. */
 const openReplication = ({
 	env,
+	secret,
 	counters,
 	logger,
 }: {
 	env: ThreadInit["env"];
+	secret: string;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
 }) => {
@@ -112,8 +124,8 @@ const openReplication = ({
 	registry.register(CATALOG_PUSH);
 	return createReplication({
 		ctx: {
-			tokenHash: env.ATOM_TOKEN_HASH,
-			port: env.ATOM_PORT,
+			secret,
+			port: env.ATOM_PEER_PORT,
 			registry,
 			counters,
 			logger,
