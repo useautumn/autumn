@@ -75,6 +75,8 @@ export type ClusterOptions = {
 	customers?: number;
 	/** Entities per customer; Autumn pushes an entity's view as often as the customer's own. */
 	entities?: number;
+	/** How often an entity's view announces the end of the customer's own plan. */
+	planEndRate?: number;
 	log?: boolean;
 };
 
@@ -87,6 +89,7 @@ export const createSimCluster = ({
 	profile = {},
 	customers = 8,
 	entities = 0,
+	planEndRate = 0,
 	log = false,
 }: ClusterOptions) => {
 	const rng = createSeededRandom(seed);
@@ -136,6 +139,9 @@ export const createSimCluster = ({
 	};
 
 	/** A customer's view, or an entity's: the customer's rows with the entity's own beside them. */
+	/** Customers whose customer-level plan ended: their own rows are gone until a customer view brings new ones. */
+	const planEnded = new Set<string>();
+
 	const subjectBody = ({
 		customerId,
 		entityId,
@@ -147,6 +153,7 @@ export const createSimCluster = ({
 		balance: number;
 		readAt: number;
 	}) => {
+		const customerRows = !entityId || !planEnded.has(customerId);
 		const entity = entityId
 			? {
 					...entityFixture,
@@ -159,9 +166,11 @@ export const createSimCluster = ({
 			: balance;
 		const state = createSubjectState({
 			identity: { ...identity, customerId, entityId },
-			customerProducts: [createCustomerProduct()],
+			customerProducts: customerRows ? [createCustomerProduct()] : [],
 			customerEntitlements: [
-				createCustomerEntitlement({ balance: customerBalance }),
+				...(customerRows
+					? [createCustomerEntitlement({ balance: customerBalance })]
+					: []),
 				...(entity
 					? [
 							{
@@ -210,6 +219,13 @@ export const createSimCluster = ({
 		const key = subjectKey({ customerId, entityId });
 		const balance = (versions.get(key) ?? 0) + 1;
 		versions.set(key, balance);
+		// Now and then an entity's view is where a customer learns its own plan ended: it carries no customer rows.
+		const endsPlan =
+			entityId !== null &&
+			!planEnded.has(customerId) &&
+			rng.chance(planEndRate);
+		if (endsPlan) planEnded.add(customerId);
+		if (!entityId) planEnded.delete(customerId);
 		const { version, text } = subjectBody({
 			customerId,
 			entityId,
@@ -237,16 +253,29 @@ export const createSimCluster = ({
 				},
 			);
 			const { stored } = (await reply.json()) as { stored: boolean };
-			if (reply.status === 200 && stored)
+			if (reply.status === 200 && stored) {
+				const on = replicas.get(to)?.id ?? 0;
 				applied.push({
 					customerId,
 					entityId,
 					version,
 					balance,
 					at: clock.now(),
-					on: replicas.get(to)?.id ?? 0,
+					on,
 				});
-			else
+				// An entity's view rewrites the customer's own rows at its version: with none when the plan ended.
+				if (entityId)
+					applied.push({
+						customerId,
+						entityId: null,
+						version,
+						balance: planEnded.has(customerId)
+							? 0
+							: (versions.get(subjectKey({ customerId, entityId: null })) ?? 0),
+						at: clock.now(),
+						on,
+					});
+			} else
 				say(
 					`push ${customerId}@${balance} to ${to}: ${reply.status} stored=${stored}`,
 				);
@@ -497,7 +526,8 @@ export const createSimCluster = ({
 				);
 				byCustomer.set(subjectKey({ customerId, entityId: entityId ?? null }), {
 					version: { readAt: subject.readAt, logOffset: subject.logOffset },
-					balance: own?.balance ?? Number.NaN,
+					// A customer whose plan ended holds no rows of its own: 0.
+					balance: own?.balance ?? (entityId ? Number.NaN : 0),
 				});
 			}
 		}

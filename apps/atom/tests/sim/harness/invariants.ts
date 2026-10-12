@@ -73,18 +73,27 @@ export const assertFreshness = ({
 			check.balance === undefined
 		)
 			continue;
-		let newest = 0;
-		for (const entry of cluster.applied)
+		const own = cluster.applied.filter(
+			(entry) =>
+				entry.customerId === check.customerId && entry.entityId === null,
+		);
+		let newest: (typeof own)[number] | undefined;
+		for (const entry of own)
 			if (
-				entry.customerId === check.customerId &&
-				entry.entityId === null &&
 				entry.at <= check.at - boundMs &&
-				entry.balance > newest
+				(!newest || cluster.newer(entry.version, newest.version))
 			)
-				newest = entry.balance;
-		if (check.balance < newest)
+				newest = entry;
+		if (!newest) continue;
+		// The answer must come from that write or a later one, whatever balance those carried.
+		const current = own.some(
+			(entry) =>
+				entry.balance === check.balance &&
+				!cluster.newer(newest.version, entry.version),
+		);
+		if (!current)
 			throw new Error(
-				`check of ${check.customerId} on ${check.to} at +${check.at - 1_700_000_000_000}ms answered balance ${check.balance}; ${newest} was applied over ${boundMs}ms earlier${check.proxied ? " (proxied)" : ""}`,
+				`check of ${check.customerId} on ${check.to} at +${check.at - 1_700_000_000_000}ms answered balance ${check.balance}; ${newest.balance} was applied over ${boundMs}ms earlier${check.proxied ? " (proxied)" : ""}`,
 			);
 	}
 };
