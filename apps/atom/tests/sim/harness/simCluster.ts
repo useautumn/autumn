@@ -194,8 +194,9 @@ export const createSimCluster = ({
 		}
 	}
 
+	/** Autumn's next read of the shared catalog; counted as applied only when a replica said it stored it. */
 	async function pushCatalog() {
-		catalogReadAt = clock.now();
+		const readAt = clock.now();
 		const rows = createCatalogRowsFor({
 			state: createSubjectState({
 				identity,
@@ -206,16 +207,24 @@ export const createSimCluster = ({
 		const to = boundAddress();
 		if (!to) return;
 		try {
-			await outsideFetch(`http://${to}:${SIM_PORT}/v1/catalog.set`, {
-				method: "POST",
-				headers: {
-					"content-type": "application/json",
-					"x-atom-token": ATOM_TOKEN,
+			const reply = await outsideFetch(
+				`http://${to}:${SIM_PORT}/v1/catalog.set`,
+				{
+					method: "POST",
+					headers: {
+						"content-type": "application/json",
+						"x-atom-token": ATOM_TOKEN,
+					},
+					body: JSON.stringify({ rows, read_at: readAt }),
+					signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
 				},
-				body: JSON.stringify({ rows, read_at: catalogReadAt }),
-				signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
-			});
-		} catch {}
+			);
+			const { stored } = (await reply.json()) as { stored: boolean };
+			if (reply.status === 200 && stored)
+				catalogReadAt = Math.max(catalogReadAt, readAt);
+		} catch (error) {
+			say(`catalog push to ${to} failed: ${String(error).slice(0, 40)}`);
+		}
 	}
 
 	/** The customer's app checking a balance through the balancer; what it was told is kept for the staleness bound. */
