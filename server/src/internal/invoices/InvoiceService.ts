@@ -2,6 +2,7 @@ import { invalidateCustomerInvoicesCache } from "@autumn/cache";
 import { getAutumnEnv } from "@autumn/env";
 import {
 	type ApiInvoiceV1,
+	type AppEnv,
 	type Customer,
 	customers,
 	ErrCode,
@@ -368,6 +369,7 @@ export class InvoiceService {
 		internalProductIds,
 		status,
 		org,
+		env,
 		items = [],
 	}: {
 		db: DrizzleCli;
@@ -378,6 +380,7 @@ export class InvoiceService {
 		internalProductIds: string[];
 		status?: InvoiceStatus | null;
 		org: Organization;
+		env: AppEnv;
 		items?: InvoiceItem[];
 	}) {
 		// Convert product ids to unique product ids
@@ -394,15 +397,18 @@ export class InvoiceService {
 			currency: stripeInvoice.currency,
 		});
 
-		const invoice: Invoice = {
+		const invoice: InsertInvoice = {
 			id: generateId("inv"),
 			internal_customer_id: internalCustomerId,
+			org_id: org.id,
+			env,
 			product_ids: uniqueProductIds,
 			created_at: stripeInvoice.created * 1000,
 			stripe_id: stripeInvoice.id!,
 			processor_type: ProcessorType.Stripe,
 			hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
-			status: status || (stripeInvoice.status as InvoiceStatus | null),
+			status:
+				status || (stripeInvoice.status as InvoiceStatus | null) || undefined,
 			internal_product_ids: uniqueInternalProductIds,
 			internal_entity_id: internalEntityId || null,
 
@@ -421,10 +427,7 @@ export class InvoiceService {
 
 		let newInvoice: Invoice | null = null;
 		try {
-			const results = await db
-				.insert(invoices)
-				.values(invoice as any)
-				.returning();
+			const results = await db.insert(invoices).values(invoice).returning();
 			if (results.length === 0) {
 				return null;
 			}
@@ -520,6 +523,8 @@ export class InvoiceService {
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: {
+					org_id: sql`COALESCE(${invoices.org_id}, excluded.org_id)`,
+					env: sql`COALESCE(${invoices.env}, excluded.env)`,
 					status: invoice.status,
 					hosted_invoice_url: invoice.hosted_invoice_url,
 					discounts: invoice.discounts,
@@ -579,6 +584,8 @@ export class InvoiceService {
 					product_ids: sql`excluded.product_ids`,
 					internal_product_ids: sql`excluded.internal_product_ids`,
 					internal_customer_id: sql`excluded.internal_customer_id`,
+					org_id: sql`excluded.org_id`,
+					env: sql`excluded.env`,
 					internal_entity_id: sql`excluded.internal_entity_id`,
 					processor_type: sql`excluded.processor_type`,
 					status: sql`excluded.status`,
