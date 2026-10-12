@@ -67,6 +67,7 @@ const EVE_PORT = process.env.EVE_PORT
 	? Number.parseInt(process.env.EVE_PORT, 10)
 	: 3999 + portOffset;
 const ATOM_PORT = 8086 + portOffset;
+const ATOM_PEER_PORT = 8087 + portOffset;
 const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
 /** Minted per run: the dev server registers each org's Atom with it; the Atom keeps only its hash. */
 const ATOM_ADMIN_TOKEN = `atom_admin_${randomBytes(32).toString("base64url")}`;
@@ -487,6 +488,8 @@ async function startDev() {
 				.digest("hex"),
 			ATOM_SLOT_COUNT: "2",
 			ATOM_PORT: ATOM_PORT.toString(),
+			ATOM_PEER_PORT: ATOM_PEER_PORT.toString(),
+			ATOM_PEER_SECRET: randomBytes(32).toString("hex"),
 			ATOM_DATA_DIR: join(projectRoot, ".data", "atom"),
 			ATOM_URL,
 			ATOM_ADMIN_TOKEN,

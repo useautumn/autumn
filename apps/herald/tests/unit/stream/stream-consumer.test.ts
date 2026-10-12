@@ -51,7 +51,12 @@ const badMessage = ({ offset }: { offset: string }) => ({
 	value: Buffer.from("{"),
 });
 
-type Delivered = { offset: string; key: Buffer | null; value: Buffer | null };
+type Delivered = {
+	offset: string;
+	key: Buffer | null;
+	value: Buffer | null;
+	timestamp?: string;
+};
 
 /**
  * The slice of kafkajs herald touches, over the real package consumer: run config captured, resolves,
@@ -65,7 +70,10 @@ const createFakeKafka = ({
 	committed?: Record<number, string>;
 } = {}) => {
 	const events: string[] = [];
-	const listeners = new Map<string, (event: unknown) => void>();
+	const listeners = new Map<string, Set<(event: unknown) => void>>();
+	const emit = (name: string, event: unknown) => {
+		for (const listener of listeners.get(name) ?? []) listener(event);
+	};
 	let runConfig: ConsumerRunConfig | undefined;
 	let running = false;
 	let heartbeats = 0;
@@ -75,10 +83,13 @@ const createFakeKafka = ({
 			GROUP_JOIN: "consumer.group_join",
 			REBALANCING: "consumer.rebalancing",
 			END_BATCH_PROCESS: "consumer.end_batch_process",
+			FETCH: "consumer.fetch",
 		},
 		on: (event: string, listener: (event: unknown) => void) => {
-			listeners.set(event, listener);
-			return () => listeners.delete(event);
+			const registered = listeners.get(event) ?? new Set();
+			registered.add(listener);
+			listeners.set(event, registered);
+			return () => registered.delete(listener);
 		},
 		connect: async () => {
 			events.push("connect");
@@ -135,7 +146,13 @@ const createFakeKafka = ({
 		admin: () => admin,
 	} as unknown as Pick<Kafka, "consumer" | "admin">;
 
-	const deliver = async ({ records }: { records: Delivered[] }) => {
+	const deliver = async ({
+		records,
+		highWatermark = "100",
+	}: {
+		records: Delivered[];
+		highWatermark?: string;
+	}) => {
 		if (!runConfig?.eachBatch) throw new Error("Consumer has not started");
 		let resolved: string | undefined;
 		const messages: KafkaMessage[] = records.map((record) => ({
@@ -148,7 +165,7 @@ const createFakeKafka = ({
 			batch: {
 				topic,
 				partition,
-				highWatermark: "100",
+				highWatermark,
 				messages,
 				firstOffset: () => messages[0]?.offset ?? null,
 				lastOffset: () => messages.at(-1)?.offset ?? "0",
@@ -196,11 +213,38 @@ const createFakeKafka = ({
 	};
 
 	const crash = ({ restart }: { restart: boolean }) =>
-		listeners.get("consumer.crash")?.({
+		emit("consumer.crash", {
 			payload: { error: new Error("boom"), restart, groupId: "g" },
 		} as ConsumerCrashEvent);
 
-	return { kafka, events, deliver, crash };
+	const joinGroup = () =>
+		emit("consumer.group_join", {
+			payload: { memberAssignment: { [topic]: [partition] } },
+		});
+
+	const fetchWithoutLanding = ({ highWatermark }: { highWatermark: string }) =>
+		emit("consumer.end_batch_process", {
+			payload: {
+				topic,
+				partition,
+				highWatermark,
+				batchSize: 3,
+				lastOffset: "2",
+			},
+		});
+
+	const completeFetch = () =>
+		emit("consumer.fetch", { payload: { numberOfBatches: 0, duration: 1 } });
+
+	return {
+		kafka,
+		events,
+		deliver,
+		crash,
+		joinGroup,
+		fetchWithoutLanding,
+		completeFetch,
+	};
 };
 
 const recordType = (payload: unknown) => {
@@ -214,6 +258,7 @@ const startConsumer = async ({
 	job,
 	recordsPerSlice = 2,
 	storedFence,
+	now,
 	...options
 }: {
 	job: StreamConsumer;
@@ -222,6 +267,7 @@ const startConsumer = async ({
 	committed?: Record<number, string>;
 	/** What partition_progress holds for the partition; undefined leaves the store out entirely. */
 	storedFence?: { epoch: bigint; offset: bigint } | null;
+	now?: () => number;
 }) => {
 	const fake = createFakeKafka(options);
 	const crashes: string[] = [];
@@ -248,6 +294,7 @@ const startConsumer = async ({
 			onCrashed: ({ job: name }) => {
 				crashes.push(name);
 			},
+			now,
 		},
 		config: { topic, groupIdPrefix: "local-herald", recordsPerSlice },
 		streamConsumer: job,
@@ -407,4 +454,110 @@ test("a consumer crash kafkajs will not restart is reported; one it restarts is 
 	expect(crashes).toEqual([]);
 	crash({ restart: false });
 	expect(crashes).toEqual(["usage-events"]);
+});
+
+const MINUTE_MS = 60_000;
+
+test("a job behind the log reports how long ago its last landed record was written", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { deliver, joinGroup, consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	joinGroup();
+	await deliver({
+		records: ["0", "1"].map((offset) => ({
+			...trackMessage({ offset }),
+			timestamp: String(60 * MINUTE_MS),
+		})),
+	});
+	expect(consumer.health()).toMatchObject({
+		maxLagRecords: 98,
+		maxLagMs: 40 * MINUTE_MS,
+	});
+	nowMs += 25 * MINUTE_MS;
+	expect(consumer.health().maxLagMs).toBe(65 * MINUTE_MS);
+});
+
+test("a job that has landed the whole log reports no lag", async () => {
+	const { deliver, joinGroup, consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => 100 * MINUTE_MS,
+	});
+	joinGroup();
+	await deliver({
+		records: [{ ...trackMessage({ offset: "1" }), timestamp: "1" }],
+		highWatermark: "2",
+	});
+	expect(consumer.health()).toMatchObject({ maxLagRecords: 0, maxLagMs: 0 });
+});
+
+test("a job that has fetched but landed nothing counts its lag from joining the group", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { joinGroup, fetchWithoutLanding, completeFetch, consumer } =
+		await startConsumer({
+			job: { name: "usage-events", handle: async () => {} },
+			now: () => nowMs,
+		});
+	joinGroup();
+	expect(consumer.health().maxLagMs).toBe(0);
+	fetchWithoutLanding({ highWatermark: "100" });
+	nowMs += 35 * MINUTE_MS;
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(35 * MINUTE_MS);
+});
+
+test("a caught-up job whose fetches stop counts its lag from the last fetch", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { deliver, joinGroup, completeFetch, consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	joinGroup();
+	completeFetch();
+	await deliver({
+		records: [{ ...trackMessage({ offset: "1" }), timestamp: String(nowMs) }],
+		highWatermark: "2",
+	});
+	expect(consumer.health().maxLagMs).toBe(0);
+	nowMs += 40 * MINUTE_MS;
+	expect(consumer.health().maxLagMs).toBe(40 * MINUTE_MS);
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(0);
+});
+
+test("a partition handed back after a rebalance counts its lag from the new join until a record lands", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { deliver, joinGroup, completeFetch, consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	joinGroup();
+	await deliver({
+		records: ["0", "1"].map((offset) => ({
+			...trackMessage({ offset }),
+			timestamp: String(60 * MINUTE_MS),
+		})),
+	});
+	nowMs = 200 * MINUTE_MS;
+	joinGroup();
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(0);
+	nowMs += 5 * MINUTE_MS;
+	completeFetch();
+	expect(consumer.health().maxLagMs).toBe(5 * MINUTE_MS);
+});
+
+test("a job still joining its group counts its lag from when it started joining", async () => {
+	let nowMs = 100 * MINUTE_MS;
+	const { consumer } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+		now: () => nowMs,
+	});
+	nowMs += 45 * MINUTE_MS;
+	expect(consumer.health()).toMatchObject({
+		membership: "joining",
+		partitions: 0,
+		maxLagMs: 45 * MINUTE_MS,
+	});
 });

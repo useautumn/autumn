@@ -65,6 +65,7 @@ export const toolAllowlists = {
 		"stripeRead",
 		"updateAgentRules",
 		"updateCustomer",
+		"updateInvoice",
 		"updateSubscription",
 		"voidInvoice",
 	],

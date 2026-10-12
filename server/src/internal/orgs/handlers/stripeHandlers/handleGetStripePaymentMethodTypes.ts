@@ -17,6 +17,15 @@ const isSupported = ({
 	type: InvoicePaymentMethod;
 }) => Boolean(configuration[type]);
 
+/** What Stripe offers on an invoice that sets no payment_method_types: the methods turned on in this configuration. */
+const enabledTypes = (configuration: Stripe.PaymentMethodConfiguration) =>
+	Object.entries(configuration).flatMap(([type, setting]) =>
+		(setting as { display_preference?: { value?: string } } | null)
+			?.display_preference?.value === "on"
+			? [type]
+			: [],
+	);
+
 /** Dashboard-only: invoice payment method types the connected Stripe account supports. */
 export const handleGetStripePaymentMethodTypes = createRoute({
 	scopes: [Scopes.Organisation.Read],
@@ -24,7 +33,10 @@ export const handleGetStripePaymentMethodTypes = createRoute({
 		const ctx = c.get("ctx");
 		const { org, env, logger } = ctx;
 		if (!isStripeConnected({ org, env })) {
-			return c.json({ payment_method_types: null });
+			return c.json({
+				payment_method_types: null,
+				default_configuration: null,
+			});
 		}
 
 		try {
@@ -35,18 +47,30 @@ export const handleGetStripePaymentMethodTypes = createRoute({
 			const configuration =
 				configurations.find((entry) => entry.is_default && entry.active) ??
 				configurations.find((entry) => entry.active);
-			if (!configuration) return c.json({ payment_method_types: null });
+			if (!configuration) {
+				return c.json({
+					payment_method_types: null,
+					default_configuration: null,
+				});
+			}
 
 			return c.json({
 				payment_method_types: InvoicePaymentMethodSchema.options.filter(
 					(type) => isSupported({ configuration, type }),
 				),
+				default_configuration: {
+					id: configuration.id,
+					payment_method_types: enabledTypes(configuration),
+				},
 			});
 		} catch (error) {
 			logger.warn(
 				`Failed to list Stripe payment method configurations for org ${org.slug}: ${error}`,
 			);
-			return c.json({ payment_method_types: null });
+			return c.json({
+				payment_method_types: null,
+				default_configuration: null,
+			});
 		}
 	},
 });

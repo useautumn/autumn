@@ -4,7 +4,6 @@ import {
 	FormLabel,
 	GroupedTabButton,
 	Input,
-	Switch,
 } from "@autumn/ui";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { PaymentMethodTypesSelect } from "@/components/forms/shared/PaymentMethodTypesSelect";
@@ -25,15 +24,12 @@ export function CollectionMethodConfigRow() {
 		selected,
 		locked,
 		sendsInvoice,
-		isActive,
 		missingCard,
 		netTermsDays,
 		paymentMethodTypes,
-		applyToAutoTopups,
 		setTarget,
 		setNetTermsDays,
 		setPaymentMethodTypes,
-		setApplyToAutoTopups,
 	} = collectionMethodSwitch;
 
 	if (!selected) return null;
@@ -76,23 +72,6 @@ export function CollectionMethodConfigRow() {
 						onValueChange={setPaymentMethodTypes}
 					/>
 				</div>
-			)}
-
-			{isActive && (
-				<ConfigRow
-					title="Apply to auto top-ups"
-					description={
-						sendsInvoice
-							? "This customer's auto top-ups are invoiced too"
-							: "This customer's auto top-ups are charged automatically too"
-					}
-					action={
-						<Switch
-							checked={applyToAutoTopups}
-							onCheckedChange={(checked) => setApplyToAutoTopups(!!checked)}
-						/>
-					}
-				/>
 			)}
 
 			{missingCard && (

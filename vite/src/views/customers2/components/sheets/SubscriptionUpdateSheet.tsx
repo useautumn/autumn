@@ -43,6 +43,7 @@ import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheet
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 function SendInvoiceContent() {
 	const { formContext, isPending, handleInvoiceUpdate, previewQuery } =
@@ -83,6 +84,12 @@ function EditContent() {
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct } = formContext;
+	const isPendingPlan = customerProduct.status === CusProductStatus.Pending;
+	const { data: pendingPaymentLink } = usePendingPaymentLink({
+		customerId: formContext.customerId,
+		customerProductId: customerProduct.id,
+		enabled: isPendingPlan,
+	});
 
 	return (
 		<LayoutGroup>
@@ -127,16 +134,20 @@ function EditContent() {
 					</div>
 				</div>
 
-				{customerProduct.status === CusProductStatus.Pending &&
-					hasChanges &&
-					!hasNoBillingChanges && (
-						<div className="px-4 pt-4">
+				{isPendingPlan && hasChanges && !hasNoBillingChanges && (
+					<div className="px-4 pt-4">
+						{pendingPaymentLink?.longLived ? (
+							<InfoBox variant="note" classNames={{ infoBox: "w-full" }}>
+								Reuses the existing checkout link.
+							</InfoBox>
+						) : (
 							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
 								Updating creates a new payment link. The existing one will stop
 								working.
 							</InfoBox>
-						</div>
-					)}
+						)}
+					</div>
+				)}
 
 				<EditPlanSection />
 				<UpdateSubscriptionAdvancedSection />

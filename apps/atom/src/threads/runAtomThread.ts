@@ -1,12 +1,19 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import type { Auth } from "../auth/types/auth.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
+import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
+import {
+	createDeployedFolders,
+	createMultiTenantFolders,
+} from "../replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
+import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
 import type { Slots } from "../slots/types/slots.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
@@ -36,17 +43,16 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
 	const answerPorts = new Map<number, MessagePort>();
 	let stopping = false;
-	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
-	const replicas =
-		env.ATOM_MODE === "deployed"
-			? openReplicas({
-					env,
-					slots: auth.slotsFor({ atomId: null }),
-					counters,
-					logger,
-					isStopping: () => stopping,
-				})
-			: undefined;
+	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
+	const replicas = openReplicas({
+		env,
+		folders: multiTenant
+			? createMultiTenantFolders({ auth: multiTenant.auth })
+			: createDeployedFolders({ slots: ownFolder({ auth }) }),
+		counters,
+		logger,
+		isStopping: () => stopping,
+	});
 	const server = createAtomServer({
 		ctx: {
 			auth,
@@ -60,7 +66,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			},
 			counters,
 			held,
-			replication: replicas?.replication,
+			replication: replicas.replication,
 		},
 		config: {
 			env,
@@ -84,7 +90,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
 	async function start(): Promise<void> {
 		await server.start();
-		if (!replicas) return;
 		await replicas.sync.catchUp();
 		void replicas.sync.runPasses();
 	}
@@ -99,25 +104,33 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	return { start, stop, join, leave };
 };
 
-/** The pushes this thread applies, on their way to every other replica, and what this one copies back from them. */
+/** An org's own Atom opens its one folder on every thread. */
+const ownFolder = ({ auth }: { auth: Auth }): Slots => {
+	const slots = auth.slotsFor({ atomId: null });
+	if (!slots)
+		throw new Error("An org's own Atom opens its one folder on every thread");
+	return slots;
+};
+
+/** The pushes and tenants this thread applies, on their way to every other replica, and what this one copies back from them. */
 const openReplicas = ({
 	env,
-	slots,
+	folders,
 	counters,
 	logger,
 	isStopping,
 }: {
-	env: Extract<ThreadInit["env"], { ATOM_MODE: "deployed" }>;
-	slots: Slots | null;
+	env: ThreadInit["env"];
+	folders: ReplicaFolders;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
 	isStopping: () => boolean;
 }) => {
-	if (!slots)
-		throw new Error("An org's own Atom opens its one folder on every thread");
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
 	registry.register(CATALOG_PUSH);
+	registry.register(ATOM_PUT);
+	registry.register(ATOM_DELETE);
 	const replication = createReplication({
 		ctx: {
 			secret: env.ATOM_PEER_SECRET,
@@ -128,7 +141,7 @@ const openReplicas = ({
 			logger,
 		},
 	});
-	// Built before the thread listens: the point it fell behind at must not move once live relays land.
+	// Built before the thread listens: the point each folder fell behind at must not move once live relays land.
 	const sync = createReplicaSync({
 		ctx: {
 			replication,
@@ -138,7 +151,7 @@ const openReplicas = ({
 			now: Date.now,
 			isStopping,
 		},
-		slots,
+		folders,
 	});
 	return { replication, sync };
 };

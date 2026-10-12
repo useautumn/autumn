@@ -61,14 +61,20 @@ export const AtomMetricsPointSchema = z.object({
 export const AtomMetricsLatestSchema = AtomMetricsRatesSchema.extend({
 	at: z
 		.number()
-		.describe("The start of the 10s window, in epoch milliseconds."),
+		.describe(
+			"The start of the newest 10s window in the last minute, in epoch milliseconds.",
+		),
 });
 
 export const GetAtomMetricsResponseSchema = z.object({
-	period_seconds: z.number(),
+	period_seconds: z
+		.number()
+		.describe(
+			"Each point's period: the finest that plots the range, or the Atom's life if shorter, in at most 120 points.",
+		),
 	points: z.array(AtomMetricsPointSchema).describe("Oldest first."),
 	latest: AtomMetricsLatestSchema.nullable().describe(
-		"The latest 10s window, or null when the Atom logged none in the last minute.",
+		"Rates over the last minute, or null when the Atom logged nothing in it.",
 	),
 });
 

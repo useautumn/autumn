@@ -203,7 +203,12 @@ describe("outbox bookkeeping (review of #4605)", () => {
 		});
 		for (let i = 0; i < 10; i++)
 			await outbox.enqueue({
-				operation: { kind: "subjects.set", key: `cus_${i}`, body: "{}" },
+				operation: {
+					kind: "subjects.set",
+					key: `cus_${i}`,
+					body: "{}",
+					atomId: null,
+				},
 				path: "/v1/subjects.set",
 			});
 		known = [];

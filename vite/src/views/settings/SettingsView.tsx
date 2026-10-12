@@ -31,12 +31,13 @@ import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
-import { AtomSection } from "./sections/AtomSection";
+import { AtomSection, AtomSectionSkeleton } from "./sections/AtomSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
 import { CustomButtonsSection } from "./sections/CustomButtonsSection";
@@ -234,12 +235,28 @@ export const useIsSettingsTabEnabled = () => {
 	};
 };
 
-export const SettingsView = () => {
-	const [searchParams, setSearchParams] = useSearchParams();
+/** The tab the URL asks for, or Account when it isn't enabled; a flagged tab waits for billing instead of flashing Account first. */
+const useActiveSettingsTab = (): SettingsTab => {
+	const [searchParams] = useSearchParams();
 	const isTabEnabled = useIsSettingsTabEnabled();
+	const { isLoading: isLoadingFlags } = useAutumnFlags();
 	const requestedTab = (searchParams.get("tab") as SettingsTab) || "account";
-	const activeTab = isTabEnabled(requestedTab) ? requestedTab : "account";
-	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
+	const isAwaitingFlag = isLoadingFlags && requestedTab in FLAGGED_TABS;
+	return isTabEnabled(requestedTab) || isAwaitingFlag
+		? requestedTab
+		: "account";
+};
+
+/** The settings nav beside the active tab's content. */
+const SettingsFrame = ({
+	activeTab,
+	children,
+}: {
+	activeTab: SettingsTab;
+	children: React.ReactNode;
+}) => {
+	const [, setSearchParams] = useSearchParams();
+	const isTabEnabled = useIsSettingsTabEnabled();
 
 	const handleTabChange = (tab: SettingsTab) => {
 		setSearchParams({ tab }, { replace: true });
@@ -314,10 +331,36 @@ export const SettingsView = () => {
 						</SelectContent>
 					</Select>
 					<SettingsGroupContext.Provider value={activeGroup?.label}>
-						<ActiveSection />
+						{children}
 					</SettingsGroupContext.Provider>
 				</div>
 			</div>
 		</div>
+	);
+};
+
+export const SettingsView = () => {
+	const activeTab = useActiveSettingsTab();
+	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
+	return (
+		<SettingsFrame activeTab={activeTab}>
+			<ActiveSection />
+		</SettingsFrame>
+	);
+};
+
+/** Tabs whose loading state is drawn as their layout, so the page settles in place. */
+const SECTION_SKELETONS: Partial<Record<SettingsTab, React.ComponentType>> = {
+	atom: AtomSectionSkeleton,
+};
+
+/** Settings as it will render, while the org it needs still loads. */
+export const SettingsViewSkeleton = () => {
+	const activeTab = useActiveSettingsTab();
+	const SectionSkeleton = SECTION_SKELETONS[activeTab] ?? LoadingScreen;
+	return (
+		<SettingsFrame activeTab={activeTab}>
+			<SectionSkeleton />
+		</SettingsFrame>
 	);
 };

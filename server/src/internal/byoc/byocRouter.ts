@@ -4,6 +4,7 @@ import { billingFeatureMiddleware } from "@/honoMiddlewares/billingFeatureMiddle
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCreateCache } from "./handlers/handleCreateCache.js";
 import { handleDeleteCache } from "./handlers/handleDeleteCache.js";
+import { handleFinishCacheSetup } from "./handlers/handleFinishCacheSetup.js";
 import { handleGetAtomMetrics } from "./handlers/handleGetAtomMetrics.js";
 import { handleGetCache } from "./handlers/handleGetCache.js";
 import { handleListAtomChecks } from "./handlers/handleListAtomChecks.js";
@@ -27,4 +28,5 @@ byocRpcRouter.post("/byoc.resize_atom", ...handleResizeCache);
 byocRpcRouter.post("/byoc.retry_atom", ...handleRetryCache);
 byocRpcRouter.post("/byoc.delete_atom", ...handleDeleteCache);
 byocRpcRouter.post("/byoc.list_atom_checks", ...handleListAtomChecks);
+byocRpcRouter.post("/byoc.finish_atom_setup", ...handleFinishCacheSetup);
 byocRpcRouter.post("/byoc.get_atom_metrics", ...handleGetAtomMetrics);

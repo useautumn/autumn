@@ -15,10 +15,11 @@ export const usePendingPaymentLink = ({
 	return useQuery({
 		queryKey: ["pending-payment-link", customerId, customerProductId],
 		queryFn: async () => {
-			const { data } = await axiosInstance.get(
-				`/customers/${customerId}/products/${customerProductId}/payment_link`,
-			);
-			return (data?.url as string | null) ?? null;
+			const { data } = await axiosInstance.get<{
+				url: string | null;
+				long_lived?: boolean;
+			}>(`/customers/${customerId}/products/${customerProductId}/payment_link`);
+			return { url: data?.url ?? null, longLived: data?.long_lived === true };
 		},
 		enabled: enabled && !!customerId && !!customerProductId,
 	});

@@ -1,11 +1,12 @@
-import { Bar } from "recharts";
-import type {
-	AtomMetricsChartData,
-	AtomMetricsReading,
-	AtomMetricsSeries,
-	AtomMetricsValues,
+import { Skeleton } from "@autumn/ui";
+import { Area } from "recharts";
+import {
+	type AtomMetricsChartData,
+	type AtomMetricsSeries,
+	requestsOf,
 } from "./atomMetricsChartData";
 import { formatPercent, formatRate, rateAxisTicks } from "./atomMetricsFormat";
+import { atomRequestsHeadline } from "./atomRequestsHeadline";
 import { MonitoringChartCard } from "./MonitoringChartCard";
 import { MonitoringLegend } from "./MonitoringLegend";
 import { MonitoringPlot } from "./MonitoringPlot";
@@ -22,7 +23,7 @@ const FORWARDED: AtomMetricsSeries = {
 	color: "var(--chart-series-other)",
 };
 
-/** Shown beside the checks for context, but kept out of the bars and the % answered. */
+/** Shown beside the checks for context, but kept out of the plot and the % answered. */
 const PUSHES: AtomMetricsSeries = {
 	key: "pushes",
 	label: "Subject pushes",
@@ -31,33 +32,54 @@ const PUSHES: AtomMetricsSeries = {
 
 const SERIES = [ANSWERED, FORWARDED, PUSHES];
 
-const requestsOf = (
-	values: Pick<AtomMetricsValues, "answered" | "forwarded">,
-) => (values.answered ?? 0) + (values.forwarded ?? 0);
-
-/** The req/s in the latest 10s, and how much of it Atom answered without Autumn. */
-const RequestsSummary = ({ now }: { now: AtomMetricsReading | null }) => {
-	const requests = now ? requestsOf(now) : null;
-	const answeredShare = now && requests ? (now.answered ?? 0) / requests : null;
+/** The req/s over the last minute and how much of it Atom answered without Autumn, or how long it has been idle. */
+const RequestsSummary = ({
+	chartData,
+	isLoading,
+}: {
+	chartData: AtomMetricsChartData | null;
+	isLoading: boolean;
+}) => {
+	const headline = atomRequestsHeadline(chartData);
 	return (
 		<div className="flex flex-wrap items-end justify-between gap-3">
 			<div className="flex flex-col gap-0.5">
-				<span className="flex items-baseline gap-1.5">
-					<span className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-						{formatRate(requests)}
-					</span>
-					<span className="text-sm text-tertiary-foreground">req/s</span>
+				<span className="flex h-8 items-baseline gap-1.5">
+					{isLoading ? (
+						<Skeleton className="h-7 w-24 self-center" />
+					) : headline.kind === "idle" ? (
+						<span className="text-2xl font-semibold tracking-tight text-tertiary-foreground">
+							No traffic
+						</span>
+					) : (
+						<>
+							<span className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
+								{formatRate(
+									headline.kind === "rate" ? headline.requests : null,
+								)}
+							</span>
+							<span className="text-sm text-tertiary-foreground">req/s</span>
+						</>
+					)}
 				</span>
-				{answeredShare !== null && (
-					<span className="text-sm text-tertiary-foreground">
-						<span style={{ color: ANSWERED.color }}>
-							{formatPercent(answeredShare)}
-						</span>{" "}
-						answered by Atom, no round trip to Autumn
-					</span>
-				)}
+				<span className="flex h-5 items-center text-sm text-tertiary-foreground">
+					{isLoading && <Skeleton className="h-4 w-64" />}
+					{headline.kind === "rate" && (
+						<span>
+							<span style={{ color: ANSWERED.color }}>
+								{formatPercent(headline.answeredShare)}
+							</span>{" "}
+							answered by Atom, no round trip to Autumn
+						</span>
+					)}
+					{headline.kind === "idle" && `in the last ${headline.idleFor}`}
+				</span>
 			</div>
-			<MonitoringLegend series={SERIES} latest={now} formatValue={formatRate} />
+			<MonitoringLegend
+				series={SERIES}
+				latest={chartData?.now}
+				formatValue={formatRate}
+			/>
 		</div>
 	);
 };
@@ -74,7 +96,7 @@ export const AtomRequestsChart = ({
 		title="Requests per second"
 		description="Checks your app sends to this Atom"
 		readingAt={chartData?.now?.at}
-		summary={<RequestsSummary now={chartData?.now ?? null} />}
+		summary={<RequestsSummary chartData={chartData} isLoading={isLoading} />}
 		isLoading={isLoading}
 		isEmpty={!chartData}
 	>
@@ -89,19 +111,21 @@ export const AtomRequestsChart = ({
 				unit="req/s"
 				showStatistics
 			>
-				<Bar
-					dataKey={ANSWERED.key}
-					stackId="requests"
-					fill={ANSWERED.color}
-					isAnimationActive={false}
-				/>
-				<Bar
-					dataKey={FORWARDED.key}
-					stackId="requests"
-					fill={FORWARDED.color}
-					radius={[2, 2, 0, 0]}
-					isAnimationActive={false}
-				/>
+				{[ANSWERED, FORWARDED].map(({ key, color }) => (
+					<Area
+						key={key}
+						dataKey={key}
+						stackId="requests"
+						type="monotone"
+						stroke={color}
+						strokeWidth={1.5}
+						fill={color}
+						fillOpacity={0.2}
+						dot={false}
+						activeDot={{ r: 3, strokeWidth: 0 }}
+						isAnimationActive={false}
+					/>
+				))}
 			</MonitoringPlot>
 		)}
 	</MonitoringChartCard>

@@ -68,13 +68,12 @@ const getCheckoutMetadataType = ({
 }: {
 	billingContext: BillingContext;
 }) => {
-	if (billingContext.longLivedCheckout) {
-		return MetadataType.LongLivedCheckoutEnabledImmediately;
+	if (billingContext.enablePlanImmediately !== true) {
+		return MetadataType.CheckoutSessionV2;
 	}
-	if (billingContext.enablePlanImmediately === true) {
-		return MetadataType.CheckoutSessionEnabledImmediately;
-	}
-	return MetadataType.CheckoutSessionV2;
+	return billingContext.longLivedCheckout
+		? MetadataType.LongLivedCheckoutEnabledImmediately
+		: MetadataType.CheckoutSessionEnabledImmediately;
 };
 
 export const executeStripeCheckoutSessionAction = async ({

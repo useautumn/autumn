@@ -4,7 +4,9 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const { data: customer } = useCustomer();
+	const { data: customer, isPending } = useCustomer();
+	// Only the prod app gates the Atom tab on billing; staging and local have no billing key and an open server gate.
+	const isProdApp = window.location.hostname === "app.useautumn.com";
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		stripe_key: false,
@@ -42,5 +44,11 @@ export const useAutumnFlags = () => {
 	}, [customer?.flags]);
 
 	// Webhooks have been released publicly — always on.
-	return { ...flags, webhooks: true as const };
+	return {
+		...flags,
+		atoms: flags.atoms || !isProdApp,
+		webhooks: true as const,
+		/** Billing hasn't answered yet, so a false flag may still turn true. */
+		isLoading: isPending,
+	};
 };

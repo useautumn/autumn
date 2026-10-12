@@ -1,6 +1,7 @@
 import {
 	type AttachBillingContext,
 	type AttachParamsV1,
+	type BillingContext,
 	type BillingContextOverride,
 	CheckoutAction,
 } from "@autumn/shared";
@@ -44,6 +45,7 @@ export async function attach({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	longLivedCheckout: existingLongLivedCheckout,
 
 	contextOverride,
 }: {
@@ -51,6 +53,8 @@ export async function attach({
 	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
+	longLivedCheckout?: BillingContext["longLivedCheckout"];
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -230,12 +234,9 @@ export async function attach({
 				})
 			).checkout
 		: undefined;
-	if (longLivedCheckout) {
-		billingContext.longLivedCheckout = {
-			id: longLivedCheckout.id,
-			expiresAt: longLivedCheckout.expires_at,
-		};
-	}
+	billingContext.longLivedCheckout = longLivedCheckout
+		? { id: longLivedCheckout.id, expiresAt: longLivedCheckout.expires_at }
+		: existingLongLivedCheckout;
 
 	// 6. Save request billing details first so tax resolves against the new location
 	billingContext.stripeCustomer = await applyBillingDetailsForBilling({

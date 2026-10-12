@@ -112,6 +112,7 @@ export const handleStartLongLivedCheckout = createRoute({
 			},
 			preview: false,
 			skipAutumnCheckout: true,
+			longLivedCheckout: { id: checkout.id, expiresAt: checkout.expires_at },
 		});
 
 		if (!billingResult) {

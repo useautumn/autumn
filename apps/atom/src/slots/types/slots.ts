@@ -53,6 +53,8 @@ export type SubjectSource = {
 
 /** One data folder: its customers, reached through the slot each lives in, and the one catalog they share. */
 export type Slots = {
+	/** The folder's name on a multi-tenant Atom; null for an org's own Atom's one folder. */
+	atomId: string | null;
 	/** How many files the folder is split into; a peer split differently holds nothing this one can copy. */
 	slotCount: number;
 	processorFor(params: { customerId: string }): SlotProcessor;

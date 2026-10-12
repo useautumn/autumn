@@ -23,6 +23,8 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noPeer,
+	noReplication,
 	noSubjectPulls,
 	storedEntitySubjectWith,
 	subjectBody,
@@ -96,6 +98,8 @@ const createDeployedApp = ({
 				health: HEALTH,
 				counters,
 				secretKeys,
+				replication: noReplication,
+				peer: noPeer,
 			},
 		}),
 		logged,
@@ -121,6 +125,8 @@ const createMultiTenantApp = () => {
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
 			counters,
+			replication: noReplication,
+			peer: noPeer,
 		},
 	});
 };
