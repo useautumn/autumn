@@ -327,4 +327,23 @@ describe("atom env", () => {
 		for (const bad of ["0", "-5", "NaN", "abc", "1.5", "999", "3000000000"])
 			expect(() => everyMs(bad)).toThrow();
 	});
+
+	test("only a replica listening on a loopback address reads its peers from a file; a deployed Atom resolves its service", () => {
+		const peersOf = (env: Record<string, string>) => {
+			const atom = createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
+				...env,
+			});
+			return atom.ATOM_MODE === "deployed" ? atom.ATOM_PEERS_FILE : undefined;
+		};
+
+		expect(peersOf({ ATOM_HOSTNAME: "0.0.0.0" })).toBeNull();
+		expect(
+			peersOf({ ATOM_HOSTNAME: "127.0.0.11", ATOM_PEERS_FILE: "/tmp/peers" }),
+		).toBe("/tmp/peers");
+		expect(() =>
+			peersOf({ ATOM_HOSTNAME: "0.0.0.0", ATOM_PEERS_FILE: "/tmp/peers" }),
+		).toThrow("loopback ATOM_HOSTNAME");
+	});
 });

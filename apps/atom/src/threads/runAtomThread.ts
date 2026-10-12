@@ -122,6 +122,7 @@ const openReplicas = ({
 		ctx: {
 			secret: env.ATOM_PEER_SECRET,
 			port: env.ATOM_PEER_PORT,
+			peersFile: env.ATOM_PEERS_FILE,
 			registry,
 			counters,
 			logger,

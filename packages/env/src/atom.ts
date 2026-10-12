@@ -73,14 +73,42 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
  * Only an org's own Atom has other replicas, signed to with the deployment's own secret; a multi-tenant one holds every folder itself.
  */
 type AtomModeEnv =
-	| { ATOM_MODE: "deployed"; ATOM_TOKEN_HASH: string; ATOM_PEER_SECRET: string }
+	| {
+			ATOM_MODE: "deployed";
+			ATOM_TOKEN_HASH: string;
+			ATOM_PEER_SECRET: string;
+			ATOM_PEERS_FILE: string | null;
+	  }
 	| { ATOM_MODE: "multi_tenant"; ATOM_TOKEN_HASH: string };
+
+const isLoopback = (hostname: string): boolean =>
+	hostname.startsWith("127.") || hostname === "localhost" || hostname === "::1";
+
+/** A replica set on one machine has no atom.svc to resolve, so its harness lists each replica's peers in a file.
+ * Only a replica listening on a loopback address reads one, so a deployed Atom (0.0.0.0) never does. */
+const peersFileOf = ({
+	runtimeEnv,
+	hostname,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+	hostname: string;
+}): string | null => {
+	const peersFile = runtimeEnv.ATOM_PEERS_FILE?.trim();
+	if (!peersFile) return null;
+	if (!isLoopback(hostname))
+		throw new Error(
+			"ATOM_PEERS_FILE is for a replica set on one machine: set it only with a loopback ATOM_HOSTNAME",
+		);
+	return peersFile;
+};
 
 /** Unset is the customer's single-tenant Atom; only our shadow Atom sets ATOM_MODE, to multi_tenant. */
 const modeEnvOf = ({
 	runtimeEnv,
+	hostname,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
+	hostname: string;
 }): AtomModeEnv => {
 	const mode = runtimeEnv.ATOM_MODE?.trim() || null;
 	if (mode !== null && mode !== "multi_tenant")
@@ -101,6 +129,7 @@ const modeEnvOf = ({
 		ATOM_MODE: "deployed",
 		ATOM_TOKEN_HASH,
 		ATOM_PEER_SECRET: peerSecret,
+		ATOM_PEERS_FILE: peersFileOf({ runtimeEnv, hostname }),
 	};
 };
 
@@ -174,7 +203,7 @@ export function createAtomEnv(
 	machine: AtomMachine = readMachine(),
 ) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
-	const modeEnv = modeEnvOf({ runtimeEnv });
+	const modeEnv = modeEnvOf({ runtimeEnv, hostname });
 	const threads = threadsOf({ runtimeEnv, machine });
 	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
 	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());

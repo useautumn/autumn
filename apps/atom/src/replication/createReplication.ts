@@ -17,6 +17,8 @@ type ReplicationContext = {
 	registry: HandlerRegistry;
 	counters: Pick<ThreadCounters, "add">;
 	logger: Pick<AutumnLogger, "warn">;
+	/** Where a replica set on one machine lists this replica's peers; null resolves the deployment's service name. */
+	peersFile?: string | null;
 	resolver?: PeerResolver;
 	/** Test seams: the clock the outbox ages by, how it waits, and how it reaches a peer. */
 	now?: () => number;
@@ -30,7 +32,8 @@ export const createReplication = ({
 }: {
 	ctx: ReplicationContext;
 }): Replication => {
-	const resolver = ctx.resolver ?? createPeerResolver();
+	const resolver =
+		ctx.resolver ?? createPeerResolver({ ctx: { peersFile: ctx.peersFile } });
 	const outbox = createPeerOutbox({
 		ctx: {
 			resolver,
