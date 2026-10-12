@@ -12,6 +12,7 @@
  * Test A: Tiered (graduated) pricing — prepaid messages with graduated tiers.
  * Test B: Volume-based pricing — prepaid messages with volume tiers.
  * Test C: Usage-based (metered) pricing — consumable messages billed per use.
+ * Test D: Metered volume pricing — a pay-per-use volume item's metered price.
  */
 
 import { expect, test } from "bun:test";
@@ -216,6 +217,52 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: metered usage-based pricing p
 	if (meteredItem!.unit_amount !== null) {
 		expect(meteredItem!.unit_amount).toBeGreaterThan(0);
 	}
+
+	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST D: Metered volume pricing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing proposals show a volume metered price")}`, async () => {
+	const customerId = "sync-tier-metered-volume";
+
+	const volumeMessages = items.volumeConsumableMessages({ includedUsage: 100 });
+	const pro = products.pro({
+		id: "pro-metered-volume",
+		items: [volumeMessages],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const stripeSubscription = await createStripeSubscriptionFromProduct({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+
+	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
+		"/billing.sync_proposals",
+		{ customer_id: customerId },
+	);
+	const matchedProposal = proposalsResponse.proposals.find(
+		(p: SyncProposal) => p.stripe_subscription_id === stripeSubscription.id,
+	);
+	const volumeItem = matchedProposal?.items.find(
+		(item: SyncProposalItem) =>
+			item.recurring_usage_type === "metered" && item.tiers_mode === "volume",
+	);
+
+	expect(volumeItem).toBeDefined();
+	expect(volumeItem!.matched_price_id).toBeTruthy();
 
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
