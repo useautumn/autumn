@@ -100,6 +100,7 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 					ref: row.ref,
 					neonBranchId: branchId,
 					runtimeEnv: { ...secrets, DATABASE_URL },
+					tinybird: row.tinybird,
 				},
 			}));
 			const tarball = await archiveSourceAtSha({ sha: row.sha });

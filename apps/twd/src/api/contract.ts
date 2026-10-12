@@ -474,7 +474,8 @@ export const EnqueueResponse = z.object({ job: Job, deduped: z.boolean() });
 
 // ---- qa envs ---------------------------------------------------------------
 
-export const QA_ENV_NAME = /^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+/** No `--`: it marks an env's Tinybird hostname (`<name>--tb`). */
+export const QA_ENV_NAME = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 
 export const CreateQaEnvBody = z.object({
 	/** Branch (or 40-char sha) to deploy; it must be pushed. */
@@ -493,6 +494,8 @@ export const CreateQaEnvBody = z.object({
 	supersedes: z.string().regex(QA_ENV_NAME).optional(),
 	/** Re-branch the database from parentBranch instead of keeping the env's QA data. */
 	freshDb: z.boolean().optional(),
+	/** Run a Tinybird Local beside the env (Usage charts, live events). Omitted on a re-ship keeps the env's setting. */
+	tinybird: z.boolean().optional(),
 });
 
 export const QaBuild = z.object({
@@ -511,6 +514,8 @@ export const QaEnv = z.object({
 	awake: z.boolean().nullable(),
 	building: QaBuild.nullable(),
 	error: z.string().nullable(),
+	/** Tinybird Local API (and ClickHouse HTTP at `/`) when the env runs one. */
+	tinybirdUrl: z.string().nullable(),
 	createdBy: z.string(),
 	createdAt: z.string(),
 	expiresAt: z.string(),

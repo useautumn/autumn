@@ -11,4 +11,8 @@ git -C "$REPO" archive "$REF" -- bun.lock bunfig.toml patches $(git -C "$REPO" l
 # preload-env.ts isn't in the deps context; installs don't need it.
 sed -i '/^preload = /d' "$OUT/bunfig.toml"
 git -C "$REPO" rev-parse "$REF" > "$OUT/.deps-sha"
+# tb:local, for Tinybird envs whose shipped commit predates it.
+TB="$HERE/container/tb-local"
+rm -rf "$TB" && mkdir -p "$TB"
+git -C "$REPO" archive "$REF" -- server/tinybird/scripts/local 2>/dev/null | tar -x -C "$TB" --strip-components=4 || true
 echo "staged $(find "$OUT" -name package.json | wc -l) manifests at $(cat "$OUT/.deps-sha")"
