@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Button, CopyButton, InfoRow } from "@autumn/ui";
+import { Button, CopyButton, InfoRow, Skeleton } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -83,9 +83,10 @@ export function SubscriptionDetailSheet() {
 		() => productV2?.items && itemsForDisplay(productV2.items),
 		[productV2?.items, itemsForDisplay],
 	);
-	const { data: stripeSubscription } = useStripeSubscriptionQuery({
-		stripeSubscriptionId: cusProduct?.subscription_ids?.[0],
-	});
+	const { data: stripeSubscription, isError: stripeSubscriptionFailed } =
+		useStripeSubscriptionQuery({
+			stripeSubscriptionId: cusProduct?.subscription_ids?.[0],
+		});
 	const { defaultConfiguration } = useStripePaymentMethodTypesQuery();
 	const { data: pendingPaymentUrl } = usePendingPaymentLink({
 		customerId: customer?.id ?? customer?.internal_id,
@@ -320,12 +321,16 @@ export function SubscriptionDetailSheet() {
 						}
 					/>
 
-					{stripeSubscription && (
+					{cusProduct.subscription_ids?.[0] && (
 						<InfoRow
 							icon={<CreditCardIcon size={16} />}
 							label="Collection"
 							value={
-								stripeSubscription.collection_method === "send_invoice" ? (
+								stripeSubscriptionFailed ? (
+									"—"
+								) : !stripeSubscription ? (
+									<Skeleton className="h-4 w-48" />
+								) : stripeSubscription.collection_method === "send_invoice" ? (
 									<span className="flex items-center gap-1.5 text-sm">
 										Send invoice · Net {stripeSubscription.days_until_due} ·{" "}
 										{stripeSubscription.payment_settings?.payment_method_types
