@@ -142,6 +142,8 @@ export const createAtomThreads = ({
 	}): Promise<void> {
 		if (stopping || threads[index] !== worker) return;
 		removeThread({ index });
+		// Not ready again until the new thread has caught up: its slots may miss what peers relayed meanwhile.
+		Atomics.store(new Int32Array(readyFlag), 0, 0);
 		ctx.logger.warn(
 			{ type: "atom_thread_died", data: { index } },
 			"An Atom thread died; starting another in its place",
@@ -152,6 +154,7 @@ export const createAtomThreads = ({
 			try {
 				await startThread({ index });
 				Atomics.add(new Int32Array(restarts), 0, 1);
+				Atomics.store(new Int32Array(readyFlag), 0, 1);
 				return;
 			} catch (error) {
 				ctx.logger.error(
