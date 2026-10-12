@@ -512,6 +512,7 @@ function enterRecovery({
 		for (const pending of unapplied.batch) owed.add(pending);
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
 	failAboveSettled({ scope, cause: error });
+	scope.ctx.onRecoveryRequired?.({ cause: error });
 }
 
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.

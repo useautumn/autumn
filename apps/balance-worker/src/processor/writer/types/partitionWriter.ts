@@ -156,6 +156,8 @@ export type PartitionWriterContext = {
 	}) => void;
 	/** Where the partition's commit position is published; without one the writer numbers its writes alone. */
 	commitPositions?: CommitPositionSink;
+	/** Told as the writer enters recovery, so an idle partition hands its unapplied batches to a successor at once. */
+	onRecoveryRequired?: (params: { cause: unknown }) => void;
 	now?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
