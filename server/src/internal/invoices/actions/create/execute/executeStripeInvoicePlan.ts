@@ -65,7 +65,10 @@ export const executeStripeInvoicePlan = async ({
 		daysUntilDue: invoiceContext.daysUntilDue,
 		dueDate: dueDate && getUnixTime(dueDate),
 		effectiveAt: issueDate && getUnixTime(issueDate),
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		paymentMethodTypes:
+			invoiceContext.params.payment_method_types ??
+			ctx.org.config.allowed_payment_methods ??
+			undefined,
 		footer: template?.footer,
 		description: template?.memo,
 		metadata: mergeStripeMetadata({

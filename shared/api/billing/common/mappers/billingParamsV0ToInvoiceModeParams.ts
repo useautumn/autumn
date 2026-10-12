@@ -1,3 +1,4 @@
+import type { InvoicePaymentMethod } from "@models/orgModels/orgConfig.js";
 import type { InvoiceModeParams } from "../invoiceModeParams";
 
 /**
@@ -12,6 +13,7 @@ export const billingParamsV0ToInvoiceModeParams = ({
 		finalize_invoice?: boolean;
 		invoice_template_id?: string;
 		net_terms_days?: number;
+		payment_method_types?: InvoicePaymentMethod[];
 	};
 }): InvoiceModeParams | undefined => {
 	if (!input.invoice) return undefined;
@@ -22,5 +24,6 @@ export const billingParamsV0ToInvoiceModeParams = ({
 		finalize: input.finalize_invoice ?? true,
 		invoice_template_id: input.invoice_template_id,
 		net_terms_days: input.net_terms_days,
+		payment_method_types: input.payment_method_types,
 	};
 };

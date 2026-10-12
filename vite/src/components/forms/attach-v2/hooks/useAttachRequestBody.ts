@@ -402,6 +402,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				finalizeInvoice,
 				invoiceTemplateId,
 				netTermsDays,
+				paymentMethodTypes,
 				longLivedCheckout,
 			}: BillingStageParams = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
@@ -413,6 +414,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 					body.finalize_invoice = finalizeInvoice ?? false;
 					body.invoice_template_id = invoiceTemplateId;
 					body.net_terms_days = netTermsDays;
+					body.payment_method_types = paymentMethodTypes;
 				}
 
 				// Checkout activation is independent of invoice mode.

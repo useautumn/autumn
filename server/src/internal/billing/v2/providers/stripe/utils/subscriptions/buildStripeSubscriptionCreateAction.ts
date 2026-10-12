@@ -99,6 +99,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		...(isCustomPaymentMethod && {
 			payment_settings: {
+				...billingContext.carriedSubscriptionParams?.payment_settings,
 				save_default_payment_method: "on_subscription",
 			},
 		}),

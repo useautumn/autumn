@@ -20,6 +20,7 @@ export function useCreateInvoiceForm({
 		discounts: [],
 		invoiceTemplateId: null,
 		netTermsDays: null,
+		paymentMethodTypes: null,
 		taxRateId: null,
 		periodStart: null,
 		periodEnd: null,

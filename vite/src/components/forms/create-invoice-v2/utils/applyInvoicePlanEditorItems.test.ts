@@ -43,6 +43,7 @@ const invoiceFor = (invoicePlan: FormInvoicePlan) =>
 			discounts: [],
 			invoiceTemplateId: null,
 			netTermsDays: null,
+			paymentMethodTypes: null,
 			taxRateId: null,
 			periodStart: null,
 			periodEnd: null,

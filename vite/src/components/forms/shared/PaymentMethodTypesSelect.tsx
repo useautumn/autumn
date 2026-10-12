@@ -10,12 +10,19 @@ import { ChevronDownIcon } from "lucide-react";
 import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
 import { INVOICE_PAYMENT_METHOD_OPTIONS } from "@/utils/invoicePaymentMethodOptions";
 
-export function ReissuePaymentMethodTypesSelect({
+export const ORG_PAYMENT_METHODS_HELPER =
+	"Prefilled from your org's allowed payment methods";
+
+export function PaymentMethodTypesSelect({
 	value,
 	onValueChange,
+	description,
+	disabled,
 }: {
 	value: InvoicePaymentMethod[] | null;
 	onValueChange: (types: InvoicePaymentMethod[]) => void;
+	description?: string;
+	disabled?: boolean;
 }) {
 	const { availableTypes, isLoading } = useStripePaymentMethodTypesQuery();
 	const selected = value ?? [];
@@ -50,11 +57,11 @@ export function ReissuePaymentMethodTypesSelect({
 	};
 
 	return (
-		<div className="space-y-1.5">
+		<div className="min-w-0 space-y-1.5">
 			<FormLabel>Payment methods</FormLabel>
 			<DropdownMenu>
 				<DropdownMenuTrigger
-					disabled={isLoading}
+					disabled={isLoading || disabled}
 					className="input-base input-shadow-default input-state-open flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg text-sm whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<span className="truncate">{summary}</span>
@@ -74,6 +81,9 @@ export function ReissuePaymentMethodTypesSelect({
 					))}
 				</DropdownMenuContent>
 			</DropdownMenu>
+			{description && (
+				<p className="text-xs text-tertiary-foreground">{description}</p>
+			)}
 		</div>
 	);
 }
