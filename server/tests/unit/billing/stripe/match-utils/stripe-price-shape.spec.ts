@@ -339,6 +339,36 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 		).toBeNull();
 	});
 
+	test("keeps another currency's flat fee on a graduated consumable shape, as the metered price is created", () => {
+		const price = consumablePrice({
+			tiers: [
+				{ to: 500, amount: 0.1 },
+				{ to: Infinite, amount: 0.05 },
+			],
+		});
+		Object.assign(price.config, {
+			base_currency: "usd",
+			currencies: {
+				eur: {
+					usage_tiers: [
+						{ to: 500, amount: 0.09, flat_amount: 5 },
+						{ to: Infinite, amount: 0.04 },
+					],
+				},
+			},
+		});
+
+		const shape = autumnConsumablePriceToStripePriceShape({
+			price,
+			entitlement: entitlement(),
+			stripeProductId: "prod_messages",
+			currency: "eur",
+			org,
+		});
+
+		expect(shape?.tiers?.[0]?.flatAmountDecimal).toBe("500");
+	});
+
 	test("constructs a volume consumable shape without flat fees, as the metered price is created", () => {
 		const shape = autumnConsumablePriceToStripePriceShape({
 			price: consumablePrice({

@@ -166,7 +166,8 @@ describe("lineItemsToInvoiceAddLinesParams", () => {
 			],
 		});
 
-		expect(params.quantity).toBeUndefined();
+		// Explicit, so a draft retry replaces the quantity an earlier exact split wrote.
+		expect(params.quantity).toBe(1);
 		expect(params.price_data).toEqual({
 			unit_amount: 1,
 			currency: "usd",
@@ -175,12 +176,12 @@ describe("lineItemsToInvoiceAddLinesParams", () => {
 		expect(params.description).toBe("Pro · Tokens — 7 @ $0.0015");
 	});
 
-	test("a line without unit pricing is unchanged", () => {
+	test("a line without unit pricing bills 1 × its total", () => {
 		const [params] = lineItemsToInvoiceAddLinesParams({
 			lineItems: [usageLine({ amount: 20.5 })],
 		});
 
-		expect(params.quantity).toBeUndefined();
+		expect(params.quantity).toBe(1);
 		expect(params.price_data).toEqual({
 			unit_amount: 2050,
 			currency: "usd",

@@ -104,7 +104,7 @@ export const autumnConsumablePriceToStripePriceShape = ({
 		entitlement,
 		org,
 		currency,
-		withFlatAmounts: false,
+		withFlatAmounts: !isVolume,
 	});
 	const recurringMetered = { ...recurring, usage_type: "metered" };
 

@@ -16,7 +16,7 @@ export const lineItemToStripePriceData = ({
 
 	if (!unitPricing) {
 		return {
-			quantity: undefined,
+			quantity: 1,
 			price_data: {
 				unit_amount: atmnToStripeAmount({ amount: lineAmount, currency }),
 				currency,
