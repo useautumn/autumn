@@ -1,5 +1,5 @@
 import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, RecaseError } from "@shared/index";
+import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -10,6 +10,7 @@ import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRe
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 export const handleInitialPurchase = async ({
 	event,
@@ -46,6 +47,21 @@ export const handleInitialPurchase = async ({
 	// Guard the same-product attach explicitly so RC consumers get the canonical
 	// CustomerAlreadyHasProduct error rather than V2 attach's PlanAlreadyAttached.
 	if (curSameProduct) {
+		// A retry after a failed id write lands here, so repair the missing purchase id first.
+		if (
+			event.original_transaction_id &&
+			curSameProduct.processor?.type === ProcessorType.RevenueCat &&
+			!curSameProduct.processor.original_transaction_id
+		)
+			await customerProductRepo.mergeProcessor({
+				db: customerCtx.db,
+				cusProductId: curSameProduct.id,
+				processor: {
+					type: ProcessorType.RevenueCat,
+					original_transaction_id: event.original_transaction_id,
+				},
+			});
+
 		throw new RecaseError({
 			message: `[handleInitialPurchase] Customer ${customer.id} already has product ${product.id}`,
 			code: ErrCode.CustomerAlreadyHasProduct,
