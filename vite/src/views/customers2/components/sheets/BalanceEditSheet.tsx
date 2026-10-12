@@ -41,6 +41,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { getCustomerBalancePlanName } from "../table/customer-balance/customerBalanceUtils";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
+import { BalanceRateCard } from "./BalanceRateCard";
 import { FeatureOverrideSection } from "./FeatureOverrideSection";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 import { PooledBalanceContributions } from "./PooledBalanceContributions";
@@ -286,6 +287,10 @@ function UnlimitedBalanceForm({
 				</Button>
 			</div>
 
+			<BalanceRateCard
+				selectedCusEnt={selectedCusEnt}
+				cusProduct={cusProduct}
+			/>
 			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
@@ -350,6 +355,10 @@ function BalanceEditForm({
 				cusPrice={cusPrice}
 			/>
 
+			<BalanceRateCard
+				selectedCusEnt={selectedCusEnt}
+				cusProduct={cusProduct}
+			/>
 			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
 
 			<PooledBalanceContributions

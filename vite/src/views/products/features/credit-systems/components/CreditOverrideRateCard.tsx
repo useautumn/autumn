@@ -1,86 +1,55 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
-import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
-import { diffCreditOverride } from "../utils/diffCreditOverride";
-import { featureDisplayName } from "../utils/featureDisplayName";
-import { CreditRateCardList } from "./CreditRateCardList";
-import { RowStatusBadge } from "./RowStatusBadge";
+import { Button, InlineAction } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
+import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
+import { useRateCardEditor } from "../hooks/useRateCardEditor";
+import { rateCardSubtitle } from "../utils/rateCardRows";
+import { OverrideRateCardRow } from "./rate-card/OverrideRateCardRow";
+import { RateCardHeader } from "./rate-card/RateCardHeader";
+import { RateCardRowEditor } from "./rate-card/RateCardRowEditor";
+import { RateCardTray } from "./rate-card/RateCardTray";
 
-export function CreditOverrideRateCard({
-	schema,
-	creditSystem,
-	onChange,
-	onRemoveLast,
-}: {
-	schema: CreditSchemaItem[];
-	creditSystem?: Feature;
-	onChange: (schema: CreditSchemaItem[]) => void;
-	onRemoveLast: () => void;
-}) {
-	const { features } = useFeaturesQuery();
-	const diff = diffCreditOverride({ schema, creditSystem });
-
-	const restoreFeature = (featureId: string) => {
-		const catalogItem = creditSystem?.config?.schema?.find(
-			(item: CreditSchemaItem) => item.metered_feature_id === featureId,
-		);
-		if (catalogItem) onChange([...schema, catalogItem]);
-	};
+/** A plan item's rate card: the credit system's rates with this plan's changes on top. */
+export function CreditOverrideRateCard() {
+	const editor = useRateCardEditor();
+	const { creditSystem, summary, edit } = editor;
+	const creditSystemName = creditSystem?.name ?? "the credit system";
+	const hasChanges = summary.rows.some((row) => row.state !== "inherited");
 
 	return (
-		<CreditSchemaListProvider
-			schema={schema}
-			onChange={onChange}
-			onRemoveLast={onRemoveLast}
-		>
-			<div className="flex flex-col gap-3">
-				{diff.changedCount > 0 && (
-					<span className="text-tertiary-foreground text-xs">
-						{diff.changedCount} of {diff.totalCount} rates differ from the
-						credit system
-					</span>
+		<div className="flex flex-col gap-2.5">
+			<RateCardHeader
+				subtitle={rateCardSubtitle({ creditSystemName, summary })}
+				action={
+					hasChanges && (
+						<InlineAction className="px-1.5" onClick={editor.resetAll}>
+							Reset all
+						</InlineAction>
+					)
+				}
+			/>
+			<RateCardTray>
+				{summary.rows.map((row) => (
+					<OverrideRateCardRow key={row.featureId} row={row} editor={editor} />
+				))}
+				{edit?.featureId === null && (
+					<li className={TABLE_TRAY_SURFACE_DIVIDER_CLASS}>
+						<div className="flex h-11 items-center pl-3 font-medium text-sm">
+							New feature
+						</div>
+						<RateCardRowEditor editor={editor} />
+					</li>
 				)}
-
-				<CreditRateCardList
-					renderRowLabel={(index) => (
-						<RowStatusBadge status={diff.statusByIndex[index]} />
-					)}
-				/>
-
-				{diff.excludedFeatureIds.length > 0 && (
-					<div className="flex flex-col gap-1">
-						<span className="text-tertiary-foreground text-xs">
-							Not covered on this plan
-						</span>
-						{diff.excludedFeatureIds.map((featureId) => (
-							<div
-								key={featureId}
-								className="flex items-center justify-between text-sm text-t3"
-							>
-								<span className="line-through">
-									{featureDisplayName({
-										features,
-										featureId,
-										plural: true,
-										capitalize: true,
-									})}
-								</span>
-								<IconButton
-									variant="skeleton"
-									iconOrientation="left"
-									icon={<ArrowCounterClockwiseIcon size={12} />}
-									onClick={() => restoreFeature(featureId)}
-									className="!text-subtle hover:!text-foreground text-xs"
-								>
-									Restore
-								</IconButton>
-							</div>
-						))}
-					</div>
-				)}
-			</div>
-		</CreditSchemaListProvider>
+			</RateCardTray>
+			<Button
+				variant="dotted"
+				size="sm"
+				className="w-full text-tertiary-foreground"
+				disabled={editor.addableFeatures.length === 0 || edit !== null}
+				onClick={editor.startAdd}
+			>
+				<PlusIcon size={12} />
+				Add a feature {creditSystemName} does not cover
+			</Button>
+		</div>
 	);
 }

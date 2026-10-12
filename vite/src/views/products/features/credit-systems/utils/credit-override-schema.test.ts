@@ -18,8 +18,8 @@ import {
 import {
 	effectiveSchemaToOverride,
 	overrideToEffectiveSchema,
+	withRate,
 } from "./creditOverrideSchema";
-import { diffCreditOverride } from "./diffCreditOverride";
 
 const row = (metered_feature_id: string, credit_amount: number) =>
 	({ metered_feature_id, credit_amount }) as CreditSchemaItem;
@@ -73,13 +73,14 @@ test("an unedited card stores nothing", () => {
 	).toEqual([]);
 });
 
-test("the diff marks changed and added rows and lists excluded features", () => {
-	const diff = diffCreditOverride({
-		schema: [row("gateway", 2.857), row("search", 0.5), row("video", 4)],
-		creditSystem,
-	});
-
-	expect(diff.statusByIndex).toEqual(["changed", "inherited", "added"]);
-	expect(diff.excludedFeatureIds).toEqual(["image_gen"]);
-	expect(diff.changedCount).toBe(3);
+test("withRate replaces a feature's rate in place and appends a new feature", () => {
+	const schema = [row("gateway", 3), row("search", 0.5)];
+	expect(withRate({ schema, rate: row("gateway", 2) })).toEqual([
+		row("gateway", 2),
+		row("search", 0.5),
+	]);
+	expect(withRate({ schema, rate: row("video", 4) })).toEqual([
+		...schema,
+		row("video", 4),
+	]);
 });

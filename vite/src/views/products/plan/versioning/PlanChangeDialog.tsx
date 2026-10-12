@@ -30,7 +30,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
-import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -75,6 +74,7 @@ import {
 } from "./mintTargetSlugs";
 import { PlanChangeFieldLabel } from "./PlanChangeFieldLabel";
 import { PlanIdChangeNotice } from "./PlanIdChangeNotice";
+import { PlanItemChangeList } from "./PlanItemChangeList";
 import {
 	PlanSettingsChanges,
 	previousAttributesToSettingChanges,
@@ -650,7 +650,7 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<ItemChangeList
+											<PlanItemChangeList
 												itemChanges={preview?.plan_change?.item_changes ?? []}
 											/>
 											<PlanSettingsChanges changes={settingsChanges} />
