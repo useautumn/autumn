@@ -163,6 +163,7 @@ export type PartitionWriterLimits = {
 	maxUnappliedBatches?: number;
 	/** The worker's resident-state allowance this partition takes a share of; absent, the map keeps its own fixed bound. */
 	subjectMapBudget?: SubjectMapBudget;
+	subjectIdleExpiryMs?: number;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
 	/** How long committed batches gather before a store flush, unless DB control overrides it; unset applies each batch at once. */

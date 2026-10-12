@@ -74,6 +74,8 @@ export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 /** An eighth of the task: 512 MiB on a 4 GiB worker, growing with the task size. */
 export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
 
+export const BALANCE_WORKER_SUBJECT_IDLE_EXPIRY_MS = 14_400_000;
+
 /** How a partition's writer commits a batch to the log. Transactional is three
  *  broker round trips per commit (register the partition, produce, end the
  *  transaction) and the broker fences a stale owner. Idempotent is one round
