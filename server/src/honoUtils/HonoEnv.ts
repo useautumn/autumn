@@ -112,6 +112,8 @@ export type RequestContext = {
 		balanceWorkerOutage?: boolean;
 		/** Caps customers walked per list page (non-prod only). */
 		listScanCap?: number;
+		/** Stands in for Autumn's own `atoms` check (non-prod only); undefined runs the real check. */
+		atomsAccess?: boolean;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];

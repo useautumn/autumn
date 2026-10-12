@@ -182,6 +182,7 @@ export class AutumnInt {
 		orgConfig,
 		liveUrl = false,
 		skipCacheDeletion = false,
+		headers,
 	}: {
 		apiKey?: string;
 		secretKey?: string;
@@ -190,6 +191,8 @@ export class AutumnInt {
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
 		skipCacheDeletion?: boolean;
+		/** Sent on every request, e.g. a test-only `x-*` toggle. */
+		headers?: Record<string, string>;
 	} = {}) {
 		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
@@ -198,6 +201,7 @@ export class AutumnInt {
 		this.headers = {
 			Authorization: `Bearer ${this.apiKey}`,
 			"Content-Type": "application/json",
+			...headers,
 		};
 
 		if (version) {

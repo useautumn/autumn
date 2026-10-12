@@ -7,8 +7,12 @@ import { handleGetCache } from "./handlers/handleGetCache.js";
 import { handleListAtomChecks } from "./handlers/handleListAtomChecks.js";
 import { handleResizeCache } from "./handlers/handleResizeCache.js";
 import { handleRetryCache } from "./handlers/handleRetryCache.js";
+import { atomsFeatureMiddleware } from "./middlewares/atomsFeatureMiddleware.js";
 
 export const byocRpcRouter = new Hono<HonoEnv>();
+
+// Scoped to byoc.* paths: this router mounts at "", so "*" would also gate every rpc route mounted after it.
+byocRpcRouter.use("/:rpc{byoc\\..+}", atomsFeatureMiddleware);
 
 byocRpcRouter.post("/byoc.create_atom", ...handleCreateCache);
 byocRpcRouter.post("/byoc.get_atom", ...handleGetCache);

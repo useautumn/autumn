@@ -102,6 +102,12 @@ const newFeatures = [
 		consumable: false,
 		featureId: "customers_and_entities",
 	}),
+	feature({
+		name: "Atoms",
+		type: "boolean",
+		consumable: false,
+		featureId: "atoms",
+	}),
 ];
 
 export const features = [...existingFeatures, ...newFeatures];
