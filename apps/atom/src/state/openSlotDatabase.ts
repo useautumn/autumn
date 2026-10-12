@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 
 /** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema. */
-const SLOT_SCHEMA_VERSION = 5;
+const SLOT_SCHEMA_VERSION = 6;
 
 const dropSlotSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS subject_states");
@@ -20,22 +20,12 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			entity_id TEXT NOT NULL,
 			log_offset INTEGER NOT NULL CHECK (log_offset >= 0),
 			read_at INTEGER NOT NULL,
+			applied_at INTEGER NOT NULL,
 			state_json TEXT NOT NULL,
 			slice_hash TEXT NOT NULL,
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);
-	// Added after the schema shipped: an older file keeps its rows, which read as applied at 0 and are copied only whole.
-	const columns = database
-		.query<{ name: string }, []>(
-			"SELECT name FROM pragma_table_info('subject_states')",
-		)
-		.all()
-		.map((column) => column.name);
-	if (!columns.includes("applied_at"))
-		database.run(
-			"ALTER TABLE subject_states ADD COLUMN applied_at INTEGER NOT NULL DEFAULT 0",
-		);
 	database.run(
 		"CREATE INDEX IF NOT EXISTS subject_states_applied_at ON subject_states (applied_at)",
 	);
