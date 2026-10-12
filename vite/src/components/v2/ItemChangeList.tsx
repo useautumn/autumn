@@ -28,7 +28,7 @@ export function ItemChangeList({
 					<RateChangeList
 						changes={itemChangeRateChanges({
 							change,
-							deleted,
+							itemChanges,
 							features: features ?? orgFeatures,
 						})}
 					/>

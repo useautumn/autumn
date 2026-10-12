@@ -1,13 +1,34 @@
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
-import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
+import {
+	PLAN_ITEM_FILTER_EMPTY_MESSAGE,
+	PlanItemFilterFieldsSchema,
+	planItemFilterHasField,
+} from "@api/products/items/filter/planItemFilter";
 import {
 	CustomizePlanLicenseSchema,
 	licensePatchIssues,
 } from "@models/licenseModels/licenseModels.js";
 import { z } from "zod/v4";
 import { UpdatePlanItemParamsV1Schema } from "../../../../billing/common/customizePlan/customizePlanV1.js";
+import { ApiFeatureOverrideSchema } from "../../../../features/apiFeatureOverride.js";
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
+
+export const MigrationRemoveItemSchema = PlanItemFilterFieldsSchema.extend({
+	previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
+		internal: true,
+		description:
+			"The matched item's feature_override before the plan update that created this migration. Display-only.",
+	}),
+})
+	.refine(planItemFilterHasField, { message: PLAN_ITEM_FILTER_EMPTY_MESSAGE })
+	.meta({
+		title: "MigrationRemoveItem",
+		description:
+			"Filter for matching plan items. All provided fields must match (AND).",
+	});
+
+export type MigrationRemoveItem = z.infer<typeof MigrationRemoveItemSchema>;
 
 export const MigrationUpdatePlanCustomizeSchema = z
 	.object({
@@ -18,7 +39,7 @@ export const MigrationUpdatePlanCustomizeSchema = z
 				"Base price before the plan update that created this migration. Display-only.",
 		}),
 		add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
-		remove_items: z.array(PlanItemFilterSchema).optional(),
+		remove_items: z.array(MigrationRemoveItemSchema).optional(),
 		update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
 			description:
 				"Deprecated. Use remove_items and add_items to replace matched plan items.",

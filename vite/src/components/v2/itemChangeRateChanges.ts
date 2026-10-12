@@ -5,23 +5,28 @@ import {
 	replacementRateChanges,
 } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 
-const itemOverride = (change: PlanItemChangeV0) =>
-	change.item.feature_override
+type ItemChange = Partial<PlanItemChangeV0>;
+
+const itemOverride = (change: ItemChange) =>
+	change.item?.feature_override
 		? apiFeatureOverrideToDb(change.item.feature_override)
 		: null;
 
 /** A created item's rate rows, diffed against the deleted item of the same feature. */
 export const itemChangeRateChanges = ({
 	change,
-	deleted,
+	itemChanges,
 	features,
 }: {
-	change: PlanItemChangeV0;
-	deleted: PlanItemChangeV0[];
+	change: ItemChange;
+	itemChanges: ItemChange[];
 	features: Feature[];
 }): RateChange[] => {
-	const replaced = deleted.find(
-		(candidate) => candidate.feature_id === change.feature_id,
+	if (change.action !== "created" || !change.feature_id) return [];
+	const replaced = itemChanges.find(
+		(candidate) =>
+			candidate.action === "deleted" &&
+			candidate.feature_id === change.feature_id,
 	);
 	return replacementRateChanges({
 		replaced: replaced && { override: itemOverride(replaced) },

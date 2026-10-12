@@ -32,9 +32,9 @@ type CatalogOverride = NonNullable<
 	NonNullable<ProductItem["config"]>["feature_override"]
 >;
 
-const creditsItem = (featureOverride?: Override): AddItem => ({
+const creditsItem = (featureOverride?: Override, included = 100): AddItem => ({
 	feature_id: "credits",
-	included: 100,
+	included,
 	reset: { interval: "month" },
 	...(featureOverride ? { feature_override: featureOverride } : {}),
 });
@@ -59,7 +59,15 @@ const catalogPlan = (featureOverride?: CatalogOverride) => ({
 	],
 });
 
-const updateOp = (item: AddItem, paired = true): UpdatePlanOp =>
+const updateOp = ({
+	item,
+	paired = true,
+	stamped,
+}: {
+	item: AddItem;
+	paired?: boolean;
+	stamped?: Override;
+}): UpdatePlanOp =>
 	({
 		type: "update_plan",
 		plan_filter: { plan_id: "pro", version: 1, custom: false },
@@ -73,6 +81,7 @@ const updateOp = (item: AddItem, paired = true): UpdatePlanOp =>
 								interval: "month",
 								interval_count: 1,
 								included: 100,
+								...(stamped ? { previous_feature_override: stamped } : {}),
 							},
 						],
 					}
@@ -84,14 +93,16 @@ const lines = ({
 	item,
 	previous,
 	paired = true,
+	stamped,
 }: {
 	item: AddItem;
 	previous?: CatalogOverride;
 	paired?: boolean;
+	stamped?: Override;
 }) =>
 	addItemRateChanges({
 		item,
-		op: updateOp(item, paired),
+		op: updateOp({ item, paired, stamped }),
 		products: [catalogPlan(previous)],
 		features,
 	}).map((change) => `${change.label}: ${rateChangeText(change)}`);
@@ -114,7 +125,7 @@ describe("addItemRateChanges", () => {
 	test("an unchanged override adds nothing", () => {
 		expect(
 			lines({
-				item: creditsItem(flatOverride(2)),
+				item: creditsItem(flatOverride(2), 200),
 				previous: {
 					schema: [
 						{ metered_feature_id: "searches", credit_amount: 5 },
@@ -192,9 +203,38 @@ describe("addItemRateChanges", () => {
 		).toEqual(["Default: 20% → 30% markup", "openai: 10% markup"]);
 	});
 
+	test("a stamped previous override wins over a catalog updated in place", () => {
+		expect(
+			lines({
+				item: creditsItem(flatOverride(3.571)),
+				stamped: flatOverride(2.857),
+				previous: {
+					schema: [
+						{ metered_feature_id: "gateway", credit_amount: 3.571 },
+						{ metered_feature_id: "searches", credit_amount: 5 },
+					],
+				},
+			}),
+		).toEqual(["Gateway spend (USD): 2.857 → 3.571 credits"]);
+	});
+
+	test("an older draft on a catalog updated in place shows the new rate card", () => {
+		expect(
+			lines({
+				item: creditsItem(flatOverride(3.571)),
+				previous: {
+					schema: [
+						{ metered_feature_id: "gateway", credit_amount: 3.571 },
+						{ metered_feature_id: "searches", credit_amount: 5 },
+					],
+				},
+			}),
+		).toEqual(["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"]);
+	});
+
 	test("a plan filter without one version shows the new rate card", () => {
 		const item = creditsItem(flatOverride(3));
-		const op = updateOp(item);
+		const op = updateOp({ item });
 		expect(
 			addItemRateChanges({
 				item,

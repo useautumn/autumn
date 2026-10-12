@@ -1,10 +1,11 @@
 import type { CatalogMigration, UpdatePlanOp } from "@autumn/shared";
 import { buildMigrationDraftId } from "./buildMigrationDraftId";
-import { buildMigrationPlanFilter } from "./buildMigrationPlanFilter";
 import {
 	sortTargetsByPlanVersion,
+	stampPreviousFeatureOverrides,
 	stampPreviousPrice,
 } from "./buildMigrationDraftUtils";
+import { buildMigrationPlanFilter } from "./buildMigrationPlanFilter";
 import { groupTargetsByCustomize } from "./groupTargetsByCustomize";
 import { targetsToPlans } from "./targetsToPlans";
 import type { MigrationTarget } from "./types";
@@ -31,7 +32,12 @@ export const buildMigrationDraft = ({
 				includeCustom: bucketTargets.every((target) => target.includeCustom),
 				versionsWithCustomersByPlanId,
 			}),
-			customize: stampPreviousPrice({ customize, targets: bucketTargets }),
+			customize: stampPreviousFeatureOverrides({
+				customize: stampPreviousPrice({ customize, targets: bucketTargets }),
+				previousItemSets: bucketTargets.map(
+					(target) => target.previousItems ?? [],
+				),
+			}),
 		}),
 	);
 

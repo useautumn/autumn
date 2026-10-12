@@ -14,6 +14,7 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { stampPreviousFeatureOverrides } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraftUtils.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -85,6 +86,31 @@ const withPreviousPrice = <T extends { operations: Operations }>({
 			return {
 				...op,
 				customize: { ...op.customize, previous_price: prices[0] },
+			};
+		}),
+	},
+});
+
+const withPreviousFeatureOverrides = <T extends { operations: Operations }>({
+	draft,
+	previousItemsByPlanId,
+}: {
+	draft: T;
+	previousItemsByPlanId: Map<string, ApiPlanV1["items"]>;
+}): T => ({
+	...draft,
+	operations: {
+		...draft.operations,
+		customer: draft.operations.customer?.map((op) => {
+			if (op.type !== "update_plan" || !op.customize) return op;
+			return {
+				...op,
+				customize: stampPreviousFeatureOverrides({
+					customize: op.customize,
+					previousItemSets: matchedPlanIds(op.plan_filter.plan_id).map(
+						(id) => previousItemsByPlanId.get(id) ?? [],
+					),
+				}),
 			};
 		}),
 	},
@@ -239,13 +265,24 @@ export const createPlanMigrationDraft = async ({
 		for (const draft of drafts.filter((draft) => draft !== null)) {
 			const migration = await migrationRepo.insert({
 				ctx,
-				insert: withPreviousPrice({
-					draft,
-					previousPriceByPlanId: buildPreviousPriceMap({
-						planId,
-						fromPlan,
-						variantsBefore: selectedVariantsBefore,
+				insert: withPreviousFeatureOverrides({
+					draft: withPreviousPrice({
+						draft,
+						previousPriceByPlanId: buildPreviousPriceMap({
+							planId,
+							fromPlan,
+							variantsBefore: selectedVariantsBefore,
+						}),
 					}),
+					previousItemsByPlanId: new Map([
+						[planId, fromPlan.items],
+						...selectedVariantsBefore.map(
+							(before): [string, ApiPlanV1["items"]] => [
+								before.product.id,
+								before.plan.items,
+							],
+						),
+					]),
 				}),
 			});
 			ids.push(migration.id);

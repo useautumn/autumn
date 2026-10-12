@@ -38,7 +38,7 @@ test("a created item diffs its override against the deleted item of the same fea
 	expect(
 		itemChangeRateChanges({
 			change: change({ action: "created", creditCost: 3 }),
-			deleted: [change({ action: "deleted", creditCost: 2 })],
+			itemChanges: [change({ action: "deleted", creditCost: 2 })],
 			features,
 		}),
 	).toEqual([

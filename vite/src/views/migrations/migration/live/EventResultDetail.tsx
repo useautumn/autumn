@@ -13,6 +13,8 @@ import {
 import { PackageIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { ChangeDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
+import { itemChangeRateChanges } from "@/components/v2/itemChangeRateChanges";
+import { RateChangeList } from "@/components/v2/RateChangeList";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -273,6 +275,7 @@ function PlanChangeRows({
 	absorbedBalances?: BalanceChange[];
 	absorbedFlags?: FlagChange[];
 }) {
+	const { features } = useFeaturesQuery();
 	const action = change.action ?? "unknown";
 	const items = getItemChanges(change);
 	const planId = getPlanId(change);
@@ -302,7 +305,17 @@ function PlanChangeRows({
 				)}
 			</ChangeRow>
 			{items.map((item, i) => (
-				<ItemChangeRow key={item.feature_id ?? i} item={item} />
+				<div className="flex flex-col gap-1" key={item.feature_id ?? i}>
+					<ItemChangeRow item={item} />
+					<RateChangeList
+						className="ml-6"
+						changes={itemChangeRateChanges({
+							change: item,
+							itemChanges: items,
+							features,
+						})}
+					/>
+				</div>
 			))}
 			{items.length === 0 && hasAbsorbed && (
 				<>
