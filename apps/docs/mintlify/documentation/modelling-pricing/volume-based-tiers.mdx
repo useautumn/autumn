@@ -69,7 +69,7 @@ Preview with `atmn push`, then apply with `atmn push --yes`.
 3. Under **Price**, select **Tiered**
 4. Switch the tier behavior to **Volume**
 5. Add tiers with the upper limit (`to`) and flat amount for each range
-6. Set the billing method to **Prepaid** and the billing interval
+6. Set the billing method (**Prepaid** or **Usage-based**) and the billing interval
 7. Save the plan
 
 </Tab>
@@ -83,7 +83,9 @@ Autumn:
 2. Finds the tier the total falls into
 3. Charges the flat amount for that tier
 
-Volume tiers are prepaid-only.
+Volume tiers work on prepaid and usage-based (pay-per-use or allocated) items. With included usage, nothing is charged until total usage passes the included amount. After that, every unit (the included ones too) is charged at the rate of the tier total usage lands in. A tier's flat amount works the same way.
+
+Volume tiers can't be combined with threshold billing.
 
 | Total volume | Matching tier | Charge |
 |-------------|---------------|--------|
