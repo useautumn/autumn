@@ -1,3 +1,4 @@
+import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { fullCustomerWithDerivedIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/fullCustomerWithDerivedIsCustom.js";
@@ -24,13 +25,31 @@ const baseProductsForMigration = ({
 	return baseProducts;
 };
 
-// The custom guard is already injected by now, so this checks the version alone.
+// The custom guard is already in plan_filter by setup, so only the version is checked.
 const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
 	Boolean(
 		migration.operations?.customer?.some(
 			(op) => op.type === "update_plan" && op.version !== undefined,
 		),
 	);
+
+/** Drift onto a row stored as not custom is likely the catalog edit the migration applies. */
+const keepStoredNotCustomFlags = ({
+	stored,
+	derived,
+}: {
+	stored: FullCustomer;
+	derived: FullCustomer;
+}): FullCustomer => ({
+	...derived,
+	customer_products: derived.customer_products.map(
+		(customerProduct, index) => ({
+			...customerProduct,
+			is_custom:
+				customerProduct.is_custom && stored.customer_products[index].is_custom,
+		}),
+	),
+});
 
 /** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
@@ -54,19 +73,13 @@ export const setupMigrateCustomerContext = async ({
 			fullCustomer: storedFullCustomer,
 			baseProducts: baseProductsForMigration({ migration }),
 		});
-	// A version bump spares every derived-custom plan. Without one, drift onto a row stored as
-	// not custom is likely the catalog edit this migration applies; the billing-plan hook re-derives after.
+	// Version bumps spare every derived-custom plan; the billing-plan hook re-derives after ops.
 	const fullCustomer = bumpsVersion({ migration })
 		? derivedFullCustomer
-		: {
-				...derivedFullCustomer,
-				customer_products: derivedFullCustomer.customer_products.map(
-					(customerProduct, index) =>
-						storedFullCustomer.customer_products[index].is_custom
-							? customerProduct
-							: { ...customerProduct, is_custom: false },
-				),
-			};
+		: keepStoredNotCustomFlags({
+				stored: storedFullCustomer,
+				derived: derivedFullCustomer,
+			});
 
 	return {
 		migration,
