@@ -1,36 +1,9 @@
-import type { CreditSchemaItem, FullCustomerEntitlement } from "@autumn/shared";
-import { hasCreditDimensionRules, numberWithCommas } from "@autumn/shared";
+import type { FullCustomerEntitlement } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
+import { featureOverrideRateCard } from "@/views/products/features/credit-systems/utils/featureOverrideRateCard";
 import { OverrideRow } from "./OverrideRow";
-
-const countLabel = (count: number, noun: string) =>
-	`${count} ${noun}${count === 1 ? "" : "s"}`;
-
-const rateText = (item: CreditSchemaItem) => {
-	const perUnits =
-		(item.feature_amount ?? 1) !== 1
-			? ` per ${numberWithCommas(item.feature_amount ?? 1)}`
-			: "";
-
-	if (item.tier_behavior === "graduated") {
-		const costs = item.tiers.map((tier) => tier.credit_amount);
-		return `${Math.min(...costs)}–${Math.max(...costs)} credits (tiered)${perUnits}`;
-	}
-
-	return `${numberWithCommas(item.credit_amount)} credits${perUnits}`;
-};
-
-const dimensionedRateText = (item: CreditSchemaItem) => {
-	const parts: string[] = [];
-	const dimensions = Object.keys(item.dimensions ?? {}).length;
-	const multipliers = Object.keys(item.multipliers ?? {}).length;
-	if (dimensions) parts.push(countLabel(dimensions, "rate"));
-	if (multipliers) parts.push(countLabel(multipliers, "multiplier"));
-	return `varies by event · ${parts.join(", ")}`;
-};
 
 export function FeatureOverrideSection({
 	selectedCusEnt,
@@ -39,58 +12,21 @@ export function FeatureOverrideSection({
 }) {
 	const { features } = useFeaturesQuery();
 	const override = selectedCusEnt.entitlement.feature_override;
-	const schema = override?.schema;
-	const markups = override?.markups;
 
-	if (!(schema?.length || markups)) return null;
-
-	const providerMarkups = Object.entries(markups?.provider_markups ?? {});
-	const modelMarkupCount = Object.keys(markups?.model_markups ?? {}).length;
+	if (!(override?.schema?.length || override?.markups)) return null;
 
 	return (
 		<SheetSection withSeparator>
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center gap-1.5 text-tertiary-foreground text-sm font-medium">
 					<CoinsIcon size={14} weight="duotone" />
-					{schema?.length ? "Custom rate card" : "Custom markup"}
+					{override.schema?.length ? "Custom rate card" : "Custom markup"}
 				</div>
 
 				<div className="flex flex-col gap-1.5">
-					{schema?.map((item) => (
-						<OverrideRow
-							key={`feature-${item.metered_feature_id}`}
-							label={featureDisplayName({
-								features,
-								featureId: item.metered_feature_id,
-								plural: true,
-								capitalize: true,
-							})}
-							value={
-								hasCreditDimensionRules(item)
-									? dimensionedRateText(item)
-									: rateText(item)
-							}
-						/>
+					{featureOverrideRateCard({ override, features }).map((line) => (
+						<OverrideRow key={line.key} label={line.label} value={line.value} />
 					))}
-					{markups && (
-						<OverrideRow
-							label="Default"
-							value={`${markups.default_markup ?? 0}% markup`}
-						/>
-					)}
-					{providerMarkups.map(([providerKey, entry]) => (
-						<OverrideRow
-							key={`provider-${providerKey}`}
-							label={providerKey}
-							value={`${entry?.markup ?? 0}% markup`}
-						/>
-					))}
-					{modelMarkupCount > 0 && (
-						<OverrideRow
-							label="Per-model"
-							value={countLabel(modelMarkupCount, "model")}
-						/>
-					)}
 				</div>
 
 				<div className="text-xs text-subtle px-2">

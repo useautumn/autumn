@@ -12,6 +12,7 @@ import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/c
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
+import { RateChangeList } from "@/components/v2/RateChangeList";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -25,6 +26,7 @@ import {
 	type ItemFilter,
 } from "../operations/operationItemUtils";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
+import { addItemRateChanges } from "./addItemRateChanges";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 import { formatVersionTransition } from "./versionTransition";
 
@@ -214,10 +216,19 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 							)}
 
 							{addItems.map((item, idx) => (
-								<AddedItemRow
-									key={`add-${idx}`}
-									item={migrationItemToProductItem(item, features)}
-								/>
+								<div className="flex flex-col gap-1 min-w-0" key={`add-${idx}`}>
+									<AddedItemRow
+										item={migrationItemToProductItem(item, features)}
+									/>
+									<RateChangeList
+										changes={addItemRateChanges({
+											item,
+											op: updateOp,
+											products,
+											features,
+										})}
+									/>
+								</div>
 							))}
 
 							{upsertLicenses.map((license) => (

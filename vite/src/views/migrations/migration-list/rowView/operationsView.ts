@@ -11,6 +11,10 @@ import {
 	intervalSuffix,
 	isAbbreviatedInterval,
 } from "@/utils/formatUtils/intervalSuffix";
+import {
+	type RateChange,
+	rateChangeText,
+} from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
 import {
 	type CappedChips,
@@ -136,6 +140,31 @@ const addItemDetail = ({
 	return parts.length > 0 ? parts.join(" · ") : "added";
 };
 
+const rateChangeSign = ({ from, to }: RateChange): ModificationView["sign"] => {
+	if (from === null) return "add";
+	if (to === null) return "remove";
+	return "change";
+};
+
+/** One row per rate the item's feature override sets or changes, under the item's tile. */
+const rateModifications = ({
+	item,
+	op,
+	catalog,
+}: {
+	item: AddItem;
+	op: UpdatePlanOp;
+	catalog: MigrationCatalog;
+}): ModificationView[] =>
+	catalog.rateChanges({ item, op }).map((change) => ({
+		sign: rateChangeSign(change),
+		chip: {
+			label: change.label,
+			tile: catalog.feature(item.feature_id).tile,
+			details: [rateChangeText(change)],
+		},
+	}));
+
 const priceModification = ({
 	customize,
 	catalog,
@@ -221,13 +250,16 @@ const updatePlanModifications = ({
 				details: ["customized"],
 			},
 		})),
-		...(customize?.add_items ?? []).map((item) => ({
-			sign: "add" as const,
-			chip: itemChip(
-				item,
-				addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
-			),
-		})),
+		...(customize?.add_items ?? []).flatMap((item) => [
+			{
+				sign: "add" as const,
+				chip: itemChip(
+					item,
+					addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
+				),
+			},
+			...rateModifications({ item, op, catalog }),
+		]),
 		...(customize?.update_items ?? []).map((item) => ({
 			sign: "change" as const,
 			chip: itemChip(

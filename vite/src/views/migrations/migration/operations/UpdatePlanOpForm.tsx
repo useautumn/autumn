@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import { RateChangeList } from "@/components/v2/RateChangeList";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
@@ -33,6 +34,7 @@ import {
 	planKeysToFilter,
 } from "../filters/filterRowTypes";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
+import { addItemRateChanges } from "../shared/addItemRateChanges";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
@@ -82,6 +84,7 @@ export function UpdatePlanOpForm({
 	defaultOpenPicker?: boolean;
 }) {
 	const versionOptions = useVersionOptions(value.plan_filter);
+	const { products } = useProductsQuery({ allVersions: true });
 	const { features } = useFeaturesQuery();
 	const { licenseProducts } = useLicenseProductsQuery();
 
@@ -268,15 +271,26 @@ export function UpdatePlanOpForm({
 			)}
 
 			{addItems.map((item, index) => (
-				<div key={`add-${index}`} className="flex items-center gap-2 group/row">
-					<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">
-						Add
-					</span>
-					<ItemSummaryRow
-						item={item}
-						onClick={() => openSheet("edit-feature", index)}
+				<div key={`add-${index}`} className="flex flex-col gap-1">
+					<div className="flex items-center gap-2 group/row">
+						<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">
+							Add
+						</span>
+						<ItemSummaryRow
+							item={item}
+							onClick={() => openSheet("edit-feature", index)}
+						/>
+						<RemoveButton onClick={() => handleRemoveItem(index)} />
+					</div>
+					<RateChangeList
+						className="ml-17.5"
+						changes={addItemRateChanges({
+							item,
+							op: value,
+							products,
+							features,
+						})}
 					/>
-					<RemoveButton onClick={() => handleRemoveItem(index)} />
 				</div>
 			))}
 

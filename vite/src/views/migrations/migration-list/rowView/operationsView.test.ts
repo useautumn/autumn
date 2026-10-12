@@ -370,3 +370,56 @@ test("ten target plans become a count subtitle over a capped chip list", () => {
 		moreCount: 7,
 	});
 });
+
+test("an override-only item change lists each changed rate under the item", () => {
+	const fixture = fixtureMigrations.find(
+		(migration) => migration.id === "migration-scale-rate-card",
+	);
+	const result = view(fixture?.operations?.customer ?? [], true);
+	expect(
+		result?.modifications.map(({ sign, chip }) => ({
+			sign,
+			label: chip.label,
+			details: chip.details,
+		})),
+	).toEqual([
+		{ sign: "add", label: "Credits", details: ["+ 100,000/mo"] },
+		{
+			sign: "change",
+			label: "Gateway spend (USD)",
+			details: ["2.857 → 3.571 credits"],
+		},
+		{ sign: "remove", label: "Credits", details: ["removed"] },
+	]);
+});
+
+test("an added item with an override lists its full rate card", () => {
+	const result = view([
+		{
+			type: "update_plan",
+			plan_filter: { plan_id: "pro" },
+			customize: {
+				add_items: [
+					{
+						feature_id: "credits",
+						included: 100,
+						feature_override: {
+							credit_schema: [
+								{ metered_feature_id: "gateway_spend", credit_cost: 2 },
+							],
+							markups: { default_markup: 25 },
+						},
+					},
+				],
+			},
+		},
+	]);
+	expect(
+		result?.modifications
+			.slice(1)
+			.map(({ sign, chip }) => [sign, chip.label, chip.details]),
+	).toEqual([
+		["add", "Gateway spend (USD)", ["2 credits"]],
+		["add", "Default", ["25% markup"]],
+	]);
+});
