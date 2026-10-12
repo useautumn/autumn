@@ -15,6 +15,7 @@ import {
 } from "@autumn/alien";
 import { getAutumnEnv } from "@autumn/env";
 import {
+	ATOM_REPLICAS,
 	type ByocCacheMachine,
 	type ByocCacheNetwork,
 	ByocCacheStatus,
@@ -40,13 +41,13 @@ const ATOM_RESOURCE_ID = "atom";
 const ATOM_ENDPOINT_NAME = "api";
 const ATOM_POOL = "stateful";
 
-/** One Atom is one stateful container, so its pool is one machine. */
+/** Each of the Atom's replicas runs on its own machine. */
 const machineToAtomPools = ({
 	machine,
 }: {
 	machine: ByocCacheMachine;
 }): AlienFixedPools => ({
-	[ATOM_POOL]: { machine: machine.instanceType, machines: 1 },
+	[ATOM_POOL]: { machine: machine.instanceType, machines: ATOM_REPLICAS },
 });
 
 /** The Atom container's share of its machine; the release's resource ranges must hold every size's. */

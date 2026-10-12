@@ -67,7 +67,7 @@ describe("starting an Atom on alien", () => {
 		]);
 	});
 
-	test("the setup defaults the Atom's pool to the chosen machine", async () => {
+	test("the setup defaults the Atom's pool to the chosen machine, one per replica", async () => {
 		const { alienClient, started } = recordingAlienClient();
 		const deployer = createAlienAtomDeployer({ alienClient });
 
@@ -79,7 +79,7 @@ describe("starting an Atom on alien", () => {
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "c8g.xlarge", machines: 1 },
+			stateful: { machine: "c8g.xlarge", machines: 2 },
 		});
 	});
 
@@ -100,6 +100,8 @@ describe("starting an Atom on alien", () => {
 	});
 
 	test.each([
+		["t4g.micro", { cpu: 1, memory: "0.625Gi" }],
+		["t4g.small", { cpu: 1, memory: "1.375Gi" }],
 		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
 		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
 		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
@@ -120,7 +122,7 @@ describe("starting an Atom on alien", () => {
 			});
 
 			expect(started[0]?.pools).toEqual({
-				stateful: { machine: instanceType, machines: 1 },
+				stateful: { machine: instanceType, machines: 2 },
 			});
 			expect(started[0]?.containers).toEqual({ atom: container });
 		},

@@ -9,6 +9,7 @@ import { LabelTag } from "@/components/general/LabelTag";
 import { AtomFieldRow } from "./AtomFieldRow";
 import { AtomMachineTable } from "./AtomMachineTable";
 import { AtomSetupSection } from "./AtomSetupSection";
+import { AtomSizeFootnote } from "./AtomSizeFootnote";
 import type { AtomSetupForm } from "./useAtomSetupForm";
 
 const PROVIDER_OPTIONS = [
@@ -37,6 +38,7 @@ export const AtomCloudSection = ({
 	onContinue: () => void;
 }) => (
 	<AtomSetupSection
+		status={<AtomSizeFootnote />}
 		actions={
 			<Button variant="primary" onClick={onContinue}>
 				Continue

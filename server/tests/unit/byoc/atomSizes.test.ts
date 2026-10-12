@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	ATOM_REPLICAS,
 	BYOC_CACHE_MACHINES,
 	DEFAULT_BYOC_CACHE_MACHINE,
 } from "@autumn/shared";
@@ -81,6 +82,13 @@ describe("Atom sizes", () => {
 			);
 			expect(container.memory * GIB).toBeLessThanOrEqual(toBytes(memory.max));
 		}
+	});
+
+	test("each Atom runs the stack's replica count, and its estimate is for all of them", () => {
+		expect(atomResource.replicas).toBe(ATOM_REPLICAS);
+		expect(
+			BYOC_CACHE_MACHINES.map(({ estimatedMonthlyUsd }) => estimatedMonthlyUsd),
+		).toEqual([28, 41, 132, 249, 482, 948]);
 	});
 
 	test("the default size is the stack's default, so a setup that names none is unchanged", () => {
