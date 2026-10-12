@@ -23,6 +23,7 @@ export const previewPendingReattach = async ({
 	deferredData: DeferredAutumnBillingPlanData;
 }) => {
 	const reattachParams = buildPendingReattachParams({
+		ctx,
 		params,
 		billingContext: deferredData.billingContext,
 		customerProduct,
