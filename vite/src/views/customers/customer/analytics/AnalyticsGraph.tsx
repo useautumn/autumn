@@ -1,40 +1,26 @@
-import { type ChartConfig, ChartContainer } from "@autumn/ui";
+import type { ChartConfig } from "@autumn/ui";
 import { X } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
 import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
+import { UsageChartFrame } from "./components/UsageChartFrame";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
-import {
-	barLayout,
-	CHART_MARGIN,
-	type PlotInsets,
-	Y_AXIS_WIDTH,
-} from "./utils/chartGeometry";
-import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
+import { barLayout } from "./utils/chartGeometry";
+import { formatPeriodLabel } from "./utils/parseTimestamp";
 import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
 const MAX_TOOLTIP_ITEMS = 5;
 const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
-const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
-const X_TICK = { fontSize: 11, fill: "#666" } as const;
-const Y_TICK = {
-	fontSize: 11,
-	fill: "#666",
-	textAnchor: "middle" as const,
-	dx: -15,
-	dy: -3,
-} as const;
 
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
 	ticks,
-	onGeometry,
 }: {
 	data: {
 		meta: any[];
@@ -43,7 +29,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 	};
 	chartConfig: ChartSeriesConfig[];
 	ticks?: number[];
-	onGeometry?: (insets: PlotInsets) => void;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
 	const selectedInterval = queryStates.interval;
@@ -60,7 +45,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		handleChartMouseLeave,
 		handleChartClick,
 		unpin,
-	} = usePinnedChartTooltip({ data, chartConfig, onGeometry });
+	} = usePinnedChartTooltip({ data, chartConfig });
 
 	const formatXAxis = useCallback(
 		(value: string): string => {
@@ -93,64 +78,35 @@ export const EventsBarChart = memo(function EventsBarChart({
 
 	const chart = useMemo(
 		() => (
-			<ChartContainer
+			<UsageChartFrame
+				chartKey={seriesSetKey}
 				config={rechartsConfig}
-				className="h-full w-full [&_*:focus]:outline-none"
+				data={data.data}
+				ticks={ticks}
+				barCategoryGap={categoryGap}
+				formatXTick={formatXAxis}
+				showYTicks
 			>
-				<BarChart
-					key={seriesSetKey}
-					data={data.data}
-					margin={CHART_MARGIN}
-					barCategoryGap={categoryGap}
-					style={CHART_STYLE}
-					throttleDelay="raf"
-				>
-					<CartesianGrid
-						vertical={false}
-						strokeDasharray="2 2"
-						stroke="var(--chart-grid-stroke)"
-						strokeWidth={1}
+				{chartConfig.map((series, si) => (
+					<Bar
+						key={series.yKey}
+						dataKey={series.yKey}
+						stackId="a"
+						fill={series.fill}
+						// Read as currentColor by the hover dim, which mixes it toward the background.
+						color={series.fill}
+						// A background-colored stroke reads as a gap between stacked segments.
+						stroke="var(--background)"
+						strokeWidth={segmentGap}
+						radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
+						activeBar={false}
+						style={BAR_STYLE}
+						onMouseEnter={barHandlers[si]}
+						onMouseLeave={handleBarMouseLeave}
+						isAnimationActive={false}
 					/>
-					<XAxis
-						dataKey="period"
-						tickLine={false}
-						tickMargin={4}
-						axisLine={false}
-						interval="equidistantPreserveStart"
-						tick={X_TICK}
-						tickFormatter={formatXAxis}
-					/>
-					<YAxis
-						tickLine={false}
-						axisLine={false}
-						width={Y_AXIS_WIDTH}
-						tickMargin={0}
-						ticks={ticks}
-						domain={ticks ? [0, ticks[ticks.length - 1]] : undefined}
-						tick={Y_TICK}
-						tickFormatter={formatCompactNumber}
-					/>
-					{chartConfig.map((series, si) => (
-						<Bar
-							key={series.yKey}
-							dataKey={series.yKey}
-							stackId="a"
-							fill={series.fill}
-							// Read as currentColor by the hover dim, which mixes it toward the background.
-							color={series.fill}
-							// A background-colored stroke reads as a gap between stacked segments.
-							stroke="var(--background)"
-							strokeWidth={segmentGap}
-							radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
-							activeBar={false}
-							style={BAR_STYLE}
-							onMouseEnter={barHandlers[si]}
-							onMouseLeave={handleBarMouseLeave}
-							isAnimationActive={false}
-						/>
-					))}
-				</BarChart>
-			</ChartContainer>
+				))}
+			</UsageChartFrame>
 		),
 		[
 			seriesSetKey,

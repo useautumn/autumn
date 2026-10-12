@@ -1,6 +1,4 @@
-import { AnimatePresence } from "motion/react";
 import { useElapsedSeconds } from "../hooks/useElapsedSeconds";
-import type { PlotInsets } from "../utils/chartGeometry";
 import { ChartSkeleton } from "./ChartSkeleton";
 import { SlowLoadNotice } from "./SlowLoadNotice";
 
@@ -11,28 +9,24 @@ export const ChartLoadingStubs = ({
 	binStarts,
 	interval,
 	seriesCount,
-	geometry,
 }: {
 	binStarts: number[];
 	interval: string;
 	seriesCount: number;
-	geometry: PlotInsets;
 }) => {
 	const seconds = useElapsedSeconds({ active: true });
 	const isSlow = seconds >= SLOW_AFTER_SECONDS;
 
 	return (
-		<>
+		<div className="absolute inset-0 flex flex-col">
 			<ChartSkeleton
 				binStarts={binStarts}
 				interval={interval}
 				isSweeping={!isSlow}
 				seriesCount={seriesCount}
-				geometry={geometry}
 			/>
-			<AnimatePresence>
-				{isSlow && <SlowLoadNotice key="slow" seconds={seconds} />}
-			</AnimatePresence>
-		</>
+			{/* No nested AnimatePresence: the notice exits with the stubs, under the page's presence. */}
+			{isSlow && <SlowLoadNotice seconds={seconds} />}
+		</div>
 	);
 };
