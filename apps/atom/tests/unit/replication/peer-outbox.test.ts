@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
 import { createPeerOutbox } from "../../../src/replication/outbox/createPeerOutbox.js";
+import type { Delivery as Outcome } from "../../../src/replication/transport/sendToPeer.js";
 import type { ReplicatedOperation } from "../../../src/replication/types/replicatedOperation.js";
 
 type Delivery = { peer: string; path: string; operation: ReplicatedOperation };
@@ -11,8 +12,8 @@ const outboxOf = ({
 	answers = {},
 }: {
 	peers: string[];
-	/** Per peer: the answer to each delivery in turn, `true` once the list runs out; `false` alone is a peer that is down. */
-	answers?: Record<string, boolean[] | false>;
+	/** Per peer: the answer to each delivery in turn, delivered once the list runs out; `false` alone is a peer that is down. */
+	answers?: Record<string, Outcome[] | false>;
 }) => {
 	const delivered: Delivery[] = [];
 	const counts: Record<string, number> = {};
@@ -31,8 +32,8 @@ const outboxOf = ({
 			send: async (delivery) => {
 				delivered.push(delivery);
 				const scripted = answers[delivery.peer];
-				if (scripted === false) return false;
-				return scripted?.shift() ?? true;
+				if (scripted === false) return "failed" as const;
+				return scripted?.shift() ?? ("delivered" as const);
 			},
 			counters: {
 				add: (field, by = 1) => {
@@ -114,7 +115,7 @@ describe("what a thread applied, on its way to the other replicas", () => {
 	test("is tried again after a failed delivery, and the peers are resolved again in case one was replaced", async () => {
 		const { outbox, delivered, counts, forgotten } = outboxOf({
 			peers: ["10.0.0.2"],
-			answers: { "10.0.0.2": [false, true] },
+			answers: { "10.0.0.2": ["failed", "delivered"] as Outcome[] },
 		});
 
 		await outbox.enqueue({
@@ -134,7 +135,9 @@ describe("what a thread applied, on its way to the other replicas", () => {
 	test("a newer copy for the same key replaces the one still waiting, so a peer never gets an older one last", async () => {
 		const { outbox, delivered } = outboxOf({
 			peers: ["10.0.0.2"],
-			answers: { "10.0.0.2": [false, true, true] },
+			answers: {
+				"10.0.0.2": ["failed", "delivered", "delivered"] as Outcome[],
+			},
 		});
 
 		await outbox.enqueue({
@@ -160,7 +163,7 @@ describe("what a thread applied, on its way to the other replicas", () => {
 	test("a copy a peer never took within the hold is dropped and counted; the peer's own catch-up covers it", async () => {
 		const { outbox, delivered, counts, advance } = outboxOf({
 			peers: ["10.0.0.2"],
-			answers: { "10.0.0.2": [false, false] },
+			answers: { "10.0.0.2": ["failed", "failed"] as Outcome[] },
 		});
 
 		await outbox.enqueue({
@@ -177,7 +180,7 @@ describe("what a thread applied, on its way to the other replicas", () => {
 	test("a peer that left the service takes its waiting copies with it", async () => {
 		const { outbox, delivered, counts, setPeers } = outboxOf({
 			peers: ["10.0.0.2"],
-			answers: { "10.0.0.2": [false] },
+			answers: { "10.0.0.2": ["failed"] as Outcome[] },
 		});
 
 		await outbox.enqueue({

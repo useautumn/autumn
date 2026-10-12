@@ -176,39 +176,106 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("lists the subjects read after a point, oldest first, and knows its newest read", () => {
+	test("lists the subjects written at or after a point, oldest write first and keyed within a write, and knows its newest write", () => {
+		let now = 1_700;
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
+			now: () => now,
 		});
-		expect(sqliteStore.maxReadAt()).toBe(0);
-		for (const [i, customerId] of ["cus_a", "cus_b", "cus_c"].entries())
+		expect(sqliteStore.maxAppliedAt()).toBe(0);
+		for (const [i, customerId] of ["cus_a", "cus_b", "cus_c"].entries()) {
+			now = 1_700 + Math.min(i, 1);
 			sqliteStore.setSubject({
 				subject: {
-					...subjectAt({ logOffset: 1n, readAt: 1700 + i }),
+					...subjectAt({ logOffset: 1n }),
 					state: createSubjectState({ identity: { ...identity, customerId } }),
 				},
 			});
+		}
 
-		const since = sqliteStore.listSubjectsSince({
-			readAtAfter: 1700,
+		const since = sqliteStore.listAppliedAfter({
+			after: 1_701,
+			cursor: null,
 			limit: 10,
 		});
+		const firstPage = sqliteStore.listAppliedAfter({
+			after: null,
+			cursor: null,
+			limit: 2,
+		});
+		const last = firstPage.at(-1)!;
+		const nextPage = sqliteStore.listAppliedAfter({
+			after: null,
+			cursor: {
+				appliedAt: last.appliedAt,
+				customerId: last.subject.state.identity.customerId,
+				entityId: "",
+			},
+			limit: 2,
+		});
 
-		expect(sqliteStore.maxReadAt()).toBe(1702);
+		expect(sqliteStore.maxAppliedAt()).toBe(1_701);
 		expect(
-			since.map((subject) => [
+			since.map(({ subject, appliedAt }) => [
 				subject.state.identity.customerId,
-				subject.readAt,
+				appliedAt,
 			]),
 		).toEqual([
-			["cus_b", 1701],
-			["cus_c", 1702],
+			["cus_b", 1_701],
+			["cus_c", 1_701],
 		]);
+		// Two rows written in the same ms straddle the page edge; the cursor's key carries the second one over.
 		expect(
-			sqliteStore.listSubjectsSince({ readAtAfter: 0, limit: 1 }).length,
-		).toBe(1);
+			firstPage.map(({ subject }) => subject.state.identity.customerId),
+		).toEqual(["cus_a", "cus_b"]);
+		expect(
+			nextPage.map(({ subject }) => subject.state.identity.customerId),
+		).toEqual(["cus_c"]);
 		sqliteStore.close();
+	});
+
+	test("a file from before writes were stamped keeps its rows, which read as written at 0", () => {
+		const databasePath = slotPath();
+		const older = new Database(databasePath, { create: true });
+		older.run("PRAGMA user_version = 5");
+		older.run(`
+			CREATE TABLE subject_states (
+				customer_id TEXT NOT NULL, entity_id TEXT NOT NULL, log_offset INTEGER NOT NULL, read_at INTEGER NOT NULL,
+				state_json TEXT NOT NULL, slice_hash TEXT NOT NULL, PRIMARY KEY (customer_id, entity_id)
+			) WITHOUT ROWID
+		`);
+		older.run(`
+			CREATE TABLE subject_slices (
+				customer_id TEXT NOT NULL, entity_id TEXT NOT NULL, slice_hash TEXT NOT NULL, catalog_json TEXT NOT NULL,
+				org_json TEXT NOT NULL, PRIMARY KEY (customer_id, entity_id)
+			) WITHOUT ROWID
+		`);
+		const subject = subjectAt({ logOffset: 41n });
+		older.run(
+			"INSERT INTO subject_states VALUES ('cus_1', '', 41, 1700, ?, 'h')",
+			[JSON.stringify(subject.state)],
+		);
+		older.run("INSERT INTO subject_slices VALUES ('cus_1', '', 'h', ?, ?)", [
+			JSON.stringify(subject.catalog),
+			JSON.stringify(subject.org),
+		]);
+		older.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+
+		expect(
+			reopened.readSubject({ customerId: "cus_1", entityId: null })?.logOffset,
+		).toBe(41n);
+		expect(
+			reopened
+				.listAppliedAfter({ after: null, cursor: null, limit: 10 })
+				.map(({ appliedAt }) => appliedAt),
+		).toEqual([0]);
+		expect(
+			reopened.listAppliedAfter({ after: 1, cursor: null, limit: 10 }),
+		).toEqual([]);
+		reopened.close();
 	});
 
 	test("the file keeps its subjects across a restart", () => {

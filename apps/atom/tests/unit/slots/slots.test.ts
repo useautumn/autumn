@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
-import type { Slots } from "../../../src/slots/types/slots.js";
+import type { Slots, SubjectSource } from "../../../src/slots/types/slots.js";
+import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import {
 	allSlotsOwnedHere,
 	checkRequestFor,
@@ -140,51 +141,123 @@ describe("a data folder's slots", () => {
 });
 
 describe("a replica catching up from a peer", () => {
-	test("asks each slot it owns from a little before its newest read and writes what comes back; a copy it holds already lands harmlessly", async () => {
+	const sourceOf = ({
+		pages,
+		catalog = null,
+	}: {
+		pages: (params: {
+			slot: number;
+			window: number | null;
+			cursor: unknown;
+		}) => StoredSubject[];
+		catalog?: { rows: never[]; readAt: number } | null;
+	}) => {
+		const asked: { slot: number; window: number | null; cursor: unknown }[] =
+			[];
+		const source: SubjectSource = {
+			since: async ({ slot, window, cursor }) => {
+				asked.push({ slot, window, cursor });
+				return {
+					after: 0,
+					subjects: pages({ slot, window, cursor }).map((subject) => ({
+						subject,
+						appliedAt: subject.readAt,
+					})),
+				};
+			},
+			catalog: async () => catalog,
+		};
+		return { source, asked };
+	};
+
+	test("asks each slot it owns for the window given, writes only what is newer than it holds, and takes a newer catalog", async () => {
 		const slots = open({ folder: newFolder(), slotCount: 2 });
 		const held = storedSubjectWith({ balance: 10, readAt: 120_000 });
 		await slots
 			.processorFor({ customerId: "cus_1" })
 			.setSubject(subjectPushOf({ subject: held }));
-		const asked: { slot: number; readAtAfter: number }[] = [];
 		const newer = storedSubjectWith({ balance: 3, readAt: 130_000 });
-
-		const result = await slots.catchUp({
-			source: async ({ slot, readAtAfter }) => {
-				asked.push({ slot, readAtAfter });
-				return slot === customerIdToSlot({ customerId: "cus_1", slotCount: 2 })
-					? [held, newer]
-					: [];
-			},
+		const slotOfCus1 = customerIdToSlot({ customerId: "cus_1", slotCount: 2 });
+		const { source, asked } = sourceOf({
+			pages: ({ slot }) => (slot === slotOfCus1 ? [held, newer] : []),
+			catalog: { rows: [], readAt: 5 },
 		});
+
+		const result = await slots.catchUp({ source, window: 90_000 });
 		const reply = await checkResponseOf({
 			processor: slots.processorFor({ customerId: "cus_1" }),
 			request: checkRequestFor({ params: { required_balance: 4 } }),
 		});
 
-		expect(result).toEqual({ slots: 2, written: 2 });
-		expect(asked.map(({ readAtAfter }) => readAtAfter).sort()).toEqual([
-			0, 60_000,
-		]);
+		// The copy already held is not rewritten; the newer one is.
+		expect(result).toEqual({ slots: 2, written: 1 });
+		expect(asked.map(({ window }) => window)).toEqual([90_000, 90_000]);
 		expect(reply.allowed).toBe(false);
+		expect(slots.installCatalog({ rows: [], readAt: 4 })).toBe(false);
 	});
 
-	test("answers a peer's listSince from the slot's file", async () => {
-		const slots = open({ folder: newFolder(), slotCount: 2 });
-		const subject = storedSubjectWith({ balance: 10, readAt: 1700 });
-		await slots
-			.processorFor({ customerId: "cus_1" })
-			.setSubject(subjectPushOf({ subject }));
+	test("pages past a full page from the last row's key", async () => {
+		const slots = open({ folder: newFolder(), slotCount: 1 });
+		const many = Array.from({ length: 500 }, (_, i) => {
+			const subject = storedSubjectWith({ balance: 1, readAt: 1_000 });
+			return {
+				...subject,
+				state: {
+					...subject.state,
+					identity: { ...subject.state.identity, customerId: `cus_${i}` },
+				},
+			};
+		});
+		const { source, asked } = sourceOf({
+			pages: ({ cursor }) => (cursor ? [] : many),
+		});
+
+		const result = await slots.catchUp({ source, window: null });
+
+		expect(result.written).toBe(500);
+		expect(asked.length).toBe(2);
+		expect(asked[1]?.cursor).toEqual({
+			appliedAt: 1_000,
+			customerId: "cus_499",
+			entityId: "",
+		});
+	});
+
+	test("answers a peer's listSince from the slot's file, and knows its own newest write", async () => {
+		const now = 1_700;
+		const slots = openSlots({
+			folder: newFolder(),
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+			held: freshHeld(),
+			now: () => now,
+		});
+		opened.push(slots);
+		await slots.processorFor({ customerId: "cus_1" }).setSubject(
+			subjectPushOf({
+				subject: storedSubjectWith({ balance: 10, readAt: 1 }),
+			}),
+		);
 		const slot = customerIdToSlot({ customerId: "cus_1", slotCount: 2 });
 
-		const since = await slots.listSince({ slot, readAtAfter: 0, limit: 10 });
+		const since = await slots.listSince({
+			slot,
+			after: null,
+			cursor: null,
+			limit: 10,
+		});
 		const nothingNewer = await slots.listSince({
 			slot,
-			readAtAfter: 1700,
+			after: 1_701,
+			cursor: null,
 			limit: 10,
 		});
 
-		expect(since.map((s) => s.readAt)).toEqual([1700]);
+		expect(since.map((s) => s.appliedAt)).toEqual([1_700]);
 		expect(nothingNewer).toEqual([]);
+		expect(slots.maxAppliedAt()).toBe(1_700);
+		expect(slots.listOwnAppliedAfter({ after: 1_700, limit: 10 }).length).toBe(
+			1,
+		);
 	});
 });

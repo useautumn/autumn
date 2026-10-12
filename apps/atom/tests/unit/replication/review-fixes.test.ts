@@ -1,154 +1,176 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import {
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
-import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
-import { hashToken } from "../../../src/auth/hashToken.js";
-import { createAtomApp } from "../../../src/http/createAtomApp.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
-import { catchUpFromPeers } from "../../../src/replication/catchUp/catchUpFromPeers.js";
-import { createReplication } from "../../../src/replication/createReplication.js";
-import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import { createPeerOutbox } from "../../../src/replication/outbox/createPeerOutbox.js";
-import { createPeerSender } from "../../../src/replication/transport/sendToPeer.js";
-import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
+import { createPeerSender } from "../../../src/replication/transport/sendToPeer.js";
 import {
-	createThreadStatsBuffer,
-	openThreadCounters,
-} from "../../../src/threads/stats/threadStats.js";
-import { allSlotsOwnedHere, freshHeld, subjectBody } from "../utils/atomFixtures.js";
+	bodyFor,
+	cleanUpReplicas,
+	connect,
+	createReplica,
+	customersInSlot,
+	disconnect,
+	heldEverywhere,
+	heldIds,
+	PEER_PORT,
+	PEER_SECRET,
+	settle,
+	storeOnly,
+} from "./replicaFixtures.js";
 
-const ATOM_TOKEN = "atom_token_1";
-const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
-const PORT = 8001;
-const AUTUMN_API_URL = "https://api.autumn.example";
-const quiet = { info: () => {}, warn: () => {}, error: () => {} };
-
-const cleanups: (() => void)[] = [];
 afterEach(() => {
-	spyOn(globalThis, "fetch").mockRestore();
-	for (const cleanup of cleanups.splice(0)) cleanup();
+	disconnect();
+	cleanUpReplicas();
 });
 
-const registry = createHandlerRegistry();
-registry.register(SUBJECT_PUSH);
-registry.register(CATALOG_PUSH);
+const signed = ({
+	path,
+	body,
+	customerId,
+}: {
+	path: string;
+	body: string;
+	customerId?: string;
+}) => ({
+	method: "POST",
+	headers: peerRequestHeaders({
+		secret: PEER_SECRET,
+		method: "POST",
+		path,
+		customerId,
+		body,
+		headers: customerId ? { [ATOM_CUSTOMER_ID_HEADER]: customerId } : {},
+	}),
+	body,
+});
 
-const createReplica = ({ address, peers, ready = true }: { address: string; peers: string[]; ready?: boolean }) => {
-	const dataDir = mkdtempSync(join(tmpdir(), "atom-fixes-"));
-	const threadStats = createThreadStatsBuffer({ threads: 1 });
-	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
-	const auth = createDeployedAuth({ dataDir, tokenHash: TOKEN_HASH, slotCount: 2, owners: allSlotsOwnedHere, held: freshHeld() });
-	const replication = createReplication({
-		ctx: { tokenHash: TOKEN_HASH, port: PORT, registry, counters, logger: quiet, resolver: { peers: async () => peers, forget: () => {} } },
-	});
-	const app = createAtomApp({
-		ctx: {
-			auth,
-			logger: quiet,
-			autumnApiUrl: AUTUMN_API_URL,
-			health: { bootedAt: "2026-10-12T00:00:00.000Z", restarts: new Int32Array(1), ready: new Int32Array([ready ? 1 : 0]), threadStats },
-			counters,
-			replication,
-			peer: { tokenHash: TOKEN_HASH, port: PORT },
-		},
-	});
-	cleanups.push(() => {
-		void replication.stop();
-		auth.close();
-		rmSync(dataDir, { recursive: true, force: true });
-	});
-	return { address, app, slots: auth.slots, replication, dataDir };
-};
-
-type Replica = ReturnType<typeof createReplica>;
-
-const connect = (replicas: Replica[]) => {
-	const byAddress = new Map(replicas.map((r) => [r.address, r]));
-	const dispatch = async (input: URL | RequestInfo, init?: RequestInit) => {
-		const url = new URL(typeof input === "string" ? input : (input as Request).url);
-		const replica = byAddress.get(url.hostname);
-		if (!replica) throw new Error(`connect ECONNREFUSED ${url.hostname}`);
-		return replica.app.request(`${url.pathname}${url.search}`, init);
-	};
-	spyOn(globalThis, "fetch").mockImplementation(dispatch as typeof fetch);
-};
-
-/** Customer ids that all live in one slot, so they share one file and one catch-up cursor. */
-const sameSlot = (count: number) => {
-	const ids: string[] = [];
-	for (let i = 0; ids.length < count; i++)
-		if (customerIdToSlot({ customerId: `cus_${i}`, slotCount: 2 }) === 0) ids.push(`cus_${i}`);
-	return ids;
-};
-
-const bodyFor = ({ customerId, readAt, balance = 10 }: { customerId: string; readAt: number; balance?: number }) => {
-	const body = subjectBody({ balance });
-	return JSON.stringify({ ...body, state: { ...body.state, identity: { ...body.state.identity, customerId } }, read_at: readAt });
-};
-
-const storeOnly = ({ replica, customerId, readAt }: { replica: Replica; customerId: string; readAt: number }) =>
-	replica.slots.processorFor({ customerId }).setSubject({ customerId, body: bodyFor({ customerId, readAt }) });
-
-const heldIds = async ({ replica, slot }: { replica: Replica; slot: number }) =>
-	(await replica.slots.listSince({ slot, readAtAfter: -1, limit: 10_000 })).map((s) => s.state.identity.customerId);
-
-const catchUpCtx = (replica: Replica) => ({
-	replication: replica.replication,
-	port: PORT,
-	tokenHash: TOKEN_HASH,
-	logger: quiet,
-	sleep: async () => {},
+const sinceBody = JSON.stringify({
+	slot: 0,
+	slotCount: 2,
+	after: null,
+	window: null,
+	cursor: null,
+	limit: 10,
 });
 
 describe("F2: a write held by one replica alone is repaired", () => {
 	test("after a restart, what a replica stored just before it died reaches the peers again", async () => {
-		const a = createReplica({ address: "10.0.0.1", peers: ["10.0.0.2"] });
-		const b = createReplica({ address: "10.0.0.2", peers: ["10.0.0.1"] });
-		connect([a, b]);
+		let now = 5_000;
+		const a = createReplica({
+			address: "10.0.0.1",
+			peers: ["10.0.0.2"],
+			now: () => now,
+		});
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			now: () => now,
+		});
+		connect({ replicas: [a, b] });
 		// Stored on a with its relay never sent (the process died before the outbox ran).
 		await storeOnly({ replica: a, customerId: "cus_1", readAt: 5_000 });
 
-		// a restarts on its volume: its boot sync must send the recent row on, or b's later passes must pull it.
-		await catchUpFromPeers({ ctx: catchUpCtx(a), slots: a.slots });
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		// a restarts on its volume a minute later: its boot sends the recent row on.
+		now = 65_000;
+		const sync = a.sync();
+		await sync.catchUp();
+		expect(sync.resendRecent()).toBe(1);
+		await settle();
 
-		const held = (await heldIds({ replica: b, slot: 0 })).concat(await heldIds({ replica: b, slot: 1 }));
-		expect(held).toContain("cus_1");
+		expect(await heldEverywhere(b)).toContain("cus_1");
+	});
+
+	test("a later pass pulls from every ready peer what it alone holds", async () => {
+		let now = 5_000;
+		const a = createReplica({
+			address: "10.0.0.1",
+			peers: ["10.0.0.2", "10.0.0.3"],
+			now: () => now,
+		});
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1", "10.0.0.3"],
+			now: () => now,
+		});
+		const c = createReplica({
+			address: "10.0.0.3",
+			peers: ["10.0.0.1", "10.0.0.2"],
+			now: () => now,
+		});
+		connect({ replicas: [a, b, c] });
+		await storeOnly({ replica: b, customerId: "cus_1", readAt: 5_000 });
+		await storeOnly({ replica: c, customerId: "cus_2", readAt: 5_000 });
+
+		now = 125_000;
+		await a.sync().pass();
+
+		expect(await heldEverywhere(a)).toEqual(
+			expect.arrayContaining(["cus_1", "cus_2"]),
+		);
 	});
 });
 
 describe("F5: the peer surface is not on the public endpoint", () => {
-	test("a peer-signed push on the public app is refused", async () => {
+	test("a peer-signed push on the public app is refused: only the Atom token opens it", async () => {
 		const a = createReplica({ address: "10.0.0.1", peers: [] });
 		const body = bodyFor({ customerId: "cus_1", readAt: 1_000 });
 
-		const reply = await a.app.request("/v1/subjects.set", {
-			method: "POST",
-			headers: peerRequestHeaders({ tokenHash: TOKEN_HASH, body, headers: { [ATOM_CUSTOMER_ID_HEADER]: "cus_1" } }),
-			body,
-		});
+		const reply = await a.app.request(
+			"/v1/subjects.set",
+			signed({ path: "/v1/subjects.set", body, customerId: "cus_1" }),
+		);
 
 		expect(reply.status).toBe(401);
+		expect(await heldEverywhere(a)).toEqual([]);
 	});
 
 	test("the public app has no since route", async () => {
 		const a = createReplica({ address: "10.0.0.1", peers: [] });
-		const body = JSON.stringify({ slot: 0, slotCount: 2, readAtAfter: 0, limit: 10 });
 
-		const reply = await a.app.request("/v1/_peer/subjects.since", {
-			method: "POST",
-			headers: peerRequestHeaders({ tokenHash: TOKEN_HASH, body }),
-			body,
-		});
+		const reply = await a.app.request(
+			"/v1/_peer/subjects.since",
+			signed({ path: "/v1/_peer/subjects.since", body: sinceBody }),
+		);
 
 		expect(reply.status).toBe(404);
+	});
+
+	test("the peer app takes only requests signed with the deployment's secret: the Atom token opens nothing there", async () => {
+		const a = createReplica({ address: "10.0.0.1", peers: [] });
+		const body = bodyFor({ customerId: "cus_1", readAt: 1_000 });
+
+		const withToken = await a.peerApp.request("/v1/subjects.set", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				"x-atom-token": "atom_token_1",
+				[ATOM_CUSTOMER_ID_HEADER]: "cus_1",
+			},
+			body,
+		});
+		const otherSecret = await a.peerApp.request("/v1/subjects.set", {
+			...signed({ path: "/v1/subjects.set", body, customerId: "cus_1" }),
+			headers: peerRequestHeaders({
+				secret: "q".repeat(64),
+				method: "POST",
+				path: "/v1/subjects.set",
+				customerId: "cus_1",
+				body,
+				headers: { [ATOM_CUSTOMER_ID_HEADER]: "cus_1" },
+			}),
+		});
+		const ours = await a.peerApp.request(
+			"/v1/subjects.set",
+			signed({ path: "/v1/subjects.set", body, customerId: "cus_1" }),
+		);
+
+		expect(withToken.status).toBe(401);
+		expect(otherSecret.status).toBe(401);
+		expect(ours.status).toBe(200);
 	});
 });
 
@@ -156,56 +178,90 @@ describe("F6: the catalog is caught up", () => {
 	test("a replica catching up takes the peer's newer catalog", async () => {
 		const a = createReplica({ address: "10.0.0.1", peers: [] });
 		const b = createReplica({ address: "10.0.0.2", peers: ["10.0.0.1"] });
-		connect([a, b]);
+		connect({ replicas: [a, b] });
 		const rows = createCatalogRowsFor({ state: createState() });
 		await a.slots.setCatalog({ rows, readAt: 1_700 });
 
-		await catchUpFromPeers({ ctx: catchUpCtx(b), slots: b.slots });
+		await b.sync().catchUp();
 
 		expect(b.slots.installCatalog({ rows: [], readAt: 1_699 })).toBe(false);
 	});
 });
 
 describe("F7: only a ready peer is a source", () => {
-	test("a replica that is not ready answers since with 503", async () => {
+	test("a replica that is not ready answers since with 503, and a replica catching up skips it", async () => {
 		const a = createReplica({ address: "10.0.0.1", peers: [], ready: false });
-		const body = JSON.stringify({ slot: 0, slotCount: 2, readAtAfter: 0, limit: 10 });
-
-		const reply = await a.app.request("/v1/_peer/subjects.since", {
-			method: "POST",
-			headers: peerRequestHeaders({ tokenHash: TOKEN_HASH, body }),
-			body,
+		const c = createReplica({ address: "10.0.0.3", peers: [] });
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1", "10.0.0.3"],
 		});
+		connect({ replicas: [a, b, c] });
+		await storeOnly({ replica: a, customerId: "cus_1", readAt: 1_000 });
+		await storeOnly({ replica: c, customerId: "cus_2", readAt: 1_000 });
+
+		const reply = await a.peerApp.request(
+			"/v1/_peer/subjects.since",
+			signed({ path: "/v1/_peer/subjects.since", body: sinceBody }),
+		);
+		await b.sync().catchUp();
 
 		expect(reply.status).toBe(503);
+		expect(await heldEverywhere(b)).toEqual(["cus_2"]);
 	});
 });
 
 describe("F8: the catch-up window is in apply time, not Autumn's read time", () => {
 	test("a push read long ago but applied on the peer after this replica's newest write is copied", async () => {
-		const a = createReplica({ address: "10.0.0.1", peers: [] });
-		const b = createReplica({ address: "10.0.0.2", peers: ["10.0.0.1"] });
-		connect([a, b]);
-		const [kept, late] = sameSlot(2) as [string, string];
+		const [kept, late] = customersInSlot({ slot: 0, count: 2 }) as [
+			string,
+			string,
+		];
+		let now = 100_000;
+		const a = createReplica({ address: "10.0.0.1", peers: [], now: () => now });
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			now: () => now,
+		});
+		connect({ replicas: [a, b] });
 		// b holds a read at 100 s; a applies, later, a push Autumn read at 10 s (delayed > 60 s on its way).
 		await storeOnly({ replica: b, customerId: kept, readAt: 100_000 });
 		await storeOnly({ replica: a, customerId: kept, readAt: 100_000 });
+		now = 130_000;
 		await storeOnly({ replica: a, customerId: late, readAt: 10_000 });
+		now = 140_000;
 
-		await catchUpFromPeers({ ctx: catchUpCtx(b), slots: b.slots });
+		await b.sync().catchUp();
 
 		expect(await heldIds({ replica: b, slot: 0 })).toContain(late);
 	});
 });
 
 describe("F10: a refusal that is not the body's fault is tried again", () => {
-	test("a 401 from a peer is not counted as delivered", async () => {
-		spyOn(globalThis, "fetch").mockResolvedValue(new Response("unauthorized", { status: 401 }));
-		const send = createPeerSender({ ctx: { tokenHash: TOKEN_HASH, port: PORT } });
+	test("a 401 from a peer is not counted as delivered; only a body the peer could never apply is", async () => {
+		const send = createPeerSender({
+			ctx: { secret: PEER_SECRET, port: PEER_PORT },
+		});
+		const operation = { kind: "subjects.set", key: "cus_1", body: "{}" };
+		const outcomes: string[] = [];
+		for (const status of [401, 429, 503, 400, 422, 200]) {
+			spyOn(globalThis, "fetch").mockResolvedValue(
+				new Response("", { status }),
+			);
+			outcomes.push(
+				await send({ peer: "10.0.0.2", path: "/v1/subjects.set", operation }),
+			);
+		}
 
-		const outcome = await send({ peer: "10.0.0.2", path: "/v1/subjects.set", operation: { kind: "subjects.set", key: "cus_1", body: "{}" } });
-
-		expect(outcome).not.toBe(true);
+		expect(outcomes).toEqual([
+			"failed",
+			"failed",
+			"failed",
+			"rejected",
+			"rejected",
+			"delivered",
+		]);
 	});
 });
 
@@ -216,7 +272,9 @@ describe("F11: what waits for a peer is bounded in bytes", () => {
 			ctx: {
 				resolver: { peers: async () => ["10.0.0.2"], forget: () => {} },
 				send: () => new Promise(() => {}),
-				counters: { add: (field) => void (counts[field] = (counts[field] ?? 0) + 1) },
+				counters: {
+					add: (field) => void (counts[field] = (counts[field] ?? 0) + 1),
+				},
 				logger: { warn: () => {} },
 				sleep: async () => {},
 				now: () => 0,
@@ -224,24 +282,41 @@ describe("F11: what waits for a peer is bounded in bytes", () => {
 		});
 		const body = "x".repeat(10 * 1024 * 1024);
 		for (let i = 0; i < 12; i++)
-			await outbox.enqueue({ operation: { kind: "subjects.set", key: `cus_${i}`, body }, path: "/v1/subjects.set" });
+			await outbox.enqueue({
+				operation: { kind: "subjects.set", key: `cus_${i}`, body },
+				path: "/v1/subjects.set",
+			});
 
-		expect(counts.relayDropped ?? 0).toBeGreaterThan(0);
+		// Four in flight, the rest waiting: 12 × 10 MB queued against a 64 MB budget drops the oldest waiting ones.
+		expect(counts.relayDropped).toBeGreaterThan(0);
 	});
 });
 
 describe("catch-up window edge", () => {
 	test("a row written exactly at the edge of the window asked for is copied", async () => {
-		const a = createReplica({ address: "10.0.0.1", peers: [] });
-		const b = createReplica({ address: "10.0.0.2", peers: ["10.0.0.1"] });
-		connect([a, b]);
-		const [kept, edge] = sameSlot(2) as [string, string];
+		const [kept, edge] = customersInSlot({ slot: 0, count: 2 }) as [
+			string,
+			string,
+		];
+		let now = 100_000;
+		const a = createReplica({ address: "10.0.0.1", peers: [], now: () => now });
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			now: () => now,
+		});
+		connect({ replicas: [a, b] });
 		await storeOnly({ replica: b, customerId: kept, readAt: 100_000 });
 		await storeOnly({ replica: a, customerId: kept, readAt: 100_000 });
-		// Exactly 60 s before b's newest read: the margin's edge.
-		await storeOnly({ replica: a, customerId: edge, readAt: 40_000 });
+		// b asks for the peer's writes in its last (downtime + hold + margin) ms; this one sits exactly on that edge.
+		now = 200_000;
+		const sync = b.sync();
+		const windowStart = 200_000 - (200_000 - 100_000 + 5 * 60_000 + 60_000);
+		now = windowStart;
+		await storeOnly({ replica: a, customerId: edge, readAt: 50_000 });
+		now = 200_000;
 
-		await catchUpFromPeers({ ctx: catchUpCtx(b), slots: b.slots });
+		await sync.catchUp();
 
 		expect(await heldIds({ replica: b, slot: 0 })).toContain(edge);
 	});
