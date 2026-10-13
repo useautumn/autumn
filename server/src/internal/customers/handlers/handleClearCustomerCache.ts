@@ -3,7 +3,10 @@ import { z } from "zod/v4";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { batchInvalidateCachedFullSubjects } from "../cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
+import { flushCachedSubjectBalances } from "../cache/fullSubject/actions/invalidate/flushCachedSubjectBalances";
 import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+
+const FLUSH_CONCURRENCY = 25;
 
 export const handleClearCustomerCache = createRoute({
 	scopes: [Scopes.Customers.Write],
@@ -16,14 +19,35 @@ export const handleClearCustomerCache = createRoute({
 		const { customer_id, customer_ids } = c.req.valid("json");
 
 		if (customer_id) {
+			// Clearing the cache changes no balance, so pending deductions are flushed rather than dropped.
 			await deleteCachedFullCustomer({
 				customerId: customer_id,
 				ctx,
 				source: `handleClearCustomerCache, deleting single customer cache`,
+				flushBalances: true,
 			});
 		}
 
 		if (customer_ids) {
+			// The batch unlink drops balance hashes whole, so each customer's pending deductions land first.
+			for (
+				let start = 0;
+				start < customer_ids.length;
+				start += FLUSH_CONCURRENCY
+			) {
+				await Promise.all(
+					customer_ids
+						.slice(start, start + FLUSH_CONCURRENCY)
+						.map((customerId) =>
+							flushCachedSubjectBalances({
+								ctx,
+								customerId,
+								source: "handleClearCustomerCache",
+							}),
+						),
+				);
+			}
+
 			const customersToDelete = customer_ids.map((id) => ({
 				customerId: id,
 				orgId: ctx.org.id,

@@ -3,6 +3,7 @@ import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
+import { flushCachedSubjectBalances } from "@/internal/customers/cache/fullSubject/actions/invalidate/flushCachedSubjectBalances.js";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { queueFailedEntityCreation } from "../recovery/queueFailedEntityCreation.js";
 import { createEntitiesV2 } from "./createEntitiesV2/createEntitiesV2";
@@ -54,6 +55,14 @@ const createEntities = async ({
 	createEntityData,
 	withAutumnId = false,
 }: BatchCreateEntitiesParams) => {
+	// Creating entities writes Postgres and ends in an invalidation; deductions still waiting on the batched
+	// sync land first, or the invalidation drops them.
+	await flushCachedSubjectBalances({
+		ctx,
+		customerId,
+		source: "batchCreateEntities",
+	});
+
 	const { entities } = await createEntitiesV2({
 		ctx,
 		params: {
