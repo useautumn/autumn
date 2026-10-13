@@ -25,6 +25,9 @@ import {
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
 import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
+import { handleAllocatedVolumeFlatFeeErrors } from "./errors/handleAllocatedVolumeFlatFeeErrors";
+import { handleSingleTierVolumeErrors } from "./errors/handleSingleTierVolumeErrors";
+import { handleThresholdBillingTierErrors } from "./errors/handleThresholdBillingTierErrors";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -36,12 +39,12 @@ const validateProductItem = ({
 	item,
 	features,
 	multiCurrencyEnabled,
-	validateRollover,
+	validateAuthoringRules,
 }: {
 	item: ProductItem;
 	features: Feature[];
 	multiCurrencyEnabled: boolean;
-	validateRollover: boolean;
+	validateAuthoringRules: boolean;
 }) => {
 	item = ProductItemSchema.parse(item);
 	const feature = features.find((f) => f.id === item.feature_id);
@@ -138,17 +141,7 @@ const validateProductItem = ({
 		}
 	}
 
-	// 2. If amount is set, it must be greater than 0
-	// if (notNullish(item.price) && item.price <= 0) {
-	// 	throw new RecaseError({
-	// 		message: `Price must be greater than 0`,
-	// 		code: ErrCode.InvalidProductItem,
-	// 		statusCode: StatusCodes.BAD_REQUEST,
-	// 	});
-	// }
-
 	// 4. One off prices / fixed prices can have at most 2 decimal places
-	// (isFeaturePriceItem(item) && !item.interval && isOneOff) ||
 	if (isPriceItem(item)) {
 		// One off price..., can't have more than 2 DP
 		if (item.price && item.price.toString().split(".")[1]?.length > 2) {
@@ -188,16 +181,6 @@ const validateProductItem = ({
 		}
 	}
 
-	// if (isFeatureItem(item)) {
-	// 	if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
-	// 		throw new RecaseError({
-	// 			message: `Included usage for feature ${item.feature_id} must be greater than 0`,
-	// 			code: ErrCode.InvalidInputs,
-	// 			statusCode: StatusCodes.BAD_REQUEST,
-	// 		});
-	// 	}
-	// }
-
 	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {
 		const billingInterval = itemToBillingInterval({ item });
@@ -214,14 +197,6 @@ const validateProductItem = ({
 		}
 	}
 
-	// if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
-	// 	throw new RecaseError({
-	// 		message: `Price must be 0 or greater`,
-	// 		code: ErrCode.InvalidInputs,
-	// 		statusCode: StatusCodes.BAD_REQUEST,
-	// 	});
-	// }
-
 	if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
 		throw new RecaseError({
 			message: `Usage model is required for priced features. Please select one for the feature ${item.feature_id}`,
@@ -230,19 +205,11 @@ const validateProductItem = ({
 		});
 	}
 
-	if (isFeaturePriceItem(item) && item.tiers) {
-		// if (
-		// 	item.tiers.some(
-		// 		(x) => x.amount < 0 || (x.amount === 0 && (x.flat_amount ?? 0) <= 0),
-		// 	)
-		// ) {
-		// 	throw new RecaseError({
-		// 		message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
-		// 		code: ErrCode.InvalidInputs,
-		// 		statusCode: StatusCodes.BAD_REQUEST,
-		// 	});
-		// }
+	// Persisted single-tier volume rows predate that rule and must keep billing.
+	if (validateAuthoringRules) handleSingleTierVolumeErrors({ item });
+	handleAllocatedVolumeFlatFeeErrors({ item, feature });
 
+	if (isFeaturePriceItem(item) && item.tiers) {
 		if (item.included_usage === Infinite) {
 			throw new RecaseError({
 				message: `Included usage can't be '${Infinite}' for tiered prices`,
@@ -254,18 +221,6 @@ const validateProductItem = ({
 		if (item.billing_units && item.billing_units <= 0) {
 			throw new RecaseError({
 				message: `Billing units must be greater than 0`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (
-			item.tier_behavior === TierBehavior.VolumeBased &&
-			item.tiers.length > 1 &&
-			item.usage_model !== UsageModel.Prepaid
-		) {
-			throw new RecaseError({
-				message: `Volume-based pricing is only supported for prepaid items`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -303,6 +258,8 @@ const validateProductItem = ({
 		}
 	}
 
+	handleThresholdBillingTierErrors({ item });
+
 	if (
 		item.usage_model === UsageModel.Prepaid &&
 		item.config?.on_increase === OnIncrease.BillImmediately
@@ -338,7 +295,7 @@ const validateProductItem = ({
 
 	// Authoring-time checks only: billing paths revalidate items round-tripped
 	// from persisted entitlements, which no longer answer for their own shape.
-	if (!validateRollover) return;
+	if (!validateAuthoringRules) return;
 
 	if (item.included_usage === Infinite) {
 		throw new RecaseError({
@@ -384,7 +341,7 @@ export const validateProductItems = ({
 	orgId,
 	env,
 	multiCurrencyEnabled,
-	validateRollover = true,
+	validateAuthoringRules = true,
 }: {
 	newItems: ProductItem[];
 	features: Feature[];
@@ -392,7 +349,7 @@ export const validateProductItems = ({
 	env: AppEnv;
 	multiCurrencyEnabled: boolean;
 	/** Off for billing paths, whose items come from already-persisted plans. */
-	validateRollover?: boolean;
+	validateAuthoringRules?: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
@@ -403,20 +360,13 @@ export const validateProductItems = ({
 
 	features = allFeatures;
 
-	// const isOneOff =
-	//   newItems.every((item) => {
-	//     if (isFeatureItem(item)) return true;
-	//     return nullish(item.interval);
-	//   }) &&
-	//   newItems.some((item) => isFeaturePriceItem(item) || isPriceItem(item));
-
 	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
 		validateProductItem({
 			item: newItems[index],
 			features,
 			multiCurrencyEnabled,
-			validateRollover,
+			validateAuthoringRules,
 		});
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 

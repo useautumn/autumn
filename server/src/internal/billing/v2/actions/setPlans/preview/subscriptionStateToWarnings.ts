@@ -23,6 +23,7 @@ import { replacedStripeScheduleId } from "../utils/replacedStripeScheduleId";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 import { billingStartsLaterWarning } from "./billingStartsLaterWarning";
+import { replayedStartCycleResetWarning } from "./replayedStartCycleResetWarning";
 import { warningText } from "./warningText";
 
 export type SubscriptionWarningContext = Pick<
@@ -308,5 +309,6 @@ export const subscriptionStateToWarnings = ({
 		}),
 		trialEndedWarning(billingContext),
 		billingStartsLaterWarning({ billingContext, lineItems }),
+		replayedStartCycleResetWarning({ billingContext }),
 	].filter((warning): warning is Warning => warning !== undefined);
 };

@@ -21,6 +21,7 @@ import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
 } from "@/views/settings/SettingsTable";
+import { getAddPasskeyErrorMessage } from "@/views/settings/sections/components/passkeyErrorMessage";
 
 const COLUMNS = [
 	{ label: "Name", width: "40%" },
@@ -67,16 +68,8 @@ export const PasskeysManager = () => {
 				name: trimmedName,
 			});
 			if (error) {
-				const msg = error.message || "";
-				if (
-					msg.toLowerCase().includes("cancel") ||
-					msg.toLowerCase().includes("aborted") ||
-					msg.toLowerCase().includes("not allowed")
-				) {
-					// Don't toast on cancel — user intentionally dismissed
-					return;
-				}
-				toast.error(error.message || "Failed to add passkey");
+				const message = getAddPasskeyErrorMessage({ error });
+				if (message) toast.error(message);
 				return;
 			}
 			toast.success("Passkey added");
@@ -84,16 +77,10 @@ export const PasskeysManager = () => {
 			setPasskeyName("");
 		} catch (err) {
 			// User-cancelled WebAuthn prompts surface as DOMExceptions
-			const msg = err instanceof Error ? err.message : "Failed to add passkey";
-			if (
-				msg.toLowerCase().includes("cancel") ||
-				msg.toLowerCase().includes("aborted") ||
-				msg.toLowerCase().includes("not allowed")
-			) {
-				// Don't toast on cancel — user intentionally dismissed
-				return;
-			}
-			toast.error(msg);
+			const message = getAddPasskeyErrorMessage({
+				error: err instanceof Error ? err : {},
+			});
+			if (message) toast.error(message);
 		} finally {
 			setAdding(false);
 		}

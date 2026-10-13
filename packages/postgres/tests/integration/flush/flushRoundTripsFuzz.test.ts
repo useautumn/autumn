@@ -283,9 +283,11 @@ describe.skipIf(!databaseUrl)(
 					databaseUrl: databaseUrl as string,
 					applicationName: "flush-round-trips-test",
 					maxConnections: 2,
-					connectTimeout: 10,
-					idleTimeout: 30,
-					queryTimeout: 30,
+					minConnections: 0,
+					connectTimeoutMs: 10_000,
+					idleTimeoutMs: 30_000,
+					queryTimeoutMs: 30_000,
+					statementTimeoutMs: null,
 				},
 			});
 			await postgres.client.query(SCHEMA);
@@ -469,9 +471,11 @@ describe.skipIf(!databaseUrl)(
 					databaseUrl: databaseUrl as string,
 					applicationName: "flush-round-trips-test",
 					maxConnections: 1,
-					connectTimeout: 10,
-					idleTimeout: 30,
-					queryTimeout: 30,
+					minConnections: 0,
+					connectTimeoutMs: 10_000,
+					idleTimeoutMs: 30_000,
+					queryTimeoutMs: 30_000,
+					statementTimeoutMs: null,
 				},
 			});
 			try {

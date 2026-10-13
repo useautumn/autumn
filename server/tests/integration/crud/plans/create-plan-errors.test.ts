@@ -7,8 +7,12 @@ import {
 	BillingMethod,
 	type CreatePlanParamsInput,
 	type CreatePlanParamsV2Input,
+	type CreateProductV2ParamsInput,
+	type ProductItem,
+	ProductItemInterval,
 	TierBehavior,
 	TierInfinite,
+	UsageModel,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -18,6 +22,7 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
+const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
@@ -318,10 +323,15 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT negative flat_amo
 // volume-based only for prepaid
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT volume-based with usage_based billing")}`, async () => {
-	const id = `err_vol_usage_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
+test.concurrent(`${chalk.yellowBright("tier-errors REST: ACCEPT volume-based with usage_based billing")}`, async () => {
+	const id = `ok_vol_usage_${getSuffix()}`;
+	try {
+		await autumnV2.products.delete(id);
+	} catch (_e) {}
+
+	await autumnV2.products.create<ApiPlan, CreatePlanParamsInput>({
+		id,
+		name: `Test ${id}`,
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -336,14 +346,20 @@ test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT volume-based wit
 				},
 			},
 		],
-		errMessage: "volume-based pricing is only supported for prepaid",
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT volume-based with usage_based billing")}`, async () => {
-	const id = `err_vol_usage_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
+test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT volume-based with usage_based billing")}`, async () => {
+	const id = `ok_vol_usage_rpc_${getSuffix()}`;
+	try {
+		await autumnRpc.plans.delete(id, { allVersions: true });
+	} catch (_e) {}
+
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: id,
+		name: `Test ${id}`,
+		group: `grp_${id}`,
+		auto_enable: false,
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -358,7 +374,286 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT volume-based with
 				},
 			},
 		],
-		errMessage: "volume-based pricing is only supported for prepaid",
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V0 product items: volume-based on usage-based items
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const VOLUME_SINGLE_TIER =
+	"Volume-based pricing on a usage-based item needs at least two tiers";
+
+const VOLUME_TWO_TIERS: ProductItem["tiers"] = [
+	{ to: 200, amount: 1 },
+	{ to: TierInfinite, amount: 0.5 },
+];
+
+const volumeMessagesItem = ({
+	usageModel,
+	price,
+	tiers,
+}: {
+	usageModel: UsageModel;
+	price?: number;
+	tiers?: ProductItem["tiers"];
+}): V0Item => ({
+	feature_id: TestFeature.Messages,
+	included_usage: 100,
+	interval: ProductItemInterval.Month,
+	usage_model: usageModel,
+	tier_behavior: TierBehavior.VolumeBased,
+	...(tiers ? { tiers } : { price }),
+});
+
+type V0Item = NonNullable<CreateProductV2ParamsInput["items"]>[number];
+
+const createV0Product = async ({
+	productId,
+	items,
+}: {
+	productId: string;
+	items: V0Item[];
+}) => {
+	try {
+		await autumnV2.products.delete(productId);
+	} catch (_e) {}
+
+	return autumnV1_2.products.create<ApiPlan, CreateProductV2ParamsInput>({
+		id: productId,
+		name: `Test ${productId}`,
+		items,
+	});
+};
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: REJECT single-tier volume on pay-per-use")}`,
+	async () => {
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: VOLUME_SINGLE_TIER,
+			func: () =>
+				createV0Product({
+					productId: `err_v0_vol_single_${getSuffix()}`,
+					items: [
+						volumeMessagesItem({ usageModel: UsageModel.PayPerUse, price: 0.5 }),
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: ACCEPT volume on pay-per-use (multi tier)")}`,
+	async () => {
+		await createV0Product({
+			productId: `ok_v0_vol_tiers_${getSuffix()}`,
+			items: [
+				volumeMessagesItem({
+					usageModel: UsageModel.PayPerUse,
+					tiers: [
+						{ to: 200, amount: 1 },
+						{ to: TierInfinite, amount: 0.5 },
+					],
+				}),
+			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 update: ACCEPT switching pay-per-use to volume")}`,
+	async () => {
+		const productId = `ok_v0_vol_update_${getSuffix()}`;
+		await createV0Product({
+			productId,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included_usage: 100,
+					interval: ProductItemInterval.Month,
+					usage_model: UsageModel.PayPerUse,
+					price: 0.5,
+				},
+			],
+		});
+
+		await autumnV1_2.products.update<ApiPlan>(productId, {
+			items: [
+				volumeMessagesItem({
+					usageModel: UsageModel.PayPerUse,
+					tiers: VOLUME_TWO_TIERS,
+				}),
+			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: REJECT pooled pay-per-use volume")}`,
+	async () => {
+		await expectAutumnError({
+			errCode: "invalid_product_item",
+			errMessage: "Pooled items cannot use usage-based pricing",
+			func: () =>
+				createV0Product({
+					productId: `err_v0_vol_pooled_${getSuffix()}`,
+					items: [
+						{
+							...volumeMessagesItem({
+								usageModel: UsageModel.PayPerUse,
+								price: 0.5,
+							}),
+							pooled: true,
+						},
+					],
+				}),
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Allocated volume: no tier-1 flat_amount, with or without included usage
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ALLOCATED_VOLUME_FLAT =
+	"Volume-based allocated items can't have a flat_amount on the first tier";
+
+const ALLOCATED_VOLUME_FLAT_TIERS: { to: number | "inf"; amount: number; flat_amount?: number }[] = [
+	{ to: 10, amount: 10, flat_amount: 5 },
+	{ to: TierInfinite, amount: 8 },
+];
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectAutumnError({
+		errCode: "invalid_inputs",
+		errMessage: ALLOCATED_VOLUME_FLAT,
+		func: () =>
+			createV0Product({
+				productId: `err_v0_alloc_flat_${getSuffix()}`,
+				items: [
+					{
+						feature_id: TestFeature.Users,
+						included_usage: 0,
+						usage_model: UsageModel.PayPerUse,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: ProductItemInterval.Month,
+						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					},
+				],
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount even with included usage")}`, async () => {
+	await expectAutumnError({
+		errCode: "invalid_inputs",
+		errMessage: ALLOCATED_VOLUME_FLAT,
+		func: () =>
+			createV0Product({
+				productId: `err_v0_alloc_flat_incl_${getSuffix()}`,
+				items: [
+					{
+						feature_id: TestFeature.Users,
+						included_usage: 3,
+						usage_model: UsageModel.PayPerUse,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: ProductItemInterval.Month,
+						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					},
+				],
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with the flat_amount on tier 2")}`, async () => {
+	await createV0Product({
+		productId: `ok_v0_alloc_flat_t2_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				included_usage: 0,
+				usage_model: UsageModel.PayPerUse,
+				tier_behavior: TierBehavior.VolumeBased,
+				interval: ProductItemInterval.Month,
+				tiers: [
+					{ to: 10, amount: 10 },
+					{ to: TierInfinite, amount: 8, flat_amount: 5 },
+				],
+			},
+		],
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectRestError({
+		productId: `err_alloc_flat_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				price: {
+					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: ALLOCATED_VOLUME_FLAT,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectRpcError({
+		productId: `err_alloc_flat_rpc_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				price: {
+					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: ALLOCATED_VOLUME_FLAT,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT single-tier volume with usage_based billing")}`, async () => {
+	await expectRestError({
+		productId: `err_vol_single_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				price: {
+					tiers: [{ to: TierInfinite, amount: 0.5 }],
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: VOLUME_SINGLE_TIER,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT single-tier volume with usage_based billing")}`, async () => {
+	await expectRpcError({
+		productId: `err_vol_single_rpc_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				price: {
+					tiers: [{ to: TierInfinite, amount: 0.5 }],
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: VOLUME_SINGLE_TIER,
 	});
 });
 

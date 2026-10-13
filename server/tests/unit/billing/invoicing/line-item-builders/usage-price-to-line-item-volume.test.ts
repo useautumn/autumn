@@ -1,0 +1,340 @@
+/**
+ * Pay-per-use volume follows the prepaid (Stripe) rule: once total usage passes the
+ * included amount, every unit is charged at the band total usage lands in.
+ */
+
+import { describe, expect, test } from "bun:test";
+import {
+	type EntityBalance,
+	type FullCusEntWithFullCusProduct,
+	type LineItemContext,
+	type Price,
+	TierBehavior,
+	type UsageTier,
+	usagePriceToLineItem,
+} from "@autumn/shared";
+import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements.js";
+import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
+import { features } from "@tests/utils/fixtures/db/features.js";
+import { prices } from "@tests/utils/fixtures/db/prices.js";
+import { products } from "@tests/utils/fixtures/db/products.js";
+
+type PriceKind = "consumable" | "allocated" | "prepaid";
+
+const createPrice = ({
+	kind,
+	tiers,
+	billingUnits = 1,
+}: {
+	kind: PriceKind;
+	tiers: UsageTier[];
+	billingUnits?: number;
+}): Price => {
+	const params = {
+		id: "price_messages",
+		featureId: "messages",
+		entitlementId: "ent_messages",
+	};
+	const base =
+		kind === "consumable"
+			? prices.createConsumable(params)
+			: kind === "allocated"
+				? prices.createAllocated(params)
+				: prices.createPrepaid(params);
+
+	return {
+		...base,
+		tier_behavior: TierBehavior.VolumeBased,
+		config: { ...base.config, usage_tiers: tiers, billing_units: billingUnits },
+	} as Price;
+};
+
+const buildVolumeLine = ({
+	kind = "consumable",
+	tiers,
+	allowance,
+	balance,
+	billingUnits,
+	entities,
+	prepaidQuantity,
+}: {
+	kind?: PriceKind;
+	tiers: UsageTier[];
+	allowance: number;
+	balance: number;
+	billingUnits?: number;
+	entities?: Record<string, EntityBalance>;
+	prepaidQuantity?: number;
+}) => {
+	const customerEntitlement = customerEntitlements.create({
+		entitlementId: "ent_messages",
+		featureId: "messages",
+		featureName: "Messages",
+		allowance,
+		balance,
+		entities: entities ?? null,
+		entityFeatureId: entities ? "users" : null,
+	});
+	const price = createPrice({ kind, tiers, billingUnits });
+	const product = products.createFull({
+		id: "pro",
+		name: "Pro",
+		prices: [price],
+		entitlements: [customerEntitlement.entitlement],
+	});
+	const customerProduct = customerProducts.create({
+		productId: product.id,
+		product,
+		customerEntitlements: [customerEntitlement],
+		customerPrices: [prices.createCustomer({ price })],
+		options:
+			prepaidQuantity === undefined
+				? []
+				: [
+						{
+							feature_id: "messages",
+							internal_feature_id: "internal_messages",
+							quantity: prepaidQuantity,
+						},
+					],
+	});
+	const cusEnt: FullCusEntWithFullCusProduct = {
+		...customerEntitlement,
+		customer_product: customerProduct,
+	};
+	const context = {
+		price,
+		product,
+		feature: features.create({ id: "messages", name: "Messages" }),
+		currency: "usd",
+		direction: "charge",
+		now: Date.now(),
+		billingTiming: "in_arrear",
+	} as LineItemContext;
+
+	return usagePriceToLineItem({
+		cusEnt,
+		context,
+		options: { includePeriodDescription: false },
+	});
+};
+
+const priceVolumeLine = (params: Parameters<typeof buildVolumeLine>[0]) =>
+	buildVolumeLine(params).amount;
+
+const SINGLE_TIER = [{ to: "inf", amount: 0.5 }] as UsageTier[];
+
+describe("usagePriceToLineItem: pay-per-use volume", () => {
+	test("100 included, 150 used → only the 50 over included at the band rate ($25)", () => {
+		expect(
+			priceVolumeLine({ tiers: SINGLE_TIER, allowance: 100, balance: -50 }),
+		).toBe(25);
+	});
+
+	test("no included, 40 used → 40 × $0.50 = $20", () => {
+		expect(
+			priceVolumeLine({ tiers: SINGLE_TIER, allowance: 0, balance: -40 }),
+		).toBe(20);
+	});
+
+	test("within included → $0", () => {
+		expect(
+			priceVolumeLine({ tiers: SINGLE_TIER, allowance: 100, balance: 30 }),
+		).toBe(0);
+	});
+
+	test("billing units round the overage up: 150 over in packs of 100 → 2 packs × $5 = $10", () => {
+		expect(
+			priceVolumeLine({
+				tiers: [{ to: "inf", amount: 5 }] as UsageTier[],
+				allowance: 100,
+				balance: -150,
+				billingUnits: 100,
+			}),
+		).toBe(10);
+	});
+
+	test("band is picked from total usage on the net tiers: 5 included, 25 used → 20 over × $0.80 = $16", () => {
+		// Total-usage bands 10/20/30/40 stored net of 5 included.
+		const netTiers = [
+			{ to: 5, amount: 1 },
+			{ to: 15, amount: 0.9 },
+			{ to: 25, amount: 0.8 },
+			{ to: 35, amount: 0.7 },
+			{ to: "inf", amount: 0.5 },
+		] as UsageTier[];
+
+		expect(
+			priceVolumeLine({ tiers: netTiers, allowance: 5, balance: -20 }),
+		).toBe(16);
+	});
+
+	describe("flat_amount", () => {
+		const FLAT_TIERS = [
+			{ to: 100, amount: 0, flat_amount: 5 },
+			{ to: "inf", amount: 0, flat_amount: 20 },
+		] as UsageTier[];
+
+		test("usage at the included amount → $0, the tier-1 flat fee is not charged", () => {
+			expect(
+				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: 0 }),
+			).toBe(0);
+		});
+
+		test("no included and no usage → $0", () => {
+			expect(
+				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 0, balance: 0 }),
+			).toBe(0);
+		});
+
+		test("1 unit over included → tier-1 flat fee ($5)", () => {
+			expect(
+				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: -1 }),
+			).toBe(5);
+		});
+
+		test("total usage past tier 1 → only tier-2 flat fee ($20)", () => {
+			expect(
+				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: -150 }),
+			).toBe(20);
+		});
+	});
+
+	test("entity feature: band and amount come from the customer's actual total usage", () => {
+		// 130 + 120 + 90 = 340 used against 300 included: the customer's 40 over at $0.50.
+		const entities = {
+			ent_a: { id: "ent_a", balance: -30, adjustment: 0 },
+			ent_b: { id: "ent_b", balance: -20, adjustment: 0 },
+			ent_c: { id: "ent_c", balance: 10, adjustment: 0 },
+		} as Record<string, EntityBalance>;
+
+		expect(
+			priceVolumeLine({
+				tiers: SINGLE_TIER,
+				allowance: 100,
+				balance: 0,
+				entities,
+			}),
+		).toBe(20);
+	});
+
+	test("entity feature: total usage within the customer's included amount → $0", () => {
+		// 150 + 50 used against 2 × 100 included.
+		const entities = {
+			ent_a: { id: "ent_a", balance: -50, adjustment: 0 },
+			ent_b: { id: "ent_b", balance: 50, adjustment: 0 },
+		} as Record<string, EntityBalance>;
+
+		expect(
+			priceVolumeLine({
+				tiers: SINGLE_TIER,
+				allowance: 100,
+				balance: 0,
+				entities,
+			}),
+		).toBe(0);
+	});
+
+	test("entity feature: total equal to included stays $0 when billing units would round it up", () => {
+		// 100 + 50 used against 2 × 75 included, billed per 100 units.
+		const entities = {
+			ent_a: { id: "ent_a", balance: -25, adjustment: 0 },
+			ent_b: { id: "ent_b", balance: 25, adjustment: 0 },
+		} as Record<string, EntityBalance>;
+
+		expect(
+			priceVolumeLine({
+				tiers: [{ to: "inf", amount: 5 }] as UsageTier[],
+				allowance: 75,
+				balance: 0,
+				billingUnits: 100,
+				entities,
+			}),
+		).toBe(0);
+	});
+});
+
+describe("usagePriceToLineItem: allocated (v1) volume", () => {
+	test("3 included, 5 seats → the 2 seats over included at the band rate ($20)", () => {
+		expect(
+			priceVolumeLine({
+				kind: "allocated",
+				tiers: [{ to: "inf", amount: 10 }] as UsageTier[],
+				allowance: 3,
+				balance: -2,
+			}),
+		).toBe(20);
+	});
+
+	test("within included seats → $0", () => {
+		expect(
+			priceVolumeLine({
+				kind: "allocated",
+				tiers: [{ to: "inf", amount: 10 }] as UsageTier[],
+				allowance: 3,
+				balance: 1,
+			}),
+		).toBe(0);
+	});
+});
+
+describe("usagePriceToLineItem: prepaid volume is unchanged", () => {
+	test("100 included + 2 packs of 100 → whole 300 charged at the band rate", () => {
+		// Prepaid still adds the allowance back: 300 units at $10 per 100 = $30.
+		expect(
+			priceVolumeLine({
+				kind: "prepaid",
+				tiers: [{ to: "inf", amount: 10 }] as UsageTier[],
+				allowance: 100,
+				balance: 300,
+				billingUnits: 100,
+				prepaidQuantity: 2,
+			}),
+		).toBe(30);
+	});
+});
+
+describe("usagePriceToLineItem: one volume line", () => {
+	test("names the tier total usage lands in", () => {
+		const line = buildVolumeLine({
+			tiers: [
+				{ to: 100, amount: 1 },
+				{ to: "inf", amount: 0.5 },
+			] as UsageTier[],
+			allowance: 100,
+			balance: -50,
+		});
+
+		// Stored tiers sit above the 100 included, so 150 lands in 101–200; the 50 over bill at $1.
+		expect(line.amount).toBe(50);
+		expect(line.description).toBe(
+			"Pro - Messages: 50 @ $1.00 (volume tier 101–200)",
+		);
+	});
+
+	test("adds the tier's flat fee to the description, still one line", () => {
+		const line = buildVolumeLine({
+			tiers: [
+				{ to: 100, amount: 0.4, flat_amount: 5 },
+				{ to: "inf", amount: 0.25, flat_amount: 20 },
+			] as UsageTier[],
+			allowance: 0,
+			balance: -300,
+		});
+
+		expect(line.amount).toBe(95);
+		expect(line.description).toBe(
+			"Pro - Messages: 300 @ $0.25 + $20.00 flat (volume tier 101+)",
+		);
+	});
+
+	test("within the included amount keeps the plain usage description", () => {
+		const line = buildVolumeLine({
+			tiers: SINGLE_TIER,
+			allowance: 100,
+			balance: 20,
+		});
+
+		expect(line.amount).toBe(0);
+	});
+});
