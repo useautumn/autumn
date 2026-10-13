@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { Infinite, type ProductItem } from "@autumn/shared";
 import {
 	applyTierToDisplayValue,
-	itemToVolumePricingMode,
 	updateTier,
 } from "@/views/products/plan/utils/tierUtils";
 
@@ -25,70 +24,6 @@ const makeItem = ({
 		feature_id: "feat_test",
 		tiers,
 	}) as ProductItem;
-
-describe("itemToVolumePricingMode", () => {
-	test("flat mode zeroes out amount and preserves flat_amount", () => {
-		const item = makeItem({
-			tiers: [
-				makeTier({ to: 100, amount: 1.5, flat_amount: 50 }),
-				makeTier({ to: Infinite, amount: 2, flat_amount: 100 }),
-			],
-		});
-
-		const result = itemToVolumePricingMode({ item, mode: "flat" });
-
-		expect(result.tiers).toHaveLength(2);
-		expect(result.tiers![0].amount).toBe(0);
-		expect(result.tiers![0].flat_amount).toBe(50);
-		expect(result.tiers![1].amount).toBe(0);
-		expect(result.tiers![1].flat_amount).toBe(100);
-	});
-
-	test("per_unit mode clears flat_amount and preserves amount", () => {
-		const item = makeItem({
-			tiers: [
-				makeTier({ to: 100, amount: 1.5, flat_amount: 50 }),
-				makeTier({ to: Infinite, amount: 2, flat_amount: 100 }),
-			],
-		});
-
-		const result = itemToVolumePricingMode({ item, mode: "per_unit" });
-
-		expect(result.tiers).toHaveLength(2);
-		expect(result.tiers![0].amount).toBe(1.5);
-		expect(result.tiers![0].flat_amount).toBeUndefined();
-		expect(result.tiers![1].amount).toBe(2);
-		expect(result.tiers![1].flat_amount).toBeUndefined();
-	});
-
-	test("returns item unchanged when tiers is null", () => {
-		const item = makeItem({ tiers: null });
-		const result = itemToVolumePricingMode({ item, mode: "flat" });
-		expect(result.tiers).toBeNull();
-	});
-
-	test("per_unit mode handles tiers that already have no flat_amount", () => {
-		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 5 })],
-		});
-
-		const result = itemToVolumePricingMode({ item, mode: "per_unit" });
-
-		expect(result.tiers![0].amount).toBe(5);
-		expect(result.tiers![0].flat_amount).toBeUndefined();
-	});
-
-	test("does not mutate the original item", () => {
-		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 5, flat_amount: 50 })],
-		});
-
-		itemToVolumePricingMode({ item, mode: "flat" });
-
-		expect(item.tiers![0].amount).toBe(5);
-		expect(item.tiers![0].flat_amount).toBe(50);
-	});
-});
 
 describe("applyTierToDisplayValue", () => {
 	test("writes the display to as an internal to without included usage", () => {

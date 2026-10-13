@@ -113,9 +113,21 @@ export const removeTier = ({
 
 	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee,
 	// so drop both rather than show volume pricing that won't save.
+	const [onlyTier] = newTiers;
 	setItem({
-		...itemToVolumePricingMode({ item: remaining, mode: "per_unit" }),
+		...remaining,
 		tier_behavior: undefined,
+		tiers: [
+			{
+				...onlyTier,
+				amount: onlyTier.amount || (onlyTier.flat_amount ?? 0),
+				flat_amount: undefined,
+				additional_currencies: migrateTierCurrenciesForMode({
+					entries: onlyTier.additional_currencies,
+					mode: "per_unit",
+				}),
+			},
+		],
 	});
 };
 
@@ -201,8 +213,8 @@ export const updateTier = ({
 
 export type VolumePricingMode = "flat" | "per_unit";
 
-/** Flat only when no tier has a unit rate, so mixed tiers open with their rates visible.
- * A flat field at 0 still counts, so Flat stays selected while its fees are being entered. */
+/** The mode an item opens in: Flat only when no tier has a unit rate, so mixed tiers show
+ * their rates. Switching modes later only changes which field the inputs edit. */
 export const itemToVolumePricingModeOnOpen = ({
 	item,
 }: {
@@ -215,52 +227,6 @@ export const itemToVolumePricingModeOnOpen = ({
 	const hasFlatField = tiers.some((tier) => tier.flat_amount != null);
 	if (hasNoUnitRates && hasFlatField) return "flat";
 	return "per_unit";
-};
-
-/** Per Unit commits tiers as stored, so API-authored flat fees survive a save. */
-export const itemToCommittedVolumeItem = ({
-	item,
-	mode,
-}: {
-	item: ProductItem;
-	mode: VolumePricingMode;
-}): ProductItem => {
-	if (mode !== "flat") return item;
-	return itemToVolumePricingMode({ item, mode });
-};
-
-/** An explicit mode switch: moves each tier's price into the fields `mode` edits. */
-export const itemToVolumePricingMode = ({
-	item,
-	mode,
-}: {
-	item: ProductItem;
-	mode: VolumePricingMode;
-}): ProductItem => {
-	if (!item.tiers) return item;
-
-	const tiers = item.tiers.map((tier): PriceTier => {
-		const additional_currencies = migrateTierCurrenciesForMode({
-			entries: tier.additional_currencies,
-			mode,
-		});
-		if (mode === "flat") {
-			return {
-				...tier,
-				flat_amount: tier.flat_amount ?? tier.amount,
-				amount: 0,
-				additional_currencies,
-			};
-		}
-		return {
-			...tier,
-			amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
-			flat_amount: undefined,
-			additional_currencies,
-		};
-	});
-
-	return { ...item, tiers };
 };
 
 export type TierRow = { range: string; value: string };

@@ -81,4 +81,36 @@ describe("PriceTiers wording", () => {
 		expect(html).toContain("usage up to");
 		expect(html).not.toContain("volume:");
 	});
+
+	test("Flat → Per Unit → Flat → Per Unit on a mixed item shows each field as stored", () => {
+		const item = tieredItem({
+			tierBehavior: TierBehavior.VolumeBased,
+			tiers: [
+				{ to: 100, amount: 0.1, flat_amount: 5 },
+				{ to: Infinite, amount: 0.05, flat_amount: 10 },
+			],
+		});
+		const values = (html: string) =>
+			[...html.matchAll(/value="([^"]*)"/g)].map(([, value]) => value);
+
+		for (const volumePricingMode of [
+			"flat",
+			"per_unit",
+			"flat",
+			"per_unit",
+		] as const) {
+			const shown = values(render({ item, volumePricingMode }));
+			if (volumePricingMode === "flat") {
+				expect(shown).toEqual(expect.arrayContaining(["5", "10"]));
+				expect(shown).not.toContain("0.1");
+			} else {
+				expect(shown).toEqual(expect.arrayContaining(["0.1", "0.05"]));
+				expect(shown).not.toContain("5");
+			}
+		}
+		expect(item.tiers).toEqual([
+			{ to: 100, amount: 0.1, flat_amount: 5 },
+			{ to: Infinite, amount: 0.05, flat_amount: 10 },
+		]);
+	});
 });

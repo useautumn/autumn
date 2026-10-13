@@ -14,10 +14,7 @@ import {
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
 import { buildUpdateCatalogPlanParams } from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
-import {
-	itemToCommittedVolumeItem,
-	itemToVolumePricingModeOnOpen,
-} from "@/views/products/plan/utils/tierUtils";
+import { itemToVolumePricingModeOnOpen } from "@/views/products/plan/utils/tierUtils";
 
 const messages: Feature = {
 	internal_id: "fe_messages",
@@ -93,13 +90,9 @@ describe("API-created volume item saved from the dashboard", () => {
 	});
 
 	test("save with no edits keeps every tier amount and flat fee", () => {
-		const committed = itemToCommittedVolumeItem({
-			item: dashboardItem,
-			mode: itemToVolumePricingModeOnOpen({ item: dashboardItem }),
-		});
 		const params = buildUpdateCatalogPlanParams({
 			baseProduct: product([dashboardItem]),
-			editedProduct: product([committed]),
+			editedProduct: product([dashboardItem]),
 			features: [messages],
 		});
 		const body = JSON.parse(JSON.stringify(params));

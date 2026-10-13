@@ -20,8 +20,6 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
-	itemToCommittedVolumeItem,
-	itemToVolumePricingMode,
 	itemToVolumePricingModeOnOpen,
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
@@ -47,7 +45,10 @@ export function EditPlanFeatureSheet({
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
-	const volumePricingMode = itemToVolumePricingModeOnOpen({ item });
+	// The toggle only picks which field the tier inputs edit; it never moves stored prices.
+	const [volumePricingMode, setVolumePricingMode] = useState(() =>
+		itemToVolumePricingModeOnOpen({ item }),
+	);
 
 	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
 	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
@@ -70,18 +71,13 @@ export function EditPlanFeatureSheet({
 			}
 		}
 
+		if (newBehavior !== TierBehavior.VolumeBased)
+			setVolumePricingMode("per_unit");
 		setItem(newItem);
 	};
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		// Re-selecting the current mode must not move or clear stored prices.
-		if (!item?.tiers || mode === volumePricingMode) return;
-		setItem(itemToVolumePricingMode({ item, mode }));
-	};
-
-	const handleBeforeCommit = () => {
-		if (!isVolumeBased) return;
-		setItem(itemToCommittedVolumeItem({ item, mode: volumePricingMode }));
+		setVolumePricingMode(mode);
 	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
@@ -226,11 +222,7 @@ export function EditPlanFeatureSheet({
 			</div>
 
 			{/* Footer stays at bottom */}
-			<SheetFooterActions
-				isDirty={hasItemChanges}
-				canConfirm={canConfirm}
-				onBeforeCommit={handleBeforeCommit}
-			/>
+			<SheetFooterActions isDirty={hasItemChanges} canConfirm={canConfirm} />
 
 			{/* Edit Feature Sheet */}
 			{isAnyCreditSystem(feature?.type) ? (
