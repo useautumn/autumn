@@ -28,6 +28,7 @@ export function createHeraldConsumers({
 		balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
 		getAtomClient: GetAtomClient;
 		shadowAtomConfig: Pick<EdgeConfigStore<ShadowAtomConfig>, "get">;
+		atomPushQueueOnly: boolean;
 		sqsJobs: Pick<SqsJobs, "autoTopup">;
 		logger: AutumnLogger;
 	};

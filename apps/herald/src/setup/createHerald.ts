@@ -95,6 +95,7 @@ export function createHerald({
 		...ctx,
 		db: ctx.postgres.db,
 		shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+		atomPushQueueOnly: env.HERALD_ATOM_PUSH_QUEUE_ONLY,
 	};
 	const jobNames = createHeraldConsumers({ ctx: consumersCtx }).map(
 		(job) => job.name,
@@ -140,6 +141,7 @@ export function createHerald({
 				db: ctx.postgres.db,
 				getAtomClient: ctx.getAtomClient,
 				shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+				atomPushQueueOnly: env.HERALD_ATOM_PUSH_QUEUE_ONLY,
 			},
 			config: {
 				topic: env.HERALD_CATALOG_INVALIDATION_TOPIC,

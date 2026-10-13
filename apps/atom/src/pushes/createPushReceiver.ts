@@ -24,6 +24,8 @@ const RECEIVE_RETRY_MS = 1_000;
 export const RECEIVE_LINGER_MS = 25;
 /** Pushes received and not yet acked; past this, receiving waits for one to finish. */
 const MAX_PUSHES_IN_FLIGHT = 400;
+/** SQS delivers a push until it is acked; past this many tries it is dropped, so one that never applies, or kills its thread, cannot loop. */
+export const MAX_PUSH_ATTEMPTS = 10;
 
 type PushReceiverContext = {
 	pushQueue: PushQueue;
@@ -38,6 +40,17 @@ type PushReceiverContext = {
 /** What a reader that honours the signal throws for a receive aborted on stop. */
 const isAbort = (error: unknown): boolean =>
 	error instanceof Error && error.name === "AbortError";
+
+/** A payload that does not decode never will, however often it is delivered. */
+const readPush = ({ message }: { message: PulledPush }): QueuedAtomPush => {
+	try {
+		return payloadToQueuedAtomPush(message);
+	} catch (cause) {
+		throw new InvalidPushError("A queued push could not be decoded", {
+			cause,
+		});
+	}
+};
 
 /** The same apply the HTTP routes run; it throws only on a failure that may pass, so SQS delivers the push again. */
 const applyPush = async ({
@@ -82,8 +95,16 @@ const receivePush = async ({
 	message: PulledPush;
 }): Promise<boolean> => {
 	ctx.counters?.add("pushes");
+	if (message.attempt > MAX_PUSH_ATTEMPTS) {
+		ctx.counters?.add("pushesDropped");
+		ctx.logger.warn(
+			{ type: "atom_push_dropped", data: { attempt: message.attempt } },
+			"A queued push failed every try; it was dropped, and Autumn's next push or a pull corrects it",
+		);
+		return true;
+	}
 	try {
-		await applyPush({ ctx, push: payloadToQueuedAtomPush(message) });
+		await applyPush({ ctx, push: readPush({ message }) });
 		return true;
 	} catch (error) {
 		if (isUnreadableRequest(error)) {

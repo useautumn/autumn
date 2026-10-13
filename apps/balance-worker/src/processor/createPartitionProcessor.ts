@@ -75,6 +75,7 @@ export function createPartitionProcessor({
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			commitPositions: dependencies.commitPositions,
+			onRecoveryRequired: dependencies.onRecoveryRequired,
 			logger: dependencies.logger,
 			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),
 		},

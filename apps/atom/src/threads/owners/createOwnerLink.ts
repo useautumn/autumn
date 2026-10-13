@@ -105,7 +105,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 			message.type === "setSubject" ? message : JSON.stringify(message),
 		);
 		const answered = await reply.promise;
-		if (!answered.ok) throw replyToError(answered);
+		if (!answered.ok) throw replyToError({ ...answered, thread });
 		return answered.value;
 	}
 

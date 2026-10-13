@@ -15,6 +15,7 @@ import {
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
 import type { Slots } from "../slots/types/slots.js";
+import { shareSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
@@ -41,6 +42,15 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		},
 	});
 	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
+	const health = {
+		bootedAt: init.bootedAt,
+		restarts: new Int32Array(init.restarts),
+		ready: new Int32Array(init.ready),
+		threadsReady: new Int32Array(init.threadsReady),
+		threadStats: init.stats,
+		dataDir: env.ATOM_DATA_DIR,
+		thread: index,
+	};
 	const answerPorts = new Map<number, MessagePort>();
 	let stopping = false;
 	const folders = multiTenant
@@ -59,13 +69,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			auth,
 			multiTenant,
 			logger,
-			health: {
-				bootedAt: init.bootedAt,
-				restarts: new Int32Array(init.restarts),
-				ready: new Int32Array(init.ready),
-				threadStats: init.stats,
-				dataDir: env.ATOM_DATA_DIR,
-			},
+			health,
 			counters,
 			held,
 			folders,
@@ -80,7 +84,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 
 	function join({ peer, ports }: { peer: number; ports: PeerPorts }): void {
 		owners.connect({ thread: peer, port: ports.calls });
-		answerOwnerCalls({ ctx: { auth }, port: ports.answers });
+		answerOwnerCalls({ ctx: { auth, health }, port: ports.answers });
 		answerPorts.set(peer, ports.answers);
 	}
 
@@ -90,10 +94,11 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
+	/** Listens first, so peers can relay to it, then copies what it missed before it answers from its own files. */
 	async function start(): Promise<void> {
 		await server.start();
 		await replicas.sync.catchUp();
+		Atomics.store(health.threadsReady, index, 1);
 		void replicas.sync.runPasses();
 	}
 
@@ -168,7 +173,11 @@ export const runAtomThread = (): void => {
 
 	async function receive(control: ThreadControl): Promise<void> {
 		if (control.type === "init") {
+			shareSqliteOpenLock({ lock: control.sqliteOpenLock });
 			thread = openThread({ init: control });
+			// Before it listens: a check it takes must reach its owner thread, not find no line to it yet.
+			for (const { index, ports } of control.peers)
+				thread.join({ peer: index, ports });
 			await thread.start();
 			report({ type: "ready" });
 		} else if (control.type === "peerJoined")

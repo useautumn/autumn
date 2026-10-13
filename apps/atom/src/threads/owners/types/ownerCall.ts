@@ -86,5 +86,7 @@ export type OwnerReply =
 			cannotAnswer: ForwardReason | null;
 			/** The push can never apply: thrown again on the caller's thread as InvalidPushError. */
 			invalid: boolean;
+			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
+			unavailable: boolean;
 			message: string;
 	  };

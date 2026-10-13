@@ -21,6 +21,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noSubjectPulls,
 } from "../utils/atomFixtures.js";
 import {
@@ -96,10 +97,13 @@ export const createMultiTenantReplica = ({
 			bootedAt: "2026-10-12T00:00:00.000Z",
 			restarts: new Int32Array(1),
 			ready: new Int32Array([ready ? 1 : 0]),
+			threadsReady: new Int32Array([1]),
+			thread: 0,
 			threadStats,
 			dataDir: dataDir,
 		},
 		counters,
+		loop: loopOnTime,
 		replication,
 		peer: { port: PORT },
 		now,

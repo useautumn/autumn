@@ -112,20 +112,12 @@ describe("atom env", () => {
 		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
-	test("runs as many threads as both its container's CPUs and memory allow", () => {
+	test("runs as many threads as its container's CPUs and memory allow, up to five", () => {
 		const GB = 1024 ** 3;
-		const threads = ({
-			cpus,
-			memory,
-			isContainerLimited = true,
-		}: {
-			cpus: number;
-			memory: number;
-			isContainerLimited?: boolean;
-		}) =>
+		const threads = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
 				{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: PEER_SECRET },
-				{ availableCpus: cpus, memoryLimitBytes: memory, isContainerLimited },
+				{ availableCpus: cpus, memoryLimitBytes: memory },
 			).ATOM_THREADS;
 
 		// Half a CPU and 512 MB, as the stack is provisioned today.
@@ -136,14 +128,11 @@ describe("atom env", () => {
 		expect(threads({ cpus: 8, memory: 2 * GB })).toBe(4);
 		// XXS: a 640 MiB container runs one thread.
 		expect(threads({ cpus: 1, memory: 640 * 1024 ** 2 })).toBe(1);
-		// Atom's sizes: Medium 3 / 6Gi, Large 7 / 12Gi, XL 15 / 24Gi use every CPU.
+		// Atom's sizes: Medium 3 / 6Gi uses every CPU; Large 7 / 12Gi and XL 15 / 24Gi stop at the cap.
 		expect(threads({ cpus: 3, memory: 6 * GB })).toBe(3);
-		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(7);
-		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(15);
-		// A container with no limits sees the whole host: the cap decides.
-		expect(
-			threads({ cpus: 64, memory: 256 * GB, isContainerLimited: false }),
-		).toBe(8);
+		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(5);
+		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(5);
+		expect(threads({ cpus: 64, memory: 256 * GB })).toBe(5);
 	});
 
 	test("is told how many threads to run when ATOM_THREADS is set", () => {
@@ -156,7 +145,6 @@ describe("atom env", () => {
 			{
 				availableCpus: 2,
 				memoryLimitBytes: 1024 ** 3,
-				isContainerLimited: true,
 			},
 		);
 
@@ -167,16 +155,14 @@ describe("atom env", () => {
 		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
-			isContainerLimited: true,
 		});
 		const small = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 2,
 			memoryLimitBytes: 4 * 1024 ** 3,
-			isContainerLimited: true,
 		});
 		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_THREADS: "3" });
 
-		expect(multiTenant.ATOM_THREADS).toBe(16);
+		expect(multiTenant.ATOM_THREADS).toBe(5);
 		expect(small.ATOM_THREADS).toBe(2);
 		expect(told.ATOM_THREADS).toBe(3);
 	});
@@ -187,11 +173,10 @@ describe("atom env", () => {
 			{
 				availableCpus: 8,
 				memoryLimitBytes: 16 * 1024 ** 3,
-				isContainerLimited: true,
 			},
 		);
 
-		expect(env.ATOM_THREADS).toBe(8);
+		expect(env.ATOM_THREADS).toBe(5);
 		expect(env.ATOM_PUSH_RECEIVERS).toBe(2);
 	});
 
@@ -305,15 +290,14 @@ describe("atom env", () => {
 				{
 					availableCpus: cpus,
 					memoryLimitBytes: memory,
-					isContainerLimited: true,
 				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
-		// Large, 12 GiB on 7 threads: (12 GiB − 288 MiB − 7 × 192 MiB) × 0.5 / 7 / 5 ≈ 152 MiB, about 8k subjects of 18.6 KB.
+		// Large, 12 GiB on 5 threads: (12 GiB − 288 MiB − 5 × 192 MiB) × 0.5 / 5 / 5 ≈ 220 MiB, about 12k subjects of 18.6 KB.
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
-			Math.floor(((12 * GiB - 288 * MiB - 7 * 192 * MiB) * 0.5) / 7 / 5),
+			Math.floor(((12 * GiB - 288 * MiB - 5 * 192 * MiB) * 0.5) / 5 / 5),
 		);
-		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(150 * MiB);
+		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(220 * MiB);
 		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.5 / 5 = 16 MiB, about 900 subjects.
 		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(16 * MiB);
 		// Too small for the threads themselves: nothing is held, and every check reads its row.
