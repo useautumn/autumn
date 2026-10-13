@@ -21,8 +21,12 @@ export const applyInvoiceLineEdits = ({
 	const { invoiceLineEdits } = billingContext;
 	if (!invoiceLineEdits) return lineItems;
 
+	// Deferred lines bill on a later invoice, so they're never removal candidates.
+	const deferredLineItems = lineItems.filter(
+		(lineItem) => !lineItem.chargeImmediately,
+	);
 	const keptLineItems = removeInvoiceLines({
-		lineItems,
+		lineItems: lineItems.filter((lineItem) => lineItem.chargeImmediately),
 		removeLines: invoiceLineEdits.removeLines,
 		requestEntityId: invoiceLineEdits.requestEntityId,
 	});
@@ -38,5 +42,5 @@ export const applyInvoiceLineEdits = ({
 		},
 	}));
 
-	return [...keptLineItems, ...addedLineItems];
+	return [...keptLineItems, ...deferredLineItems, ...addedLineItems];
 };
