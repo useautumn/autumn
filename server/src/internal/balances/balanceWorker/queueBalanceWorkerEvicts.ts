@@ -7,20 +7,23 @@ import { generateId } from "@/utils/genUtils.js";
 export type EvictableCustomer = {
 	orgId: string;
 	env: string;
-	customerId: string;
+	/** Null for a customer with no public id: no worker holds it under one. */
+	customerId: string | null;
+	/** The entity deleted: its evict names it, so herald pushes the entity's deletion to the Atoms. */
+	entityId?: string;
 };
 
 const uniqueCustomers = ({
 	customers,
 }: {
 	customers: EvictableCustomer[];
-}): EvictableCustomer[] => {
-	const byKey = new Map<string, EvictableCustomer>();
-	for (const customer of customers) {
-		if (!customer.customerId) continue;
+}): (EvictableCustomer & { customerId: string })[] => {
+	const byKey = new Map<string, EvictableCustomer & { customerId: string }>();
+	for (const { customerId, ...customer } of customers) {
+		if (!customerId) continue;
 		byKey.set(
-			`${customer.orgId}:${customer.env}:${customer.customerId}`,
-			customer,
+			`${customer.orgId}:${customer.env}:${customerId}:${customer.entityId ?? ""}`,
+			{ ...customer, customerId },
 		);
 	}
 	return [...byKey.values()];
@@ -43,11 +46,11 @@ export async function queueBalanceWorkerEvicts({
 	const requestId = generateId("evict");
 	const occurredAt = Date.now();
 	const commands: EvictCommand[] = evictable.map(
-		({ orgId, env, customerId }) => ({
+		({ orgId, env, customerId, entityId = null }) => ({
 			schemaVersion: 1,
 			type: "evict",
 			requestId,
-			identity: { orgId, env, customerId, entityId: null },
+			identity: { orgId, env, customerId, entityId },
 			occurredAt,
 			refreshSnapshots: false,
 		}),
