@@ -2,7 +2,6 @@ import {
 	type Feature,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
-	getFeatureInvoiceDescription,
 	type InsertReplaceable,
 	InternalError,
 	OnDecrease,
@@ -11,20 +10,21 @@ import {
 	priceToInvoiceAmount,
 	shouldProrate,
 	shouldProrateDowngradeNow,
-	type UsagePriceConfig,
 } from "@autumn/shared";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
-import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
+import { allocatedSeatsToInvoiceDescription } from "../allocatedSeatsToInvoiceDescription.js";
+import { chargeProrationInvoiceNow } from "./chargeProrationInvoiceNow.js";
 
 const createDowngradeProrationInvoice = async ({
 	ctx,
@@ -34,7 +34,8 @@ const createDowngradeProrationInvoice = async ({
 	subItem,
 	newPrice,
 	prevPrice,
-	newRoundedUsage,
+	newUsage,
+	allowance,
 	feature,
 	product,
 	onIncrease,
@@ -47,14 +48,14 @@ const createDowngradeProrationInvoice = async ({
 	subItem: Stripe.SubscriptionItem;
 	newPrice: number;
 	prevPrice: number;
-	newRoundedUsage: number;
+	newUsage: number;
+	allowance: number;
 	feature: Feature;
 	product: Product;
 	onIncrease: OnIncrease;
 	onDecrease: OnDecrease;
 }) => {
 	const { logger } = ctx;
-	const config = cusPrice.price.config as UsagePriceConfig;
 
 	const now = await stripeSubscriptionToNowMs({
 		stripeSubscription: sub,
@@ -65,11 +66,13 @@ const createDowngradeProrationInvoice = async ({
 	logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);
 	logger.info(`Invoice amount: ${invoiceAmount}`);
 
-	let invoiceDescription = getFeatureInvoiceDescription({
+	let invoiceDescription = allocatedSeatsToInvoiceDescription({
+		price: cusPrice.price,
+		product,
 		feature,
-		usage: newRoundedUsage,
-		billingUnits: config.billing_units,
-		prodName: product.name,
+		usage: newUsage,
+		allowance,
+		currency: ctx.org?.default_currency ?? "usd",
 	});
 
 	invoiceAmount = calculateProrationAmount({
@@ -111,12 +114,11 @@ const createDowngradeProrationInvoice = async ({
 			onDecrease,
 		})
 	) {
-		const { invoice: finalInvoice } = await createAndFinalizeInvoice({
+		// Volume seats can cost more after a decrease, so the invoice may need paying.
+		const finalInvoice = await chargeProrationInvoiceNow({
+			ctx,
 			stripeCli,
-			paymentMethod: null,
-			stripeCusId: sub.customer as string,
-			stripeSubId: sub.id,
-			logger,
+			sub,
 		});
 
 		invoice = finalInvoice;
@@ -201,10 +203,8 @@ export const handleProratedDowngrade = async ({
 			subItem,
 			newPrice,
 			prevPrice,
-			newRoundedUsage: roundUsage({
-				usage: newUsage,
-				price: cusPrice.price,
-			}),
+			newUsage,
+			allowance: cusEnt.entitlement.allowance ?? 0,
 			feature,
 			product,
 			onIncrease:
@@ -230,7 +230,11 @@ export const handleProratedDowngrade = async ({
 	const numDeletedReplaceables = cusEnt.replaceables.filter(
 		(r) => r.delete_next_cycle,
 	).length;
-	const newQuantity = newUsage - numDeletedReplaceables;
+	const newQuantity = allocatedUsageToStripeUsage({
+		price: cusPrice.price,
+		usage: newUsage - numDeletedReplaceables,
+		allowance: cusEnt.entitlement.allowance ?? 0,
+	});
 
 	await stripeCli.subscriptionItems.update(subItem.id, {
 		quantity: roundUsage({

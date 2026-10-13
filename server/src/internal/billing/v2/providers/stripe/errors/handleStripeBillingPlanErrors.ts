@@ -7,8 +7,10 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleSharedVolumeSeatPriceErrors } from "@/internal/billing/v2/providers/stripe/errors/handleSharedVolumeSeatPriceErrors";
 import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
 import { lineItemToStripeProductId } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToStripeProductId";
+import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 
 const getPlannedStripeProductIds = ({
 	billingPlan,
@@ -76,6 +78,12 @@ export const handleStripeBillingPlanErrors = ({
 
 	validatePromotionCodeProducts({ billingContext, billingPlan });
 	validatePromotionCodeMinimums({ ctx, billingContext, billingPlan });
+	handleSharedVolumeSeatPriceErrors({
+		customerProducts: autumnBillingPlanToFinalFullCustomer({
+			billingContext,
+			autumnBillingPlan: billingPlan.autumn,
+		}).customer_products,
+	});
 
 	if (subscriptionScheduleAction?.type !== "update") return;
 	if (!stripeSubscriptionSchedule?.subscription) return;
