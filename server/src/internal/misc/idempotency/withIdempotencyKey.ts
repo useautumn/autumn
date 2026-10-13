@@ -1,4 +1,4 @@
-import { ErrCode, type RouteGroup } from "@autumn/shared";
+import { ErrCode, RecaseError, type RouteGroup } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkIdempotencyKey } from "./actions/checkIdempotencyKey.js";
 import { releaseIdempotencyKey } from "./actions/releaseIdempotencyKey.js";
@@ -29,6 +29,10 @@ const shouldReleaseIdempotencyKeyForError = (error: unknown) => {
 	);
 };
 
+const isDuplicateIdempotencyKey = (error: unknown): boolean =>
+	error instanceof RecaseError &&
+	error.code === ErrCode.DuplicateIdempotencyKey;
+
 /** Wraps `run` in an idempotency-key claim: duplicate → 409 before running,
  *  retryable failure → key released so the client can retry. Shared by the
  *  Idempotency-Key header middleware and track's body-level key. */
@@ -38,6 +42,7 @@ export const withIdempotencyKey = async <T>({
 	routeGroup = null,
 	run,
 	releaseOnSuccess,
+	onDuplicate,
 }: {
 	ctx: AutumnContext;
 	/** The idempotency key to claim in it's raw form, not hashed. */
@@ -48,14 +53,21 @@ export const withIdempotencyKey = async <T>({
 	/** Release the key even though `run` resolved (e.g. the work was handed
 	 *  off for a replay, or the response status is a retryable failure). */
 	releaseOnSuccess?: (result: T) => boolean;
+	/** Answers in place of the 409 when another request already holds the key. */
+	onDuplicate?: () => Promise<T>;
 }): Promise<T> => {
 	if (!idempotencyKey) return run();
 
-	await checkIdempotencyKey({
-		ctx,
-		idempotencyKey,
-		ttlMs: resolveIdempotencyTtlMs({ ctx, routeGroup }),
-	});
+	try {
+		await checkIdempotencyKey({
+			ctx,
+			idempotencyKey,
+			ttlMs: resolveIdempotencyTtlMs({ ctx, routeGroup }),
+		});
+	} catch (error) {
+		if (onDuplicate && isDuplicateIdempotencyKey(error)) return onDuplicate();
+		throw error;
+	}
 
 	const release = () => releaseIdempotencyKey({ ctx, idempotencyKey });
 

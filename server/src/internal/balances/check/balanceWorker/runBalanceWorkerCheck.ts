@@ -40,14 +40,18 @@ export async function runBalanceWorkerCheck({
 	const body = parseCheckParamsForLock({ params: rawBody });
 	const command = checkParamsToCheckCommand({ ctx, body });
 	const isDeductingCheck = body.send_event === true || body.lock !== undefined;
-	const answerToResult = async (
-		answer: WorkerCheckAnswer,
-	): Promise<RunWithCustomer<CheckResponseWithPreview>> => ({
+	const answerToResult = async ({
+		answer,
+		deducted,
+	}: {
+		answer: WorkerCheckAnswer;
+		deducted: boolean;
+	}): Promise<RunWithCustomer<CheckResponseWithPreview>> => ({
 		result: await checkAnswerToApiResponse({
 			ctx,
 			command,
 			answer,
-			isDeductingCheck,
+			isDeductingCheck: deducted,
 			withPreview: body.with_preview,
 		}),
 		customer: answer.state?.customer ?? null,
@@ -58,7 +62,7 @@ export async function runBalanceWorkerCheck({
 	> => {
 		const answer = await client.check({ command });
 		triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
-		return answerToResult(answer);
+		return answerToResult({ answer, deducted: false });
 	};
 	// Deducts on the same engine a track would: Postgres when the worker refuses a v1 paid allocated grant.
 	const deductingCheck = (): Promise<
@@ -69,7 +73,10 @@ export async function runBalanceWorkerCheck({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			worker: async () =>
-				answerToResult(await runDeductingCheck({ ctx, body, client })),
+				answerToResult({
+					answer: await runDeductingCheck({ ctx, body, client }),
+					deducted: true,
+				}),
 			postgres: async ({ fullSubject }) => ({
 				result: await runPostgresDeductingCheck({
 					ctx,
@@ -80,15 +87,23 @@ export async function runBalanceWorkerCheck({
 				customer: fullSubject.customer,
 			}),
 		});
-	const checkOnWorker = async (): Promise<
-		RunWithCustomer<CheckResponseWithPreview>
-	> => {
-		try {
-			return isDeductingCheck ? await deductingCheck() : await plainCheck();
-		} catch (cause) {
-			rethrowBalanceWorkerError({ cause });
-		}
-	};
+	const onWorker =
+		(check: () => Promise<RunWithCustomer<CheckResponseWithPreview>>) => () =>
+			withCreateIfMissing({
+				ctx,
+				createEnabled: apiVersionCreatesCustomer({ ctx }),
+				customerId: body.customer_id,
+				customerData: body.customer_data,
+				entityId: body.entity_id,
+				entityData: body.entity_data,
+				run: async () => {
+					try {
+						return await check();
+					} catch (cause) {
+						rethrowBalanceWorkerError({ cause });
+					}
+				},
+			});
 	// A deduction under the client's key claims what an Atom's hand-in of the same deduction claims, so only one lands.
 	return withIdempotencyKey({
 		ctx,
@@ -97,15 +112,8 @@ export async function runBalanceWorkerCheck({
 				? toTrackIdempotencyKey({ key: idempotencyKey })
 				: null,
 		routeGroup: RouteGroup.Balances,
-		run: () =>
-			withCreateIfMissing({
-				ctx,
-				createEnabled: apiVersionCreatesCustomer({ ctx }),
-				customerId: body.customer_id,
-				customerData: body.customer_data,
-				entityId: body.entity_id,
-				entityData: body.entity_data,
-				run: checkOnWorker,
-			}),
+		run: onWorker(isDeductingCheck ? deductingCheck : plainCheck),
+		// The Atom's hand-in of this deduction landed first: answer the balance it left, as a plain check.
+		onDuplicate: onWorker(plainCheck),
 	});
 }
