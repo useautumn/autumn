@@ -110,6 +110,39 @@ test.each([
 		{ previous_feature_override: rates(1, true) },
 		[true, "Rate card changed undefined → undefined"],
 	],
+	[
+		"excluding a feature the credit system omits changes no rate",
+		{
+			feature_override: {
+				credit_schema: [
+					{ metered_feature_id: "search", excluded: true },
+					{ metered_feature_id: "gateway", credit_cost: 2.857 },
+				],
+			},
+		},
+		{},
+		[false],
+	],
+	[
+		"reordered rows change no rate",
+		{
+			feature_override: {
+				credit_schema: [
+					{ metered_feature_id: "search", excluded: true },
+					{ metered_feature_id: "gateway", credit_cost: 2.857 },
+				],
+			},
+		},
+		{
+			previous_feature_override: {
+				credit_schema: [
+					{ metered_feature_id: "gateway", credit_cost: 2.857 },
+					{ metered_feature_id: "search", excluded: true },
+				],
+			},
+		},
+		[false],
+	],
 ] as [string, Partial<Add>, Partial<Remove>, (string | boolean)[]][])(
 	"%s",
 	(_, addPatch, removePatch, expected) => {

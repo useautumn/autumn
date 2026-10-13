@@ -76,8 +76,10 @@ const creditSchemasAreSame = ({
 	schema1?: CreditSchemaOverrideItem[] | null;
 	schema2?: CreditSchemaOverrideItem[] | null;
 }) => {
-	if (!schema1 && !schema2) return true;
-	if (!schema1 || !schema2) return false;
+	// No rows patches nothing, so [] is the same as absent.
+	if (!schema1?.length || !schema2?.length) {
+		return !schema1?.length && !schema2?.length;
+	}
 	if (schema1.length !== schema2.length) return false;
 
 	return schema1.every((item1) => {

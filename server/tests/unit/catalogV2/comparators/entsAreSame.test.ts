@@ -564,6 +564,15 @@ describe("entsAreSame", () => {
 			);
 			expectSame({ feature_override: null }, { feature_override: null }, true);
 		});
+
+		test("an empty override is the same as absent", () => {
+			expectSame(
+				{ feature_override: { schema: [] } },
+				{ feature_override: null },
+				true,
+			);
+			expectSame({ feature_override: {} }, { feature_override: null }, true);
+		});
 	});
 
 	describe("ignored fields (differ but still same)", () => {
