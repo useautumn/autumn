@@ -38,16 +38,23 @@ function commandOf({
 
 function createFixture({
 	outcome,
+	refuses,
 }: {
 	outcome?: "applied" | "rejected" | Error;
+	/** Refuses just the commands it names, for good. */
+	refuses?: (command: TrackCommand) => boolean;
 } = {}) {
 	const tracked: string[] = [];
+	const decided: TrackCommand[] = [];
 	const logs: string[] = [];
 	const keys = createFakeIdempotencyKeys();
 	const processor = {
 		decideTrack: async ({ command }: { command: TrackCommand }) => {
 			tracked.push(command.commandId);
+			decided.push(command);
 			if (outcome instanceof Error) throw outcome;
+			if (refuses?.(command))
+				throw new UnsupportedCommandError({ reason: "feature_not_found" });
 			const result = {
 				type: "track",
 				status: outcome ?? "applied",
@@ -67,7 +74,7 @@ function createFixture({
 			warn: (message: string) => logs.push(`warn:${message}`),
 		} as never,
 	};
-	return { ctx, tracked, logs, keys };
+	return { ctx, tracked, decided, logs, keys };
 }
 
 describe("consumeTrack", () => {
@@ -165,6 +172,54 @@ describe("consumeTrack", () => {
 		expect(keys.released).toEqual([]);
 
 		await queued?.onRefused?.();
+		expect(keys.released).toEqual([storageKey]);
+	});
+
+	const source = { atomId: "atom_1", writerId: "w_1", seq: 4 };
+	const sourced = ({
+		commandId,
+		requestId,
+	}: {
+		commandId: string;
+		requestId: string;
+	}) =>
+		parseTrackCommand({
+			input: { ...commandOf({ commandId, requestId }), source },
+		});
+	/** What lands for a sourced command that will never deduct: its seq alone, under its own command id. */
+	const seqOnly = (command: TrackCommand) => ({
+		commandId: command.commandId,
+		value: 0,
+		usageEvent: null,
+		enforceOverdueBlock: false,
+		idempotency: undefined,
+		source,
+	});
+
+	test("an Atom's command skipped as a duplicate still lands its seq, as a track of nothing", async () => {
+		const { ctx, decided, keys } = createFixture();
+		await consumeTrack({
+			ctx,
+			command: commandOf({ commandId: "c1", requestId: "r1" }),
+		});
+		const atomCommand = sourced({ commandId: "c2", requestId: "r2" });
+		const queued = await consumeTrack({ ctx, command: atomCommand });
+
+		expect(queued).not.toBeNull();
+		expect(decided.map(({ commandId }) => commandId)).toEqual(["c1", "c2"]);
+		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
+		expect(keys.owners.get(storageKey)).toBe("r1");
+	});
+
+	test("an Atom's command refused for good lands its seq the same way, and still frees its claim", async () => {
+		const { ctx, decided, keys } = createFixture({
+			refuses: (command) => command.value > 0,
+		});
+		const atomCommand = sourced({ commandId: "c1", requestId: "r1" });
+		const queued = await consumeTrack({ ctx, command: atomCommand });
+
+		expect(queued).not.toBeNull();
+		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
 		expect(keys.released).toEqual([storageKey]);
 	});
 });

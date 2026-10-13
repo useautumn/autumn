@@ -4,7 +4,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
-/** The worker's own track for `value` messages, as an Atom journals the deduction it granted under `idempotencyKey`. */
+/** The worker's own track for `value` messages, as an Atom journals it: under the client's Idempotency-Key when it sent one. */
 export const atomTrack = ({
 	customerId,
 	value,
@@ -39,7 +39,7 @@ export const atomTrack = ({
 		enforceOverdueBlock: true,
 		usageEvent: null,
 		idempotency: {
-			key: `track:${idempotencyKey ?? requestId}`,
+			key: idempotencyKey ?? `track:${requestId}`,
 			ttlMs: 86_400_000,
 		},
 	};
