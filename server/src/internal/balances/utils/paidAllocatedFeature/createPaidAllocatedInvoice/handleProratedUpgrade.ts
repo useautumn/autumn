@@ -165,6 +165,7 @@ export const handleProratedUpgrade = async ({
 			newPrice,
 			prevPrice,
 			newRoundedUsage,
+			allowance: cusEnt.entitlement.allowance ?? 0,
 			feature,
 			product,
 			config,
