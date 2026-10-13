@@ -2,6 +2,7 @@ import { statSync } from "node:fs";
 import { join } from "node:path";
 import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
+import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import { CATALOG_FILE, openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -44,6 +45,7 @@ export const createMultiTenantAuth = ({
 	owners,
 	heldSubjects,
 	subjectPulls,
+	journalForwarder,
 	now,
 	clock = () => performance.now(),
 }: {
@@ -53,6 +55,8 @@ export const createMultiTenantAuth = ({
 	heldSubjects: HeldSubjects;
 	/** Each folder pulls with its own token hash, read at each pull since a put may re-token it. */
 	subjectPulls: SubjectPulls;
+	/** Each folder's journals are handed to Autumn with its own token hash. */
+	journalForwarder: JournalForwarder;
 	/** This replica's clock, stamped on every write. */
 	now?: () => number;
 	clock?: () => number;
@@ -140,6 +144,7 @@ export const createMultiTenantAuth = ({
 				subjectPulls,
 				tokenHash: () => held.tokenHash,
 			},
+			journalForwarder,
 		});
 		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;

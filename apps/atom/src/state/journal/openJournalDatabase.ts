@@ -14,8 +14,7 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 		CREATE TABLE IF NOT EXISTS journal_entries (
 			customer_id TEXT NOT NULL,
 			seq INTEGER NOT NULL CHECK (seq > 0),
-			status TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'rejected')),
-			reject_code TEXT CHECK ((status = 'rejected') = (reject_code IS NOT NULL)),
+			appended_at INTEGER NOT NULL,
 			command_json TEXT NOT NULL,
 			PRIMARY KEY (customer_id, seq)
 		) WITHOUT ROWID
@@ -29,7 +28,7 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 	`);
 };
 
-/** A slot's journal: the only copy of the deductions the Atom granted and has not yet seen Autumn apply, so every commit is synced. */
+/** A slot's journal: the deductions the Atom granted and has not yet seen Autumn apply, kept as lightly as the slot's subjects. */
 export const openJournalDatabase = ({
 	databasePath,
 }: {
@@ -40,5 +39,4 @@ export const openJournalDatabase = ({
 		schemaVersion: JOURNAL_SCHEMA_VERSION,
 		dropSchema: dropJournalSchema,
 		createSchema: createJournalSchema,
-		synchronous: "FULL",
 	});

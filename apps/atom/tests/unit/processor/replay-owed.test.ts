@@ -135,7 +135,7 @@ const generateOwed = ({ random }: { random: () => number }): JournalEntry[] =>
 		return {
 			customerId: "cus_1",
 			seq: index + 1,
-			status: { kind: "pending" },
+			appendedAt: occurredAt,
 			command,
 		};
 	});

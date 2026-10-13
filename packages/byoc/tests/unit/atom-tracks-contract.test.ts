@@ -3,15 +3,21 @@ import { createTrackCommand } from "../../../balance-engine/tests/unit/engineFix
 import { AtomTracksAppendRequestSchema } from "../../src/byoc.js";
 
 describe("tracks.append contract", () => {
-	test("a request is the journaled commands with their per-customer seq", () => {
+	test("a request is one journal's writer id and its commands with their per-customer seq", () => {
 		const command = createTrackCommand({ commandId: "atom_req_1" });
 
 		expect(
-			AtomTracksAppendRequestSchema.parse({ tracks: [{ seq: 1, command }] }),
-		).toEqual({ tracks: [{ seq: 1, command }] });
-		expect(
-			AtomTracksAppendRequestSchema.safeParse({ tracks: [{ seq: 0, command }] })
-				.success,
-		).toBe(false);
+			AtomTracksAppendRequestSchema.parse({
+				writer: "w_1",
+				tracks: [{ seq: 1, command }],
+			}),
+		).toEqual({ writer: "w_1", tracks: [{ seq: 1, command }] });
+		for (const unreadable of [
+			{ writer: "w_1", tracks: [{ seq: 0, command }] },
+			{ tracks: [{ seq: 1, command }] },
+		])
+			expect(AtomTracksAppendRequestSchema.safeParse(unreadable).success).toBe(
+				false,
+			);
 	});
 });

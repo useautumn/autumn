@@ -20,6 +20,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noPeer,
@@ -398,6 +399,7 @@ describe("the public app", () => {
 		const dataDir = mkdtempSync(join(tmpdir(), "atom-replica-"));
 		const threadStats = createThreadStatsBuffer({ threads: 1 });
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir,
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,

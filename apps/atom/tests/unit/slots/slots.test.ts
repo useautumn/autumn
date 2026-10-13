@@ -10,6 +10,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	freshHeld,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -25,6 +26,7 @@ const newFolder = () => {
 };
 const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount,
 		owners: allSlotsOwnedHere,
@@ -266,6 +268,7 @@ describe("a replica catching up from a peer", () => {
 	test("answers a peer's listSince, digestSince and fetchSubjects from the slot's file, and knows its own newest write", async () => {
 		const now = 1_700;
 		const slots = openSlots({
+			journalForwarder: forwardingNowhere,
 			folder: newFolder(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,

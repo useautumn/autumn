@@ -20,6 +20,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -48,6 +49,7 @@ const openFolder = () => {
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const held = freshHeld();
 	const auth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		tokenHash: "0".repeat(64),
 		slotCount: 2,

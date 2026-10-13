@@ -18,6 +18,8 @@ export type ForwardReason =
 	| "subject_not_written"
 	/** A send_event the Atom granted could not be journaled, so nothing was deducted here and the API deducts instead. */
 	| "journal_not_written"
+	/** Autumn has fallen too far behind this customer's journal: its send_event checks are the API's until it catches up. */
+	| "journal_backlog"
 	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
 	| "secret_key_not_known";
 
