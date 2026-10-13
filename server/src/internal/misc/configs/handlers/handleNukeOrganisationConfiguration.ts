@@ -4,6 +4,7 @@ import { AppEnv } from "@shared/index";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
@@ -25,10 +26,17 @@ export const handleNukeOrganisationConfiguration = createRoute({
 			return c.json({ error: "Cannot clear non-sandbox orgs" }, 400);
 		}
 
-		await CusService.safeDeleteByOrgId({
+		const deleted = await CusService.safeDeleteByOrgId({
 			db,
 			orgId: org.id,
 			env: AppEnv.Sandbox,
+		});
+		await queueBalanceWorkerEvicts({
+			customers: deleted.map(({ id }) => ({
+				orgId: org.id,
+				env: AppEnv.Sandbox,
+				customerId: id,
+			})),
 		});
 
 		await ProductService.safeDeleteByOrgId({

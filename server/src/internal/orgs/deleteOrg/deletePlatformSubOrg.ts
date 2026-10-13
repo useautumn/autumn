@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 import {
 	deleteStripeAccounts,
 	deleteStripeWebhooks,
@@ -61,11 +62,17 @@ export const deletePlatformSubOrg = async ({
 	await deleteStripeAccounts({ org, logger });
 
 	logger.info("4. Deleting sandbox customers");
-	await db
+	const deleted = await db
 		.delete(customers)
-		.where(
-			and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
-		);
+		.where(and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)))
+		.returning({ id: customers.id });
+	await queueBalanceWorkerEvicts({
+		customers: deleted.map(({ id }) => ({
+			orgId: org.id,
+			env: AppEnv.Sandbox,
+			customerId: id,
+		})),
+	});
 
 	logger.info("5. Deleting org memberships");
 	await db.delete(member).where(eq(member.organizationId, org.id));

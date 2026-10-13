@@ -6,7 +6,11 @@ import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -36,6 +40,7 @@ export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
 
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
+registry.register(DELETE_PUSH);
 registry.register(CATALOG_PUSH);
 
 const cleanups: (() => void)[] = [];

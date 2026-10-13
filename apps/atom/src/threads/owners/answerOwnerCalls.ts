@@ -43,6 +43,10 @@ const runOwnerCall = async ({
 		return slots
 			.processorFor({ customerId: call.customerId })
 			.setSubject({ customerId: call.customerId, body: call.body });
+	if (call.type === "deleteSubject")
+		return slots
+			.processorFor({ customerId: call.customerId })
+			.deleteSubject({ customerId: call.customerId, body: call.body });
 	if (call.type === "listSince")
 		return (
 			await slots.listSince({

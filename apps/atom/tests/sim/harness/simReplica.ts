@@ -12,7 +12,11 @@ import {
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import type { AtomHttpEnv } from "../../../src/http/types/atomHttp.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createPeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
@@ -138,6 +142,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 	const fetch = network.fetchFor(endpoint);
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
+	registry.register(DELETE_PUSH);
 	registry.register(CATALOG_PUSH);
 	const replication: Replication = createReplication({
 		ctx: {

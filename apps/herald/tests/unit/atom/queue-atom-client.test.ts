@@ -31,6 +31,9 @@ const createClient = ({ queueOnly = false }: { queueOnly?: boolean } = {}) => {
 		setSubject: async () => {
 			overHttp.push(AtomPushType.SetSubject);
 		},
+		deleteSubject: async () => {
+			overHttp.push(AtomPushType.DeleteSubject);
+		},
 		setCatalog: async () => {
 			overHttp.push(AtomPushType.SetCatalog);
 		},
@@ -63,6 +66,29 @@ describe("queue Atom client", () => {
 		expect(overHttp).toEqual([]);
 		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
 			type: AtomPushType.SetSubject,
+			atomId: "org_1.sandbox",
+			customerId: "cus_1",
+			body: JSON.stringify(body),
+		});
+	});
+
+	test("a deletion is queued as subjects.delete, routed by the customer it names: never as a set", async () => {
+		const { client, queued } = createClient();
+		const body = {
+			identity: {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				entityId: null,
+			},
+			log_offset: "9",
+			read_at: 1900,
+		};
+
+		await client.deleteSubject({ body });
+
+		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
+			type: AtomPushType.DeleteSubject,
 			atomId: "org_1.sandbox",
 			customerId: "cus_1",
 			body: JSON.stringify(body),

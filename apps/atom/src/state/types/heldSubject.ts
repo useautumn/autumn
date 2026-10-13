@@ -1,8 +1,8 @@
-import type { StoredSubject } from "./storedSubject.js";
+import type { SubjectRow } from "./storedSubject.js";
 
 /** A subject as held in memory, with the size of the row text it came from (what the held budget counts) and its slice's hash. */
 export type HeldSubject = {
-	subject: StoredSubject;
+	subject: SubjectRow;
 	bytes: number;
 	sliceHash: string;
 };

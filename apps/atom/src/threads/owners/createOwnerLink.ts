@@ -119,6 +119,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					customerId,
 					body,
 				})) as boolean,
+			deleteSubject: async ({ customerId, body }) =>
+				(await call({
+					type: "deleteSubject",
+					atomId,
+					customerId,
+					body,
+				})) as boolean,
 		};
 	}
 

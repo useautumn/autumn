@@ -12,7 +12,11 @@ import {
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import type { Replication } from "../replication/types/replication.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
-import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
+import {
+	applyCatalogPush,
+	applyDeletePush,
+	applySubjectPush,
+} from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
 /** Long polls in flight per receiver, so applying one batch never waits on the next receive. */
@@ -74,8 +78,12 @@ const applyPush = async ({
 		return;
 	}
 	if (push.customerId === null)
-		throw new InvalidPushError("A queued subjects.set push names no customer");
-	await applySubjectPush({
+		throw new InvalidPushError(`A queued ${push.type} push names no customer`);
+	const apply =
+		push.type === AtomPushType.DeleteSubject
+			? applyDeletePush
+			: applySubjectPush;
+	await apply({
 		slots,
 		customerId: push.customerId,
 		body: push.body,

@@ -19,6 +19,7 @@ import {
 	listPendingCustomerProducts,
 } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { discardReplacedPendingPlans } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardReplacedPendingPlans";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
@@ -168,15 +169,25 @@ export async function attach({
 		}
 	}
 
+	const pendingCustomerProducts = await listPendingCustomerProducts({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+	});
+	// System and confirm flows (incl. the long-lived link's own start) never replace a pending plan.
+	const remainingPendingCustomerProducts = skipAutumnCheckout
+		? pendingCustomerProducts
+		: await discardReplacedPendingPlans({
+				ctx,
+				fullCustomer: billingContext.fullCustomer,
+				attachProduct: billingContext.attachProduct,
+				pendingCustomerProducts,
+			});
+
 	const pendingInvoiceResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		attachProduct: billingContext.attachProduct,
-		loadPendingCustomerProducts: () =>
-			listPendingCustomerProducts({
-				ctx,
-				fullCustomer: billingContext.fullCustomer,
-			}),
+		loadPendingCustomerProducts: async () => remainingPendingCustomerProducts,
 	});
 	if (pendingInvoiceResult) {
 		preserveSubjectCache({ ctx });

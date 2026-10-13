@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { mountMultiTenantRoutes } from "../multiTenant/mountMultiTenantRoutes.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
+import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
@@ -38,6 +39,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 		receiveCheck,
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
+	authorized.post("/subjects.delete", pushAuth, receiveDeleteSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
 	app.route("/v1", authorized);
 	return app;

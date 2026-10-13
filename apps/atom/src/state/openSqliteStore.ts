@@ -6,6 +6,7 @@ import {
 	dataBytes,
 	deleteCustomersWrittenBefore,
 	listDigestsAppliedAfter,
+	listEntityIds,
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
 	readSubject as readSubjectRow,
@@ -17,7 +18,7 @@ import {
 	upsertSubjects,
 } from "./repos/subjectStates.js";
 import type { SqliteStore } from "./types/sqliteStore.js";
-import type { StoredSubject } from "./types/storedSubject.js";
+import { isDeletedSubject, type SubjectRow } from "./types/storedSubject.js";
 
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
@@ -30,7 +31,7 @@ const subjectKey = ({
 	entityId: string | null;
 }): string => `${customerId}\u0000${entityId ?? ""}`;
 
-const keyOf = ({ state }: StoredSubject): string =>
+const keyOf = ({ state }: SubjectRow): string =>
 	subjectKey({
 		customerId: state.identity.customerId,
 		entityId: state.identity.entityId ?? null,
@@ -56,7 +57,7 @@ export const openSqliteStore = ({
 	function readSubject(params: {
 		customerId: string;
 		entityId: string | null;
-	}): StoredSubject | null {
+	}): SubjectRow | null {
 		const key = storePrefix + subjectKey(params);
 		const found = held.get(key);
 		if (found) return found.subject;
@@ -82,10 +83,14 @@ export const openSqliteStore = ({
 	}
 
 	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
-	function writeOf(subject: StoredSubject): SubjectWrite {
+	function writeOf(subject: SubjectRow): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
-		if (heldCopy?.sliceHash !== slice.hash)
+		if (
+			heldCopy?.sliceHash !== slice.hash ||
+			isDeletedSubject(subject) ||
+			isDeletedSubject(heldCopy.subject)
+		)
 			return { subject, slice, sliceStored: false };
 		const { catalog, org } = heldCopy.subject;
 		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
@@ -128,7 +133,7 @@ export const openSqliteStore = ({
 	}
 
 	/** After the commit: only the store decides which part settles a customer's version, and rows still mean "stored". */
-	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
+	function setSubjects({ subjects }: { subjects: SubjectRow[] }): boolean[] {
 		const writes = subjects.map(writeOf);
 		const results = upsertSubjects({ ctx, writes, appliedAt: now() });
 		writes.forEach((write, index) => {
@@ -161,6 +166,7 @@ export const openSqliteStore = ({
 	return {
 		readSubject,
 		readVersion,
+		entityIdsOf: ({ customerId }) => listEntityIds({ ctx, customerId }),
 		setSubject: ({ subject }) =>
 			setSubjects({ subjects: [subject] })[0] ?? false,
 		setSubjects,
