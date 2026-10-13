@@ -11,8 +11,8 @@ import type { AtomPushQueue } from "./types/atomPushQueue.js";
 
 type QueueAtomClientContext = {
 	pushQueue: AtomPushQueue;
-	/** Takes a push too big for one queue message. */
-	http: AtomClient;
+	/** Takes a push too big for one queue message; null where pushes go over the queue only, so such a push fails. */
+	http: AtomClient | null;
 	logger: Pick<AutumnLogger, "warn">;
 };
 
@@ -23,11 +23,15 @@ const push = async ({
 }: {
 	ctx: QueueAtomClientContext;
 	message: AtomPushMessage;
-	sendOverHttp: () => Promise<void>;
+	sendOverHttp: (http: AtomClient) => Promise<void>;
 }): Promise<void> => {
 	const payload = atomPushMessageToPayload({ message });
 	const bytes = Buffer.byteLength(payload);
 	if (bytes <= ATOM_PUSH_MAX_BYTES) return ctx.pushQueue.send({ payload });
+	if (!ctx.http)
+		throw new Error(
+			`A ${message.type} push of ${bytes} bytes is too big for the Atom's queue, and pushes go over the queue only`,
+		);
 	ctx.logger.warn(
 		{
 			type: "herald_atom_push_oversized",
@@ -35,7 +39,7 @@ const push = async ({
 		},
 		"A push is too big for the Atom's queue; it goes over HTTP",
 	);
-	return sendOverHttp();
+	return sendOverHttp(ctx.http);
 };
 
 /** The same pushes as the HTTP client, through the Atom's own queue: nothing has to reach the Atom from outside. */
@@ -55,7 +59,18 @@ export const createQueueAtomClient = ({
 				customerId: body.state.identity.customerId,
 				body,
 			},
-			sendOverHttp: () => ctx.http.setSubject({ body }),
+			sendOverHttp: (http) => http.setSubject({ body }),
+		}),
+	deleteSubject: ({ body }) =>
+		push({
+			ctx,
+			message: {
+				type: AtomPushType.DeleteSubject,
+				atomId,
+				customerId: body.identity.customerId,
+				body,
+			},
+			sendOverHttp: (http) => http.deleteSubject({ body }),
 		}),
 	setCatalog: ({ rows, readAt }) =>
 		push({
@@ -66,6 +81,6 @@ export const createQueueAtomClient = ({
 				customerId: null,
 				body: toAtomCatalogBody({ rows, readAt }),
 			},
-			sendOverHttp: () => ctx.http.setCatalog({ rows, readAt }),
+			sendOverHttp: (http) => http.setCatalog({ rows, readAt }),
 		}),
 });

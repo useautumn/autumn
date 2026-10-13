@@ -22,6 +22,7 @@ import {
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
 	CircleUserRoundIcon,
+	LogOut,
 	Monitor,
 	Moon,
 	PackageIcon,
@@ -38,7 +39,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonationFavouritesStore";
-import { useListOrganizations } from "@/lib/auth-client";
+import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
@@ -582,6 +583,23 @@ const CommandBar = () => {
 						icon: <FingerprintIcon />,
 						shortcutKey: "7",
 						onSelect: () => switchToPage("impersonate"),
+					},
+				]
+			: []),
+		...(isAdmin && isCurrentlyImpersonating
+			? [
+					{
+						title: "End impersonation",
+						icon: <LogOut />,
+						onSelect: async () => {
+							closeDialog();
+							const { error } = await authClient.admin.stopImpersonating();
+							if (error) {
+								toast.error("Failed to end impersonation");
+								return;
+							}
+							window.location.reload();
+						},
 					},
 				]
 			: []),

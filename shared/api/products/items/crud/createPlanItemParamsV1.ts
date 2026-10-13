@@ -20,6 +20,7 @@ import {
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import { withSpecDefault } from "@utils/common/withSpecDefault";
+import { isSingleTierUsageBasedVolume } from "@utils/productUtils/priceUtils/classifyPrice/isSingleTierUsageBasedVolume";
 import { z } from "zod/v4";
 
 export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
@@ -55,7 +56,10 @@ export const PlanItemPriceParamsSchema = z.object({
 	tiers: z.array(ApiUsageTierWithCurrenciesSchema).optional().meta({
 		description: "Tiered pricing.  Either 'amount' or 'tiers' is required.",
 	}),
-	tier_behavior: z.enum(TierBehavior).optional(),
+	tier_behavior: z.enum(TierBehavior).optional().meta({
+		description:
+			"How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.",
+	}),
 
 	interval: z.enum(BillingInterval).meta({
 		description:
@@ -377,11 +381,15 @@ export const planItemParamsIssues = (
 		}
 
 		if (
-			value.price?.tier_behavior === TierBehavior.VolumeBased &&
-			value.price?.billing_method !== BillingMethod.Prepaid
+			isSingleTierUsageBasedVolume({
+				tierBehavior: value.price.tier_behavior,
+				isPrepaid: value.price.billing_method === BillingMethod.Prepaid,
+				tierCount: value.price.tiers.length,
+			})
 		) {
 			issues.push({
-				message: "volume-based pricing is only supported for prepaid features.",
+				message:
+					"Volume-based pricing on a usage-based item needs at least two tiers. Add a tier, or use graduated pricing for a single rate.",
 				input: value.price,
 			});
 		}

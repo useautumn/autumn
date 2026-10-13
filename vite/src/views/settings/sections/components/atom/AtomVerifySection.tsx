@@ -1,5 +1,5 @@
 import type { ApiByocCache } from "@autumn/shared";
-import { Button, CopyButton } from "@autumn/ui";
+import { Button, CopyButton, Skeleton } from "@autumn/ui";
 import { useAtomChecksQuery } from "@/hooks/queries/useAtomChecksQuery";
 import { AtomFieldRow } from "./AtomFieldRow";
 import { AtomFirstChecks } from "./AtomFirstChecks";
@@ -13,15 +13,17 @@ import {
 	isAtomConnected,
 } from "./atomDisplay";
 
-/** Step 4: Atom runs, Autumn reaches it, and the org's app sends its first checks. */
+/** Step 4: Atom runs, Autumn reaches it, and the org's app sends its first checks; every row holds its place as they land. */
 export const AtomVerifySection = ({
 	cache,
 	onDelete,
 	onFinish,
+	isFinishing,
 }: {
 	cache: ApiByocCache;
 	onDelete: () => void;
 	onFinish: () => void;
+	isFinishing: boolean;
 }) => {
 	const isConnected = isAtomConnected(cache);
 	const { checks } = useAtomChecksQuery({ enabled: isConnected });
@@ -42,11 +44,14 @@ export const AtomVerifySection = ({
 					<Button variant="secondary" onClick={onDelete}>
 						Delete
 					</Button>
-					{hasChecks && (
-						<Button variant="primary" onClick={onFinish}>
-							Finish setup
-						</Button>
-					)}
+					<Button
+						variant="primary"
+						onClick={onFinish}
+						disabled={!hasChecks}
+						isLoading={isFinishing}
+					>
+						Finish setup
+					</Button>
 				</>
 			}
 		>
@@ -58,17 +63,21 @@ export const AtomVerifySection = ({
 				<AtomStatusChip chip={connectionChip} />
 				<span className="text-tertiary-foreground">Atom reports in</span>
 			</AtomFieldRow>
-			{cache.endpoint_url && (
-				<AtomFieldRow label="URL" isMuted>
+			<AtomFieldRow label="URL" isMuted>
+				{cache.endpoint_url ? (
 					<CopyButton
 						text={cache.endpoint_url}
 						className="max-w-full font-mono text-xs"
 					/>
-				</AtomFieldRow>
-			)}
-			{isConnected && cache.endpoint_url && (
-				<AtomFirstChecks endpointUrl={cache.endpoint_url} checks={checks} />
-			)}
+				) : (
+					<Skeleton className="h-6 w-64" />
+				)}
+			</AtomFieldRow>
+			<AtomFirstChecks
+				endpointUrl={cache.endpoint_url}
+				isConnected={isConnected}
+				checks={checks}
+			/>
 		</AtomSetupSection>
 	);
 };

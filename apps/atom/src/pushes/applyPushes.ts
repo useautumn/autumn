@@ -9,6 +9,10 @@ export const SUBJECT_PUSH: ReplicationHandler = {
 	kind: "subjects.set",
 	path: "/v1/subjects.set",
 };
+export const DELETE_PUSH: ReplicationHandler = {
+	kind: "subjects.delete",
+	path: "/v1/subjects.delete",
+};
 export const CATALOG_PUSH: ReplicationHandler = {
 	kind: "catalog.set",
 	path: "/v1/catalog.set",
@@ -30,8 +34,8 @@ const subjectKeyOf = ({
 /** The one catalog per folder: a newer copy replaces an older one still on its way. */
 const CATALOG_KEY = "catalog";
 
-/** How a push reaches the other replicas: not at all when it was already relayed here, or when there are none. */
-export type PushReplication = { replication?: Replication; relayed?: boolean };
+/** How a push reaches the other replicas: not again when it was relayed here. */
+export type PushReplication = { replication: Replication; relayed?: boolean };
 
 /**
  * A subject as Autumn pushes it, over HTTP or the queue: routed by the customer id sent beside it and handed on as text,
@@ -51,13 +55,44 @@ export const applySubjectPush = async ({
 	const stored = await slots
 		.processorFor({ customerId })
 		.setSubject({ customerId, body });
-	if (stored && replication && !relayed)
+	if (stored && !relayed)
 		replication.replicate({
 			kind: SUBJECT_PUSH.kind,
 			key: subjectKeyOf({ customerId, body }),
 			body,
+			atomId: slots.atomId,
 			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
 		});
+	return stored;
+};
+
+/** A deletion as Autumn pushes it, applied and relayed as a subject push is; false when a newer read is already held. */
+export const applyDeletePush = async ({
+	slots,
+	customerId,
+	body,
+	replication,
+	relayed = false,
+}: {
+	slots: Slots;
+	customerId: string;
+	body: string;
+} & PushReplication): Promise<boolean> => {
+	const stored = await slots
+		.processorFor({ customerId })
+		.deleteSubject({ customerId, body });
+	if (stored && !relayed) {
+		const { identity } = JSON.parse(body) as {
+			identity: { entityId: string | null };
+		};
+		replication.replicate({
+			kind: DELETE_PUSH.kind,
+			key: `${customerId}\u0000${identity.entityId ?? ""}`,
+			body,
+			atomId: slots.atomId,
+			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
+		});
+	}
 	return stored;
 };
 
@@ -74,7 +109,12 @@ export const applyCatalogPush = async ({
 	const stored = await slots.setCatalog(
 		catalogBodyToSharedRows({ body: JSON.parse(body) }),
 	);
-	if (stored && replication && !relayed)
-		replication.replicate({ kind: CATALOG_PUSH.kind, key: CATALOG_KEY, body });
+	if (stored && !relayed)
+		replication.replicate({
+			kind: CATALOG_PUSH.kind,
+			key: CATALOG_KEY,
+			body,
+			atomId: slots.atomId,
+		});
 	return stored;
 };

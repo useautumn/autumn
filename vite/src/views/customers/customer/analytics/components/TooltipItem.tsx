@@ -11,14 +11,24 @@ export const tooltipItemHref = ({
 	return link ? pushPage(link) : undefined;
 };
 
+export const formatWithUnit = ({
+	value,
+	unit,
+}: {
+	value: number;
+	unit?: string;
+}) => `${Number(value).toLocaleString()}${unit ? ` ${unit}` : ""}`;
+
 export function TooltipItem({
 	item,
 	label,
 	href,
+	unit,
 }: {
 	item: TooltipEntry;
 	label: string;
 	href?: string;
+	unit?: string;
 }) {
 	return (
 		<div className="flex items-center gap-2">
@@ -41,7 +51,7 @@ export function TooltipItem({
 				</span>
 			)}
 			<span className="tabular-nums text-muted-foreground">
-				{Number(item.value).toLocaleString()}
+				{formatWithUnit({ value: item.value, unit })}
 			</span>
 		</div>
 	);

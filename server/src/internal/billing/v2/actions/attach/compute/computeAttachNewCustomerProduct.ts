@@ -97,6 +97,7 @@ const computeAttachNewCustomerProductResult = ({
 		billingStartsAt,
 		paymentMethod,
 		processorTypeOverride,
+		processorOverride,
 		invoiceMode,
 	} = attachBillingContext;
 
@@ -171,6 +172,7 @@ const computeAttachNewCustomerProductResult = ({
 			collectionMethod,
 			externalId,
 			processorType: processorTypeOverride,
+			...(processorOverride ? { processor: processorOverride } : {}),
 			// A new subscription is created on the anchor; an existing one resets to it later.
 			billingCycleAnchorResetsAt: stripeSubscription
 				? getRequestedBillingCycleAnchorResetAt({

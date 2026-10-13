@@ -11,6 +11,8 @@ import { useSession } from "./lib/auth-client";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
 import LoadingScreen from "./views/general/LoadingScreen";
+// Eager: the command bar already bundles it, so lazy only added a fallback frame on load.
+import { SettingsView } from "./views/settings/SettingsView";
 
 const AdminView = React.lazy(() =>
 	import("./views/admin/AdminView").then(({ AdminView }) => ({
@@ -117,11 +119,6 @@ const QuickstartView = React.lazy(
 const ProductsView = React.lazy(() => import("./views/products/ProductsView"));
 const PlanEditorView = React.lazy(
 	() => import("./views/products/plan/PlanEditorView"),
-);
-const SettingsView = React.lazy(() =>
-	import("./views/settings/SettingsView").then(({ SettingsView }) => ({
-		default: SettingsView,
-	})),
 );
 const TerminalView = React.lazy(() =>
 	import("./views/TerminalView").then(({ TerminalView }) => ({

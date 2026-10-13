@@ -111,7 +111,11 @@ export function InvoiceSettingsSection({
 						onValueChange={(paymentMethodTypes) =>
 							onChange({ ...value, paymentMethodTypes })
 						}
-						description={ORG_PAYMENT_METHODS_HELPER}
+						description={
+							defaultPaymentMethodTypes?.length
+								? ORG_PAYMENT_METHODS_HELPER
+								: undefined
+						}
 					/>
 				</div>
 			</SheetAccordionItem>

@@ -8,6 +8,7 @@ import {
 	billingContextToCurrency,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
@@ -16,6 +17,10 @@ import {
 	wantsStripeAutomaticTax,
 } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 import { billingDetailsToTaxCalculationCustomerDetails } from "@/internal/billing/v2/utils/tax/billingDetailsToTaxCalculationCustomerDetails";
+import {
+	computeInvoicePreviewTax,
+	isThirdPartyTaxProviderError,
+} from "./computeInvoicePreviewTax";
 
 /**
  * Build-stage helper that computes a tax preview for an attach via Stripe Tax.
@@ -165,9 +170,66 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 			status: "complete",
 		};
 	} catch (err) {
+		if (isThirdPartyTaxProviderError(err)) {
+			return computeThirdPartyProviderTax({
+				ctx,
+				stripeCli,
+				currency,
+				stripeCustomerId,
+				customerDetails,
+				taxableSubtotal,
+				taxSign,
+				zeroTax,
+			});
+		}
 		const errMsg = (err as { message?: string })?.message ?? String(err);
 		ctx.logger.warn(
 			`[computeAttachTaxPreview] Stripe Tax calculation failed; returning incomplete status: ${errMsg}`,
+		);
+		return zeroTax("incomplete");
+	}
+};
+
+const computeThirdPartyProviderTax = async ({
+	ctx,
+	stripeCli,
+	currency,
+	stripeCustomerId,
+	customerDetails,
+	taxableSubtotal,
+	taxSign,
+	zeroTax,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	currency: string;
+	stripeCustomerId?: string;
+	customerDetails?: Stripe.Tax.CalculationCreateParams.CustomerDetails;
+	taxableSubtotal: number;
+	taxSign: number;
+	zeroTax: (status: PreviewTax["status"]) => PreviewTax;
+}): Promise<PreviewTax> => {
+	try {
+		const tax = await computeInvoicePreviewTax({
+			stripeCli,
+			currency,
+			stripeCustomerId,
+			customerDetails,
+			taxableMinorUnits: atmnToStripeAmount({
+				amount: taxableSubtotal,
+				currency,
+			}),
+		});
+		return {
+			...tax,
+			total: tax.total * taxSign,
+			amount_inclusive: tax.amount_inclusive * taxSign,
+			amount_exclusive: tax.amount_exclusive * taxSign,
+		};
+	} catch (err) {
+		const errMsg = (err as { message?: string })?.message ?? String(err);
+		ctx.logger.warn(
+			`[computeAttachTaxPreview] Invoice preview tax failed for third-party tax provider; returning incomplete status: ${errMsg}`,
 		);
 		return zeroTax("incomplete");
 	}

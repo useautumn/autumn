@@ -7,6 +7,7 @@ import {
 	CustomerNotFoundError,
 	CustomerProductsCursor,
 	type CustomerProductsPage,
+	customerLicenses,
 	customerProducts,
 	customers,
 	type Entity,
@@ -19,6 +20,7 @@ import {
 	type ListCustomerProductsParams,
 	type ListCustomersV2Params,
 	type Organization,
+	planLicenses,
 	products,
 	RecaseError,
 } from "@autumn/shared";
@@ -32,6 +34,7 @@ import {
 	inArray,
 	isNull,
 	ne,
+	notExists,
 	or,
 	sql,
 	type Table,
@@ -46,6 +49,7 @@ import {
 	markCustomerUpdatedAt,
 } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
+import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -929,6 +933,25 @@ export class CusService {
 		orgId: string;
 		env: AppEnv;
 	}) {
+		const customerLicenseRows = await db.query.customerLicenses.findMany({
+			where: eq(customerLicenses.internal_customer_id, internalId),
+			columns: { plan_license_id: true },
+		});
+		const planLicenseIds = [
+			...new Set(
+				customerLicenseRows
+					.map((row) => row.plan_license_id)
+					.filter((id): id is string => Boolean(id)),
+			),
+		];
+		const linkedItems =
+			planLicenseIds.length > 0
+				? await licenseItemRepo.listByPlanLicenseIds({
+						db,
+						planLicenseIds,
+					})
+				: { entitlements: [], prices: [] };
+
 		const results = await db
 			.delete(customers)
 			.where(
@@ -939,6 +962,33 @@ export class CusService {
 				),
 			)
 			.returning();
+
+		if (planLicenseIds.length > 0) {
+			const deletedLinks = await db
+				.delete(planLicenses)
+				.where(
+					and(
+						inArray(planLicenses.id, planLicenseIds),
+						notExists(
+							db
+								.select({ id: customerLicenses.id })
+								.from(customerLicenses)
+								.where(eq(customerLicenses.plan_license_id, planLicenses.id)),
+						),
+					),
+				)
+				.returning({ id: planLicenses.id });
+			const deletedLinkIds = new Set(deletedLinks.map((row) => row.id));
+			await licenseItemRepo.sweepUnreferencedCustomRows({
+				db,
+				entitlementIds: linkedItems.entitlements
+					.filter((row) => deletedLinkIds.has(row.plan_license_id))
+					.map((row) => row.id),
+				priceIds: linkedItems.prices
+					.filter((row) => deletedLinkIds.has(row.plan_license_id))
+					.map((row) => row.id),
+			});
+		}
 
 		return results;
 	}
@@ -978,6 +1028,7 @@ export class CusService {
 		if (env === AppEnv.Live)
 			throw new Error("Cannot delete all customers under org in live mode");
 
+		const deleted: { id: string | null }[] = [];
 		while (true) {
 			const batch = await db
 				.select({ internal_id: customers.internal_id })
@@ -989,7 +1040,7 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db
+			const rows = await db
 				.delete(customers)
 				.where(
 					and(
@@ -997,8 +1048,11 @@ export class CusService {
 						eq(customers.org_id, orgId),
 						eq(customers.env, env),
 					),
-				);
+				)
+				.returning({ id: customers.id });
+			deleted.push(...rows);
 		}
+		return deleted;
 	}
 
 	static async getByVercelId({

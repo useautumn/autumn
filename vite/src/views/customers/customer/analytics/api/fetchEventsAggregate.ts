@@ -38,6 +38,7 @@ export const fetchEventsAggregate = async ({
 	groupBy,
 	maxGroups,
 	aggregateOn,
+	measure,
 	timezone,
 }: {
 	axiosInstance: AxiosInstance;
@@ -50,6 +51,7 @@ export const fetchEventsAggregate = async ({
 	groupBy?: string | null;
 	maxGroups?: number | null;
 	aggregateOn?: "deducted";
+	measure?: "count";
 	timezone: string;
 }): Promise<EventsAggregateResponseV1> => {
 	const publicGroupBy = toPublicGroupBy({ groupBy });
@@ -67,6 +69,7 @@ export const fetchEventsAggregate = async ({
 			// One top-N set for the whole range, so a group never drops to a fake 0.
 			group_ranking: publicGroupBy ? "window" : undefined,
 			aggregate_on: aggregateOn,
+			measure,
 		},
 	);
 	return data;

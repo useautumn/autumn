@@ -19,8 +19,9 @@ fi
 log "fetched ($(( $(date +%s) - t0 ))s)"
 
 # Only the workspaces the QA stack runs; a warm snapshot already holds most of these.
+# Envs with Tinybird also run Herald, which lands usage events there.
 bun install --frozen-lockfile --filter autumn --filter ./server --filter ./vite --filter ./apps/balance-worker --filter ./scripts \
-	>/tmp/install.log 2>&1 || { tail -50 /tmp/install.log; exit 1; }
+	${QA_TINYBIRD:+--filter ./apps/herald} >/tmp/install.log 2>&1 || { tail -50 /tmp/install.log; exit 1; }
 log "installed ($(( $(date +%s) - t0 ))s)"
 if [ "${PREPARE_MODE:-}" = deps ]; then
 	log "deps-only warm prepare done ($(du -sh /app/node_modules | cut -f1))"

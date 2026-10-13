@@ -151,11 +151,14 @@ export const openSlots = ({
 		atomId,
 	};
 	return {
+		atomId,
 		slotCount,
 		processorFor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
 		...serveReplicaReads({ ctx }),
+		ownedStores: () =>
+			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

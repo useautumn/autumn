@@ -399,3 +399,67 @@ test("any target with billing changes sets no_billing_changes false", () => {
 
 	expect(draft?.no_billing_changes).toBe(false);
 });
+
+const creditsOverride = (creditCost: number) => ({
+	credit_schema: [{ metered_feature_id: "gateway", credit_cost: creditCost }],
+});
+const creditsFilter = { feature_id: "credits", interval: ResetInterval.Month };
+
+test("previous_feature_override is stamped only when the override changes", () => {
+	const creditsTarget = (
+		planId: string,
+		previous: number | null,
+		next: number,
+	) =>
+		target({
+			planId,
+			version: 1,
+			customize: {
+				remove_items: [creditsFilter],
+				add_items: [
+					{
+						feature_id: "credits",
+						included: 100,
+						unlimited: false,
+						reset: { interval: ResetInterval.Month },
+						feature_override: creditsOverride(next),
+					},
+				],
+			},
+			previousItems: [
+				{
+					feature_id: "credits",
+					reset: { interval: ResetInterval.Month },
+					...(previous !== null && {
+						feature_override: creditsOverride(previous),
+					}),
+				} as NonNullable<MigrationTarget["previousItems"]>[number],
+			],
+		});
+	const draft = buildMigrationDraft({
+		targets: [
+			creditsTarget("changed", 2.857, 3.571),
+			creditsTarget("unchanged", 2, 2),
+			creditsTarget("inherited", null, 3),
+		],
+		versionsWithCustomersByPlanId: {
+			changed: [1],
+			unchanged: [1],
+			inherited: [1],
+		},
+	});
+	expect(
+		Object.fromEntries(
+			updatePlanOps(draft).map((op) => [
+				op.plan_filter.plan_id,
+				op.customize?.remove_items,
+			]),
+		),
+	).toEqual({
+		changed: [
+			{ ...creditsFilter, previous_feature_override: creditsOverride(2.857) },
+		],
+		inherited: [{ ...creditsFilter, previous_feature_override: {} }],
+		unchanged: [creditsFilter],
+	});
+});

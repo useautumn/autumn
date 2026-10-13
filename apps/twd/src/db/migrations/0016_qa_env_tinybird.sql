@@ -1,0 +1,1 @@
+ALTER TABLE "qa_envs" ADD COLUMN "tinybird" boolean DEFAULT false NOT NULL;

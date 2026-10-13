@@ -4,6 +4,7 @@ import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendB
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import { linkStripeCustomer } from "@/internal/customers/actions/linkStripeCustomer.js";
 import { setCustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
+import { assertCustomerCreateWithinOrgLimit } from "@/internal/misc/rateLimiter/assertCustomerCreateWithinOrgLimit.js";
 import { computeCreateCustomerPlan } from "./compute/computeCreateCustomerPlan.js";
 import { executeAutumnCreateCustomerPlan } from "./execute/executeAutumnCreateCustomerPlan.js";
 import {
@@ -35,6 +36,8 @@ export const createCustomerWithDefaults = async ({
 	customerId: string | null;
 	customerData?: CustomerData;
 }): Promise<FullCustomer> => {
+	// Email-only calls may resolve to an existing customer, so only id'd creations count.
+	if (customerId) await assertCustomerCreateWithinOrgLimit({ ctx });
 	setCustomerCreationRecoveryStage({ ctx, stage: "pre_commit" });
 
 	// ============ Phase 1: Create Autumn customer ============

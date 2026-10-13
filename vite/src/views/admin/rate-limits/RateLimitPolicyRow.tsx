@@ -3,13 +3,21 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ROW_ACTIONS_REVEAL } from "../edge-config/rolloutRowStyles";
-import { formatPolicyLabel, formatVersionLimits } from "./formatRateLimit";
+import {
+	formatOverrideValues,
+	formatPolicyLabel,
+	formatVersionLimits,
+} from "./formatRateLimit";
 import { RateLimitLayerCell } from "./RateLimitLayerCell";
 import { RateLimitOverrideBadge } from "./RateLimitOverrideBadge";
 import { RateLimitPolicyDetails } from "./RateLimitPolicyDetails";
 import {
+	POLICY_ROW_ACTIONS,
+	POLICY_ROW_DETAIL,
 	POLICY_ROW_LAYOUT,
+	POLICY_ROW_NAME,
 	POLICY_TABLE_COLUMNS,
+	TOUCH_TARGET,
 } from "./rateLimitTableStyles";
 import type {
 	RateLimitOverridesView,
@@ -89,7 +97,10 @@ export const RateLimitPolicyRow = ({
 					type="button"
 					aria-expanded={isExpanded}
 					onClick={() => setIsExpanded(!isExpanded)}
-					className="flex min-w-0 cursor-pointer items-center gap-2 text-left"
+					className={cn(
+						"flex min-h-11 min-w-0 cursor-pointer flex-wrap items-center gap-2 text-left md:min-h-0 md:flex-nowrap",
+						POLICY_ROW_NAME,
+					)}
 				>
 					<CaretRightIcon
 						className={cn(
@@ -100,15 +111,27 @@ export const RateLimitPolicyRow = ({
 					<PolicyName policy={policy} isNested={isNested} />
 					<PolicyTags policy={policy} isNested={isNested} />
 				</button>
-				<RateLimitLayerCell layer={policy.perCustomer} unit="per customer" />
-				<RateLimitLayerCell layer={policy.perOrg} unit="per org" />
-				<div className="flex min-w-0 flex-wrap gap-1.5">
+				<RateLimitLayerCell
+					layer={policy.perCustomer}
+					unit="per customer"
+					className={POLICY_ROW_DETAIL}
+				/>
+				<RateLimitLayerCell
+					layer={policy.perOrg}
+					unit="per org"
+					className={POLICY_ROW_DETAIL}
+				/>
+				<div
+					className={cn(
+						"flex min-w-0 flex-wrap gap-1.5 empty:hidden md:empty:flex",
+						POLICY_ROW_DETAIL,
+					)}
+				>
 					{policy.overrides.map((override) => (
 						<RateLimitOverrideBadge
 							key={override.orgKey}
-							policy={policy}
-							override={override}
 							orgName={view.orgsByKey[override.orgKey]?.name ?? override.orgKey}
+							values={formatOverrideValues({ policy, override })}
 						/>
 					))}
 				</div>
@@ -116,7 +139,7 @@ export const RateLimitPolicyRow = ({
 					variant="skeleton"
 					size="sm"
 					onClick={onOverride}
-					className={cn("justify-self-end", ROW_ACTIONS_REVEAL)}
+					className={cn(POLICY_ROW_ACTIONS, TOUCH_TARGET, ROW_ACTIONS_REVEAL)}
 				>
 					Override
 				</Button>

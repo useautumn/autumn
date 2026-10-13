@@ -62,6 +62,8 @@ export const recordRevenueCatInvoice = async ({
 	const invoice: InsertInvoice = {
 		id: generateId("inv"),
 		internal_customer_id: customer.internal_id,
+		org_id: customer.org_id,
+		env: customer.env,
 		internal_entity_id: null,
 		product_ids: [product.id],
 		internal_product_ids: [product.internal_id],

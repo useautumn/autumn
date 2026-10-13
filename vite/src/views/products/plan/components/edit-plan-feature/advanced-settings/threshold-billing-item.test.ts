@@ -3,6 +3,7 @@ import {
 	Infinite,
 	type ProductItem,
 	ProductItemInterval,
+	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -36,6 +37,26 @@ test("only a finite pay-per-use price can bill on a threshold", () => {
 			item: { feature_id: "messages", included_usage: 100 },
 		}),
 	).toBe(false);
+});
+
+const tiers: NonNullable<ProductItem["tiers"]> = [
+	{ to: 500, amount: 0.1 },
+	{ to: Infinite, amount: 0.05 },
+];
+
+test("a multi-tier price can't bill on a threshold; a single tier can", () => {
+	const tiered = { ...payPerUse, price: undefined, tiers };
+	expect(showsThresholdBilling({ item: tiered })).toBe(false);
+	expect(
+		showsThresholdBilling({
+			item: { ...tiered, tier_behavior: TierBehavior.VolumeBased },
+		}),
+	).toBe(false);
+	expect(
+		showsThresholdBilling({
+			item: { ...payPerUse, price: undefined, tiers: [tiers[1]] },
+		}),
+	).toBe(true);
 });
 
 test("setting a threshold writes item.config.threshold_billing and clearing removes it", () => {
@@ -73,5 +94,11 @@ test("an item edited out of eligibility drops its stale threshold", () => {
 	const unlimited = { ...enabled, included_usage: Infinite };
 	expect(
 		itemThreshold({ item: reconcileThresholdBilling({ item: unlimited }) }),
+	).toBeNull();
+
+	// Given a second tier → same.
+	const tiered = { ...enabled, price: undefined, tiers };
+	expect(
+		itemThreshold({ item: reconcileThresholdBilling({ item: tiered }) }),
 	).toBeNull();
 });

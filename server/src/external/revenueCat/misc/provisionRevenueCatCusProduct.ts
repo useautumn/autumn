@@ -190,6 +190,7 @@ export const provisionRevenueCatCusProduct = async ({
 	featureQuantities,
 	appUserId,
 	periodEvent,
+	originalTransactionId,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
@@ -198,6 +199,7 @@ export const provisionRevenueCatCusProduct = async ({
 	featureQuantities?: Array<{ feature_id: string; quantity?: number }>;
 	appUserId?: string;
 	periodEvent?: RevenueCatPeriodEvent;
+	originalTransactionId?: string | null;
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
@@ -210,6 +212,14 @@ export const provisionRevenueCatCusProduct = async ({
 		skipBillingFetching: true,
 		skipExternalPSPGuard: true,
 		processorTypeOverride: ProcessorType.RevenueCat,
+		...(originalTransactionId
+			? {
+					processorOverride: {
+						type: ProcessorType.RevenueCat,
+						original_transaction_id: originalTransactionId,
+					},
+				}
+			: {}),
 	};
 
 	await attach({

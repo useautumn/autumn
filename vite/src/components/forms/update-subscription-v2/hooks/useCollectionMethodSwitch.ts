@@ -38,7 +38,6 @@ export function useCollectionMethodSwitch({
 	const [paymentMethodTypes, setPaymentMethodTypes] = useState<
 		InvoicePaymentMethod[] | null
 	>(null);
-	const [applyToAutoTopups, setApplyToAutoTopups] = useState(true);
 
 	const { data: stripeSubscription } = useStripeSubscriptionQuery({
 		stripeSubscriptionId: customerProduct.subscription_ids?.[0],
@@ -113,7 +112,6 @@ export function useCollectionMethodSwitch({
 									payment_method_types: resolvedPaymentMethodTypes ?? undefined,
 								}
 							: {}),
-						apply_to_auto_topups: applyToAutoTopups,
 					},
 				}
 			: null;
@@ -145,11 +143,9 @@ export function useCollectionMethodSwitch({
 		apiVersion: LATEST_VERSION,
 		netTermsDays: resolvedNetTermsDays,
 		paymentMethodTypes: resolvedPaymentMethodTypes,
-		applyToAutoTopups,
 		setTarget,
 		setNetTermsDays,
 		setPaymentMethodTypes,
-		setApplyToAutoTopups,
 		submit: () => mutation.mutate({}),
 		isPending: mutation.isPending,
 	};

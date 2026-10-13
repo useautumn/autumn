@@ -44,6 +44,8 @@ let deployment: AlienDeployment | null = null;
 /** A group's own deployment where a test sets one; any other group finds `deployment`. */
 let deploymentsByGroup: Record<string, AlienDeployment | null> = {};
 let setupCount = 0;
+/** External ids alien still has a deployment group for, whether or not a record names it. */
+let liveGroups = new Set<string>();
 
 const alienClient: AlienClient = {
 	startSetup: async (params) => {
@@ -53,6 +55,8 @@ const alienClient: AlienClient = {
 			setupUrl: "https://setup.example",
 		};
 	},
+	findDeploymentGroup: async ({ externalId }) =>
+		liveGroups.has(externalId) ? { id: `dg_${externalId}` } : null,
 	findDeployment: async (params) => {
 		calls.found.push(params);
 		return Object.hasOwn(deploymentsByGroup, params.deploymentGroupId)
@@ -103,6 +107,7 @@ beforeEach(() => {
 	stored = shadowAtomConfig.defaultValue();
 	deployment = null;
 	deploymentsByGroup = {};
+	liveGroups = new Set();
 	setupCount = 0;
 	getAlien.mockReturnValue(alienClient);
 	for (const list of Object.values(calls)) list.length = 0;
@@ -179,7 +184,7 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 	expect(started?.label).toMatch(SHADOW_STACK_NAME);
 	expect(body.stack_name).toBe(started?.label);
 	expect(started?.pools).toEqual({
-		stateful: { machine: "c8g.xlarge", machines: 1 },
+		stateful: { machine: "c8g.xlarge", machines: 2 },
 	});
 	expect(started?.containers).toEqual({ atom: { cpu: 3, memory: "6Gi" } });
 	const variables = Object.fromEntries(
@@ -321,7 +326,7 @@ test("resize moves the running Atom's pool; one still awaiting setup, or none, i
 
 	expect(response.status).toBe(200);
 	expect(calls.resized[0]?.pools).toEqual({
-		stateful: { machine: "c8g.2xlarge", machines: 1 },
+		stateful: { machine: "c8g.2xlarge", machines: 2 },
 	});
 });
 
@@ -401,6 +406,28 @@ test("a new shadow Atom made while the deleted one comes down gets its own names
 		{ id: first.id, stack_name: first.stack_name, status: "removing" },
 	]);
 	expect(atom.cache.id).not.toBe(first.id);
+});
+
+test("a new shadow Atom skips an earlier id whose alien group outlived its record, instead of reusing that group", async () => {
+	await startedConfig();
+	deployment = runningDeployment;
+	await getAtom();
+	await call({ route: "delete_atom" });
+	const [removing] = (await getAtom()).removing;
+	expect(removing.id).toBe("atom_b55ee51c6af650dd1aefc172");
+	// The id the next Atom took last time this alternated: its group is still in alien, its record gone.
+	liveGroups.add("autumn-internal-shadow-atom.atom_dd3d20bd53fb6cf8c54e4865");
+
+	deploymentsByGroup.dg_2 = null;
+	const response = await call({
+		route: "create_atom",
+		body: { cpu: 4, memory: 8 },
+	});
+
+	expect(response.status).toBe(200);
+	expect(calls.started.map(({ externalId }) => externalId)).toEqual([
+		"autumn-internal-shadow-atom.atom_001e8754e924c479a2f58865",
+	]);
 });
 
 test("a shadow Atom from before Atom ids keeps its fixed names, steps aside on delete, and the next one is named apart", async () => {
@@ -491,7 +518,11 @@ test("monitoring reads the same Atom metrics, by the shadow's deployment id", as
 	});
 
 	expect(response.status).toBe(200);
-	expect(metrics).toHaveBeenCalledWith({ deploymentId: "dep_1", range: "1h" });
+	expect(metrics).toHaveBeenCalledWith({
+		deploymentId: "dep_1",
+		range: "1h",
+		createdAt: expect.any(Number),
+	});
 });
 
 test("an org's own key cannot touch the shadow Atom", async () => {

@@ -3,13 +3,12 @@
  * subscription is collected, from the next renewal on.
  *
  * Contract:
- *   { invoice_mode: { enabled: true, net_terms_days, payment_method_types, apply_to_auto_topups } }
+ *   { invoice_mode: { enabled: true, net_terms_days, payment_method_types } }
  *     → Stripe sub send_invoice with those terms + types, no invoice created,
- *       customer product collection_method send_invoice, auto top-ups invoiced
- *   { invoice_mode: { enabled: false, apply_to_auto_topups } }
- *     → Stripe sub charge_automatically, invoice-only types cleared, auto top-ups charged
+ *       customer product collection_method send_invoice, auto top-ups untouched
+ *   { invoice_mode: { enabled: false } }
+ *     → Stripe sub charge_automatically, invoice-only types cleared, auto top-ups untouched
  *   switch to charge automatically with no card on file → 400
- *   apply_to_auto_topups outside the pure switch (attach, or update with other changes) → 400
  */
 
 import { expect, test } from "bun:test";
@@ -78,7 +77,7 @@ const expectCollectionMethodCorrect = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("collection method switch: charge automatically ↔ invoicing, top-ups follow")}`,
+	`${chalk.yellowBright("collection method switch: charge automatically ↔ invoicing, top-ups untouched")}`,
 	async () => {
 		const customerId = "switch-collection-method";
 		const pro = products.pro({
@@ -109,6 +108,10 @@ test.concurrent(
 			},
 		});
 
+		const topupInvoiceModeBefore = (
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId)
+		).billing_controls?.auto_topups?.[0]?.invoice_mode;
+
 		const before = await loadCustomerProduct({
 			internalCustomerId,
 			productId: pro.id,
@@ -128,7 +131,6 @@ test.concurrent(
 				enabled: true,
 				net_terms_days: 15,
 				payment_method_types: ["card"],
-				apply_to_auto_topups: true,
 			},
 		});
 
@@ -146,14 +148,14 @@ test.concurrent(
 
 		const invoiced = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(invoiced.billing_controls?.auto_topups?.[0]?.invoice_mode).toBe(
-			true,
+			topupInvoiceModeBefore,
 		);
 
 		// Back to charging automatically
 		await autumnV2_3.billing.update({
 			customer_id: customerId,
 			plan_id: pro.id,
-			invoice_mode: { enabled: false, apply_to_auto_topups: true },
+			invoice_mode: { enabled: false },
 		});
 
 		await expectCollectionMethodCorrect({
@@ -166,7 +168,7 @@ test.concurrent(
 
 		const charged = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(charged.billing_controls?.auto_topups?.[0]?.invoice_mode).toBe(
-			false,
+			topupInvoiceModeBefore,
 		);
 	},
 );
@@ -211,51 +213,6 @@ test.concurrent(
 			customerProduct.subscription_ids![0],
 		);
 		expect(stripeSubscription.collection_method).toBe("send_invoice");
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("collection method switch: apply_to_auto_topups outside the pure switch → 400")}`,
-	async () => {
-		const customerId = "switch-collection-topups-scope";
-		const pro = products.pro({
-			id: "pro-switch-scope",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			id: "premium-switch-scope",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-
-		const { autumnV2_3 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: pro.id })],
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_3.billing.attach({
-					customer_id: customerId,
-					plan_id: premium.id,
-					invoice_mode: { enabled: true, apply_to_auto_topups: true },
-				}),
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_3.billing.update({
-					customer_id: customerId,
-					plan_id: pro.id,
-					feature_quantities: [],
-					invoice_mode: { enabled: true, apply_to_auto_topups: true },
-				}),
-		});
 	},
 );
 

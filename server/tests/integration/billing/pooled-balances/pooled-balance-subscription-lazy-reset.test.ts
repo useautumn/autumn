@@ -31,6 +31,7 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import {
 	findResetEligibleRow,
 	runResetOnCustomerEntitlement,
@@ -40,6 +41,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { expectPooledBalanceCorrect } from "./utils/expectPooledBalanceCorrect.js";
 import { expirePooledBalanceForReset } from "./utils/expirePooledBalanceForReset.js";
 import { getPooledBalanceDbState } from "./utils/getPooledBalanceDbState.js";
@@ -117,6 +119,9 @@ test.concurrent(
 			usage: 0,
 		});
 
+		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
 		// ── Contract: pool keeps subscription mode + Stripe sub linkage ──
 		await expectPooledBalanceCorrect({
 			db: ctx.db,

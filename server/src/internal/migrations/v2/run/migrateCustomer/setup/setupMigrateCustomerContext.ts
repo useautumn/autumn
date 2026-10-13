@@ -1,3 +1,4 @@
+import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { fullCustomerWithDerivedIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/fullCustomerWithDerivedIsCustom.js";
@@ -24,6 +25,32 @@ const baseProductsForMigration = ({
 	return baseProducts;
 };
 
+// The custom guard is already in plan_filter by setup, so only the version is checked.
+const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
+	Boolean(
+		migration.operations?.customer?.some(
+			(op) => op.type === "update_plan" && op.version !== undefined,
+		),
+	);
+
+/** Drift onto a row stored as not custom is likely the catalog edit the migration applies. */
+const keepStoredNotCustomFlags = ({
+	stored,
+	derived,
+}: {
+	stored: FullCustomer;
+	derived: FullCustomer;
+}): FullCustomer => ({
+	...derived,
+	customer_products: derived.customer_products.map(
+		(customerProduct, index) => ({
+			...customerProduct,
+			is_custom:
+				customerProduct.is_custom && stored.customer_products[index].is_custom,
+		}),
+	),
+});
+
 /** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
 	ctx,
@@ -36,15 +63,23 @@ export const setupMigrateCustomerContext = async ({
 	customerId: string;
 	preview: boolean;
 }): Promise<MigrateCustomerContext> => {
-	// Ops branch on is_custom, so they read the derived flag; the billing-plan hook persists it.
-	const { fullCustomer, corrections } = await fullCustomerWithDerivedIsCustom({
+	const storedFullCustomer = await setupFullCustomerContext({
 		ctx,
-		fullCustomer: await setupFullCustomerContext({
-			ctx,
-			params: { customer_id: customerId },
-		}),
-		baseProducts: baseProductsForMigration({ migration }),
+		params: { customer_id: customerId },
 	});
+	const { fullCustomer: derivedFullCustomer, corrections } =
+		await fullCustomerWithDerivedIsCustom({
+			ctx,
+			fullCustomer: storedFullCustomer,
+			baseProducts: baseProductsForMigration({ migration }),
+		});
+	// Version bumps spare every derived-custom plan; the billing-plan hook re-derives after ops.
+	const fullCustomer = bumpsVersion({ migration })
+		? derivedFullCustomer
+		: keepStoredNotCustomFlags({
+				stored: storedFullCustomer,
+				derived: derivedFullCustomer,
+			});
 
 	return {
 		migration,

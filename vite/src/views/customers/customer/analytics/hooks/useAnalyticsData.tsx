@@ -52,6 +52,8 @@ export const useAnalyticsData = ({
 		queryStates.aggregate_on === "deducted" && customerId
 			? "deducted"
 			: undefined;
+	const measure =
+		!aggregateOn && queryStates.measure === "count" ? "count" : undefined;
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
@@ -96,6 +98,7 @@ export const useAnalyticsData = ({
 			effectiveTimezone,
 			String(maxGroups),
 			aggregateOn ?? "",
+			measure ?? "",
 		]),
 		// Names load in the same step as the chart so rows never flash raw ids.
 		queryFn: async () => {
@@ -110,6 +113,7 @@ export const useAnalyticsData = ({
 				groupBy: effectiveGroupBy,
 				maxGroups,
 				aggregateOn,
+				measure,
 				timezone: effectiveTimezone,
 			});
 			const displayNames = await fetchGroupDisplayNames({
@@ -144,6 +148,7 @@ export const useAnalyticsData = ({
 		customer,
 		deductions: data?.deductions,
 		aggregateOn,
+		measure,
 		features: featuresData || [],
 		featuresLoading,
 		queryLoading,

@@ -4,6 +4,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
 import { ConfigHealthChip } from "../components/ConfigHealthChip";
+import {
+	type RateLimitEndpointDraft,
+	RateLimitEndpointOverrideSheet,
+} from "./RateLimitEndpointOverrideSheet";
+import { RateLimitEndpointTable } from "./RateLimitEndpointTable";
 import { RateLimitOrgCombobox } from "./RateLimitOrgCombobox";
 import { RateLimitOrgOverridesTable } from "./RateLimitOrgOverridesTable";
 import {
@@ -12,9 +17,17 @@ import {
 } from "./RateLimitOverrideSheet";
 import { RateLimitPolicyTable } from "./RateLimitPolicyTable";
 import { RateLimitRawJsonDialog } from "./RateLimitRawJsonDialog";
+import { listEndpointOptions } from "./rateLimitEndpoints";
 import { listOverrideOrgs } from "./rateLimitOrgs";
-import { withOverride, withoutOverrides } from "./rateLimitOverrideEdits";
+import {
+	withEndpointOverride,
+	withOverride,
+	withoutEndpointOverride,
+	withoutOverrides,
+} from "./rateLimitOverrideEdits";
+import { TOUCH_TARGET } from "./rateLimitTableStyles";
 import type {
+	RateLimitEndpointOverride,
 	RateLimitOrg,
 	RateLimitOverrideLimits,
 	RateLimitPolicySummary,
@@ -50,6 +63,9 @@ export const RateLimitsSection = () => {
 	const [filterOrg, setFilterOrg] = useState<RateLimitOrg | null>(null);
 	const [draft, setDraft] = useState<RateLimitOverrideDraft | null>(null);
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
+	const [endpointDraft, setEndpointDraft] =
+		useState<RateLimitEndpointDraft | null>(null);
+	const [isEndpointSheetOpen, setIsEndpointSheetOpen] = useState(false);
 	const [isRawJsonOpen, setIsRawJsonOpen] = useState(false);
 
 	if (isLoading) return <Skeleton className="h-96" />;
@@ -75,6 +91,11 @@ export const RateLimitsSection = () => {
 			scope: pickInitialScope({ policy, orgKey: filterOrg?.key }),
 		});
 		setIsSheetOpen(true);
+	};
+
+	const openEndpointSheet = ({ endpoint }: { endpoint: string | null }) => {
+		setEndpointDraft({ org: filterOrg, endpoint });
+		setIsEndpointSheetOpen(true);
 	};
 
 	const save = async ({
@@ -129,6 +150,42 @@ export const RateLimitsSection = () => {
 			message: "Override removed",
 		});
 
+	const saveEndpointOverride = async ({
+		org,
+		endpoint,
+		override,
+	}: {
+		org: RateLimitOrg;
+		endpoint: string;
+		override: RateLimitEndpointOverride;
+	}) => {
+		const orgs = withEndpointOverride({
+			orgs: view.orgs,
+			orgKey: org.key,
+			endpoint,
+			override,
+		});
+		if (await save({ orgs, message: "Endpoint override saved" })) {
+			setIsEndpointSheetOpen(false);
+		}
+	};
+
+	const removeEndpointOverride = ({
+		org,
+		endpoint,
+	}: {
+		org: RateLimitOrg;
+		endpoint: string;
+	}) =>
+		save({
+			orgs: withoutEndpointOverride({
+				orgs: view.orgs,
+				orgKey: org.key,
+				endpoint,
+			}),
+			message: "Endpoint override removed",
+		});
+
 	const saveRawJson = async (orgs: RateLimitOverrideLimits) => {
 		if (await save({ orgs, message: "Overrides saved" })) {
 			setIsRawJsonOpen(false);
@@ -137,57 +194,74 @@ export const RateLimitsSection = () => {
 
 	return (
 		<section className="flex flex-col gap-1">
-			<PageHeader
-				icon={<Gauge className="size-4 text-subtle" />}
-				title="Rate limits"
-				titleAccessory={<ConfigHealthChip healthy={view.configHealthy} />}
-			>
-				<RateLimitOrgCombobox
-					value={filterOrg}
-					overrideOrgs={overrideOrgs}
-					onChange={setFilterOrg}
-					placeholder="All orgs"
-					triggerClassName="w-56"
+			<div className="flex flex-col md:flex-row md:items-center md:justify-between md:gap-4">
+				<PageHeader
+					icon={<Gauge className="size-4 text-subtle" />}
+					title="Rate limits"
+					titleAccessory={<ConfigHealthChip healthy={view.configHealthy} />}
 				/>
-				{filterOrg && (
+				<div className="flex flex-wrap items-center gap-2 pb-4 md:h-10 md:flex-nowrap">
+					<RateLimitOrgCombobox
+						value={filterOrg}
+						overrideOrgs={overrideOrgs}
+						onChange={setFilterOrg}
+						placeholder="All orgs"
+						triggerClassName="h-11 w-full md:h-auto md:w-56"
+					/>
+					{filterOrg && (
+						<Button
+							variant="skeleton"
+							size="sm"
+							className={TOUCH_TARGET}
+							onClick={() => setFilterOrg(null)}
+						>
+							Clear
+						</Button>
+					)}
 					<Button
-						variant="skeleton"
+						variant="secondary"
 						size="sm"
-						onClick={() => setFilterOrg(null)}
+						className={TOUCH_TARGET}
+						onClick={() => setIsRawJsonOpen(true)}
 					>
-						Clear
+						Raw JSON
 					</Button>
-				)}
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => setIsRawJsonOpen(true)}
-				>
-					Raw JSON
-				</Button>
-				<Button
-					variant="primary"
-					size="sm"
-					onClick={() => openSheet({ policy: view.policies[0] })}
-				>
-					Add override
-				</Button>
-			</PageHeader>
+					<Button
+						variant="primary"
+						size="sm"
+						className={TOUCH_TARGET}
+						onClick={() => openSheet({ policy: view.policies[0] })}
+					>
+						Add override
+					</Button>
+				</div>
+			</div>
 
 			{filterOrg ? (
 				<RateLimitOrgOverridesTable
 					org={filterOrg}
 					policies={view.policies}
+					endpoints={view.orgs[filterOrg.key]?.endpoints ?? {}}
 					onEdit={(policy) => openSheet({ policy })}
 					onRemove={(policy) => removeOverride({ org: filterOrg, policy })}
+					onEditEndpoint={(endpoint) => openEndpointSheet({ endpoint })}
+					onRemoveEndpoint={(endpoint) =>
+						removeEndpointOverride({ org: filterOrg, endpoint })
+					}
 					isSaving={isSaving}
 					onShowAll={() => setFilterOrg(null)}
 				/>
 			) : (
-				<RateLimitPolicyTable
-					view={view}
-					onOverride={(policy) => openSheet({ policy })}
-				/>
+				<>
+					<RateLimitPolicyTable
+						view={view}
+						onOverride={(policy) => openSheet({ policy })}
+					/>
+					<RateLimitEndpointTable
+						view={view}
+						onOverride={(endpoint) => openEndpointSheet({ endpoint })}
+					/>
+				</>
 			)}
 
 			{draft && (
@@ -199,6 +273,19 @@ export const RateLimitsSection = () => {
 					overrideOrgs={overrideOrgs}
 					isSaving={isSaving}
 					onSave={saveOverride}
+				/>
+			)}
+
+			{endpointDraft && (
+				<RateLimitEndpointOverrideSheet
+					open={isEndpointSheetOpen}
+					onOpenChange={setIsEndpointSheetOpen}
+					initialDraft={endpointDraft}
+					orgs={view.orgs}
+					endpoints={listEndpointOptions({ view })}
+					overrideOrgs={overrideOrgs}
+					isSaving={isSaving}
+					onSave={saveEndpointOverride}
 				/>
 			)}
 

@@ -110,6 +110,12 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "updateCustomer",
 	},
 	{
+		agents: ["leaf"],
+		previewTool: "getInvoice",
+		scopes: ["billing:write"],
+		toolName: "updateInvoice",
+	},
+	{
 		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: ["plans:write"],

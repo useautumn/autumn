@@ -16,8 +16,8 @@ import { getShadowAtomDeployer } from "../getShadowAtomDeployer.js";
 import { shadowAtomConfigStore } from "../shadowAtomConfigStore.js";
 import { shadowAtomContext } from "../shadowAtomContext.js";
 import {
-	nextShadowAtomNames,
 	shadowAtomRecordNames,
+	startableShadowAtomNames,
 } from "../shadowAtomNames.js";
 import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
 import {
@@ -71,13 +71,14 @@ const startShadowAtomSetup = async ({
 			: generateAtomToken();
 	// As an org's setup: a named network wins, and a fresh link for a waiting setup keeps the one it asked for.
 	const network = askedNetwork ?? existing?.network ?? null;
+	const deployer = getShadowAtomDeployer();
 	const names = existing
 		? {
 				...shadowAtomRecordNames({ record: existing }),
 				atomId: existing.atom_id,
 			}
-		: nextShadowAtomNames({ previous });
-	const setup = await getShadowAtomDeployer().start({
+		: await startableShadowAtomNames({ previous, deployer });
+	const setup = await deployer.start({
 		names: { externalId: names.externalId, label: names.label },
 		auth: {
 			mode: "multi_tenant",

@@ -8,6 +8,8 @@ export interface ShownChart {
 	chartConfig: ChartSeriesConfig[];
 	chartTicks: number[] | undefined;
 	geometry: ChartGeometry;
+	// Kept with the data so a dimmed chart keeps its own unit while the next measure loads.
+	unit?: string;
 }
 
 /** The most recent chart that rendered, held through later loads so they can dim it instead of blanking. */

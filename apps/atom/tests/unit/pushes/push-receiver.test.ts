@@ -6,7 +6,10 @@ import { AtomPushType, atomPushMessageToPayload } from "@autumn/byoc";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { createPushReceiver } from "../../../src/pushes/createPushReceiver.js";
+import {
+	createPushReceiver,
+	MAX_PUSH_ATTEMPTS,
+} from "../../../src/pushes/createPushReceiver.js";
 import type { PulledPush } from "../../../src/pushQueue/types/pushQueue.js";
 import {
 	allSlotsOwnedHere,
@@ -14,6 +17,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noReplication,
 	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -91,6 +95,7 @@ const drain = async ({
 		ctx: {
 			pushQueue: fake.queue,
 			auth,
+			replication: noReplication,
 			logger: {
 				warn: (fields) =>
 					warnings.push(String((fields as { type: string }).type)),
@@ -252,6 +257,7 @@ describe("push receiver", () => {
 					ack: async () => {},
 				},
 				auth,
+				replication: noReplication,
 				logger: {
 					warn: (fields) =>
 						warnings.push(String((fields as { type: string }).type)),
@@ -312,6 +318,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					},
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: { warn: () => {} },
 				sleep: async () => {},
 			},
@@ -350,6 +357,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					},
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: {
 					warn: (fields) =>
 						warnings.push(String((fields as { type: string }).type)),
@@ -379,6 +387,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					ack: () => never(),
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: { warn: () => {} },
 				sleep: async () => {},
 			},
@@ -392,5 +401,51 @@ describe("push receiver under a hung or stopped queue", () => {
 		// Each of the 4 loops may hold one batch past the cap before it waits.
 		expect(receives).toBeGreaterThanOrEqual(3);
 		expect(receives).toBeLessThanOrEqual(3 + 4);
+	});
+
+	test("a push whose body cannot be decoded is acked and logged as invalid, never redelivered", async () => {
+		const corrupt = subjectMessage({
+			payload: JSON.stringify({
+				type: AtomPushType.SetSubject,
+				atom: null,
+				customer: "cus_1",
+				enc: "gzip",
+				body: Buffer.from("not gzip").toString("base64"),
+			}),
+		});
+
+		const { acked, warnings } = await drain({
+			auth: openDeployed(),
+			batches: [[corrupt]],
+		});
+
+		expect(acked).toEqual([corrupt.receiptHandle]);
+		expect(warnings).toEqual(["atom_push_invalid"]);
+	});
+
+	test("a push still failing after its last try is acked and dropped without being applied again", async () => {
+		const applied: number[] = [];
+		const failing = {
+			slotsFor: () =>
+				({
+					processorFor: () => ({
+						setSubject: async () => {
+							applied.push(1);
+							throw new Error("disk I/O error");
+						},
+					}),
+				}) as unknown as ReturnType<Auth["slotsFor"]>,
+		};
+		const lastTry = { ...subjectMessage({}), attempt: MAX_PUSH_ATTEMPTS };
+		const pastIt = { ...subjectMessage({}), attempt: MAX_PUSH_ATTEMPTS + 1 };
+
+		const { acked, warnings } = await drain({
+			auth: failing as unknown as Auth,
+			batches: [[lastTry], [pastIt]],
+		});
+
+		expect(applied).toHaveLength(1);
+		expect(acked).toEqual([pastIt.receiptHandle]);
+		expect(warnings.sort()).toEqual(["atom_push_dropped", "atom_push_failed"]);
 	});
 });

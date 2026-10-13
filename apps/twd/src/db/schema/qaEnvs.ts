@@ -29,6 +29,8 @@ export const qaEnvs = pgTable(
 		/** Options of the latest request, consumed by the job that applies it. */
 		freshDbRequested: boolean("fresh_db_requested").notNull().default(false),
 		supersedes: text("supersedes"),
+		/** Runs a Tinybird Local beside the env at `<name>--tb.atmn.lol`. */
+		tinybird: boolean("tinybird").notNull().default(false),
 		lastJobId: text("last_job_id"),
 		error: text("error"),
 		createdBy: text("created_by").notNull(),

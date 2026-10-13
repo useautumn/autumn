@@ -68,6 +68,7 @@ export * from "./getStartingBalance";
 export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
+export * from "./overageUtils/cusEntToVolumeInvoiceQuantity";
 // Reset utils
 export * from "./resetUtils/clampNextResetAtToPendingBillingCycleAnchor";
 export * from "./resetUtils/customerEntitlementToNextResetAt";

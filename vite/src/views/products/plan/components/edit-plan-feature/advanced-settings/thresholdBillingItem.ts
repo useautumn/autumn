@@ -6,10 +6,17 @@ import {
 } from "@autumn/shared";
 
 /** Threshold billing needs a finite pay-per-use price, the same rule the API enforces. */
-export const showsThresholdBilling = ({ item }: { item: ProductItem }) =>
-	isFeaturePriceItem(item) &&
-	item.usage_model === UsageModel.PayPerUse &&
-	item.included_usage !== Infinite;
+export const showsThresholdBilling = ({ item }: { item: ProductItem }) => {
+	// Each threshold charge restarts the tier count, so tiered prices would be mis-priced.
+	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
+
+	return (
+		isFeaturePriceItem(item) &&
+		item.usage_model === UsageModel.PayPerUse &&
+		item.included_usage !== Infinite &&
+		!hasMultipleTiers
+	);
+};
 
 export const itemThreshold = ({ item }: { item: ProductItem }) =>
 	item.config?.threshold_billing?.threshold ?? null;

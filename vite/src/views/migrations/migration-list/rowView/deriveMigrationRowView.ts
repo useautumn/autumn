@@ -1,5 +1,6 @@
 import { type Feature, formatAmount } from "@autumn/shared";
 import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
+import { migrationOpRateRows } from "@/utils/product/featureOverrideRates";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import type { MigrationCatalog } from "./chipView";
 import { deriveFilterView, type FilterView } from "./filterView";
@@ -52,6 +53,7 @@ export const createMigrationCatalog = ({
 				amount,
 				amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 			}),
+		rateRows: (op) => migrationOpRateRows({ op, features }),
 	};
 };
 

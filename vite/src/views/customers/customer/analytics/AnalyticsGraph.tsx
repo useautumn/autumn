@@ -5,7 +5,11 @@ import { createPortal } from "react-dom";
 import { Bar } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
-import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
+import {
+	formatWithUnit,
+	TooltipItem,
+	tooltipItemHref,
+} from "./components/TooltipItem";
 import { UsageChartFrame } from "./components/UsageChartFrame";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
@@ -21,6 +25,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
 	ticks,
+	unit,
 }: {
 	data: {
 		meta: any[];
@@ -29,6 +34,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 	};
 	chartConfig: ChartSeriesConfig[];
 	ticks?: number[];
+	unit?: string;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
 	const selectedInterval = queryStates.interval;
@@ -86,6 +92,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 				barCategoryGap={categoryGap}
 				formatXTick={formatXAxis}
 				showYTicks
+				yUnit={unit}
 			>
 				{chartConfig.map((series, si) => (
 					<Bar
@@ -116,6 +123,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 			rechartsConfig,
 			chartConfig,
 			ticks,
+			unit,
 			formatXAxis,
 			barHandlers,
 			handleBarMouseLeave,
@@ -172,6 +180,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 										item.dataKey
 									}
 									href={pinned ? tooltipItemHref({ item }) : undefined}
+									unit={unit}
 								/>
 							))}
 							{overflowItems.length > 0 && (
@@ -179,7 +188,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 									<span className="h-2.5 w-2.5 shrink-0" />
 									<span className="flex-1">+{overflowItems.length} more</span>
 									<span className="tabular-nums">
-										{overflowSum.toLocaleString()}
+										{formatWithUnit({ value: overflowSum, unit })}
 									</span>
 								</div>
 							)}

@@ -5,6 +5,7 @@ import type {
 	SubjectCursor,
 	SubjectDigest,
 } from "../../state/repos/subjectStates.js";
+import type { SqliteStore } from "../../state/types/sqliteStore.js";
 
 export type SubjectKey = { customerId: string; entityId: string };
 
@@ -53,6 +54,8 @@ export type SubjectSource = {
 
 /** One data folder: its customers, reached through the slot each lives in, and the one catalog they share. */
 export type Slots = {
+	/** The folder's name on a multi-tenant Atom; null for an org's own Atom's one folder. */
+	atomId: string | null;
 	/** How many files the folder is split into; a peer split differently holds nothing this one can copy. */
 	slotCount: number;
 	processorFor(params: { customerId: string }): SlotProcessor;
@@ -73,6 +76,8 @@ export type Slots = {
 	}): Promise<AppliedSubject[]>;
 	/** The newest write in the slots this thread owns, by this replica's clock; 0 when they are empty. */
 	maxAppliedAt(): number;
+	/** The slot files this thread owns in the folder: what it alone may drop rows from. */
+	ownedStores(): SqliteStore[];
 	/**
 	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
 	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only

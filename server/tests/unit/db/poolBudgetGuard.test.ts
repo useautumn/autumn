@@ -4,6 +4,7 @@ import { clientGeneral, computePoolBudgetWarnings } from "@/db/initDrizzle.js";
 const prodDefaults = {
 	criticalPoolMax: 22,
 	generalPoolMax: 14,
+	listPoolMax: 4,
 	replicaPoolMax: 9,
 };
 
@@ -20,7 +21,7 @@ describe("computePoolBudgetWarnings", () => {
 	});
 
 	test("oversized primary pools trip only the primary guard", () => {
-		// 90 x (60 + 60) + 362 = 11,162 > 0.85 x 12,000 = 10,200
+		// 90 x (60 + 60 + 4) + 362 = 11,522 > 0.85 x 12,000 = 10,200
 		const warnings = computePoolBudgetWarnings({
 			...prodDefaults,
 			...NINETY,
@@ -65,6 +66,7 @@ describe("computePoolBudgetWarnings", () => {
 			...NINETY,
 			criticalPoolMax: 80,
 			generalPoolMax: 80,
+			listPoolMax: 4,
 			replicaPoolMax: 20,
 		});
 		expect(warnings).toHaveLength(2);

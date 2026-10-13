@@ -100,3 +100,18 @@ test("other customer changes raise no version", () => {
 			{ subject: "cus_1", logOffset: 500n, customerVersion: null },
 		]);
 });
+
+test("an evict naming an entity pushes that entity and its customer, the customer's version at the evict's offset", () => {
+	expect(
+		summaryOf([
+			recordAt({
+				offset: 300,
+				identity: entity("ent_1"),
+				command: { type: "evict" },
+			}),
+		]),
+	).toEqual([
+		{ subject: "cus_1/ent_1", logOffset: 300n, customerVersion: null },
+		{ subject: "cus_1", logOffset: 300n, customerVersion: 300n },
+	]);
+});

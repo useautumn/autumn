@@ -23,13 +23,16 @@ const subjectBody = ({ padding = "" }: { padding?: string } = {}) =>
 const incompressible = (bytes: number) =>
 	Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString("hex");
 
-const createClient = () => {
+const createClient = ({ queueOnly = false }: { queueOnly?: boolean } = {}) => {
 	const queued: string[] = [];
 	const overHttp: string[] = [];
 	const warnings: string[] = [];
 	const http: AtomClient = {
 		setSubject: async () => {
 			overHttp.push(AtomPushType.SetSubject);
+		},
+		deleteSubject: async () => {
+			overHttp.push(AtomPushType.DeleteSubject);
 		},
 		setCatalog: async () => {
 			overHttp.push(AtomPushType.SetCatalog);
@@ -42,7 +45,7 @@ const createClient = () => {
 					queued.push(payload);
 				},
 			},
-			http,
+			http: queueOnly ? null : http,
 			logger: {
 				warn: (fields) =>
 					warnings.push(String((fields as { type: string }).type)),
@@ -63,6 +66,29 @@ describe("queue Atom client", () => {
 		expect(overHttp).toEqual([]);
 		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
 			type: AtomPushType.SetSubject,
+			atomId: "org_1.sandbox",
+			customerId: "cus_1",
+			body: JSON.stringify(body),
+		});
+	});
+
+	test("a deletion is queued as subjects.delete, routed by the customer it names: never as a set", async () => {
+		const { client, queued } = createClient();
+		const body = {
+			identity: {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				entityId: null,
+			},
+			log_offset: "9",
+			read_at: 1900,
+		};
+
+		await client.deleteSubject({ body });
+
+		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
+			type: AtomPushType.DeleteSubject,
 			atomId: "org_1.sandbox",
 			customerId: "cus_1",
 			body: JSON.stringify(body),
@@ -92,5 +118,18 @@ describe("queue Atom client", () => {
 		expect(queued).toEqual([]);
 		expect(overHttp).toEqual([AtomPushType.SetSubject]);
 		expect(warnings).toEqual(["herald_atom_push_oversized"]);
+	});
+
+	test("where pushes go over the queue only, a push too big for one message fails and never reaches HTTP", async () => {
+		const { client, queued, overHttp } = createClient({ queueOnly: true });
+
+		await expect(
+			client.setSubject({
+				body: subjectBody({ padding: incompressible(ATOM_PUSH_MAX_BYTES) }),
+			}),
+		).rejects.toThrow("too big for the Atom's queue");
+
+		expect(queued).toEqual([]);
+		expect(overHttp).toEqual([]);
 	});
 });

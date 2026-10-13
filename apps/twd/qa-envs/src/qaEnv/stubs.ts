@@ -6,3 +6,12 @@ export const qaEnvStub = ({ env, name }: { env: Env; name: string }) =>
 
 export const routerStub = ({ env }: { env: Env }) =>
 	env.QA_ROUTER.getByName("router");
+
+export const tinybirdStub = ({ env, name }: { env: Env; name: string }) =>
+	env.QA_TINYBIRD.get(env.QA_TINYBIRD.idFromName(name), {
+		locationHint: "weur",
+	});
+
+/** Tinybird's own hostname label; env names never contain `--`, so it can't collide with an env. */
+export const tinybirdHostLabel = (name: string) => `${name}--tb`;
+export const TINYBIRD_HOST_SUFFIX = "--tb";

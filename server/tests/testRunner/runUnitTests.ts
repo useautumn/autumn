@@ -15,10 +15,15 @@
  * More shards than cores is deliberate: several suites hold real timers
  * (TTL expiries, lane-isolation holds), so extra shards overlap that sleep
  * time instead of serializing it. Override with UNIT_SHARDS.
+ *
+ * UNIT_RESULTS_FILE=<path> also writes per-file results (from bun's junit
+ * reporter) as JSON there; CI uploads it to twd on dev pushes.
  */
 
-import { readdirSync, statSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { filesWithoutCases, junitFileResults } from "./junitFileResults";
 
 const SERVER_ROOT = path.resolve(import.meta.dir, "../..");
 const UNIT_ROOT = path.join(SERVER_ROOT, "tests/unit");
@@ -95,9 +100,18 @@ const packShards = (groups: Group[]): string[][] => {
 	return shards.filter((shard) => shard.paths.length > 0).map((s) => s.paths);
 };
 
-const runShard = async (paths: string[]) => {
+const RESULTS_FILE = process.env.UNIT_RESULTS_FILE;
+const junitDir = RESULTS_FILE
+	? mkdtempSync(path.join(tmpdir(), "unit-junit-"))
+	: null;
+
+const runShard = async (paths: string[], index: number) => {
 	const shardStartedAt = performance.now();
-	const proc = Bun.spawn(["bun", "test", ...paths], {
+	const junitFile = junitDir ? path.join(junitDir, `shard-${index}.xml`) : null;
+	const reporterArgs = junitFile
+		? ["--reporter=junit", `--reporter-outfile=${junitFile}`]
+		: [];
+	const proc = Bun.spawn(["bun", "test", ...reporterArgs, ...paths], {
 		cwd: SERVER_ROOT,
 		env: {
 			...process.env,
@@ -114,12 +128,53 @@ const runShard = async (paths: string[]) => {
 		proc.exited,
 	]);
 	const elapsedMs = performance.now() - shardStartedAt;
-	return { paths, stdout, stderr, exitCode, elapsedMs };
+	return { paths, stdout, stderr, exitCode, elapsedMs, junitFile };
+};
+
+const readJunit = (file: string | null) => {
+	try {
+		return file ? readFileSync(file, "utf8") : "";
+	} catch {
+		return "";
+	}
 };
 
 const startedAt = performance.now();
 const shards = packShards(collectGroups());
 const results = await Promise.all(shards.map(runShard));
+
+/** A case-less file in a failed shard is either empty or broke at import; running it alone tells which. */
+const crashesAlone = async (file: string) => {
+	const proc = Bun.spawn(["bun", "test", file], {
+		cwd: SERVER_ROOT,
+		env: { ...process.env, UNIT_TESTS: "1", UNIT_TEST_FILES: file },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	return (await proc.exited) !== 0;
+};
+
+if (RESULTS_FILE) {
+	const reports = results.map((result) => ({
+		result,
+		xml: readJunit(result.junitFile),
+	}));
+	const suspects = reports.flatMap(({ result, xml }) =>
+		result.exitCode === 0
+			? []
+			: filesWithoutCases({ xml, paths: result.paths }),
+	);
+	const crashedFiles = new Set<string>();
+	for (const file of suspects)
+		if (await crashesAlone(file)) crashedFiles.add(file);
+	const fileResults = reports.flatMap(({ result, xml }) =>
+		junitFileResults({ xml, paths: result.paths, crashedFiles }),
+	);
+	await Bun.write(RESULTS_FILE, JSON.stringify(fileResults));
+	console.log(
+		`Wrote ${fileResults.length} per-file results to ${RESULTS_FILE}`,
+	);
+}
 
 let failed = false;
 for (const result of results) {

@@ -38,6 +38,8 @@ export const createAutumnClient = ({
 	const sdk = new Autumn({
 		secretKey: config.secretKey,
 		serverURL: config.serverUrl,
+		// `edge.check` asks this Atom first and falls back to the Autumn API when it's down.
+		edgeURL: process.env.AUTUMN_EDGE_URL || undefined,
 	});
 
 	const batchTrack = async ({ items }: { items: TrackItem[] }) => {
@@ -55,16 +57,23 @@ export const createAutumnClient = ({
 		await sdk.customers.getOrCreate({ customerId: id, name });
 	};
 
-	const check = async ({
-		customerId,
-		featureId,
-	}: {
-		customerId: string;
-		featureId: string;
-	}) => {
-		const { allowed } = await sdk.check({ customerId, featureId });
-		return { allowed };
-	};
+	const checkOn =
+		(client: Autumn) =>
+		async ({
+			customerId,
+			featureId,
+		}: {
+			customerId: string;
+			featureId: string;
+		}) => {
+			const { allowed } = await client.check({ customerId, featureId });
+			return { allowed };
+		};
 
-	return { batchTrack, getOrCreateCustomer, check };
+	return {
+		batchTrack,
+		getOrCreateCustomer,
+		check: checkOn(sdk),
+		edge: { check: checkOn(sdk.edge) },
+	};
 };

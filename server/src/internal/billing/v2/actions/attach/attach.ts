@@ -1,6 +1,7 @@
 import {
 	type AttachBillingContext,
 	type AttachParamsV1,
+	type BillingContext,
 	type BillingContextOverride,
 	CheckoutAction,
 } from "@autumn/shared";
@@ -18,6 +19,7 @@ import {
 	listPendingCustomerProducts,
 } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { discardReplacedPendingPlans } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardReplacedPendingPlans";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
@@ -44,6 +46,7 @@ export async function attach({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	longLivedCheckout: existingLongLivedCheckout,
 
 	contextOverride,
 }: {
@@ -51,6 +54,8 @@ export async function attach({
 	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
+	longLivedCheckout?: BillingContext["longLivedCheckout"];
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -164,15 +169,25 @@ export async function attach({
 		}
 	}
 
+	const pendingCustomerProducts = await listPendingCustomerProducts({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+	});
+	// System and confirm flows (incl. the long-lived link's own start) never replace a pending plan.
+	const remainingPendingCustomerProducts = skipAutumnCheckout
+		? pendingCustomerProducts
+		: await discardReplacedPendingPlans({
+				ctx,
+				fullCustomer: billingContext.fullCustomer,
+				attachProduct: billingContext.attachProduct,
+				pendingCustomerProducts,
+			});
+
 	const pendingInvoiceResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		attachProduct: billingContext.attachProduct,
-		loadPendingCustomerProducts: () =>
-			listPendingCustomerProducts({
-				ctx,
-				fullCustomer: billingContext.fullCustomer,
-			}),
+		loadPendingCustomerProducts: async () => remainingPendingCustomerProducts,
 	});
 	if (pendingInvoiceResult) {
 		preserveSubjectCache({ ctx });
@@ -189,20 +204,6 @@ export async function attach({
 		);
 	}
 
-	if (shouldCreateLongLivedCheckout && !billingContext.enablePlanImmediately) {
-		// Creating a checkout changes no Autumn balance state. Keep any accepted
-		// Redis-only tracks for the later confirmation request to consume.
-		preserveSubjectCache({ ctx });
-		return createAutumnCheckout<AttachBillingContext>({
-			ctx,
-			action: CheckoutAction.Attach,
-			params,
-			billingContext,
-			billingPlan,
-			expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
-		});
-	}
-
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
@@ -217,7 +218,7 @@ export async function attach({
 		});
 	}
 
-	// enable_plan_immediately grants the plan now, so the link wraps a real attach.
+	// The link wraps a real attach: the plan is granted (enable_plan_immediately) or left pending now.
 	const longLivedCheckout = shouldCreateLongLivedCheckout
 		? (
 				await billingPlanToAutumnCheckout({
@@ -230,12 +231,9 @@ export async function attach({
 				})
 			).checkout
 		: undefined;
-	if (longLivedCheckout) {
-		billingContext.longLivedCheckout = {
-			id: longLivedCheckout.id,
-			expiresAt: longLivedCheckout.expires_at,
-		};
-	}
+	billingContext.longLivedCheckout = longLivedCheckout
+		? { id: longLivedCheckout.id, expiresAt: longLivedCheckout.expires_at }
+		: existingLongLivedCheckout;
 
 	// 6. Save request billing details first so tax resolves against the new location
 	billingContext.stripeCustomer = await applyBillingDetailsForBilling({

@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { isAtomReady } from "../../init/atomHealth.js";
+import { isServing } from "../../init/atomHealth.js";
 import {
 	type CatalogSinceRequest,
 	catalogSinceResponse,
@@ -19,7 +19,7 @@ type PeerReadBody = { slotCount?: number; limit?: number; keys?: unknown[] };
 
 /**
  * Only this deployment's own replicas reach these routes, on the private port and signed, so the body is taken as
- * typed, with its page and key counts capped. While this replica is not ready its own store may be behind, so it
+ * typed, with its page and key counts capped. While this replica or thread is not ready its store may be behind, so it
  * answers nothing; a peer split into a different number of slots holds nothing this one can copy.
  */
 const peerRead = <Body extends object>({
@@ -29,7 +29,7 @@ const peerRead = <Body extends object>({
 	ctx: Pick<AtomHttpContext, "health">;
 	context: Context<AtomHttpEnv>;
 }) => {
-	if (!isAtomReady(ctx.health))
+	if (!isServing(ctx.health))
 		return {
 			refused: context.json(
 				{

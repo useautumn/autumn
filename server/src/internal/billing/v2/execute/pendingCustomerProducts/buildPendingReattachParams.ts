@@ -4,12 +4,16 @@ import type {
 	FullCusProduct,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { pendingPlanToReattachCustomize } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanToReattachCustomize";
 
 export const buildPendingReattachParams = ({
+	ctx,
 	params,
 	billingContext,
 	customerProduct,
 }: {
+	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 	billingContext: BillingContext;
 	customerProduct: FullCusProduct;
@@ -28,7 +32,11 @@ export const buildPendingReattachParams = ({
 		plan_id: customerProduct.product.id,
 		entity_id: params.entity_id ?? customerProduct.entity_id ?? undefined,
 		feature_quantities: featureQuantities,
-		customize: params.customize,
+		customize: pendingPlanToReattachCustomize({
+			ctx,
+			customize: params.customize,
+			customerProduct,
+		}),
 		version: params.version,
 		enable_plan_immediately: billingContext.enablePlanImmediately,
 		invoice_mode: invoiceMode && {
