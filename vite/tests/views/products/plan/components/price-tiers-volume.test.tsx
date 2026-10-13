@@ -60,22 +60,20 @@ describe("PriceTiers table", () => {
 		const html = render({
 			item: tieredItem({ tierBehavior: TierBehavior.Graduated }),
 		});
-		expect(html).toContain("Included");
+		expect(html).toContain("included free");
 		expect(html).toContain("Unlimited");
 		expect(html).not.toContain("Flat fee");
 		expect(html).not.toContain("Example bill");
 	});
 
-	test("volume tiers explain the rule under the switch and show the bill", () => {
+	test("volume shows included usage above the table and the example bill", () => {
 		const html = render({
 			item: tieredItem({ tierBehavior: TierBehavior.VolumeBased }),
 		});
-		expect(html).toContain("one tier is picked from total usage");
-		expect(html).toContain("plus its flat fee");
-		expect(html).toContain("Free until exceeded");
+		expect(html).toContain("First 100");
 		expect(html).toContain("Example bill");
+		expect(html).not.toContain("Free until exceeded");
 		expect(html).not.toContain("volume: past 100");
-		expect(html).not.toContain("Unit + Flat");
 	});
 
 	test("each volume tier is one row with its rate and an optional flat fee", () => {

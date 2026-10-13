@@ -33,17 +33,16 @@ export const useTierCurrencyTabs = ({
 		setSelectedCurrency(normalized);
 	};
 
-	const removeActiveCurrency = () => {
+	const removeCurrency = (code: string) => {
 		if (!item) return;
-		applyChange(removeCurrencyFromTiers({ item, code: activeCurrency }));
+		applyChange(removeCurrencyFromTiers({ item, code }));
 	};
 
 	return {
 		currencies: [baseCode, ...additionalCodes],
 		activeCurrency,
-		isBaseCurrencyActive: activeCurrency === baseCode,
 		selectCurrency: setSelectedCurrency,
 		addCurrency,
-		removeActiveCurrency,
+		removeCurrency,
 	};
 };

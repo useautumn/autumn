@@ -16,11 +16,13 @@ export function TierTableRow({
 	currency,
 	baseCurrency,
 	showsFlatFee,
+	blocksFlatFee,
 }: {
 	index: number;
 	currency: string;
 	baseCurrency: string;
 	showsFlatFee: boolean;
+	blocksFlatFee: boolean;
 }) {
 	const { item, setItem } = useProductItemContext();
 	const tier = item?.tiers?.[index];
@@ -45,7 +47,15 @@ export function TierTableRow({
 				displayValue={amountDisplayValue(price.amount ?? 0)}
 				onRawChange={setPrice("amount")}
 			/>
-			{showsFlatFee && (
+			{showsFlatFee && blocksFlatFee && (
+				<span
+					className="px-2 text-sm text-tertiary-foreground"
+					title="Allocated items can't charge a flat fee on the first tier"
+				>
+					—
+				</span>
+			)}
+			{showsFlatFee && !blocksFlatFee && (
 				<CurrencyAmountInput
 					currencyCode={currency}
 					displayValue={amountDisplayValue(price.flat_amount ?? 0)}

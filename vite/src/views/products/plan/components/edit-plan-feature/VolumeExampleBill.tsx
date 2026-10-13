@@ -1,8 +1,9 @@
-import { getFeatureName } from "@autumn/shared";
+import { numberWithCommas } from "@autumn/shared";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { featureUnitName } from "../../utils/billingUnitsUtils";
 import { itemInCurrency } from "../../utils/currencyUtils";
 import { itemToIncludedUsage, tierToDisplay } from "../../utils/tierUtils";
 import {
@@ -37,14 +38,13 @@ export function VolumeExampleBill({
 	});
 	const format = (amount: number) => formatBillAmount({ amount, currency });
 	const flatFee = bill.billedTier?.flat_amount ?? 0;
-	const unitName = getFeatureName({
+	const unitName = featureUnitName({
 		feature: features.find((feature) => feature.id === item.feature_id),
 		plural: true,
-		capitalize: false,
 	});
 
 	return (
-		<div className="flex flex-col gap-3 rounded-xl border p-3">
+		<div className="flex flex-col gap-3 rounded-xl border p-3 tabular-nums">
 			<div className="flex items-center justify-between gap-2">
 				<span className="font-medium text-sm">Example bill</span>
 				<div className="flex items-center gap-2">
@@ -64,26 +64,25 @@ export function VolumeExampleBill({
 					</InputGroup>
 				</div>
 			</div>
-			<div className="flex items-end justify-between gap-3 text-sm">
-				<div className="flex items-end gap-2">
-					<BillCell label="Tier" value={billedTierLabel(bill)} />
-					<span className="text-tertiary-foreground">·</span>
-					<BillCell
-						label="Usage"
-						value={`${bill.billedUsage.toLocaleString()} × ${format(bill.unitRate)}`}
-					/>
-					{flatFee > 0 && (
-						<>
-							<span className="text-tertiary-foreground">+</span>
-							<BillCell label="Flat fee" value={format(flatFee)} />
-						</>
-					)}
-					<span className="text-tertiary-foreground">=</span>
-				</div>
-				<div className="flex flex-col items-end">
-					<span className="text-tertiary-foreground text-xs">Total</span>
-					<span className="font-semibold text-lg">{format(bill.total)}</span>
-				</div>
+			<div className="flex flex-wrap items-end gap-x-2 gap-y-1 text-sm">
+				<BillCell label="Tier" value={billedTierLabel(bill)} />
+				<span className="text-tertiary-foreground">·</span>
+				<BillCell
+					label="Billed"
+					value={`${numberWithCommas(bill.billedUsage)} × ${format(bill.unitRate)}`}
+				/>
+				{flatFee > 0 && (
+					<>
+						<span className="text-tertiary-foreground">+</span>
+						<BillCell label="Flat fee" value={format(flatFee)} />
+					</>
+				)}
+			</div>
+			<div className="flex items-baseline justify-between gap-3 border-t pt-2">
+				<span className="text-tertiary-foreground text-xs">Total</span>
+				<span className="min-w-0 break-all text-right font-semibold text-lg">
+					{format(bill.total)}
+				</span>
 			</div>
 		</div>
 	);

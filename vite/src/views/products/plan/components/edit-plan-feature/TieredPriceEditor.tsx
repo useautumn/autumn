@@ -28,22 +28,10 @@ export function TieredPriceEditor({ baseCurrency }: { baseCurrency: string }) {
 					activeCurrency={activeCurrency}
 					onSelect={currencyTabs.selectCurrency}
 					onAdd={currencyTabs.addCurrency}
+					onRemove={currencyTabs.removeCurrency}
 				/>
 			)}
 			<TierTable currency={activeCurrency} baseCurrency={baseCurrency} />
-			{!currencyTabs.isBaseCurrencyActive && (
-				<div className="flex items-center justify-between gap-2 text-tertiary-foreground text-xs">
-					<span>Each currency edits the same tiers, row for row.</span>
-					<IconButton
-						variant="muted"
-						size="sm"
-						className="text-xs hover:text-red-500"
-						onClick={currencyTabs.removeActiveCurrency}
-					>
-						Remove <span className="uppercase">{activeCurrency}</span>
-					</IconButton>
-				</div>
-			)}
 			<IconButton
 				variant="muted"
 				size="sm"

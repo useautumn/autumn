@@ -5,9 +5,11 @@ import {
 	numberWithCommas,
 	type ProductItem,
 	roundUsageToNearestBillingUnit,
+	UsageModel,
 	type UsageTier,
 	volumeTiersToLineAmount,
 } from "@autumn/shared";
+import { itemToIncludedUsage } from "./tierUtils";
 
 export type VolumeExampleBill = {
 	total: number;
@@ -17,7 +19,8 @@ export type VolumeExampleBill = {
 	unitRate: number;
 };
 
-/** Bills `usage` with the shared volume pricing, plus the tier it lands in for the breakdown. */
+/** Bills `usage` the way `usagePriceToLineItem` does: usage-based bills the overage past
+ * included at the tier total usage reaches; prepaid bills every unit on allowance-shifted tiers. */
 export const itemToVolumeExampleBill = ({
 	item,
 	usage,
@@ -30,20 +33,32 @@ export const itemToVolumeExampleBill = ({
 		amount: tier.amount ?? 0,
 		flat_amount: tier.flat_amount ?? undefined,
 	}));
-	const allowance =
-		typeof item.included_usage === "number" ? item.included_usage : 0;
+	const allowance = itemToIncludedUsage(item);
 	const billingUnits = item.billing_units || 1;
-	const billedUsage = roundUsageToNearestBillingUnit({ usage, billingUnits });
+	const isPrepaid = item.usage_model === UsageModel.Prepaid;
+	const tierShift = isPrepaid ? allowance : 0;
+	const billedQuantity = isPrepaid ? usage : Math.max(0, usage - allowance);
+	const billedUsage = roundUsageToNearestBillingUnit({
+		usage: billedQuantity,
+		billingUnits,
+	});
+	const isWithinIncluded = usage <= allowance;
 	const billedTier = findTierByQuantity({
 		tiers: addAllowanceToTiers({ tiers, allowance }),
-		quantity: billedUsage,
+		quantity: billedUsage + allowance - tierShift,
+	});
+	const total = volumeTiersToLineAmount({
+		tiers,
+		usage: billedQuantity,
+		allowance: tierShift,
+		billingUnits,
 	});
 
 	return {
-		total: volumeTiersToLineAmount({ tiers, usage, allowance, billingUnits }),
+		total: isWithinIncluded ? 0 : total,
 		billedUsage,
 		billedTier,
-		isWithinIncluded: billedUsage <= allowance,
+		isWithinIncluded,
 		unitRate: (billedTier?.amount ?? 0) / billingUnits,
 	};
 };
