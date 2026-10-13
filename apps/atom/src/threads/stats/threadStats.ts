@@ -5,7 +5,7 @@ export const THREAD_STAT_FIELDS = [
 	"requests",
 	/** Of those requests, the ones the Autumn API answered instead of Atom. */
 	"forwarded",
-	/** Requests refused at once because the thread was too far behind to answer them in time. */
+	/** Requests refused at once: the thread was too far behind to answer in time, or already forwarding all it can. */
 	"shed",
 	"pushes",
 	/** Operations this thread passed on to other replicas: delivered, failed once, and given up on. */
