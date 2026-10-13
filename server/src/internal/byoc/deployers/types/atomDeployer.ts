@@ -45,6 +45,8 @@ export type AtomDeployer = {
 		region: string;
 		network?: ByocCacheNetwork | null;
 	}): Promise<AtomSetup>;
+	/** Whether a start with this external id would reuse a group that already exists. */
+	hasGroup(params: { externalId: string }): Promise<boolean>;
 	/** The deployment we know by id, followed through its delete; else the group's live one. Null once neither exists. */
 	find(params: {
 		deploymentGroupId: string;

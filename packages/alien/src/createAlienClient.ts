@@ -1,4 +1,5 @@
 import { ALIEN_HOSTED_API_URL } from "./alienConstants.js";
+import { findDeploymentGroup } from "./deploymentGroups/deploymentGroups.js";
 import {
 	deleteDeployment,
 	findDeployment,
@@ -32,6 +33,8 @@ export const createAlienClient = ({
 	const ctx = { api: configToApi({ config }), logger };
 	return {
 		startSetup: (params) => startSetup({ ctx, ...params }),
+		findDeploymentGroup: (params) =>
+			findDeploymentGroup({ api: ctx.api, ...params }),
 		findDeployment: (params) => findDeployment({ ctx, ...params }),
 		getDeployment: (params) => getDeployment({ ctx, ...params }),
 		retryDeployment: (params) => retryDeployment({ ctx, ...params }),
