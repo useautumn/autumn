@@ -5,6 +5,7 @@ import {
 	RouteGroup,
 	type TrackParams,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
@@ -32,6 +33,13 @@ export const runQueuedTrack = async ({
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
+	trace.getActiveSpan()?.setAttributes({
+		"track.feature_id": body.feature_id,
+		"track.event_name": body.event_name,
+		"track.idempotency_key": body.idempotency_key,
+		"track.value": body.value ?? 1,
+	});
+
 	const featureDeductions = getValidatedTrackFeatureDeductions({
 		ctx,
 		body,
