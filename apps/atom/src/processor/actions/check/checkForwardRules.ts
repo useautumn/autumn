@@ -27,7 +27,6 @@ const FORWARD_RULES: {
 		applies: ({ params }) =>
 			params.send_event === true && Boolean(params.entity_id),
 	},
-	// A reservation is the API's.
 	{ reason: "lock", applies: ({ params }) => params.lock !== undefined },
 	// A preview reads the org's plans from Postgres.
 	{
