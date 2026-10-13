@@ -1,7 +1,6 @@
 import {
 	type BillingPlan,
 	ErrCode,
-	isCustomerProductOneOff,
 	RecaseError,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
@@ -35,12 +34,6 @@ export const handleUpdateSubscriptionInvoiceLineEditsErrors = ({
 	if (params.cancel_action) {
 		throw invalidRequest(
 			"add_lines and remove_lines can't be combined with cancel_action",
-		);
-	}
-
-	if (isCustomerProductOneOff(billingContext.customerProduct)) {
-		throw invalidRequest(
-			"add_lines and remove_lines are not supported for one-off plans",
 		);
 	}
 

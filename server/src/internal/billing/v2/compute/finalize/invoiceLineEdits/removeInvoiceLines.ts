@@ -32,16 +32,16 @@ const invalidRequest = (message: string) =>
 		statusCode: 400,
 	});
 
-const ownerPlanId = (lineItem: LineItem) =>
+export const ownerPlanId = (lineItem: LineItem) =>
 	lineItem.context.customerProduct?.product.id ?? lineItem.context.product.id;
 
 /** License lines are priced through the license plan but owned by the parent plan. */
-const licensePlanId = (lineItem: LineItem) => {
+export const licensePlanId = (lineItem: LineItem) => {
 	const { product } = lineItem.context;
 	return product.id !== ownerPlanId(lineItem) ? product.id : undefined;
 };
 
-const lineEntityId = (lineItem: LineItem) =>
+export const lineEntityId = (lineItem: LineItem) =>
 	lineItem.context.customerProduct?.entity_id ??
 	lineItem.context.entity?.id ??
 	null;
@@ -211,6 +211,37 @@ const assertTargetMatchesOnePrice = ({
 	}
 };
 
+const resolveEntryEntityId = ({
+	entry,
+	requestEntityId,
+}: {
+	entry: RemoveLine;
+	requestEntityId?: string;
+}) =>
+	entry.entity_id === undefined ? (requestEntityId ?? null) : entry.entity_id;
+
+/** Every line one remove_lines entry would remove, without validating it. */
+export const linesMatchedByRemoveLine = ({
+	lineItems,
+	entry,
+	requestEntityId,
+}: {
+	lineItems: LineItem[];
+	entry: RemoveLine;
+	requestEntityId?: string;
+}): LineItem[] => {
+	const entityId = resolveEntryEntityId({ entry, requestEntityId });
+	const belongsToEntry = (lineItem: LineItem) =>
+		ownerPlanId(lineItem) === entry.plan_id &&
+		lineEntityId(lineItem) === entityId &&
+		(entry.direction === undefined ||
+			lineItem.context.direction === entry.direction);
+	const targets = entryToTargets({ entry, entryIndex: 0, belongsToEntry });
+	return lineItems.filter((lineItem) =>
+		targets.some((target) => target.matches(lineItem)),
+	);
+};
+
 /** Drops the generated lines remove_lines points at; every entry must match, and only once. */
 export const removeInvoiceLines = ({
 	lineItems,
@@ -224,10 +255,7 @@ export const removeInvoiceLines = ({
 	const removedBy = new Map<LineItem, string>();
 
 	for (const [entryIndex, entry] of removeLines.entries()) {
-		const entityId =
-			entry.entity_id === undefined
-				? (requestEntityId ?? null)
-				: entry.entity_id;
+		const entityId = resolveEntryEntityId({ entry, requestEntityId });
 		const isPlanOnInvoice = (lineItem: LineItem) =>
 			ownerPlanId(lineItem) === entry.plan_id &&
 			lineEntityId(lineItem) === entityId;

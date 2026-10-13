@@ -6,9 +6,10 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customLineItemsToLineItems } from "@/internal/billing/v2/utils/lineItems/customLineItemsToLineItems";
 import { toInvoicePeriod } from "@/internal/invoices/actions/create/setup/resolveInvoiceEnvelope";
+import { lineItemToRemoveLine } from "./lineItemToRemoveLine";
 import { removeInvoiceLines } from "./removeInvoiceLines";
 
-/** remove_lines then add_lines on the lines Autumn generated for this invoice. */
+/** Tags each line billed now with the remove_lines entry that targets it, then applies remove_lines and add_lines. */
 export const applyInvoiceLineEdits = ({
 	ctx,
 	lineItems,
@@ -18,18 +19,33 @@ export const applyInvoiceLineEdits = ({
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 }): LineItem[] => {
-	const { invoiceLineEdits } = billingContext;
-	if (!invoiceLineEdits) return lineItems;
-
 	// Deferred lines bill on a later invoice, so they're never removal candidates.
-	const deferredLineItems = lineItems.filter(
-		(lineItem) => !lineItem.chargeImmediately,
+	const immediateLineItems = lineItems.filter(
+		(lineItem) => lineItem.chargeImmediately,
 	);
+	const taggedLineItems = lineItems.map((lineItem) =>
+		lineItem.chargeImmediately
+			? {
+					...lineItem,
+					removeLine: lineItemToRemoveLine({
+						lineItem,
+						lineItems: immediateLineItems,
+					}),
+				}
+			: lineItem,
+	);
+
+	const { invoiceLineEdits } = billingContext;
+	if (!invoiceLineEdits) return taggedLineItems;
+
 	const keptLineItems = removeInvoiceLines({
-		lineItems: lineItems.filter((lineItem) => lineItem.chargeImmediately),
+		lineItems: taggedLineItems.filter((lineItem) => lineItem.chargeImmediately),
 		removeLines: invoiceLineEdits.removeLines,
 		requestEntityId: invoiceLineEdits.requestEntityId,
 	});
+	const deferredLineItems = taggedLineItems.filter(
+		(lineItem) => !lineItem.chargeImmediately,
+	);
 
 	const addedLineItems = customLineItemsToLineItems({
 		customLineItems: invoiceLineEdits.addLines,

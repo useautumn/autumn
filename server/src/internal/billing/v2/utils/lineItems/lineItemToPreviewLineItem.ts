@@ -26,5 +26,6 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		custom: !line.context.price.config,
 		quantity: line.totalQuantity ?? 1,
 		period: line.context.effectivePeriod,
+		remove_line: line.removeLine ?? null,
 	};
 };

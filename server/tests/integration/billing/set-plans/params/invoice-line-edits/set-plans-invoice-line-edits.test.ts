@@ -154,3 +154,38 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set_plans invoice line edits 4: a preview line's remove_line removes exactly that line")}`,
+	async () => {
+		const customerId = "set-plans-line-edits-selector";
+		const { autumnV2_5, premium } = await setupPlans({
+			customerId,
+			proActive: true,
+		});
+
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: premium.id }],
+					proration_behavior: "bill_difference",
+				},
+			],
+		};
+		const basePreview = await autumnV2_5.billing.previewSetPlans(params);
+		expect(basePreview.invoice_lines_editable).toBe(true);
+		const credit = basePreview.line_items.find(
+			(line: { total: number }) => line.total < 0,
+		);
+		if (!credit?.remove_line) throw new Error("Expected a credit selector");
+
+		const preview = await autumnV2_5.billing.previewSetPlans({
+			...params,
+			remove_lines: [credit.remove_line],
+		});
+		expect(preview.line_items).toHaveLength(basePreview.line_items.length - 1);
+		expect(preview.total).toBeCloseTo(basePreview.total - credit.total, 2);
+	},
+);
