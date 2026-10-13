@@ -8,6 +8,7 @@
  *   start_cursor                 → pages walk every row exactly once
  *   other org / other env        → never listed
  *   invoice stamped for another org (customer in this org) → not listed: both tenancy guards must agree
+ *   invoice stamped for another env (customer in this env) → listed in neither env
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -177,6 +178,12 @@ beforeAll(async () => {
 			orgId: orgB.id,
 			env: AppEnv.Sandbox,
 		},
+		{
+			key: "foreignEnv",
+			internalCustomerId: ids.c1,
+			orgId: orgA.id,
+			env: AppEnv.Live,
+		},
 	];
 	await defaultCtx.db.insert(invoices).values(
 		seeded.map((row, index) => {
@@ -245,6 +252,18 @@ describe(
 				query: {},
 			});
 			expect(keysOf(rows)).toEqual(["live"]);
+		});
+
+		test("an invoice stamped for another env is listed in neither env", async () => {
+			const sandbox = await listPage({
+				org: orgA,
+				env: AppEnv.Sandbox,
+				query: { customer_id: `c1-${runTag}` },
+			});
+			expect(keysOf(sandbox.rows)).not.toContain("foreignEnv");
+
+			const live = await listPage({ org: orgA, env: AppEnv.Live, query: {} });
+			expect(keysOf(live.rows)).not.toContain("foreignEnv");
 		});
 
 		test("customer_id and entity_id narrow the list", async () => {
