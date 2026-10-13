@@ -11,6 +11,7 @@ import {
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
+import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
 import {
 	receiveCatalogSince,
 	receiveSubjectsDigest,
@@ -56,6 +57,7 @@ export function createPeerApp({
 	const folder = new Hono<AtomHttpEnv>();
 	folder.use(peerFolderMiddleware({ ctx }));
 	folder.post("/v1/subjects.set", receiveSetSubject({ ctx }));
+	folder.post("/v1/subjects.delete", receiveDeleteSubject({ ctx }));
 	folder.post("/v1/catalog.set", receiveSetCatalog({ ctx }));
 	folder.post(PEER_SUBJECTS_SINCE_PATH, receiveSubjectsSince({ ctx }));
 	folder.post(PEER_SUBJECTS_DIGEST_PATH, receiveSubjectsDigest({ ctx }));

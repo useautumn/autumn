@@ -1,8 +1,14 @@
-import type { ErrorHandler } from "hono";
-import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import type { Context, ErrorHandler } from "hono";
+import {
+	CannotAnswerError,
+	type ForwardReason,
+} from "../../../lib/forward/cannotAnswerError.js";
 import { forwardToAutumn } from "../../forward/forwardToAutumn.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { atomErrorOf } from "./atomErrorOf.js";
+
+/** Forwards waiting on the API, per app; past this a check is refused, so a slow API cannot pile up a backlog the loop-lag gate never sees. */
+export const MAX_FORWARDS_IN_FLIGHT = 256;
 
 /**
  * Where every request Atom did not answer ends up. One it cannot answer is answered by the Autumn API;
@@ -12,12 +18,38 @@ export const createAtomErrorHandler = ({
 	ctx,
 }: {
 	ctx: AtomHttpContext;
-}): ErrorHandler<AtomHttpEnv> =>
-	function handleError(cause, context) {
+}): ErrorHandler<AtomHttpEnv> => {
+	let forwarding = 0;
+
+	/** Past the cap: a 503 without x-atom-forwarded, which the SDK takes to the API itself. */
+	async function forwardWithinCap(
+		context: Context<AtomHttpEnv>,
+		reason: ForwardReason,
+	): Promise<Response> {
+		if (forwarding >= MAX_FORWARDS_IN_FLIGHT) {
+			ctx.counters.add("shed");
+			return context.json(
+				{
+					message: "Atom is forwarding all it can; ask the Autumn API",
+					code: "atom_overloaded",
+				},
+				503,
+			);
+		}
+		forwarding += 1;
+		try {
+			return await forwardToAutumn({ ctx, context, reason });
+		} finally {
+			forwarding -= 1;
+		}
+	}
+
+	return function handleError(cause, context) {
 		if (cause instanceof CannotAnswerError)
-			return forwardToAutumn({ ctx, context, reason: cause.reason });
+			return forwardWithinCap(context, cause.reason);
 
 		const { status, code, message } = atomErrorOf({ cause });
 		context.set("failure", { code, error: cause });
 		return context.json({ message, code }, status);
 	};
+};

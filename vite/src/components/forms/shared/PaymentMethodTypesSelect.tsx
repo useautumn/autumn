@@ -10,6 +10,7 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
+import { useRef } from "react";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
 import { useEnv } from "@/utils/envUtils";
@@ -18,6 +19,7 @@ import {
 	paymentMethodLabel,
 } from "@/utils/invoicePaymentMethodOptions";
 import { getStripePaymentMethodConfigLink } from "@/utils/linkUtils";
+import { nextPaymentMethodTypes } from "./utils/nextPaymentMethodTypes";
 
 export const ORG_PAYMENT_METHODS_HELPER =
 	"Prefilled from your org's allowed payment methods";
@@ -29,7 +31,7 @@ export function PaymentMethodTypesSelect({
 	disabled,
 }: {
 	value: InvoicePaymentMethod[] | null;
-	onValueChange: (types: InvoicePaymentMethod[]) => void;
+	onValueChange: (types: InvoicePaymentMethod[] | null) => void;
 	description?: string;
 	disabled?: boolean;
 }) {
@@ -50,6 +52,12 @@ export function PaymentMethodTypesSelect({
 				.join(", ")
 		: "Default methods";
 
+	// The prefilled value, captured once it loads (or at the first edit when nothing was prefilled).
+	const original = useRef<{ value: InvoicePaymentMethod[] | null } | null>(
+		null,
+	);
+	if (!original.current && value?.length) original.current = { value };
+
 	const toggle = ({
 		type,
 		checked,
@@ -57,17 +65,19 @@ export function PaymentMethodTypesSelect({
 		type: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = INVOICE_PAYMENT_METHOD_OPTIONS.map(
-			(option) => option.value,
-		).filter((option) =>
-			option === type ? checked : selected.includes(option),
+		original.current ??= { value };
+		onValueChange(
+			nextPaymentMethodTypes({
+				selected,
+				type,
+				checked,
+				original: original.current.value,
+			}),
 		);
-		// Stripe rejects an empty list, so the last type cannot be removed.
-		if (next.length > 0) onValueChange(next);
 	};
 
 	return (
-		<div className="min-w-0 space-y-1.5">
+		<div className="flex min-w-0 flex-col">
 			<FormLabel>Payment methods</FormLabel>
 			<DropdownMenu>
 				<DropdownMenuTrigger
@@ -98,7 +108,7 @@ export function PaymentMethodTypesSelect({
 				</DropdownMenuContent>
 			</DropdownMenu>
 			{description && (
-				<p className="text-xs text-tertiary-foreground">{description}</p>
+				<p className="mt-1.5 text-xs text-tertiary-foreground">{description}</p>
 			)}
 		</div>
 	);

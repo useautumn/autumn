@@ -139,6 +139,7 @@ export type PartitionProcessorDependencies = {
 	recentCommands: RecentCommands;
 	/** Where the partition's writer publishes its commit position. */
 	commitPositions?: CommitPositionSink;
+	onRecoveryRequired?: PartitionWriterContext["onRecoveryRequired"];
 	assertCanRead(): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };

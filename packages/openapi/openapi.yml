@@ -40998,6 +40998,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -41519,6 +41535,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates and sends an invoice instead of charging the
@@ -49879,6 +49911,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -52841,6 +52889,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -54401,6 +54465,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -57668,6 +57748,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -60486,6 +60582,22 @@ paths:
                       exclusiveMinimum: 0
                       description: Number of days the customer has to pay the invoice before it is due
                         (Stripe days_until_due).
+                    payment_method_types:
+                      type: array
+                      minItems: 1
+                      items:
+                        enum:
+                          - card
+                          - customer_balance
+                          - us_bank_account
+                          - sepa_debit
+                          - bacs_debit
+                          - acss_debit
+                          - link
+                        type: string
+                      description: Payment method types the customer can pay the invoice with, e.g.
+                        card and us_bank_account. Overrides the org's allowed
+                        payment methods.
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -72247,6 +72359,22 @@ paths:
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) applied to every line.
+                payment_method_types:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - card
+                      - customer_balance
+                      - us_bank_account
+                      - sepa_debit
+                      - bacs_debit
+                      - acss_debit
+                      - link
+                    type: string
+                  description: Payment method types the customer can pay the invoice with, e.g.
+                    card and us_bank_account. Defaults to the org's allowed
+                    payment methods.
                 period_start:
                   type: integer
                   minimum: 0
@@ -75771,6 +75899,261 @@ paths:
                       amount_due: 29.99
                       due_date: 1761839877000
       x-speakeasy-name-override: reissue
+      parameters:
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.5.0
+          x-speakeasy-globals-hidden: true
+  /v1/invoices.update:
+    post:
+      operationId: updateInvoice
+      description: Changes which payment methods a draft or open Stripe invoice
+        accepts. The customer sees the change on the hosted invoice page
+        straight away.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_id:
+                  type: string
+                  description: The Autumn invoice ID to update.
+                payment_method_types:
+                  type: array
+                  minItems: 1
+                  items:
+                    enum:
+                      - card
+                      - customer_balance
+                      - us_bank_account
+                      - sepa_debit
+                      - bacs_debit
+                      - acss_debit
+                      - link
+                    type: string
+                  description: Payment method types the customer can pay the invoice with. Only
+                    draft and open Stripe invoices can be updated.
+              required:
+                - invoice_id
+                - payment_method_types
+              title: UpdateInvoiceParams
+              examples:
+                - invoice_id: inv_2b3c4d5e6f7g8h
+                  payment_method_types:
+                    - card
+                    - us_bank_account
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoice:
+                    type: object
+                    properties:
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of plan IDs included in this invoice
+                      stripe_id:
+                        type: string
+                        description: The Stripe invoice ID
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        type: string
+                        description: The status of the invoice
+                      total:
+                        type: number
+                        description: The total amount of the invoice
+                      currency:
+                        type: string
+                        description: The currency code for the invoice
+                      created_at:
+                        type: number
+                        description: Timestamp when the invoice was created
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL to the Stripe-hosted invoice page
+                      id:
+                        type: string
+                        description: The Autumn invoice ID
+                      customer_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the customer this invoice belongs to. Null for customers
+                          created without an ID.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The ID of the entity this invoice belongs to, if entity-scoped
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        description: The amount paid on the invoice. Null on invoices recorded before
+                          amounts paid were tracked.
+                      refunded_amount:
+                        type: number
+                        description: The total amount refunded on the invoice
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The Autumn invoice line item ID. Stable across reads, and can be
+                                used to reference this line in later calls.
+                            description:
+                              type: string
+                              description: Description of the invoice line item
+                            period_start:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period starts
+                            period_end:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Timestamp when the billing period ends
+                            plan_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The plan this line item came from. Null for lines with no Autumn
+                                plan behind them.
+                            feature_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The ID of the feature associated with this line item
+                            feature_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The name of the feature associated with this line item
+                            quantity:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Quantity actually charged on this line. Null on fixed-price lines.
+                            amount:
+                              type: number
+                              description: Amount charged on this line, pre-discount and pre-tax. Negative for
+                                credits.
+                            entities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  entity_id:
+                                    type: string
+                                    description: The entity this share of the line item is attributed to
+                                  quantity:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Quantity charged to this entity. Null on fixed-price lines.
+                                  amount:
+                                    type: number
+                                    description: Amount attributed to this entity, pre-discount and pre-tax
+                                required:
+                                  - entity_id
+                                  - quantity
+                                  - amount
+                              description: How this line splits by entity. Empty for customer-level lines.
+                                Only populated for invoices finalized after
+                                entity attribution shipped.
+                          required:
+                            - id
+                            - description
+                            - period_start
+                            - period_end
+                            - plan_id
+                            - feature_id
+                            - feature_name
+                            - quantity
+                            - amount
+                            - entities
+                        description: Line items on the invoice, one per line as shown in Stripe. Capped
+                          at 100. Empty for invoices recorded before line item
+                          storage.
+                    required:
+                      - plan_ids
+                      - stripe_id
+                      - status
+                      - total
+                      - currency
+                      - created_at
+                      - id
+                      - customer_id
+                      - entity_id
+                      - amount_paid
+                      - refunded_amount
+                required:
+                  - invoice
+                examples:
+                  - invoice:
+                      id: inv_2b3c4d5e6f7g8h
+                      customer_id: cus_123
+                      entity_id: null
+                      plan_ids:
+                        - pro_plan
+                      stripe_id: in_1A2B3C4D5E6F7G8H
+                      processor_type: stripe
+                      status: open
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1759247877000
+                      hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                      items:
+                        - id: invoice_li_2b3c4d5e6f7g8h
+                          description: Pro plan
+                          plan_id: pro_plan
+                          feature_id: null
+                          feature_name: null
+                          quantity: null
+                          amount: 20
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities: []
+                        - id: invoice_li_3c4d5e6f7g8h9i
+                          description: AI credits
+                          plan_id: pro_plan
+                          feature_id: ai_credits
+                          feature_name: AI Credits
+                          quantity: 4995
+                          amount: 9.99
+                          period_start: 1759247877000
+                          period_end: 1761839877000
+                          entities:
+                            - entity_id: acme-docs-prod
+                              quantity: 4995
+                              amount: 9.99
+      x-speakeasy-name-override: update
       parameters:
         - name: x-api-version
           in: header

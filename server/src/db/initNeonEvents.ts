@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { type DrizzleCli, initDrizzle } from "./initDrizzle.js";
 
 // GUARD: initDrizzle falls back to DATABASE_URL when no url is given — never let events
@@ -7,8 +8,6 @@ export const neonEventsDb: DrizzleCli | null = process.env
 	? initDrizzle({
 			name: "neon-events",
 			databaseUrl: process.env.NEON_EVENTS_DATABASE_URL, // POOLED (-pooler) endpoint
-			maxConnections: 5,
-			connectTimeout: 10,
-			poolConfig: { application_name: "autumn-neon-events", query_timeout: 10_000 },
+			pool: getPostgresPools().neonEvents,
 		}).db
 	: null;

@@ -7,6 +7,7 @@ import {
 	type Price,
 	PriceType,
 	type Product,
+	priceToStripeUnitTiers,
 } from "@autumn/shared";
 
 await mockModuleWithRestore(
@@ -17,10 +18,7 @@ await mockModuleWithRestore(
 );
 
 import { createStripeEmptyPrice } from "@/external/stripe/createStripePrice/createStripeEmptyPrice";
-import {
-	createStripeInArrearPrice,
-	priceToInArrearTiers,
-} from "@/external/stripe/createStripePrice/createStripeInArrear";
+import { createStripeInArrearPrice } from "@/external/stripe/createStripePrice/createStripeInArrear";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
@@ -80,14 +78,14 @@ const product = {
 	processor: { id: "prod_shared" },
 } as unknown as Product;
 
-describe("priceToInArrearTiers per-currency", () => {
+describe("priceToStripeUnitTiers per-currency", () => {
 	test("default: base amounts, allowance-shifted boundaries", () => {
-		const tiers = priceToInArrearTiers({
+		const tiers = priceToStripeUnitTiers({
 			price: consumablePrice({}),
 			entitlement,
 			org,
 		});
-		expect(tiers[0]).toEqual({ unit_amount: 0, up_to: 100 });
+		expect(tiers[0]).toEqual({ unit_amount_decimal: "0", up_to: 100 });
 		expect(tiers[1].unit_amount_decimal).toBe("10");
 		expect(tiers[1].up_to).toBe(1100);
 		expect(tiers[2].unit_amount_decimal).toBe("8");
@@ -97,13 +95,13 @@ describe("priceToInArrearTiers per-currency", () => {
 		const price = consumablePrice({
 			currencies: { eur: { usage_tiers: eurTiers } },
 		});
-		const tiers = priceToInArrearTiers({
+		const tiers = priceToStripeUnitTiers({
 			price,
 			entitlement,
 			org,
 			currency: "eur",
 		});
-		expect(tiers[0]).toEqual({ unit_amount: 0, up_to: 100 });
+		expect(tiers[0]).toEqual({ unit_amount_decimal: "0", up_to: 100 });
 		expect(tiers[1].unit_amount_decimal).toBe("9");
 		expect(tiers[1].up_to).toBe(1100);
 		expect(tiers[2].unit_amount_decimal).toBe("7");
@@ -119,7 +117,7 @@ describe("priceToInArrearTiers per-currency", () => {
 				eur: { usage_tiers: [{ to: -1, amount: 0.09, flat_amount: 5 }] },
 			},
 		});
-		const tiers = priceToInArrearTiers({
+		const tiers = priceToStripeUnitTiers({
 			price,
 			entitlement: { ...entitlement, allowance: 0 },
 			org,
@@ -133,7 +131,7 @@ describe("priceToInArrearTiers per-currency", () => {
 		const price = consumablePrice({
 			currencies: { jpy: { usage_tiers: [{ to: -1, amount: 1000 }] } },
 		});
-		const tiers = priceToInArrearTiers({
+		const tiers = priceToStripeUnitTiers({
 			price,
 			entitlement: { ...entitlement, allowance: 0 },
 			org,

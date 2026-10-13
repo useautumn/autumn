@@ -6,6 +6,7 @@ import {
 import { HOLD_MS } from "../../src/replication/outbox/createPeerOutbox.js";
 import {
 	assertConverged,
+	assertDeletionsHeld,
 	assertFreshness,
 	assertNoErrors,
 	assertNoLoops,
@@ -28,6 +29,17 @@ const WARM_MS = 20_000;
 /** After the chaos: one anti-entropy period past the relay hold, so what any replica alone held has reached the others. */
 const QUIET_MS = HOLD_MS + 2 * ANTI_ENTROPY_EVERY_MS;
 
+/** An hour of one new customer a second, at the ~9 KB a fixture customer takes on disk: ~32 MB unbounded, against a 16 MB share. */
+const CHURN_MS = 3_600_000;
+const CHURN_DISK_SHARE_BYTES = 16 * 1024 * 1024;
+/** 15 min of churn (the evictor's minimum age, ~8 MB) fits the share, so the share never has to drop recent rows. */
+const CHURN_CONVERGED_WITHIN_MS = 5 * 60_000;
+const CHURN_ROW_TEXT_BYTES = 4_000;
+/** A tick is 10 s apart, and a pass stops at 95% of the share: between two, a replica may be ahead by 15 s of pushes (3 a second, ~9 KB each). */
+const CHURN_PUSH_SLACK_BYTES = 15 * 3 * 9_000;
+/** About 60 held subjects: the eight checked customers fit, the churn does not. */
+const CHURN_HELD_BUDGET_BYTES = 256 * 1024;
+
 const CHAOTIC_NETWORK: Partial<NetworkProfile> = {
 	delayMs: [1, 400],
 	dropRate: 0.1,
@@ -44,6 +56,8 @@ afterAll(() => spyOn(globalThis, "fetch").mockRestore());
 
 type Scenario = {
 	name: string;
+	/** Runs on this many of the seeds; a long scenario runs on fewer. */
+	seeds?: number;
 	profile?: Partial<NetworkProfile>;
 	/** Entities per customer, pushed as views beside the customer's own. */
 	entities?: number;
@@ -61,6 +75,18 @@ type Scenario = {
 	noErrors?: boolean;
 	/** Whether checks may be answered 504 while a replica starts (a proxied check whose peer timed out). */
 	allowPeerTimeouts?: boolean;
+	/** Each replica's held budget and disk share, for a scenario about eviction. */
+	heldBudgetBytes?: number;
+	diskShareBytes?: number;
+	/** Only customers pushed this recently must be held everywhere at the end: the rest may have been dropped for the share. */
+	convergedWithinMs?: number;
+	/** The chaos's own traffic, over `runFor`'s defaults. */
+	traffic?: {
+		pushesPerSecond?: number;
+		checksPerSecond?: number;
+		newCustomersPerSecond?: number;
+		deletesPerSecond?: number;
+	};
 };
 
 const boot = async (cluster: SimCluster, skews: number[] = []) => {
@@ -113,16 +139,23 @@ const runScenario = async ({
 		profile: scenario.profile,
 		entities: scenario.entities,
 		planEndRate: scenario.planEndRate,
+		heldBudgetBytes: scenario.heldBudgetBytes,
+		diskShareBytes: scenario.diskShareBytes,
 		log: LOG,
 	});
 	try {
 		await boot(cluster, scenario.skews);
 		const { ms, onStep, after } = scenario.chaos(cluster);
-		await cluster.runFor({ ms, onStep });
+		await cluster.runFor({ ms, onStep, ...scenario.traffic });
 		after?.();
 		await recover(cluster);
-		await assertConverged({ cluster });
+		await assertConverged({
+			cluster,
+			pushedWithinMs: scenario.convergedWithinMs,
+		});
 		assertNoLoops({ cluster });
+		if (scenario.traffic?.deletesPerSecond)
+			await assertDeletionsHeld({ cluster });
 		if (scenario.freshnessBoundMs !== undefined)
 			assertFreshness({ cluster, boundMs: scenario.freshnessBoundMs });
 		if (scenario.noErrors)
@@ -293,6 +326,19 @@ const scenarios: Scenario[] = [
 		freshnessBoundMs: 15_000,
 	},
 	{
+		name: "customers deleted through restarts and a lossy network: every replica ends holding them and their entities as deleted, and no copy from before a delete is answered",
+		profile: CHAOTIC_NETWORK,
+		entities: 2,
+		traffic: { deletesPerSecond: 0.05 },
+		chaos: (cluster) => ({
+			ms: 90_000,
+			onStep: () => {
+				if (cluster.rng.chance(0.004)) restartOne({ cluster, fresh: false });
+			},
+		}),
+		freshnessBoundMs: 15_000,
+	},
+	{
 		name: "the ready gate under churn: checks proxied while replicas start, never twice, never in a loop",
 		profile: { delayMs: [1, 300], dropRate: 0.05 },
 		chaos: (cluster) => ({
@@ -303,13 +349,54 @@ const scenarios: Scenario[] = [
 		}),
 		allowPeerTimeouts: true,
 	},
+	{
+		name: "sustained new-customer churn: every replica's files and held copies stay bounded, recent customers stay converged, nothing is answered stale",
+		seeds: 1,
+		heldBudgetBytes: CHURN_HELD_BUDGET_BYTES,
+		diskShareBytes: CHURN_DISK_SHARE_BYTES,
+		traffic: {
+			pushesPerSecond: 2,
+			checksPerSecond: 5,
+			newCustomersPerSecond: 1,
+		},
+		chaos: (cluster) => ({
+			ms: CHURN_MS,
+			onStep: () => {
+				for (const replica of cluster.alive()) {
+					// A tick is 10 s apart, so between two a replica may be ahead by what Autumn pushed since.
+					if (
+						replica.diskBytes() >
+						CHURN_DISK_SHARE_BYTES + CHURN_PUSH_SLACK_BYTES
+					)
+						throw new Error(
+							`${replica.address}#${replica.id} holds ${replica.diskBytes()} bytes on disk, over its share of ${CHURN_DISK_SHARE_BYTES}`,
+						);
+					if (
+						replica.held.bytes >
+						CHURN_HELD_BUDGET_BYTES + CHURN_ROW_TEXT_BYTES
+					)
+						throw new Error(
+							`${replica.address}#${replica.id} holds ${replica.held.bytes} bytes parsed, over its budget of ${CHURN_HELD_BUDGET_BYTES}`,
+						);
+				}
+			},
+			after: () => {
+				for (const replica of cluster.alive()) {
+					expect(replica.stats().diskEvicted).toBeGreaterThan(0);
+					expect(replica.held.evicted).toBeGreaterThan(0);
+				}
+			},
+		}),
+		convergedWithinMs: CHURN_CONVERGED_WITHIN_MS,
+		freshnessBoundMs: 15_000,
+	},
 ];
 
 for (const scenario of scenarios)
 	describe(scenario.name, () => {
-		test.each(seeds)(
+		test.each(seeds.slice(0, scenario.seeds ?? seeds.length))(
 			"seed %i",
 			async (seed) => runScenario({ scenario, seed }),
-			60_000,
+			600_000,
 		);
 	});

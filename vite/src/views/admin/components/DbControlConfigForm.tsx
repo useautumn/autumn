@@ -74,6 +74,17 @@ export const DbControlConfigForm = ({
 						/>
 					)}
 				</form.AppField>
+				<form.AppField name="maxBatchesPerFlush">
+					{(field) => (
+						<field.NumberField
+							label="Max batches per flush"
+							description="Committed batches one Postgres flush takes; reaching it flushes without waiting out the linger. Leave blank to use the worker's default (32)."
+							min={DB_CONTROL_LIMITS.maxBatchesPerFlush.min}
+							max={DB_CONTROL_LIMITS.maxBatchesPerFlush.max}
+							inputClassName="tabular-nums"
+						/>
+					)}
+				</form.AppField>
 			</div>
 			<DialogFooter>
 				<Button variant="secondary" onClick={onClose}>

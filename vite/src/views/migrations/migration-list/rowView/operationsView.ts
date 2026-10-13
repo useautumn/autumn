@@ -11,6 +11,7 @@ import {
 	intervalSuffix,
 	isAbbreviatedInterval,
 } from "@/utils/formatUtils/intervalSuffix";
+import type { RateChange } from "@/utils/product/featureOverrideRates";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
 import {
 	type CappedChips,
@@ -25,6 +26,14 @@ export type ModificationView = {
 	sign: "add" | "change" | "remove";
 	chip: ChipView;
 	isVersion?: boolean;
+	/** Changed rates, each with its metered feature's tile. */
+	children?: {
+		key: string;
+		tile: NonNullable<ChipView["tile"]>;
+		change: RateChange;
+	}[];
+	/** Set when the card covers several update ops, so the cell can group rows by plan. */
+	planLabel?: string;
 };
 
 export type OperationsView = {
@@ -186,6 +195,8 @@ const updatePlanModifications = ({
 	catalog: MigrationCatalog;
 }): ModificationView[] => {
 	const customize = op.customize;
+	const addItems = customize?.add_items ?? [];
+	const rateRows = catalog.rateRows(op);
 	const isBooleanItem = (filter: ItemFilter) =>
 		catalog.feature(filter.feature_id ?? "").type === FeatureType.Boolean;
 	const itemChip = (filter: ItemFilter, detail: string | null): ChipView => {
@@ -221,13 +232,26 @@ const updatePlanModifications = ({
 				details: ["customized"],
 			},
 		})),
-		...(customize?.add_items ?? []).map((item) => ({
-			sign: "add" as const,
-			chip: itemChip(
+		...rateRows.rows.map(({ addIndex, updated, changes }) => {
+			const item = addItems[addIndex];
+			const detail = addItemDetail({
 				item,
-				addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
-			),
-		})),
+				isBoolean: isBooleanItem(item),
+				catalog,
+			});
+			return {
+				sign: updated ? ("change" as const) : ("add" as const),
+				chip: itemChip(item, updated ? "updated" : detail),
+				...(changes.length > 0 && {
+					children: changes.map((change) => ({
+						key: change.key,
+						tile: catalog.feature(change.meteredFeatureId ?? item.feature_id)
+							.tile,
+						change,
+					})),
+				}),
+			};
+		}),
 		...(customize?.update_items ?? []).map((item) => ({
 			sign: "change" as const,
 			chip: itemChip(
@@ -235,10 +259,12 @@ const updatePlanModifications = ({
 				updateItemDetail({ item, isBoolean: isBooleanItem(item.filter) }),
 			),
 		})),
-		...(customize?.remove_items ?? []).map((item) => ({
-			sign: "remove" as const,
-			chip: itemChip(item, "removed"),
-		})),
+		...(customize?.remove_items ?? [])
+			.filter((_, index) => !rateRows.mergedRemoveIndices.has(index))
+			.map((item) => ({
+				sign: "remove" as const,
+				chip: itemChip(item, "removed"),
+			})),
 	];
 };
 
@@ -254,14 +280,19 @@ export const deriveOperationsView = ({
 	const ops = operations?.customer ?? [];
 	if (ops.length === 0) return null;
 
-	const modifications = ops.flatMap((op) =>
-		op.type === "add_plan"
-			? [addPlanModification({ op, catalog })]
-			: updatePlanModifications({ op, catalog }),
-	);
 	const updateOps = ops.filter(
 		(op): op is UpdatePlanOp => op.type === "update_plan",
 	);
+	const groupByPlan = updateOps.length > 1;
+	const modifications = ops.flatMap((op) => {
+		if (op.type === "add_plan") return [addPlanModification({ op, catalog })];
+		const rows = updatePlanModifications({ op, catalog });
+		if (!groupByPlan) return rows;
+		const planLabel = planIdsFromFilter(op.plan_filter)
+			.map(catalog.planName)
+			.join(", ");
+		return rows.map((row) => ({ ...row, planLabel }));
+	});
 	const targetNames = updateOps.flatMap((op) =>
 		planIdsFromFilter(op.plan_filter).map(catalog.planName),
 	);

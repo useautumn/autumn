@@ -213,7 +213,7 @@ export const setupPatchContext = ({
 		orgId: patchFullProduct.org_id,
 		env: patchFullProduct.env,
 		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
-		validateRollover: false,
+		validateAuthoringRules: false,
 	});
 
 	const patchContext: PatchContext = {

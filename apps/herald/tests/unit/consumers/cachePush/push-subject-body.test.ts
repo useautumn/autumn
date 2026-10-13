@@ -4,10 +4,15 @@
  *
  *  2.1 the worker's logOffset is the body's; 2.2 without one, the record's; 2.4 an evict's version rides along;
  *  2.5 read_at is taken before the worker read; and the body and the read it sends are exactly herald's old ones.
+ *  A subject its worker no longer holds is sent to subjects.delete instead; any other failure sends nothing.
  */
 
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
-import type { ReadSubjectStateCommand } from "@autumn/balance-engine";
+import type {
+	MeteringIdentity,
+	ReadSubjectStateCommand,
+} from "@autumn/balance-engine";
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import type { ReadSubjectStateReply } from "@autumn/balance-worker-client/protocol";
 import { _resetOrgWithFeaturesL1ForTesting } from "@autumn/cache";
 import { ShadowAtomConfigSchema } from "@autumn/edge-config";
@@ -17,6 +22,8 @@ import {
 	type Organization,
 	OrgConfigSchema,
 } from "@autumn/shared";
+import { WORKER_ERROR_CODES } from "../../../../../../packages/balance-worker-client/src/contracts/worker.js";
+import { BALANCE_WORKER_CLIENT_ERROR_CODES } from "../../../../../../packages/balance-worker-client/src/types/balanceWorkerClientErrors.js";
 import { pushSubjectToCache } from "../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js";
 import type { CachePushContext } from "../../../../src/consumers/cachePush/types/cachePushContext.js";
 
@@ -37,13 +44,16 @@ const identity = {
 const workerState = { customer: { id: "cus_1" } } as const;
 const workerCatalog = { features: {} } as const;
 
-/** org_1 with its own ready Atom, whose worker answers `reply` and moves the clock to 2 000 while it reads. */
+/** org_1 with its own ready Atom, whose worker answers `reply` (or throws `refusal`) and moves the clock to 2 000 while it reads. */
 const createBodyContext = ({
-	reply,
+	reply = {},
+	refusal,
 }: {
-	reply: Partial<ReadSubjectStateReply>;
+	reply?: Partial<ReadSubjectStateReply>;
+	refusal?: unknown;
 }) => {
 	const bodies: unknown[] = [];
+	const deletions: unknown[] = [];
 	const commands: ReadSubjectStateCommand[] = [];
 	const atomDeployments = [
 		{
@@ -72,6 +82,7 @@ const createBodyContext = ({
 			}) => {
 				commands.push(command);
 				now = 2_000;
+				if (refusal) throw refusal;
 				return { state: workerState, catalog: workerCatalog, ...reply };
 			},
 		},
@@ -84,27 +95,33 @@ const createBodyContext = ({
 					orgs: {},
 				}),
 		},
+		atomPushQueueOnly: false,
 		getAtomClient: () => ({
 			setSubject: async ({ body }: { body: unknown }) => {
 				bodies.push(body);
 			},
+			deleteSubject: async ({ body }: { body: unknown }) => {
+				deletions.push(body);
+			},
 			setCatalog: async () => undefined,
 		}),
 	} as unknown as CachePushContext;
-	return { ctx, bodies, commands };
+	return { ctx, bodies, deletions, commands };
 };
 
 const pushSubject = ({
 	ctx,
 	customerVersion = null,
+	subject = identity,
 }: {
 	ctx: CachePushContext;
 	customerVersion?: bigint | null;
+	subject?: MeteringIdentity;
 }) =>
 	pushSubjectToCache({
 		ctx,
 		cacheSubject: {
-			identity,
+			identity: subject,
 			logOffset: 120n,
 			oldestOccurredAt: 1,
 			customerVersion,
@@ -167,3 +184,74 @@ test("2.4 an evict's version still rides on the customer's body", async () => {
 		expect.objectContaining({ log_offset: "180", customer_version: "140" }),
 	]);
 });
+
+/** The worker refusing a read with `workerCode`, as its client throws it. */
+const workerRefusal = (workerCode: BalanceWorkerClientError["workerCode"]) =>
+	new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "refused",
+		workerCode,
+	});
+
+test("a customer its worker no longer holds is sent to subjects.delete, at the record's offset and read_at from before the read", async () => {
+	const { ctx, bodies, deletions } = createBodyContext({
+		refusal: workerRefusal("CUSTOMER_NOT_FOUND"),
+	});
+
+	await pushSubject({ ctx });
+
+	expect(bodies).toEqual([]);
+	expect(deletions).toEqual([{ identity, log_offset: "120", read_at: 1_000 }]);
+});
+
+test("an entity its worker no longer holds is sent to subjects.delete, under the entity", async () => {
+	const entity = { ...identity, entityId: "ent_1" };
+	const { ctx, deletions } = createBodyContext({
+		refusal: workerRefusal("ENTITY_NOT_FOUND"),
+	});
+
+	await pushSubject({ ctx, subject: entity });
+
+	expect(deletions).toEqual([
+		{ identity: entity, log_offset: "120", read_at: 1_000 },
+	]);
+});
+
+const NOT_FOUND_CODES = new Set(["CUSTOMER_NOT_FOUND", "ENTITY_NOT_FOUND"]);
+
+/** Every way a worker read fails other than the worker's own not-found: each must fail the push and delete nothing. */
+const failuresThatAreNotDeletes: { name: string; error: unknown }[] = [
+	...WORKER_ERROR_CODES.filter((code) => !NOT_FOUND_CODES.has(code)).map(
+		(workerCode) => ({
+			name: `the worker answering ${workerCode}`,
+			error: workerRefusal(workerCode),
+		}),
+	),
+	...BALANCE_WORKER_CLIENT_ERROR_CODES.filter(
+		(code) => code !== "WORKER_ERROR",
+	).map((code) => ({
+		name: `the client failing with ${code}`,
+		error: new BalanceWorkerClientError({
+			code,
+			outcome: "unknown",
+			message: "refused",
+		}),
+	})),
+	{ name: "a network error", error: new TypeError("refused: fetch failed") },
+	{
+		name: "a timeout",
+		error: new DOMException("refused: timed out", "TimeoutError"),
+	},
+];
+
+test.each(failuresThatAreNotDeletes)(
+	"$name is no deletion: the push fails as before and sends nothing",
+	async ({ error }) => {
+		const { ctx, bodies, deletions } = createBodyContext({ refusal: error });
+
+		await expect(pushSubject({ ctx })).rejects.toBe(error);
+		expect(bodies).toEqual([]);
+		expect(deletions).toEqual([]);
+	},
+);

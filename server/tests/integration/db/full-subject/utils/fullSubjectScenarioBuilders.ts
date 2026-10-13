@@ -1,5 +1,6 @@
 import {
 	ApiVersion,
+	type AppEnv,
 	BillingInterval,
 	BillingType,
 	BillingVersion,
@@ -439,6 +440,8 @@ const buildInvoice = ({
 	internal_product_ids: [product.internal_id],
 	internal_customer_id: customer.internal_id,
 	internal_entity_id: internalEntityId,
+	org_id: customer.org_id,
+	env: customer.env as AppEnv,
 	stripe_id: `stripe_inv_${key}_${suffix}`,
 	processor_type: ProcessorType.Stripe,
 	status: InvoiceStatus.Paid,

@@ -54,6 +54,7 @@ export const resolveOwnMigrationTarget = ({
 		version,
 		customize,
 		previousPrice: fromPlan.price ? toBasePriceParams(fromPlan.price) : null,
+		previousItems: fromPlan.items,
 		hasBillingChanges: planDiffHasBillingChanges(customize, fromPlan),
 		includeCustom: includeCustomForMigrationDraft({
 			upsertProductPlan,

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { dirname } from "node:path";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -10,7 +11,13 @@ const state = {
 	checks: [] as Record<string, unknown>[],
 };
 
-await mockModuleWithRestore("autumn-js", () => ({
+// Billing pins its own autumn-js, so mock the copy it imports, not server's.
+const billingAutumnJs = Bun.resolveSync(
+	"autumn-js",
+	dirname(Bun.resolveSync("@autumn/billing", import.meta.dir)),
+);
+
+await mockModuleWithRestore(billingAutumnJs, () => ({
 	Autumn: class {
 		async check(args: Record<string, unknown>) {
 			state.checks.push(args);

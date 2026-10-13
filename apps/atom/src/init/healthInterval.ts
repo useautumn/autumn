@@ -4,10 +4,15 @@ import type { AtomHealth } from "./atomHealth.js";
 type IntervalCounter =
 	| "requests"
 	| "forwarded"
+	| "shed"
 	| "pushes"
 	| "subjectMisses"
 	| "subjectPulls"
-	| "subjectFills";
+	| "subjectFills"
+	| "heldEvicted"
+	| "heldExpired"
+	| "diskEvicted"
+	| "diskExpired";
 
 /** Totals since boot at one read, summed over every thread. */
 export type HealthTotals = Record<IntervalCounter, number> & {
@@ -30,10 +35,15 @@ export const bootTotals = ({
 	cpuSeconds: 0,
 	requests: 0,
 	forwarded: 0,
+	shed: 0,
 	pushes: 0,
 	subjectMisses: 0,
 	subjectPulls: 0,
 	subjectFills: 0,
+	heldEvicted: 0,
+	heldExpired: 0,
+	diskEvicted: 0,
+	diskExpired: 0,
 });
 
 export const healthTotalsOf = ({
@@ -50,10 +60,15 @@ export const healthTotalsOf = ({
 		cpuSeconds: health.container.cpuUsageSeconds,
 		requests: sumOf("requests"),
 		forwarded: sumOf("forwarded"),
+		shed: sumOf("shed"),
 		pushes: sumOf("pushes"),
 		subjectMisses: sumOf("subjectMisses"),
 		subjectPulls: sumOf("subjectPulls"),
 		subjectFills: sumOf("subjectFills"),
+		heldEvicted: sumOf("heldEvicted"),
+		heldExpired: sumOf("heldExpired"),
+		diskEvicted: sumOf("diskEvicted"),
+		diskExpired: sumOf("diskExpired"),
 	};
 };
 
@@ -71,8 +86,13 @@ export const healthIntervalBetween = ({
 			: current.cpuSeconds - previous.cpuSeconds,
 	requests: current.requests - previous.requests,
 	forwarded: current.forwarded - previous.forwarded,
+	shed: current.shed - previous.shed,
 	pushes: current.pushes - previous.pushes,
 	subjectMisses: current.subjectMisses - previous.subjectMisses,
 	subjectPulls: current.subjectPulls - previous.subjectPulls,
 	subjectFills: current.subjectFills - previous.subjectFills,
+	heldEvicted: current.heldEvicted - previous.heldEvicted,
+	heldExpired: current.heldExpired - previous.heldExpired,
+	diskEvicted: current.diskEvicted - previous.diskEvicted,
+	diskExpired: current.diskExpired - previous.diskExpired,
 });

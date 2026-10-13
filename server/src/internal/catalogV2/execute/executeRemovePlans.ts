@@ -1,7 +1,9 @@
+import { planLicenses } from "@autumn/shared";
+import { eq, or } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
-import { deleteProductRowAndHandoffActive } from "@/internal/products/repos/activateHighestRemainingProduct";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { deleteProductRowAndHandoffActive } from "@/internal/products/repos/activateHighestRemainingProduct";
 
 /** Archive leaves `active` in place. Hard-delete of the active row promotes a survivor. */
 export const executeRemovePlans = async ({
@@ -34,6 +36,23 @@ export const executeRemovePlans = async ({
 				});
 				continue;
 			}
+
+			// Junction rows RESTRICT the row's items; dropping its links first
+			// makes removal order between a parent and its license irrelevant.
+			await tx
+				.delete(planLicenses)
+				.where(
+					or(
+						eq(
+							planLicenses.parent_internal_product_id,
+							row.current.internal_id,
+						),
+						eq(
+							planLicenses.license_internal_product_id,
+							row.current.internal_id,
+						),
+					),
+				);
 
 			await deleteProductRowAndHandoffActive({
 				db: tx,

@@ -29,6 +29,7 @@ export const readSubjectAtomTargets = async ({
 		org,
 		env,
 		customerId: identity.customerId,
+		orgAtomsOverQueue: ctx.atomPushQueueOnly,
 	});
 	if (atomConnections.length === 0) return null;
 	return { org, atomConnections };

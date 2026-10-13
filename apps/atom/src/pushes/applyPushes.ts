@@ -9,6 +9,10 @@ export const SUBJECT_PUSH: ReplicationHandler = {
 	kind: "subjects.set",
 	path: "/v1/subjects.set",
 };
+export const DELETE_PUSH: ReplicationHandler = {
+	kind: "subjects.delete",
+	path: "/v1/subjects.delete",
+};
 export const CATALOG_PUSH: ReplicationHandler = {
 	kind: "catalog.set",
 	path: "/v1/catalog.set",
@@ -59,6 +63,36 @@ export const applySubjectPush = async ({
 			atomId: slots.atomId,
 			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
 		});
+	return stored;
+};
+
+/** A deletion as Autumn pushes it, applied and relayed as a subject push is; false when a newer read is already held. */
+export const applyDeletePush = async ({
+	slots,
+	customerId,
+	body,
+	replication,
+	relayed = false,
+}: {
+	slots: Slots;
+	customerId: string;
+	body: string;
+} & PushReplication): Promise<boolean> => {
+	const stored = await slots
+		.processorFor({ customerId })
+		.deleteSubject({ customerId, body });
+	if (stored && !relayed) {
+		const { identity } = JSON.parse(body) as {
+			identity: { entityId: string | null };
+		};
+		replication.replicate({
+			kind: DELETE_PUSH.kind,
+			key: `${customerId}\u0000${identity.entityId ?? ""}`,
+			body,
+			atomId: slots.atomId,
+			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
+		});
+	}
 	return stored;
 };
 

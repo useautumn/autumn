@@ -23,4 +23,6 @@ export type SlotProcessor = {
 	 * for another customer with InvalidPushError. False when the subject was read before the one held, and so ignored.
 	 */
 	setSubject(params: { customerId: string; body: string }): Promise<boolean>;
+	/** A `subjects.delete` body as JSON text, routed and refused the same way. False when a newer read is already held. */
+	deleteSubject(params: { customerId: string; body: string }): Promise<boolean>;
 };

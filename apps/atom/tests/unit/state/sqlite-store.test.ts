@@ -1,15 +1,22 @@
 import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	createSubjectState,
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
+import { openSlotDatabase } from "../../../src/state/openSlotDatabase.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
+import {
+	startWalCheckpointer,
+	TICKS_PER_FILE,
+} from "../../../src/state/startWalCheckpointer.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import { atomOrg, freshHeld } from "../utils/atomFixtures.js";
+
+const quietLogger = { warn: () => {} };
 
 const identity: MeteringIdentity = {
 	orgId: "org_1",
@@ -572,5 +579,199 @@ describe("a customer's version", () => {
 			reopened.readSubject({ customerId: "cus_1", entityId: "ent_1" }),
 		).toMatchObject({ logOffset: 100n, customerVersion: 0n });
 		reopened.close();
+	});
+});
+
+describe("a slot file's footprint", () => {
+	const pragma = (databasePath: string, name: string) => {
+		const database = new Database(databasePath, { readonly: true });
+		const value = database.query(`PRAGMA ${name}`).get() as Record<
+			string,
+			number
+		>;
+		database.close();
+		return value[name];
+	};
+
+	test("a connection keeps 256 KiB of its file in memory, its log is cut back to 1 MiB after a checkpoint, and freed pages can be given back", () => {
+		const databasePath = slotPath();
+		const database = openSlotDatabase({ databasePath });
+
+		expect(database.query("PRAGMA cache_size").get()).toEqual({
+			cache_size: -256n,
+		});
+		expect(database.query("PRAGMA journal_size_limit").get()).toEqual({
+			journal_size_limit: BigInt(1024 * 1024),
+		});
+		expect(pragma(databasePath, "auto_vacuum")).toBe(2);
+		database.close();
+	});
+
+	test("a file of another version is rebuilt so its freed pages can be given back too", () => {
+		const databasePath = slotPath();
+		const older = new Database(databasePath, { create: true });
+		older.run("CREATE TABLE subject_states (customer_id TEXT PRIMARY KEY)");
+		older.run("PRAGMA user_version = 1");
+		older.close();
+		expect(pragma(databasePath, "auto_vacuum")).toBe(0);
+
+		openSqliteStore({ databasePath, held: freshHeld() }).close();
+
+		expect(pragma(databasePath, "auto_vacuum")).toBe(2);
+	});
+
+	const manyAt = ({ count, readAt }: { count: number; readAt: number }) =>
+		Array.from({ length: count }, (_, i) => ({
+			...subjectAt({ logOffset: 1n, readAt }),
+			state: createSubjectState({
+				identity: { ...identity, customerId: `cus_${readAt}_${i}` },
+				customerEntitlements: Array.from({ length: 40 }, (_, j) => ({
+					id: `ce_${i}_${j}`,
+					internal_customer_id: "c",
+					internal_entity_id: null,
+					internal_feature_id: `f_${j}`,
+					customer_product_id: "cp",
+					entitlement_id: `e_${j}`,
+					created_at: 1,
+					unlimited: false,
+					balance: 1000 - j,
+					additional_balance: 0,
+					usage_allowed: false,
+					reset_cycle_anchor: null,
+					next_reset_at: null,
+					adjustment: 0,
+					expires_at: null,
+					external_id: null,
+				})),
+			}),
+		}));
+
+	test("drops whole customers written before a point, oldest write first, and their held copies with them", () => {
+		const databasePath = slotPath();
+		let at = 1000;
+		const held = freshHeld();
+		const sqliteStore = openSqliteStore({ databasePath, held, now: () => at });
+		sqliteStore.setSubjects({
+			subjects: [
+				subjectAt({ logOffset: 1n }),
+				{ ...subjectAt({ logOffset: 1n, entityId: "ent_1" }) },
+			],
+		});
+		at = 2000;
+		sqliteStore.setSubject({
+			subject: {
+				...subjectAt({ logOffset: 1n }),
+				state: createSubjectState({
+					identity: { ...identity, customerId: "cus_2" },
+				}),
+			},
+		});
+		expect(held.size).toBe(3);
+
+		const dropped = sqliteStore.dropCustomersWrittenBefore({
+			before: 1500,
+			limit: 10,
+		});
+
+		expect(dropped).toEqual({ customers: 1, rows: 2 });
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toBeNull();
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: "ent_1" }),
+		).toBeNull();
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_2", entityId: null }),
+		).not.toBeNull();
+		expect(sqliteStore.countSubjects()).toBe(1);
+		expect(held.size).toBe(1);
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
+		).toEqual({ customers: 0, rows: 0 });
+		sqliteStore.close();
+	});
+
+	test("a customer with any row written since the point stays whole: an old customer row under a fresh entity is not dropped", () => {
+		const databasePath = slotPath();
+		let at = 1000;
+		const sqliteStore = openSqliteStore({
+			databasePath,
+			held: freshHeld(),
+			now: () => at,
+		});
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		at = 2000;
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 2n, entityId: "ent_1" }),
+		});
+
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
+		).toEqual({ customers: 0, rows: 0 });
+		expect(sqliteStore.countSubjects()).toBe(2);
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 2500, limit: 10 }),
+		).toEqual({ customers: 1, rows: 2 });
+		sqliteStore.close();
+	});
+
+	test("the limit bounds the customers dropped per call, so a call's cost is bounded whatever the file holds", () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+			now: () => 1000,
+		});
+		sqliteStore.setSubjects({ subjects: manyAt({ count: 50, readAt: 1 }) });
+
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 2000, limit: 20 })
+				.customers,
+		).toBe(20);
+		expect(sqliteStore.countSubjects()).toBe(30);
+		sqliteStore.close();
+	});
+
+	test("dropping customers gives the space back to the volume once the main thread checkpoints the file", () => {
+		const databasePath = slotPath();
+		const sqliteStore = openSqliteStore({
+			databasePath,
+			held: freshHeld(),
+			now: () => 1000,
+		});
+		const checkpointer = startWalCheckpointer({
+			dataDir: join(databasePath, ".."),
+			logger: quietLogger,
+		});
+		// The main thread's checkpointer reaches each file once per this many ticks.
+		const checkpointEveryFile = () => {
+			for (let tick = 0; tick < TICKS_PER_FILE; tick++)
+				checkpointer.checkpoint();
+		};
+		sqliteStore.setSubjects({ subjects: manyAt({ count: 400, readAt: 1 }) });
+		sqliteStore.setSubjects({ subjects: manyAt({ count: 400, readAt: 2 }) });
+		checkpointEveryFile();
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		const onVolume = () =>
+			[databasePath, `${databasePath}-wal`].reduce(
+				(sum, path) => sum + statSync(path).size,
+				0,
+			);
+		const full = onVolume();
+		expect(full).toBeGreaterThan(10_000_000);
+		expect(sqliteStore.dataBytes()).toBeGreaterThan(10_000_000);
+
+		while (
+			sqliteStore.dropCustomersWrittenBefore({ before: 2000, limit: 100 })
+				.customers > 0
+		);
+		checkpointEveryFile();
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
+
+		expect(sqliteStore.countSubjects()).toBe(1);
+		expect(sqliteStore.dataBytes()).toBeLessThan(100_000);
+		// What is left on the volume is a near-empty file and a log cut back to its 1 MiB limit at most.
+		expect(onVolume()).toBeLessThan(1.5 * 1024 * 1024);
+		checkpointer.stop();
+		sqliteStore.close();
 	});
 });

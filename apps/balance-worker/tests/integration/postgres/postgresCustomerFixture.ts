@@ -474,9 +474,11 @@ export function openFixturePostgres({
 			databaseUrl,
 			applicationName: "balance-worker-test",
 			maxConnections: 2,
-			connectTimeout: 10,
-			idleTimeout: 30,
-			queryTimeout: 30,
+			minConnections: 0,
+			connectTimeoutMs: 10_000,
+			idleTimeoutMs: 30_000,
+			queryTimeoutMs: 30_000,
+			statementTimeoutMs: null,
 		},
 	});
 }

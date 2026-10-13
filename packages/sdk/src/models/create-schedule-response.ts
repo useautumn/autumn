@@ -11,12 +11,15 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
+  PhaseAddItemCreditSchemaUnion2,
+  PhaseAddItemCreditSchemaUnion2$Outbound,
+  PhaseAddItemCreditSchemaUnion2$outboundSchema,
   PhaseAddItemExpiry2,
   PhaseAddItemExpiry2$Outbound,
   PhaseAddItemExpiry2$outboundSchema,
-  PhaseAddItemFeatureOverride2,
-  PhaseAddItemFeatureOverride2$Outbound,
-  PhaseAddItemFeatureOverride2$outboundSchema,
+  PhaseAddItemMarkups2,
+  PhaseAddItemMarkups2$Outbound,
+  PhaseAddItemMarkups2$outboundSchema,
   PhaseAddItemPrice2,
   PhaseAddItemPrice2$Outbound,
   PhaseAddItemPrice2$outboundSchema,
@@ -53,7 +56,7 @@ import {
   UnscheduledPlan,
   UnscheduledPlan$Outbound,
   UnscheduledPlan$outboundSchema,
-} from "./phase-add-item-feature-override-2.js";
+} from "./phase-add-item-markups-2.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   CreateScheduleAttachDiscount,
@@ -69,7 +72,21 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./unscheduled-plan-upsert-license-proration.js";
+} from "./unscheduled-plan-upsert-license-on-decrease.js";
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type PhaseAddItemFeatureOverride2 = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?: Array<PhaseAddItemCreditSchemaUnion2> | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: PhaseAddItemMarkups2 | undefined;
+};
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
@@ -1473,6 +1490,40 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
+export type PhaseAddItemFeatureOverride2$Outbound = {
+  credit_schema?: Array<PhaseAddItemCreditSchemaUnion2$Outbound> | undefined;
+  markups?: PhaseAddItemMarkups2$Outbound | undefined;
+};
+
+/** @internal */
+export const PhaseAddItemFeatureOverride2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemFeatureOverride2$Outbound,
+  PhaseAddItemFeatureOverride2
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(
+      z.array(PhaseAddItemCreditSchemaUnion2$outboundSchema),
+    ),
+    markups: z.optional(PhaseAddItemMarkups2$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function phaseAddItemFeatureOverride2ToJSON(
+  phaseAddItemFeatureOverride2: PhaseAddItemFeatureOverride2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemFeatureOverride2$outboundSchema.parse(
+      phaseAddItemFeatureOverride2,
+    ),
+  );
+}
+
+/** @internal */
 export type PhaseAddItemPlanItem2$Outbound = {
   threshold_billing?: PhaseAddItemThresholdBilling2$Outbound | null | undefined;
   feature_id: string;
@@ -1505,7 +1556,9 @@ export const PhaseAddItemPlanItem2$outboundSchema: z.ZodMiniType<
     proration: z.optional(PhaseAddItemProration2$outboundSchema),
     rollover: z.optional(PhaseAddItemRollover2$outboundSchema),
     expiry: z.optional(PhaseAddItemExpiry2$outboundSchema),
-    featureOverride: z.optional(PhaseAddItemFeatureOverride2$outboundSchema),
+    featureOverride: z.optional(
+      z.lazy(() => PhaseAddItemFeatureOverride2$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

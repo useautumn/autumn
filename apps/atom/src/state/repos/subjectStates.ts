@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { HeldSubject } from "../types/heldSubject.js";
-import type { StoredSubject } from "../types/storedSubject.js";
+import type { SubjectRow } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
 
@@ -26,7 +26,7 @@ export type SubjectSlice = {
 
 /** One subject to write; `sliceStored` when its slice row already holds this slice, so only the state row is written. */
 export type SubjectWrite = {
-	subject: StoredSubject;
+	subject: SubjectRow;
 	slice: SubjectSlice;
 	sliceStored: boolean;
 };
@@ -37,7 +37,7 @@ const textBytes = (texts: string[]): number =>
 export const subjectToSlice = ({
 	subject,
 }: {
-	subject: StoredSubject;
+	subject: SubjectRow;
 }): SubjectSlice => {
 	const catalogJson = JSON.stringify(subject.catalog);
 	const orgJson = JSON.stringify(subject.org);
@@ -87,6 +87,21 @@ export const readSubjectVersion = ({
 	return row ? { readAt: Number(row.readAt), logOffset: row.logOffset } : null;
 };
 
+/** The entities of a customer the file holds a row for, its own row aside. */
+export const listEntityIds = ({
+	ctx,
+	customerId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+}): string[] =>
+	ctx.sqliteDb
+		.query<{ entityId: string }, { customerId: string }>(
+			"SELECT entity_id AS entityId FROM subject_states WHERE customer_id = $customerId AND entity_id != ''",
+		)
+		.all({ customerId })
+		.map(({ entityId }) => entityId);
+
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
@@ -132,7 +147,7 @@ export type SubjectCursor = {
 };
 
 /** A stored subject with when this file wrote it, by this replica's clock: what a copy to a peer is ordered by. */
-export type AppliedSubject = { subject: StoredSubject; appliedAt: number };
+export type AppliedSubject = { subject: SubjectRow; appliedAt: number };
 
 /**
  * Subjects this file wrote at or after `after` (null: all of them), oldest write first, ties broken by key, after
@@ -393,3 +408,57 @@ const upsertSubject = ({
 		customerVersion: written.customerVersion,
 	};
 };
+
+/** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
+export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
+	const pages = ctx.sqliteDb
+		.query<{ page_count: bigint }, []>("PRAGMA page_count")
+		.get();
+	const size = ctx.sqliteDb
+		.query<{ page_size: bigint }, []>("PRAGMA page_size")
+		.get();
+	return Number(pages?.page_count ?? 0n) * Number(size?.page_size ?? 0n);
+};
+
+/** The keys of the rows one drop removed, so the copies held of them go too. */
+export type DroppedRows = { customerId: string; entityId: string }[];
+
+/**
+ * Deletes every row of up to `limit` customers whose own row, rewritten by every push of the customer or an entity, was
+ * written before `before`, oldest first. A customer goes whole, its entities with it, so no entity outlives the rows it is
+ * read beside; one with any row copied since (a peer's catch-up writes a part alone) stays.
+ */
+export const deleteCustomersWrittenBefore = ({
+	ctx,
+	before,
+	limit,
+}: {
+	ctx: SlotContext;
+	before: number;
+	limit: number;
+}): DroppedRows =>
+	ctx.sqliteDb.transaction((): DroppedRows => {
+		const customers = ctx.sqliteDb
+			.query<{ customerId: string }, { before: number; limit: number }>(`
+				SELECT own.customer_id AS customerId FROM subject_states AS own
+				WHERE own.entity_id = '' AND own.applied_at < $before
+					AND NOT EXISTS (SELECT 1 FROM subject_states AS fresh
+						WHERE fresh.customer_id = own.customer_id AND fresh.applied_at >= $before)
+				ORDER BY own.applied_at ASC LIMIT $limit
+			`)
+			.all({ before, limit });
+		if (customers.length === 0) return [];
+		const ids = JSON.stringify(customers.map(({ customerId }) => customerId));
+		const inCustomers = "customer_id IN (SELECT value FROM json_each($ids))";
+		const dropped = ctx.sqliteDb
+			.query<{ customerId: string; entityId: string }, { ids: string }>(
+				`DELETE FROM subject_states WHERE ${inCustomers} RETURNING customer_id AS customerId, entity_id AS entityId`,
+			)
+			.all({ ids });
+		ctx.sqliteDb
+			.query(`DELETE FROM subject_slices WHERE ${inCustomers}`)
+			.run({ ids });
+		// Freed pages go back to the volume once the main thread checkpoints the file.
+		ctx.sqliteDb.run("PRAGMA incremental_vacuum");
+		return dropped;
+	})();

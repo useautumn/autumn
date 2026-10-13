@@ -9,6 +9,7 @@ import {
 	shouldCreateInvoiceItem,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
@@ -148,11 +149,6 @@ export const handleProratedUpgrade = async ({
 		cusPrice.price.proration_config?.on_increase ||
 		OnIncrease.ProrateImmediately;
 
-	const newRoundedUsage = roundUsage({
-		usage: newUsage,
-		price: cusPrice.price,
-	});
-
 	let invoice = null;
 	if (shouldCreateInvoiceItem(onIncrease) && sub.status !== "trialing") {
 		invoice = await createUpgradeProrationInvoice({
@@ -163,7 +159,8 @@ export const handleProratedUpgrade = async ({
 			subItem,
 			newPrice,
 			prevPrice,
-			newRoundedUsage,
+			newUsage,
+			allowance: cusEnt.entitlement.allowance ?? 0,
 			feature,
 			product,
 			config,
@@ -177,7 +174,11 @@ export const handleProratedUpgrade = async ({
 	});
 
 	const newQuantity = roundUsage({
-		usage: newUsage,
+		usage: allocatedUsageToStripeUsage({
+			price: cusPrice.price,
+			usage: newUsage,
+			allowance: cusEnt.entitlement.allowance ?? 0,
+		}),
 		price: cusPrice.price,
 	});
 

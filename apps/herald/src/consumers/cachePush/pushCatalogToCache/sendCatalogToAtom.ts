@@ -1,5 +1,6 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import { atomPushFailureLevel } from "../../../atom/atomPushFailureLevel.js";
+import { AtomQueueBackoffError } from "../../../atom/queue/createAtomPushQueue.js";
 import type { AtomConnection } from "../../../atom/types/atomClient.js";
 import type { CatalogPushContext } from "../types/catalogPushContext.js";
 
@@ -21,6 +22,7 @@ export const sendCatalogToAtom = async ({
 		const atomClient = ctx.getAtomClient({ connection: atomConnection });
 		await atomClient.setCatalog({ rows, readAt });
 	} catch (error) {
+		if (error instanceof AtomQueueBackoffError) return;
 		ctx.logger[atomPushFailureLevel({ atomConnection })](
 			{
 				error,

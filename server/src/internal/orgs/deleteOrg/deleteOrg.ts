@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 import type { DrizzleCli } from "../../../db/initDrizzle";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 import { CusService } from "../../customers/CusService";
@@ -69,10 +70,17 @@ export const deleteOrg = async ({
 		deleteOrgStripeAccounts({ org, logger }),
 	]);
 
-	await CusService.deleteByOrgId({
+	const deleted = await CusService.deleteByOrgId({
 		db,
 		orgId: org.id,
 		env: AppEnv.Sandbox,
+	});
+	await queueBalanceWorkerEvicts({
+		customers: deleted.map(({ id }) => ({
+			orgId: org.id,
+			env: AppEnv.Sandbox,
+			customerId: id,
+		})),
 	});
 
 	if (deleteOrgFromDb) {

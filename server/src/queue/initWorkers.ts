@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import "../sentry.js";
 import { flushErrorReports } from "@autumn/errors";
 import { ms, seconds, withTimeout } from "@autumn/shared";
@@ -627,7 +628,10 @@ export const initWorkers = async ({
 	startupStartedAt: number;
 	queueImplementation: string;
 }) => {
-	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
+	const { db } = initDrizzle({
+		name: "worker",
+		pool: getPostgresPools().worker,
+	});
 	startPgPoolMonitor();
 
 	await initBlueGreen({ db, logger });

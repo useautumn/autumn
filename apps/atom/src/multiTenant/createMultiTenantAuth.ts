@@ -44,6 +44,7 @@ export const createMultiTenantAuth = ({
 	owners,
 	heldSubjects,
 	subjectPulls,
+	now,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
@@ -52,6 +53,8 @@ export const createMultiTenantAuth = ({
 	heldSubjects: HeldSubjects;
 	/** Each folder pulls with its own token hash, read at each pull since a put may re-token it. */
 	subjectPulls: SubjectPulls;
+	/** This replica's clock, stamped on every write. */
+	now?: () => number;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -132,6 +135,7 @@ export const createMultiTenantAuth = ({
 			atomId: held.id,
 			owners,
 			held: heldSubjects,
+			now,
 			pulls: {
 				subjectPulls,
 				tokenHash: () => held.tokenHash,

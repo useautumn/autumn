@@ -9,7 +9,11 @@ import {
 	ATOM_DELETE,
 	ATOM_PUT,
 } from "../../../src/multiTenant/replicateAtoms.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createMultiTenantFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -21,6 +25,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noSubjectPulls,
 } from "../utils/atomFixtures.js";
 import {
@@ -42,6 +47,7 @@ export const TENANT_TOKENS: Record<string, string> = {
 
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
+registry.register(DELETE_PUSH);
 registry.register(CATALOG_PUSH);
 registry.register(ATOM_PUT);
 registry.register(ATOM_DELETE);
@@ -96,9 +102,13 @@ export const createMultiTenantReplica = ({
 			bootedAt: "2026-10-12T00:00:00.000Z",
 			restarts: new Int32Array(1),
 			ready: new Int32Array([ready ? 1 : 0]),
+			threadsReady: new Int32Array([1]),
+			thread: 0,
 			threadStats,
+			dataDir: dataDir,
 		},
 		counters,
+		loop: loopOnTime,
 		replication,
 		peer: { port: PORT },
 		now,

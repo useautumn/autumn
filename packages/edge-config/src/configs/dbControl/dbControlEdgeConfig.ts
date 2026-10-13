@@ -12,16 +12,38 @@ export const DbControlEdgeConfigSchema = z
 				/** Flushes in flight per worker; clamped to the worker's pool size. */
 				concurrency: z.number().int().positive().nullable().default(null),
 				/** How long committed batches gather before one flush; 0 flushes each batch at once. */
-				applyLingerMs: z.number().int().min(0).max(5_000).nullable().default(null),
+				applyLingerMs: z
+					.number()
+					.int()
+					.min(0)
+					.max(5_000)
+					.nullable()
+					.default(null),
+				/** Committed batches one flush takes; the worker clamps it to its unapplied-batch bound. */
+				maxBatchesPerFlush: z
+					.number()
+					.int()
+					.min(1)
+					.max(64)
+					.nullable()
+					.default(null),
 			})
-			.default({ concurrency: null, applyLingerMs: null }),
+			.default({
+				concurrency: null,
+				applyLingerMs: null,
+				maxBatchesPerFlush: null,
+			}),
 	})
 	.strict();
 
 export type DbControlEdgeConfig = z.infer<typeof DbControlEdgeConfigSchema>;
 
 export const defaultDbControlEdgeConfig = (): DbControlEdgeConfig => ({
-	balanceCommitter: { concurrency: null, applyLingerMs: null },
+	balanceCommitter: {
+		concurrency: null,
+		applyLingerMs: null,
+		maxBatchesPerFlush: null,
+	},
 });
 
 export const dbControlEdgeConfig = {

@@ -6,7 +6,11 @@ import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -20,6 +24,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -35,6 +40,7 @@ export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
 
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
+registry.register(DELETE_PUSH);
 registry.register(CATALOG_PUSH);
 
 const cleanups: (() => void)[] = [];
@@ -90,9 +96,13 @@ export const createReplica = ({
 			bootedAt: "2026-10-12T00:00:00.000Z",
 			restarts: new Int32Array(1),
 			ready: readyFlag,
+			threadsReady: new Int32Array([1]),
+			thread: 0,
 			threadStats,
+			dataDir: dataDir,
 		},
 		counters,
+		loop: loopOnTime,
 		replication,
 		peer: { port: PORT },
 		now,

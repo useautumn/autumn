@@ -15,6 +15,7 @@ import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { migrationOpRateRows } from "@/utils/product/featureOverrideRates";
 import {
 	AdditionalCurrenciesHint,
 	getCurrencyChangeStates,
@@ -25,6 +26,7 @@ import {
 	type ItemFilter,
 } from "../operations/operationItemUtils";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
+import { ItemRateChangeRow } from "./ItemRateChangeRow";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 import { formatVersionTransition } from "./versionTransition";
 
@@ -121,7 +123,10 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const planIds = planIdsFromFilter(updateOp.plan_filter);
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
-					const removeItems = customize?.remove_items ?? [];
+					const rateRows = migrationOpRateRows({ op: updateOp, features });
+					const removeItems = (customize?.remove_items ?? []).filter(
+						(_, idx) => !rateRows.mergedRemoveIndices.has(idx),
+					);
 					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];
@@ -213,11 +218,22 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 								/>
 							)}
 
-							{addItems.map((item, idx) => (
-								<AddedItemRow
-									key={`add-${idx}`}
-									item={migrationItemToProductItem(item, features)}
-								/>
+							{rateRows.rows.map((row) => (
+								<ItemRateChangeRow
+									changes={row.changes}
+									key={`add-${row.addIndex}`}
+									updated={row.updated}
+								>
+									<div className="flex-1 min-w-0">
+										<SubscriptionItemRow
+											isCreated={!row.updated}
+											item={migrationItemToProductItem(
+												addItems[row.addIndex],
+												features,
+											)}
+										/>
+									</div>
+								</ItemRateChangeRow>
 							))}
 
 							{upsertLicenses.map((license) => (
