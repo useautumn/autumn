@@ -5,4 +5,6 @@ export type HeldSubject = {
 	subject: StoredSubject;
 	bytes: number;
 	sliceHash: string;
+	/** Run when the copy is dropped for good (not replaced): takes the subject out of the shared store too. */
+	release?: () => void;
 };

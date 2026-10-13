@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
+import { createNativeReadProcessor } from "../processor/createNativeReadProcessor.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
+import { getNativeReadCache } from "../state/nativeSubjects/nativeReadCache.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
@@ -71,13 +73,23 @@ export const openSlots = ({
 		applyPulled: ({ customerId, body }) =>
 			processorFor({ customerId }).setSubject({ customerId, body }),
 	});
+	const readCache = getNativeReadCache();
 	const slots = Array.from({ length: slotCount }, (_, slot): OpenedSlot => {
 		const owner = owners.ownerOf({ slot });
-		if (owner !== owners.index)
+		if (owner !== owners.index) {
+			const ownerProcessor = owners.processorOn({ thread: owner, atomId });
 			return {
 				sqliteStore: null,
-				processor: owners.processorOn({ thread: owner, atomId }),
+				processor: readCache
+					? createNativeReadProcessor({
+							ctx: { catalogStore, logger, subjectPulls },
+							databasePath: slotFilePath({ folder, slot, slotCount }),
+							owner: ownerProcessor,
+							readCache,
+						})
+					: ownerProcessor,
 			};
+		}
 		const sqliteStore = openSqliteStore({
 			databasePath: slotFilePath({ folder, slot, slotCount }),
 			held,

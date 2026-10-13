@@ -25,12 +25,18 @@ export const createHeldSubjects = ({
 	let evicted = 0;
 	let expired = 0;
 
-	function drop(key: string): boolean {
+	function remove(key: string): Entry | undefined {
 		const found = held.get(key);
-		if (!found) return false;
+		if (!found) return undefined;
 		held.delete(key);
 		bytes -= found.bytes;
-		return true;
+		return found;
+	}
+
+	function drop(key: string): boolean {
+		const found = remove(key);
+		found?.release?.();
+		return found !== undefined;
 	}
 
 	function get(key: string): HeldSubject | undefined {
@@ -60,7 +66,7 @@ export const createHeldSubjects = ({
 	}
 
 	function hold({ key, ...entry }: { key: string } & HeldSubject) {
-		drop(key);
+		remove(key);
 		held.set(key, { ...entry, touchedAt: now() });
 		bytes += entry.bytes;
 		expireIdle();

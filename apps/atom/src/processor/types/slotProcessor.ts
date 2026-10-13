@@ -11,6 +11,11 @@ export type SlotProcessorContext = {
 	subjectPulls: FolderSubjectPulls;
 };
 
+/** What deciding a check reads: only a subject's stored copy, so a thread that does not own the slot can decide it too. */
+export type CheckContext = Omit<SlotProcessorContext, "sqliteStore"> & {
+	sqliteStore: Pick<SqliteStore, "readSubject">;
+};
+
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */
 export type CheckAnswer = { json: string; allowed: boolean };
 

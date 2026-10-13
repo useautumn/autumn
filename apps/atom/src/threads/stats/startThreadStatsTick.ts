@@ -1,4 +1,7 @@
+import { nativeReadStats } from "../../processor/createNativeReadProcessor.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
+import { getNativeReadCache } from "../../state/nativeSubjects/nativeReadCache.js";
+import { getNativeSubjects } from "../../state/nativeSubjects/nativeSubjects.js";
 import type { ThreadCounters } from "./threadStats.js";
 
 const TICK_MS = 1000;
@@ -26,6 +29,13 @@ export const startThreadStatsTick = ({
 		counters.set("heldMisses", held.misses);
 		counters.set("heldEvicted", held.evicted);
 		counters.set("heldExpired", held.expired);
+		const readCache = getNativeReadCache();
+		if (!readCache) return;
+		counters.set("nativeAnswered", nativeReadStats.answered);
+		counters.set("nativeHops", nativeReadStats.hops);
+		counters.set("nativeParses", readCache.stats.parses);
+		counters.set("nativeCacheBytes", readCache.bytes);
+		counters.set("nativeStoreBytes", getNativeSubjects()?.bytes ?? 0);
 	}, TICK_MS);
 	timer.unref();
 	return { stop: () => clearInterval(timer) };

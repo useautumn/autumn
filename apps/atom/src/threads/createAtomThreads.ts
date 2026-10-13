@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
+import { createNativeSubjectsStore } from "../state/nativeSubjects/nativeSubjects.js";
 import { getSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
@@ -79,6 +80,10 @@ export const createAtomThreads = ({
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	const readyFlag = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
+	// Outlives any one thread, so a replaced thread's readers still find what its peers own.
+	const nativeStore = env.ATOM_NATIVE_STORE
+		? createNativeSubjectsStore()
+		: null;
 	let stopping = false;
 	let healthLog: { stop(): void } | null = null;
 
@@ -104,6 +109,7 @@ export const createAtomThreads = ({
 				ready: readyFlag,
 				stats,
 				sqliteOpenLock: getSqliteOpenLock(),
+				nativeStore,
 			},
 		});
 		threads.forEach((peer, peerIndex) => {

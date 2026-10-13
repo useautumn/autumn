@@ -31,6 +31,14 @@ export const THREAD_STAT_FIELDS = [
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
+	/** ATOM_NATIVE_STORE: checks of other threads' slots answered here, and those that still went to the owner. */
+	"nativeAnswered",
+	"nativeHops",
+	/** Shared copies parsed on this thread (a version it had not cached), and its cache's row-text bytes. */
+	"nativeParses",
+	"nativeCacheBytes",
+	/** The shared store's row-text bytes, the same on every thread. */
+	"nativeStoreBytes",
 ] as const;
 
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];
