@@ -6,13 +6,18 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@autumn/ui";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { billingUnitsLabel } from "../../utils/billingUnitsUtils";
 
-export function BillingUnits() {
+/** `asColumnHeader` renders the control as plain header text with a chevron, for the tier table. */
+export function BillingUnits({
+	asColumnHeader = false,
+}: {
+	asColumnHeader?: boolean;
+}) {
 	const { features } = useFeaturesQuery();
 	const [open, setOpen] = useState(false);
 	const { item, setItem } = useProductItemContext();
@@ -38,29 +43,35 @@ export function BillingUnits() {
 		capitalize: false,
 	});
 
-	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
+	const label = billingUnitsLabel({ item, features });
 
 	return (
-		<div
-			className={cn(
-				"flex min-w-0 overflow-hidden",
-				hasMultipleTiers && "shrink-0",
-			)}
-		>
+		<div className="flex min-w-0 overflow-hidden">
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger asChild>
-					<Button
-						variant="muted"
-						className={cn(
-							"min-w-0 max-w-full justify-start overflow-hidden text-tertiary-foreground",
-							hasMultipleTiers && "max-w-20",
-						)}
+				{asColumnHeader ? (
+					<PopoverTrigger
+						render={
+							<button
+								type="button"
+								className="flex min-w-0 cursor-pointer items-center gap-1 text-tertiary-foreground text-xs outline-none hover:text-foreground focus-visible:text-foreground"
+							/>
+						}
 					>
-						<span className="min-w-0 truncate text-xs">
-							{billingUnitsLabel({ item, features })}
+						<span className="min-w-0 truncate first-letter:uppercase">
+							{label}
 						</span>
-					</Button>
-				</PopoverTrigger>
+						<CaretDownIcon className="size-2.5 shrink-0 opacity-60" />
+					</PopoverTrigger>
+				) : (
+					<PopoverTrigger asChild>
+						<Button
+							variant="muted"
+							className="min-w-0 max-w-full justify-start overflow-hidden text-tertiary-foreground"
+						>
+							<span className="min-w-0 truncate text-xs">{label}</span>
+						</Button>
+					</PopoverTrigger>
+				)}
 				<PopoverContent className="max-w-[200px] pt-2" align="start">
 					<LabelInput
 						label={`Billing units (${unitName})`}

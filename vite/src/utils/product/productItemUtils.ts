@@ -9,6 +9,7 @@ import {
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
+import { stripTierUids } from "@/views/products/plan/utils/tierUids";
 import { notNullish, nullish } from "../genUtils";
 import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
 import { itemToUsageType } from "./productItemUtils/convertItem";
@@ -149,7 +150,10 @@ export const stripEditorFields = ({
 }: {
 	items: ProductItem[] | undefined;
 }): ProductItem[] | undefined =>
-	items?.map(({ _uid, ...item }) => item as ProductItem);
+	items?.map(({ _uid, ...item }) => ({
+		...item,
+		tiers: item.tiers ? stripTierUids(item.tiers) : item.tiers,
+	})) as ProductItem[] | undefined;
 
 export const getPrepaidItems = (product: ProductV2 | undefined) => {
 	if (!product) return [];

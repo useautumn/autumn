@@ -1,4 +1,4 @@
-import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
+import { FeatureType, isAnyCreditSystem } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -17,17 +17,11 @@ import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
-import {
-	itemToVolumePricingModeOnOpen,
-	type VolumePricingMode,
-} from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
 import { IncludedUsage } from "./IncludedUsage";
 import { PricedFeatureSettings } from "./PricedFeatureSettings";
-import { PriceSectionTitle } from "./PriceSectionTitle";
 import { PriceTiers } from "./PriceTiers";
 import { SheetFooterActions } from "./SheetFooterActions";
 import { UsageReset } from "./UsageReset";
@@ -44,41 +38,6 @@ export function EditPlanFeatureSheet({
 	const hasItemChanges = useHasItemChanges();
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
-
-	// The toggle only picks which field the tier inputs edit; it never moves stored prices.
-	const [volumePricingMode, setVolumePricingMode] = useState(() =>
-		itemToVolumePricingModeOnOpen({ item }),
-	);
-
-	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
-	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
-	const showVolumePricingToggle = isVolumeBased && isMultiTier;
-
-	const handleTierBehaviorChange = (val: string) => {
-		const newBehavior = val as TierBehavior;
-		const newItem = { ...item, tier_behavior: newBehavior };
-
-		if (newBehavior !== TierBehavior.VolumeBased) {
-			if (newItem.tiers) {
-				newItem.tiers = newItem.tiers.map((tier) => ({
-					...tier,
-					flat_amount: undefined,
-					additional_currencies: migrateTierCurrenciesForMode({
-						entries: tier.additional_currencies,
-						mode: "per_unit",
-					}),
-				}));
-			}
-		}
-
-		if (newBehavior !== TierBehavior.VolumeBased)
-			setVolumePricingMode("per_unit");
-		setItem(newItem);
-	};
-
-	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		setVolumePricingMode(mode);
-	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
 		if (oldId !== newId && product.items) {
@@ -176,30 +135,9 @@ export function EditPlanFeatureSheet({
 						)}
 
 						{isFeaturePrice && (
-							<SheetSection
-								title={
-									item.tiers && item.tiers.length > 1 ? (
-										<PriceSectionTitle
-											tierBehavior={
-												item.tier_behavior ?? TierBehavior.Graduated
-											}
-											volumePricingMode={volumePricingMode}
-											showVolumePricingToggle={showVolumePricingToggle}
-											onTierBehaviorChange={handleTierBehaviorChange}
-											onVolumePricingModeChange={handleVolumePricingModeChange}
-										/>
-									) : (
-										"Price"
-									)
-								}
-								className="space-y-3"
-							>
+							<SheetSection title="Price" className="space-y-3">
 								<div>
-									<PriceTiers
-										volumePricingMode={
-											showVolumePricingToggle ? volumePricingMode : undefined
-										}
-									/>
+									<PriceTiers />
 									<UsageReset showBillingLabel={true} />
 								</div>
 								<PricedFeatureSettings />

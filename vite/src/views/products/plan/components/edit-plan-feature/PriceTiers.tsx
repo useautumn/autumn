@@ -1,76 +1,26 @@
-import { type PriceTier, TierBehavior } from "@autumn/shared";
-import { IconButton, Input } from "@autumn/ui";
-import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { IconButton } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
-import {
-	addTier,
-	applyTierToDisplayValue,
-	removeTier,
-	tierToDisplay,
-	updateTier,
-	type VolumePricingMode,
-} from "../../utils/tierUtils";
+import { addTier, updateTierPrice } from "../../utils/tierUtils";
 import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
 import {
 	amountDisplayValue,
 	CurrencyAmountInput,
 } from "../shared/CurrencyAmountInput";
-import { TieredCurrenciesEditor } from "../shared/TieredCurrenciesEditor";
 import { BillingUnits } from "./BillingUnits";
+import { TieredPriceEditor } from "./TieredPriceEditor";
 
-const TierToInput = ({ index }: { index: number }) => {
-	const { item, setItem } = useProductItemContext();
-	const tiers = item?.tiers || [];
-	const includedUsage =
-		typeof item?.included_usage === "number" ? item?.included_usage : 0;
-
-	const isInfinite = index === tiers.length - 1;
-
-	const commitDisplayTo = (value: string) => {
-		setItem(applyTierToDisplayValue({ item, index, displayValue: value }));
-	};
-
-	const [tierVal, setTierVal] = useState<string>(
-		tierToDisplay({ tier: tiers[index], includedUsage }),
-	);
-
-	return (
-		<Input
-			value={tierVal}
-			onBlur={() => commitDisplayTo(tierVal)}
-			onChange={(e) => {
-				setTierVal(e.target.value);
-				commitDisplayTo(e.target.value);
-			}}
-			className="w-full"
-			placeholder={isInfinite ? "∞" : "100"}
-			inputMode="decimal"
-			disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
-		/>
-	);
-};
-
-export function PriceTiers({
-	volumePricingMode,
-}: {
-	volumePricingMode?: VolumePricingMode;
-}) {
+export function PriceTiers() {
 	const { item, setItem } = useProductItemContext();
 	const { org } = useOrg();
 	const currency = org?.default_currency?.toUpperCase() ?? "USD";
 
 	if (!item) return null;
 
-	const tiers = item.tiers || [];
-	const includedUsage = item.included_usage || 0;
-
-	// Only show pricing UI if billing type is "priced" (has tiers)
-	if (!tiers || tiers.length === 0) {
-		return null;
-	}
+	const tiers = item.tiers ?? [];
+	if (tiers.length === 0) return null;
 
 	// Simple single tier UI - just amount input with billing units
 	if (tiers.length === 1) {
@@ -84,13 +34,16 @@ export function PriceTiers({
 						currencyCode={currency}
 						displayValue={amountDisplayValue(firstTier.amount)}
 						onRawChange={(raw) =>
-							updateTier({
-								item,
-								setItem,
-								index: 0,
-								field: "amount",
-								value: raw,
-							})
+							setItem(
+								updateTierPrice({
+									item,
+									index: 0,
+									currency,
+									baseCurrency: currency,
+									field: "amount",
+									value: raw,
+								}),
+							)
 						}
 					/>
 
@@ -135,76 +88,5 @@ export function PriceTiers({
 		);
 	}
 
-	// Multi-tier UI - full tier management
-	const isFlatMode = volumePricingMode === "flat";
-	const amountField = isFlatMode ? "flat_amount" : "amount";
-
-	// Volume bills every unit at one tier, so graduated "then" wording doesn't apply.
-	const tierLabel = (index: number) => {
-		if (item.tier_behavior === TierBehavior.VolumeBased) return "usage up to";
-		if (Number(includedUsage) === 0 && index === 0) return "first";
-		return "then, up to";
-	};
-
-	return (
-		<div className="space-y-2">
-			{tiers.map((tier: PriceTier, index: number) => {
-				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
-
-				return (
-					<div key={`tier-${index}`} className="flex gap-2 w-full items-center">
-						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
-							{tierLabel(index)}
-						</span>
-
-						<TierToInput index={index} />
-
-						<CurrencyAmountInput
-							className="min-w-0 w-26 shrink-0"
-							currencyCode={currency}
-							displayValue={amountDisplayValue(amountValue)}
-							onRawChange={(raw) =>
-								updateTier({
-									item,
-									setItem,
-									index,
-									field: amountField,
-									value: raw,
-								})
-							}
-						/>
-
-						{!isFlatMode && <BillingUnits />}
-
-						<div className="flex items-center gap-1 shrink-0">
-							<IconButton
-								variant="muted"
-								onClick={() => removeTier({ item, setItem, index })}
-								icon={<TrashIcon size={10} />}
-								className="p-1 text-tertiary-foreground hover:text-red-500"
-							/>
-						</div>
-					</div>
-				);
-			})}
-			<IconButton
-				variant="muted"
-				className="w-full text-tertiary-foreground text-xs"
-				size="sm"
-				onClick={() => addTier({ item, setItem })}
-				icon={<PlusIcon size={10} />}
-			>
-				Add Tier
-			</IconButton>
-
-			{org?.config?.multi_currency && (
-				<TieredCurrenciesEditor
-					amountField={amountField}
-					baseCurrency={currency}
-					item={item}
-					onItemChange={setItem}
-				/>
-			)}
-		</div>
-	);
+	return <TieredPriceEditor baseCurrency={currency} />;
 }

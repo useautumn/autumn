@@ -8,9 +8,19 @@ import {
 	TierInfinite,
 	tiersToVolumeTierPricing,
 } from "@autumn/shared";
-import { migrateTierCurrenciesForMode } from "./currencyUtils";
+import {
+	migrateTierCurrenciesForMode,
+	tierChargesFlatFee,
+	updateTierCurrencyAmount,
+} from "./currencyUtils";
+import {
+	type EditorTier,
+	newTierUid,
+	stripTierUids,
+	withTierUids,
+} from "./tierUids";
 
-const itemToIncludedUsage = (item: ProductItem): number =>
+export const itemToIncludedUsage = (item: ProductItem): number =>
 	typeof item.included_usage === "number" ? item.included_usage : 0;
 
 export const tierToDisplay = ({
@@ -62,23 +72,27 @@ export const addTier = ({
 			],
 		});
 	} else {
-		// Adding to existing multi-tier setup
-		const newTiers = [...item.tiers];
-		const lastTier = newTiers[newTiers.length - 1];
-
-		// Set previous last tier to a default value if it was infinite
-		if (lastTier.to === Infinite) {
-			const prevTierTo = newTiers[newTiers.length - 2]?.to;
-			lastTier.to = (typeof prevTierTo === "number" ? prevTierTo : 0) + 100;
-		}
-
-		// Add new infinite tier
-		newTiers.push({
+		// The old last tier gets a bound 100 past the one before it.
+		const tiers = withTierUids(item).tiers ?? [];
+		const lastTier = tiers[tiers.length - 1];
+		const prevTierTo = tiers[tiers.length - 2]?.to;
+		const boundedLastTier =
+			lastTier.to === Infinite
+				? {
+						...lastTier,
+						to: (typeof prevTierTo === "number" ? prevTierTo : 0) + 100,
+					}
+				: lastTier;
+		const newTier: EditorTier = {
 			to: Infinite,
 			amount: 0,
 			additional_currencies: zeroedCurrencyEntries(lastTier),
+			_uid: newTierUid(),
+		};
+		setItem({
+			...item,
+			tiers: [...tiers.slice(0, -1), boundedLastTier, newTier],
 		});
-		setItem({ ...item, tiers: newTiers });
 	}
 };
 
@@ -97,13 +111,12 @@ export const removeTier = ({
 		return;
 	}
 
-	const newTiers = [...item.tiers];
-	newTiers.splice(index, 1);
-
-	// Ensure last tier is always infinite
-	if (newTiers.length > 0) {
-		newTiers[newTiers.length - 1].to = Infinite;
-	}
+	// The last remaining tier is always unbounded.
+	const kept = (withTierUids(item).tiers ?? []).filter((_, i) => i !== index);
+	const newTiers = kept.map(
+		(tier, i): EditorTier =>
+			i === kept.length - 1 ? { ...tier, to: Infinite } : tier,
+	);
 
 	const remaining = { ...item, tiers: newTiers };
 	if (newTiers.length > 1) {
@@ -111,23 +124,11 @@ export const removeTier = ({
 		return;
 	}
 
-	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee,
-	// so drop both rather than show volume pricing that won't save.
-	const [onlyTier] = newTiers;
+	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee.
 	setItem({
 		...remaining,
+		tiers: stripTierUids(newTiers).map(tierToPerUnit),
 		tier_behavior: undefined,
-		tiers: [
-			{
-				...onlyTier,
-				amount: onlyTier.amount || (onlyTier.flat_amount ?? 0),
-				flat_amount: undefined,
-				additional_currencies: migrateTierCurrenciesForMode({
-					entries: onlyTier.additional_currencies,
-					mode: "per_unit",
-				}),
-			},
-		],
 	});
 };
 
@@ -151,83 +152,104 @@ export const applyTierToDisplayValue = ({
 	const internalTo = parsed - includedUsage;
 	if (item.tiers[index]?.to === internalTo) return item;
 
-	const newTiers = [...item.tiers];
-	newTiers[index] = { ...newTiers[index], to: internalTo };
-	return { ...item, tiers: newTiers };
+	return mapTier({ item, index, fn: (tier) => ({ ...tier, to: internalTo }) });
 };
 
-export const updateTier = ({
+const parseAmount = (value: string) => {
+	const parsed = Number.parseFloat(value);
+	return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+/** A tier keeps a base flat fee whenever any currency charges one, so the save can't strip it. */
+const withFlatFeePresence = (tier: PriceTier): PriceTier => ({
+	...tier,
+	flat_amount: tierChargesFlatFee(tier) ? (tier.flat_amount ?? 0) : undefined,
+});
+
+const mapTier = ({
 	item,
-	setItem,
 	index,
+	fn,
+}: {
+	item: ProductItem;
+	index: number;
+	fn: (tier: PriceTier) => PriceTier;
+}): ProductItem => ({
+	...item,
+	tiers: item.tiers?.map((tier, i) => (i === index ? fn(tier) : tier)),
+});
+
+/** Writes one price cell; `currency` is the tab being edited, base when it matches the org's. */
+export const updateTierPrice = ({
+	item,
+	index,
+	currency,
+	baseCurrency,
 	field,
 	value,
 }: {
 	item: ProductItem;
-	setItem: (item: ProductItem) => void;
 	index: number;
-	field: "to" | "amount" | "flat_amount";
+	currency: string;
+	baseCurrency: string;
+	field: "amount" | "flat_amount";
 	value: string;
-}) => {
-	if (!item.tiers) return;
+}): ProductItem => {
+	if (!item.tiers?.[index]) return item;
 
-	const newTiers = [...item.tiers];
-	if (field === "to") {
-		// Don't allow updating the last tier's "to" value - it must always be Infinite
-		if (index === newTiers.length - 1) {
-			return;
-		}
-
-		// Handle empty string, infinity, or numeric values
-		let numValue: number | typeof Infinite;
-		if (value === "" || value === "∞") {
-			numValue = value === "" ? 0 : Infinite;
-		} else {
-			const parsed = parseFloat(value);
-			numValue = Number.isNaN(parsed) ? 0 : parsed;
-		}
-		newTiers[index] = { ...newTiers[index], to: numValue };
-
-		// Update next tier's "to" to match, but ensure last tier stays Infinite
-		if (newTiers[index + 1]) {
-			if (index + 1 === newTiers.length - 1) {
-				// If next tier is the last tier, keep it as Infinite
-				newTiers[index + 1].to = Infinite;
-			} else {
-				newTiers[index + 1].to = numValue;
-			}
-		}
-	} else if (field === "amount" || field === "flat_amount") {
-		// Handle empty string or numeric values
-		let numValue: number;
-		if (value === "") {
-			numValue = 0;
-		} else {
-			const parsed = parseFloat(value);
-			numValue = Number.isNaN(parsed) ? 0 : parsed;
-		}
-		newTiers[index] = { ...newTiers[index], [field]: numValue };
-	}
-	setItem({ ...item, tiers: newTiers });
+	const isBaseCurrency = currency.toLowerCase() === baseCurrency.toLowerCase();
+	const edited = isBaseCurrency
+		? mapTier({
+				item,
+				index,
+				fn: (tier) => ({ ...tier, [field]: parseAmount(value) }),
+			})
+		: updateTierCurrencyAmount({
+				item,
+				tierIndex: index,
+				code: currency,
+				field,
+				value,
+			});
+	if (field === "amount") return edited;
+	return mapTier({ item: edited, index, fn: withFlatFeePresence });
 };
 
-export type VolumePricingMode = "flat" | "per_unit";
-
-/** The mode an item opens in: Flat only when no tier has a unit rate, so mixed tiers show
- * their rates. Switching modes later only changes which field the inputs edit. */
-export const itemToVolumePricingModeOnOpen = ({
+/** Graduated pricing has no flat fees, so switching to it drops them. */
+export const itemToTierBehavior = ({
 	item,
+	tierBehavior,
 }: {
-	item: ProductItem | null | undefined;
-}): VolumePricingMode => {
-	const tiers = item?.tiers ?? [];
-	if (item?.tier_behavior !== TierBehavior.VolumeBased) return "per_unit";
-
-	const hasNoUnitRates = tiers.every((tier) => !tier.amount);
-	const hasFlatField = tiers.some((tier) => tier.flat_amount != null);
-	if (hasNoUnitRates && hasFlatField) return "flat";
-	return "per_unit";
+	item: ProductItem;
+	tierBehavior: TierBehavior;
+}): ProductItem => {
+	if (tierBehavior === TierBehavior.VolumeBased || !item.tiers) {
+		return { ...item, tier_behavior: tierBehavior };
+	}
+	return {
+		...item,
+		tier_behavior: tierBehavior,
+		tiers: item.tiers.map((tier) => ({
+			...tier,
+			flat_amount: undefined,
+			additional_currencies: migrateTierCurrenciesForMode({
+				entries: tier.additional_currencies,
+				mode: "per_unit",
+			}),
+		})),
+	};
 };
+
+/** A single tier saves as a plain per-unit price, so a flat-only tier keeps its fee as the rate. */
+const tierToPerUnit = (tier: PriceTier): PriceTier => ({
+	...tier,
+	amount: tier.amount || tier.flat_amount || 0,
+	flat_amount: undefined,
+	additional_currencies: migrateTierCurrenciesForMode({
+		entries: tier.additional_currencies,
+		mode: "per_unit",
+	}),
+});
 
 export type TierRow = { range: string; value: string };
 

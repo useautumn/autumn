@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Infinite, type ProductItem } from "@autumn/shared";
 import {
 	applyTierToDisplayValue,
-	updateTier,
+	updateTierPrice,
 } from "@/views/products/plan/utils/tierUtils";
 
 const makeTier = ({
@@ -95,126 +95,99 @@ describe("applyTierToDisplayValue", () => {
 	});
 });
 
-describe("updateTier — flat_amount field", () => {
-	test("sets flat_amount on the correct tier", () => {
-		let captured: ProductItem | null = null;
-		const item = makeItem({
-			tiers: [
-				makeTier({ to: 100, amount: 1 }),
-				makeTier({ to: Infinite, amount: 0 }),
-			],
-		});
+const setPrice = ({
+	item,
+	index = 0,
+	field,
+	value,
+}: {
+	item: ProductItem;
+	index?: number;
+	field: "amount" | "flat_amount";
+	value: string;
+}) =>
+	updateTierPrice({
+		item,
+		index,
+		currency: "usd",
+		baseCurrency: "USD",
+		field,
+		value,
+	});
 
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
-			index: 0,
+describe("updateTierPrice — base currency", () => {
+	test("sets flat_amount on the correct tier", () => {
+		const result = setPrice({
+			item: makeItem({
+				tiers: [
+					makeTier({ to: 100, amount: 1 }),
+					makeTier({ to: Infinite, amount: 0 }),
+				],
+			}),
 			field: "flat_amount",
 			value: "25.50",
 		});
 
-		expect(captured).not.toBeNull();
-		expect(captured!.tiers![0].flat_amount).toBe(25.5);
-		expect(captured!.tiers![0].amount).toBe(1);
+		expect(result.tiers?.[0].flat_amount).toBe(25.5);
+		expect(result.tiers?.[0].amount).toBe(1);
 	});
 
-	test("sets flat_amount to 0 for empty string", () => {
-		let captured: ProductItem | null = null;
-		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-		});
-
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
-			index: 0,
+	test("a cleared flat fee is unset, so the tier bills per unit only", () => {
+		const result = setPrice({
+			item: makeItem({
+				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
+			}),
 			field: "flat_amount",
 			value: "",
 		});
 
-		expect(captured!.tiers![0].flat_amount).toBe(0);
+		expect(result.tiers?.[0].flat_amount).toBeUndefined();
 	});
 
-	test("sets flat_amount to 0 for non-numeric string", () => {
-		let captured: ProductItem | null = null;
-		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-		});
-
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
-			index: 0,
+	test("a non-numeric flat fee is unset", () => {
+		const result = setPrice({
+			item: makeItem({
+				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
+			}),
 			field: "flat_amount",
 			value: "abc",
 		});
 
-		expect(captured!.tiers![0].flat_amount).toBe(0);
+		expect(result.tiers?.[0].flat_amount).toBeUndefined();
 	});
 
 	test("does not affect other tiers", () => {
-		let captured: ProductItem | null = null;
-		const item = makeItem({
-			tiers: [
-				makeTier({ to: 100, amount: 1, flat_amount: 10 }),
-				makeTier({ to: Infinite, amount: 2, flat_amount: 20 }),
-			],
-		});
-
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
+		const result = setPrice({
+			item: makeItem({
+				tiers: [
+					makeTier({ to: 100, amount: 1, flat_amount: 10 }),
+					makeTier({ to: Infinite, amount: 2, flat_amount: 20 }),
+				],
+			}),
 			index: 1,
 			field: "flat_amount",
 			value: "99",
 		});
 
-		expect(captured!.tiers![0].flat_amount).toBe(10);
-		expect(captured!.tiers![1].flat_amount).toBe(99);
+		expect(result.tiers?.[0].flat_amount).toBe(10);
+		expect(result.tiers?.[1].flat_amount).toBe(99);
 	});
 
-	test("amount field still works as before", () => {
-		let captured: ProductItem | null = null;
-		const item = makeItem({
-			tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-		});
-
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
-			index: 0,
+	test("amount field keeps the flat fee", () => {
+		const result = setPrice({
+			item: makeItem({
+				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
+			}),
 			field: "amount",
 			value: "7.25",
 		});
 
-		expect(captured!.tiers![0].amount).toBe(7.25);
-		expect(captured!.tiers![0].flat_amount).toBe(50);
+		expect(result.tiers?.[0].amount).toBe(7.25);
+		expect(result.tiers?.[0].flat_amount).toBe(50);
 	});
 
-	test("does nothing when tiers is null", () => {
-		let captured: ProductItem | null = null;
+	test("returns the item unchanged when tiers is null", () => {
 		const item = makeItem({ tiers: null });
-
-		updateTier({
-			item,
-			setItem: (i) => {
-				captured = i;
-			},
-			index: 0,
-			field: "flat_amount",
-			value: "10",
-		});
-
-		expect(captured).toBeNull();
+		expect(setPrice({ item, field: "flat_amount", value: "10" })).toBe(item);
 	});
 });

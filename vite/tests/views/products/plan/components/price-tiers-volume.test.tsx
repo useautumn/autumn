@@ -20,8 +20,6 @@ const { ProductItemContext } = await import(
 const { PriceTiers } = await import(
 	"@/views/products/plan/components/edit-plan-feature/PriceTiers"
 );
-type VolumePricingMode =
-	import("@/views/products/plan/utils/tierUtils").VolumePricingMode;
 
 const tieredItem = ({
 	tierBehavior,
@@ -40,13 +38,7 @@ const tieredItem = ({
 		tiers,
 	}) as ProductItem;
 
-const render = ({
-	item,
-	volumePricingMode,
-}: {
-	item: ProductItem;
-	volumePricingMode?: VolumePricingMode;
-}) =>
+const render = ({ item }: { item: ProductItem }) =>
 	renderToStaticMarkup(
 		<ProductItemContext.Provider
 			value={{
@@ -59,58 +51,46 @@ const render = ({
 				handleUpdateProductItem: async () => null,
 			}}
 		>
-			<PriceTiers volumePricingMode={volumePricingMode} />
+			<PriceTiers />
 		</ProductItemContext.Provider>,
 	);
 
-describe("PriceTiers wording", () => {
-	test("graduated tiers keep the stacking wording", () => {
+describe("PriceTiers table", () => {
+	test("graduated tiers have no flat fee column or example bill", () => {
 		const html = render({
 			item: tieredItem({ tierBehavior: TierBehavior.Graduated }),
 		});
-		expect(html).toContain("then, up to");
-		expect(html).not.toContain("volume:");
+		expect(html).toContain("Included");
+		expect(html).toContain("Unlimited");
+		expect(html).not.toContain("Flat fee");
+		expect(html).not.toContain("Example bill");
 	});
 
-	test("volume tiers drop graduated wording", () => {
+	test("volume tiers explain the rule under the switch and show the bill", () => {
 		const html = render({
 			item: tieredItem({ tierBehavior: TierBehavior.VolumeBased }),
-			volumePricingMode: "per_unit",
 		});
-		expect(html).not.toContain("then, up to");
-		expect(html).toContain("usage up to");
-		expect(html).not.toContain("volume:");
+		expect(html).toContain("one tier is picked from total usage");
+		expect(html).toContain("plus its flat fee");
+		expect(html).toContain("Free until exceeded");
+		expect(html).toContain("Example bill");
+		expect(html).not.toContain("volume: past 100");
+		expect(html).not.toContain("Unit + Flat");
 	});
 
-	test("Flat → Per Unit → Flat → Per Unit on a mixed item shows each field as stored", () => {
-		const item = tieredItem({
-			tierBehavior: TierBehavior.VolumeBased,
-			tiers: [
-				{ to: 100, amount: 0.1, flat_amount: 5 },
-				{ to: Infinite, amount: 0.05, flat_amount: 10 },
-			],
+	test("each volume tier is one row with its rate and an optional flat fee", () => {
+		const html = render({
+			item: tieredItem({
+				tierBehavior: TierBehavior.VolumeBased,
+				tiers: [
+					{ to: 100, amount: 1, flat_amount: 5 },
+					{ to: Infinite, amount: 0.5 },
+				],
+			}),
 		});
-		const values = (html: string) =>
-			[...html.matchAll(/value="([^"]*)"/g)].map(([, value]) => value);
-
-		for (const volumePricingMode of [
-			"flat",
-			"per_unit",
-			"flat",
-			"per_unit",
-		] as const) {
-			const shown = values(render({ item, volumePricingMode }));
-			if (volumePricingMode === "flat") {
-				expect(shown).toEqual(expect.arrayContaining(["5", "10"]));
-				expect(shown).not.toContain("0.1");
-			} else {
-				expect(shown).toEqual(expect.arrayContaining(["0.1", "0.05"]));
-				expect(shown).not.toContain("5");
-			}
-		}
-		expect(item.tiers).toEqual([
-			{ to: 100, amount: 0.1, flat_amount: 5 },
-			{ to: Infinite, amount: 0.05, flat_amount: 10 },
-		]);
+		expect(html.match(/value="1"/g)).toHaveLength(1);
+		expect(html.match(/value="5"/g)).toHaveLength(1);
+		expect(html.match(/value="0.5"/g)).toHaveLength(1);
+		expect(html.match(/placeholder="—"/g)).toHaveLength(2);
 	});
 });

@@ -301,6 +301,7 @@ export * from "./utils/productDisplayUtils";
 export * from "./utils/productDisplayUtils/sortProductItems";
 export * from "./utils/productUtils/convertProductUtils";
 export * from "./utils/productUtils/priceToInvoiceAmount";
+export * from "./utils/productUtils/priceUtils/findTier/findTierByQuantity";
 export * from "./utils/productUtils/productUtils";
 export * from "./utils/productV2Utils/compareProductUtils/buildEditsForItem";
 export * from "./utils/productV2Utils/compareProductUtils/compareItemUtils";
@@ -315,6 +316,7 @@ export * from "./utils/productV2Utils/productItemUtils/convertProductItem/planIt
 export * from "./utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1";
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
+export { addAllowanceToTiers } from "./utils/productV2Utils/productItemUtils/tierUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
 export * from "./utils/rewardUtils/promoCodeUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
