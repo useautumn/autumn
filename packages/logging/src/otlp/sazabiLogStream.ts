@@ -6,6 +6,7 @@ import {
 } from "@opentelemetry/sdk-logs";
 import type pino from "pino";
 import { resolveDeployment } from "../logger/resolveLoggerOptions.js";
+import { isRoutineWarning } from "./isRoutineWarning.js";
 import {
 	SEVERITY_NUMBERS,
 	sazabiIntakeUrlOf,
@@ -44,7 +45,7 @@ export type SazabiLogStream = {
 	flush: () => Promise<void>;
 };
 
-/** Pino tap shipping warn+ lines (SAZABI_LOG_LEVEL overrides) to Sazabi over OTLP; undefined when Sazabi is off. */
+/** Pino tap shipping warn+ lines, minus routine ones, to Sazabi over OTLP; undefined when Sazabi is off. */
 export const createSazabiLogStream = ({
 	service,
 	env = process.env,
@@ -82,7 +83,9 @@ export const createSazabiLogStream = ({
 			stream: {
 				write: (line: string) => {
 					try {
-						sazabiLogger.emit(pinoLineToOtlpLogRecord(JSON.parse(line)));
+						const record: PinoLogLine = JSON.parse(line);
+						if (isRoutineWarning(record)) return;
+						sazabiLogger.emit(pinoLineToOtlpLogRecord(record));
 					} catch {
 						// Sazabi is best effort: a bad line is dropped, never thrown into the caller.
 					}
