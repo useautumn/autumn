@@ -32,6 +32,8 @@ const atom = {
 const server = Bun.serve({
 	port: 0,
 	fetch: async (request) => {
+		// The shadow also samples the Atom's /health; only checks are recorded.
+		if (new URL(request.url).pathname === "/health") return Response.json({});
 		atom.received.push({
 			url: request.url,
 			headers: request.headers,
@@ -57,8 +59,9 @@ const params: CheckParams = { customer_id: "cus_1", feature_id: "messages" };
 
 const createCtx = () => {
 	const logs: Record<string, unknown>[] = [];
+	// The /health samples the shadow logs beside its checks are another test's.
 	const log = (_message: string, meta: Record<string, unknown>) => {
-		logs.push(meta);
+		if (meta?.type !== "atom_shadow_health") logs.push(meta);
 	};
 	const ctx = {
 		org: { id: "org_shadow" },
