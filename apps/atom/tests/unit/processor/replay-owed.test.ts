@@ -22,8 +22,11 @@ import {
 	identity,
 	occurredAt,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
 import { replayOwed } from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
 import type { JournalEntry } from "../../../src/state/journal/types/journal.js";
+import { atomOrg } from "../utils/atomFixtures.js";
+import { openSlotProcessor } from "../utils/journalFixtures.js";
 
 /** Deterministic, so a failing seed reproduces. */
 const seededRandom = (seed: number) => {
@@ -202,6 +205,52 @@ describe("replaying what the Atom owes", () => {
 		expect(moved.customerEntitlements).toBeGreaterThan(0);
 		expect(moved.rollovers).toBeGreaterThan(0);
 		expect(moved.usageWindows).toBeGreaterThan(0);
+	});
+
+	test("twin: the view built step by step as appends and reads interleave equals the full replay after every read", async () => {
+		for (let seed = 1; seed <= 100; seed++) {
+			const random = seededRandom(seed);
+			const { state, catalog } = generateSubject({ random });
+			const { ctx, journal, close } = openSlotProcessor();
+			try {
+				ctx.sqliteStore.setSubject({
+					subject: {
+						state,
+						catalog,
+						org: atomOrg,
+						logOffset: 1n,
+						readAt: 1000,
+						customerVersion: 0n,
+					},
+				});
+				const appends: Promise<unknown>[] = [];
+				for (const { command } of generateOwed({ random })) {
+					appends.push(journal.append({ customerId: "cus_1", command }));
+					if (random() < 0.6) continue;
+					const view = readCurrentSubject({
+						ctx,
+						customerId: "cus_1",
+						entityId: null,
+					});
+					const replayed = replayOwed({
+						owed: journal.owed({ customerId: "cus_1" }),
+						state,
+						catalog,
+					});
+					expect({ seed, fullSubject: view.fullSubject }).toEqual({
+						seed,
+						fullSubject: subjectStateToFullSubject({
+							state: replayed,
+							catalog: view.catalog,
+							entityId: null,
+						}),
+					});
+				}
+				await Promise.all(appends);
+			} finally {
+				close();
+			}
+		}
 	});
 
 	test("nothing owed is the snapshot itself", () => {
