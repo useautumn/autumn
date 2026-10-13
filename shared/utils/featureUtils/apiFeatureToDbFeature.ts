@@ -178,11 +178,15 @@ export const apiCreditSchemaItemToDb = (
 });
 
 // Excluded rows carry no rate, so they map across unchanged.
-const apiOverrideRowToDb = (row: ApiCreditSchemaOverrideItem) =>
-	isExcludedCreditSchemaItem(row) ? row : apiCreditSchemaItemToDb(row);
+const apiOverrideRowToDb = (row: ApiCreditSchemaOverrideItem) => {
+	if (isExcludedCreditSchemaItem(row)) return row;
+	return apiCreditSchemaItemToDb(row);
+};
 
-const dbOverrideRowToApi = (row: CreditSchemaOverrideItem) =>
-	isExcludedCreditSchemaItem(row) ? row : dbCreditSchemaItemToApi(row);
+const dbOverrideRowToApi = (row: CreditSchemaOverrideItem) => {
+	if (isExcludedCreditSchemaItem(row)) return row;
+	return dbCreditSchemaItemToApi(row);
+};
 
 export const apiFeatureOverrideToDb = (
 	override: ApiFeatureOverride,
