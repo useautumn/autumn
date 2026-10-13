@@ -9,6 +9,7 @@ import {
 	addTriggerToLogs,
 	addWorkflowToLogs,
 } from "@/utils/logging/addContextToLogs.js";
+import { flushSazabiLogs } from "@/utils/logging/initLogger.js";
 
 // Trigger loads this file before any task, so every run reports errors to Sazabi.
 initErrorReporting({ tracesRequests: false });
@@ -26,5 +27,8 @@ tasks.onFailure(async ({ ctx, task, error }) => {
 		workflowContext: { id: ctx.run.id, name: task, payload: undefined },
 	});
 	reportError({ ctx: { logger }, error, operation: `trigger task ${task}` });
-	await flushErrorReports({ timeoutMs: 2_000 });
+	await Promise.all([
+		flushSazabiLogs(),
+		flushErrorReports({ timeoutMs: 2_000 }),
+	]);
 });

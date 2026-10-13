@@ -5,6 +5,7 @@ import {
 	createSazabiLogStream,
 	normalizeErrorValues,
 	resolveDeployment,
+	type SazabiLogStream,
 } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
@@ -172,6 +173,13 @@ const createConsoleJsonStream = () =>
  *
  * `mode: "default"` preserves existing prod behavior verbatim.
  */
+const sazabiLogStreams: SazabiLogStream[] = [];
+
+/** Sends warnings still queued for Sazabi; call on shutdown beside flushErrorReports. */
+export const flushSazabiLogs = async (): Promise<void> => {
+	await Promise.all(sazabiLogStreams.map((stream) => stream.flush()));
+};
+
 export type InitLoggerOptions = {
 	mode?: "default" | "dual";
 	transport?: "direct" | "firelens";
@@ -259,7 +267,10 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	streams.push(...createMapleLogStreams());
 
 	const sazabi = createSazabiLogStream({ service: "server" });
-	if (sazabi) streams.push(sazabi.entry);
+	if (sazabi) {
+		streams.push(sazabi.entry);
+		sazabiLogStreams.push(sazabi);
+	}
 
 	const logger = pino(
 		{
