@@ -110,12 +110,7 @@ export const handleCheck = createRoute({
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
-			const runOnWorker = () =>
-				runBalanceWorkerCheck({
-					ctx,
-					body: rawBody,
-					idempotencyKey: c.req.header("idempotency-key"),
-				});
+			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
 			// A lock must settle its reservation, so a lock check never answers without the worker.
 			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
 			const { result, failedOpen } =

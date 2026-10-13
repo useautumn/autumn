@@ -1,5 +1,5 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import { type CheckParams, RouteGroup } from "@autumn/shared";
+import type { CheckParams } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckResponseWithPreview } from "@/internal/api/check/getCheckPreview.js";
@@ -9,9 +9,7 @@ import {
 	withCreateIfMissing,
 } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/withPaidAllocatedFallback.js";
-import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
-import { toTrackIdempotencyKey } from "../../idempotency/trackBodyIdempotencyKey.js";
 import { parseCheckParamsForLock } from "../../utils/lock/parseCheckParamsForLock.js";
 import { checkAnswerToApiResponse } from "./balanceWorkerCheckReply.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
@@ -27,31 +25,24 @@ import { triggerAutoTopupFromCheckAnswer } from "./triggerAutoTopupFromCheckAnsw
 export async function runBalanceWorkerCheck({
 	ctx,
 	body: rawBody,
-	idempotencyKey,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: CheckParams;
-	/** The request's Idempotency-Key header. */
-	idempotencyKey?: string;
 	client?: Pick<BalanceWorkerClient, "check" | "track">;
 }): Promise<CheckResponseWithPreview> {
 	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
 	const body = parseCheckParamsForLock({ params: rawBody });
 	const command = checkParamsToCheckCommand({ ctx, body });
 	const isDeductingCheck = body.send_event === true || body.lock !== undefined;
-	const answerToResult = async ({
-		answer,
-		deducted,
-	}: {
-		answer: WorkerCheckAnswer;
-		deducted: boolean;
-	}): Promise<RunWithCustomer<CheckResponseWithPreview>> => ({
+	const answerToResult = async (
+		answer: WorkerCheckAnswer,
+	): Promise<RunWithCustomer<CheckResponseWithPreview>> => ({
 		result: await checkAnswerToApiResponse({
 			ctx,
 			command,
 			answer,
-			isDeductingCheck: deducted,
+			isDeductingCheck,
 			withPreview: body.with_preview,
 		}),
 		customer: answer.state?.customer ?? null,
@@ -62,7 +53,7 @@ export async function runBalanceWorkerCheck({
 	> => {
 		const answer = await client.check({ command });
 		triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
-		return answerToResult({ answer, deducted: false });
+		return answerToResult(answer);
 	};
 	// Deducts on the same engine a track would: Postgres when the worker refuses a v1 paid allocated grant.
 	const deductingCheck = (): Promise<
@@ -73,10 +64,7 @@ export async function runBalanceWorkerCheck({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			worker: async () =>
-				answerToResult({
-					answer: await runDeductingCheck({ ctx, body, client }),
-					deducted: true,
-				}),
+				answerToResult(await runDeductingCheck({ ctx, body, client })),
 			postgres: async ({ fullSubject }) => ({
 				result: await runPostgresDeductingCheck({
 					ctx,
@@ -87,33 +75,22 @@ export async function runBalanceWorkerCheck({
 				customer: fullSubject.customer,
 			}),
 		});
-	const onWorker =
-		(check: () => Promise<RunWithCustomer<CheckResponseWithPreview>>) => () =>
-			withCreateIfMissing({
-				ctx,
-				createEnabled: apiVersionCreatesCustomer({ ctx }),
-				customerId: body.customer_id,
-				customerData: body.customer_data,
-				entityId: body.entity_id,
-				entityData: body.entity_data,
-				run: async () => {
-					try {
-						return await check();
-					} catch (cause) {
-						rethrowBalanceWorkerError({ cause });
-					}
-				},
-			});
-	// A deduction under the client's key claims what an Atom's hand-in of the same deduction claims, so only one lands.
-	return withIdempotencyKey({
+	const checkOnWorker = async (): Promise<
+		RunWithCustomer<CheckResponseWithPreview>
+	> => {
+		try {
+			return isDeductingCheck ? await deductingCheck() : await plainCheck();
+		} catch (cause) {
+			rethrowBalanceWorkerError({ cause });
+		}
+	};
+	return withCreateIfMissing({
 		ctx,
-		idempotencyKey:
-			isDeductingCheck && idempotencyKey
-				? toTrackIdempotencyKey({ key: idempotencyKey })
-				: null,
-		routeGroup: RouteGroup.Balances,
-		run: onWorker(isDeductingCheck ? deductingCheck : plainCheck),
-		// The Atom's hand-in of this deduction landed first: answer the balance it left, as a plain check.
-		onDuplicate: onWorker(plainCheck),
+		createEnabled: apiVersionCreatesCustomer({ ctx }),
+		customerId: body.customer_id,
+		customerData: body.customer_data,
+		entityId: body.entity_id,
+		entityData: body.entity_data,
+		run: checkOnWorker,
 	});
 }
