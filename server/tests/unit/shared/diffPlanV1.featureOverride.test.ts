@@ -147,3 +147,27 @@ test("O6 applying the diff keeps the override on the resulting item", () => {
 		override({ creditCost: 2 }),
 	);
 });
+
+test("O7 excluded rows compare equal regardless of row order", () => {
+	const rate = { metered_feature_id: "actions", credit_cost: 2 };
+	const excluded = { metered_feature_id: "searches", excluded: true as const };
+	expect(
+		itemsEqual(
+			creditsItem({ credit_schema: [rate, excluded] }),
+			creditsItem({ credit_schema: [excluded, rate] }),
+		),
+	).toBe(true);
+});
+
+test("O8 a rate changing to an exclusion for the same feature is a change", () => {
+	expect(
+		itemsEqual(
+			creditsItem({
+				credit_schema: [{ metered_feature_id: "searches", credit_cost: 1 }],
+			}),
+			creditsItem({
+				credit_schema: [{ metered_feature_id: "searches", excluded: true }],
+			}),
+		),
+	).toBe(false);
+});
