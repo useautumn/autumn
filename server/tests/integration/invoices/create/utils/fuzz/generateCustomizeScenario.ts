@@ -171,7 +171,7 @@ const genPriceShape = ({
 	}
 	const volume = style === "volume";
 	const tiers = genTiers({ rng, billingUnits, volume });
-	// Volume items carry no included usage, and allocated volume rejects a tier-1 flat fee without it.
+	// Allocated volume rejects any tier-1 flat fee.
 	const isAllocatedUsageBased =
 		behavior === BillingMethod.UsageBased &&
 		(CONTINUOUS_FEATURES as string[]).includes(featureId);

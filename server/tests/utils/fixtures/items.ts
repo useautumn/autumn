@@ -768,8 +768,8 @@ const tieredConsumableMessages = ({
 type VolumeTier = { to: number | "inf"; amount: number; flat_amount?: number };
 
 /**
- * Volume consumable - pay-per-use with volume tiers: once total usage passes the
- * included amount, every unit is charged at the band total usage lands in.
+ * Volume consumable - pay-per-use with volume tiers: usage past the included amount
+ * is charged at the rate of the tier total usage lands in, plus that tier's flat fee.
  * Default tiers: 0-500 units at $0.10/unit, 501+ at $0.05/unit.
  */
 const volumeConsumable = ({

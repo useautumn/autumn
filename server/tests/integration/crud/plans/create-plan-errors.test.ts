@@ -513,11 +513,11 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Allocated volume: a tier-1 flat_amount needs included usage
+// Allocated volume: no tier-1 flat_amount, with or without included usage
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ALLOCATED_VOLUME_FLAT =
-	"Volume-based allocated items can't have a flat_amount on the first tier without included usage";
+	"Volume-based allocated items can't have a flat_amount on the first tier";
 
 const ALLOCATED_VOLUME_FLAT_TIERS: { to: number | "inf"; amount: number; flat_amount?: number }[] = [
 	{ to: 10, amount: 10, flat_amount: 5 },
@@ -545,17 +545,41 @@ test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated v
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with tier-1 flat_amount and included usage")}`, async () => {
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount even with included usage")}`, async () => {
+	await expectAutumnError({
+		errCode: "invalid_inputs",
+		errMessage: ALLOCATED_VOLUME_FLAT,
+		func: () =>
+			createV0Product({
+				productId: `err_v0_alloc_flat_incl_${getSuffix()}`,
+				items: [
+					{
+						feature_id: TestFeature.Users,
+						included_usage: 3,
+						usage_model: UsageModel.PayPerUse,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: ProductItemInterval.Month,
+						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					},
+				],
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with the flat_amount on tier 2")}`, async () => {
 	await createV0Product({
-		productId: `ok_v0_alloc_flat_${getSuffix()}`,
+		productId: `ok_v0_alloc_flat_t2_${getSuffix()}`,
 		items: [
 			{
 				feature_id: TestFeature.Users,
-				included_usage: 3,
+				included_usage: 0,
 				usage_model: UsageModel.PayPerUse,
 				tier_behavior: TierBehavior.VolumeBased,
 				interval: ProductItemInterval.Month,
-				tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+				tiers: [
+					{ to: 10, amount: 10 },
+					{ to: TierInfinite, amount: 8, flat_amount: 5 },
+				],
 			},
 		],
 	});
