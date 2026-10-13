@@ -8,6 +8,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { featureUnitName } from "../../utils/billingUnitsUtils";
+import { tierChargesFlatFee } from "../../utils/currencyUtils";
 import { tierRowKey } from "../../utils/tierUids";
 import { itemToIncludedUsage } from "../../utils/tierUtils";
 import { BillingUnits } from "./BillingUnits";
@@ -29,7 +30,7 @@ export function TierTable({
 	const showsFlatFee = item.tier_behavior === TierBehavior.VolumeBased;
 	const rowClassName = tierTableRowClassName({ showsFlatFee });
 	const includedUsage = itemToIncludedUsage(item);
-	// Stripe would bill an allocated tier-1 flat fee with no seats over included, so the API rejects it.
+	// The API rejects an allocated tier-1 flat fee; a fee already there stays editable so it can be cleared.
 	const isAllocated =
 		item.usage_model === UsageModel.PayPerUse &&
 		feature !== undefined &&
@@ -63,7 +64,9 @@ export function TierTable({
 							currency={currency}
 							baseCurrency={baseCurrency}
 							showsFlatFee={showsFlatFee}
-							blocksFlatFee={isAllocated && index === 0}
+							blocksFlatFee={
+								isAllocated && index === 0 && !tierChargesFlatFee(tier)
+							}
 						/>
 					))}
 				</div>
