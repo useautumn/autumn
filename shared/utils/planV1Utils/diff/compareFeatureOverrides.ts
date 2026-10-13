@@ -1,4 +1,5 @@
 import type { ApiFeatureOverride } from "@api/features/apiFeatureOverride.js";
+import { isExcludedCreditSchemaItem } from "../../../models/featureModels/featureConfig/creditConfig.js";
 import { deterministicStringify } from "../../common/deterministicStringify.js";
 
 type ApiCreditSchemaRow = NonNullable<
@@ -13,7 +14,7 @@ const creditSchemaFingerprint = (
 		Object.fromEntries(
 			(rows ?? []).map((row) => [
 				row.metered_feature_id,
-				"excluded" in row
+				isExcludedCreditSchemaItem(row)
 					? row
 					: { ...row, billing_units: row.billing_units ?? 1 },
 			]),
