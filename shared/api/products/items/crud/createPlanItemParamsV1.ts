@@ -58,7 +58,7 @@ export const PlanItemPriceParamsSchema = z.object({
 	}),
 	tier_behavior: z.enum(TierBehavior).optional().meta({
 		description:
-			"How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage and charges every unit at that tier's rate plus its flat_amount. Under 'volume', nothing is charged at or below the included amount; above it, the included units are charged too.",
+			"How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.",
 	}),
 
 	interval: z.enum(BillingInterval).meta({
