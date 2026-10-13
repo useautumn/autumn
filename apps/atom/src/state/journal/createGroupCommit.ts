@@ -9,7 +9,7 @@ type Waiting<Item> = {
 
 /**
  * Commits items in batches, one at a time: what arrives while a commit is in flight goes in the next, so a burst
- * costs one transaction and one fsync, not one each. Each `add` resolves only once its own batch has committed.
+ * costs one transaction, not one each. Each `add` resolves only once its own batch has committed.
  */
 export const createGroupCommit = <Item>({
 	commit,

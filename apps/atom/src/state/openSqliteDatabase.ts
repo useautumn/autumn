@@ -27,23 +27,15 @@ const switchToWal = ({ database }: { database: Database }) => {
 	}
 };
 
-/** NORMAL for a copy of what Autumn holds, which it can send again; FULL for what only this file holds. */
-type SqliteSynchronous = "NORMAL" | "FULL";
-
-const configureDatabase = ({
-	database,
-	synchronous,
-}: {
-	database: Database;
-	synchronous: SqliteSynchronous;
-}) => {
+const configureDatabase = ({ database }: { database: Database }) => {
 	// First, before anything touches the file: another thread may be recovering its log right now.
 	database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
 	// Pages a dropped customer frees can be handed back to the volume. Before the WAL switch writes the header; a file
 	// that already has one keeps its mode until the VACUUM that follows an emptied schema.
 	database.run("PRAGMA auto_vacuum = INCREMENTAL");
 	switchToWal({ database });
-	database.run(`PRAGMA synchronous = ${synchronous}`);
+	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
+	database.run("PRAGMA synchronous = NORMAL");
 	// The main thread checkpoints every file (startWalCheckpointer), so a commit never copies the log back itself.
 	database.run("PRAGMA wal_autocheckpoint = 0");
 	database.run(`PRAGMA journal_size_limit = ${JOURNAL_SIZE_LIMIT_BYTES}`);
@@ -97,13 +89,11 @@ export const openSqliteDatabase = ({
 	schemaVersion,
 	dropSchema,
 	createSchema,
-	synchronous = "NORMAL",
 }: {
 	databasePath: string;
 	schemaVersion: number;
 	dropSchema: (params: { database: Database }) => void;
 	createSchema: (params: { database: Database }) => void;
-	synchronous?: SqliteSynchronous;
 }): Database => {
 	const database = newSqliteConnection({
 		path: databasePath,
@@ -115,7 +105,7 @@ export const openSqliteDatabase = ({
 		},
 	});
 	try {
-		configureDatabase({ database, synchronous });
+		configureDatabase({ database });
 		initializeSchema({ database, schemaVersion, dropSchema, createSchema });
 		return database;
 	} catch (error) {
