@@ -11,6 +11,7 @@ import { z } from "zod/v4";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheContext.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
@@ -55,10 +56,17 @@ export const handleSyncPreviewPricing = createRoute({
 		// Step 1: Nuke existing config
 		ctx.logger.debug("[Preview Sync] Step 1: Nuking existing configuration...");
 
-		await CusService.deleteByOrgId({
+		const deleted = await CusService.deleteByOrgId({
 			db,
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
+		});
+		await queueBalanceWorkerEvicts({
+			customers: deleted.map(({ id }) => ({
+				orgId: previewOrg.id,
+				env: AppEnv.Sandbox,
+				customerId: id,
+			})),
 		});
 
 		await ProductService.deleteByOrgId({

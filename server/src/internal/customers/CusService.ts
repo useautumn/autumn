@@ -1028,6 +1028,7 @@ export class CusService {
 		if (env === AppEnv.Live)
 			throw new Error("Cannot delete all customers under org in live mode");
 
+		const deleted: { id: string | null }[] = [];
 		while (true) {
 			const batch = await db
 				.select({ internal_id: customers.internal_id })
@@ -1039,7 +1040,7 @@ export class CusService {
 
 			const ids = batch.map((r) => r.internal_id);
 
-			await db
+			const rows = await db
 				.delete(customers)
 				.where(
 					and(
@@ -1047,8 +1048,11 @@ export class CusService {
 						eq(customers.org_id, orgId),
 						eq(customers.env, env),
 					),
-				);
+				)
+				.returning({ id: customers.id });
+			deleted.push(...rows);
 		}
+		return deleted;
 	}
 
 	static async getByVercelId({
