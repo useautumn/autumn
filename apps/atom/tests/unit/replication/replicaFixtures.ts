@@ -54,6 +54,7 @@ export const createReplica = ({
 	now = () => 1_000_000,
 	ringPeers = [],
 	journalForwarder = forwardingNowhere,
+	stopping = () => false,
 }: {
 	address: string;
 	peers: string[];
@@ -64,6 +65,8 @@ export const createReplica = ({
 	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
 	ringPeers?: string[];
 	journalForwarder?: typeof forwardingNowhere;
+	/** True from the moment the thread starts stopping, as its server's stop sets it. */
+	stopping?: () => boolean;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -106,6 +109,7 @@ export const createReplica = ({
 		counters,
 		loop: loopOnTime,
 		replication,
+		stopping,
 		peer: {
 			port: PEER_PORT,
 			secret,

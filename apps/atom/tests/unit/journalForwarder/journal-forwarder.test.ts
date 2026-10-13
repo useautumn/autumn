@@ -64,7 +64,10 @@ const forwarderTo = ({
 	createJournalForwarder({
 		ctx: {
 			autumnClient: createAutumnClient({ autumnApiUrl: autumn.url }),
-			logger: { warn: (fields: unknown) => void warnings.push(fields) },
+			logger: {
+				info: () => {},
+				warn: (fields: unknown) => void warnings.push(fields),
+			},
 			sleep,
 		},
 	});

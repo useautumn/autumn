@@ -1,6 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
-import type { JournalEntry } from "../state/journal/types/journal.js";
+import type { Journal, JournalEntry } from "../state/journal/types/journal.js";
 import type {
 	ForwardedJournal,
 	JournalForwarder,
@@ -13,10 +13,12 @@ const FIRST_RETRY_MS = 1_000;
 const LAST_RETRY_MS = 30_000;
 /** A sent deduction no push has shown applied by now has its customer pulled: the read says how far Autumn has seen. */
 const PUSH_GRACE_MS = 60_000;
+/** How often a drain looks again at what the journals still hold. */
+const DRAIN_POLL_MS = 20;
 
 type JournalForwarderContext = {
 	autumnClient: Pick<AutumnClient, "appendTracks">;
-	logger: Pick<AutumnLogger, "warn">;
+	logger: Pick<AutumnLogger, "info" | "warn">;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
@@ -32,6 +34,8 @@ export const createJournalForwarder = ({
 	ctx: JournalForwarderContext;
 }): JournalForwarder => {
 	const sleep = ctx.sleep ?? Bun.sleep;
+	/** Every journal being handed to Autumn now: what a drain waits on. */
+	const handed = new Set<Journal>();
 
 	/** One line per run of failures, so an Autumn that is down cannot flood the logs. */
 	function logFailure({ error }: { error: unknown }): void {
@@ -103,10 +107,12 @@ export const createJournalForwarder = ({
 		}
 
 		forwarded.journal.onCommitted(() => void wake());
+		handed.add(forwarded.journal);
 		void wake();
 		return {
 			stop: () => {
 				stopped = true;
+				handed.delete(forwarded.journal);
 			},
 		};
 	}
@@ -117,20 +123,47 @@ export const createJournalForwarder = ({
 	}: ForwardedJournal & { retired: () => void }) {
 		let stopped = false;
 		const isStopped = () => stopped;
+		const stop = () => {
+			stopped = true;
+			handed.delete(forwarded.journal);
+		};
 		// A journal that holds nothing to send is retired at once.
 		if (forwarded.journal.unsent({ limit: 1 }).length === 0) retired();
-		else
+		else {
+			handed.add(forwarded.journal);
 			void drain({ ...forwarded, isStopped }).then(() => {
 				if (stopped) return;
-				stopped = true;
+				stop();
 				retired();
 			});
-		return {
-			stop: () => {
-				stopped = true;
-			},
-		};
+		}
+		return { stop };
 	}
 
-	return { forward, retire };
+	/** What is still unsent when the deadline passes stays in its file, and is sent again on the next boot. */
+	async function drainAll({ deadlineMs }: { deadlineMs: number }) {
+		const deadline = Date.now() + deadlineMs;
+		const holdsUnsent = () =>
+			[...handed].some((journal) => journal.unsent({ limit: 1 }).length > 0);
+		while (holdsUnsent() && Date.now() < deadline)
+			await Bun.sleep(DRAIN_POLL_MS);
+		const unsent = [...handed].reduce(
+			(sum, journal) =>
+				sum + journal.unsent({ limit: Number.MAX_SAFE_INTEGER }).length,
+			0,
+		);
+		const fields = { journals: handed.size, unsent };
+		if (unsent === 0)
+			ctx.logger.info(
+				{ type: "atom_journal_drained", ...fields },
+				"Autumn holds every deduction this thread journaled",
+			);
+		else
+			ctx.logger.warn(
+				{ type: "atom_journal_drain_deadline", ...fields },
+				`${unsent} journaled deductions were not sent before the deadline; they are sent on the next boot`,
+			);
+	}
+
+	return { forward, retire, drainAll };
 };

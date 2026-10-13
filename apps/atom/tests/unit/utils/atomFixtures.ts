@@ -221,6 +221,6 @@ export const noSubjectPulls: SubjectPulls = {
 export const forwardingNowhere = createJournalForwarder({
 	ctx: {
 		autumnClient: { appendTracks: () => new Promise(() => {}) },
-		logger: { warn() {} },
+		logger: { info() {}, warn() {} },
 	},
 });

@@ -84,6 +84,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			held,
 			folders,
 			replication: replicas.replication,
+			journalForwarder,
 		},
 		config: {
 			env,
