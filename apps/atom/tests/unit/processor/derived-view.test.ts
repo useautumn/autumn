@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as engine from "@autumn/balance-engine";
 import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
 import * as replay from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
 import { commandsSeenBy } from "../../../src/state/journal/commandsSeenBy.js";
@@ -221,5 +222,105 @@ describe("the view is memoised", () => {
 				.flatMap(({ customer_entitlements }) => customer_entitlements)
 				.map(({ id, balance }) => [id, balance]),
 		).toContainEqual(["messages_monthly", 890]);
+	});
+});
+
+/** Engine steps taken while `run` runs: one computeTrack and one applyMutation per owed command applied to a view. */
+const countEngineSteps = async (run: () => unknown) => {
+	const tracks = spyOn(engine, "computeTrack");
+	const applies = spyOn(engine, "applyMutation");
+	try {
+		await run();
+		return {
+			computeTrack: tracks.mock.calls.length,
+			applyMutation: applies.mock.calls.length,
+		};
+	} finally {
+		tracks.mockRestore();
+		applies.mockRestore();
+	}
+};
+
+describe("the view is incremental between pushes", () => {
+	const read = ({ ctx }: { ctx: ReturnType<typeof openSlot>["ctx"] }) =>
+		readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
+	const balanceOf = ({ ctx }: { ctx: ReturnType<typeof openSlot>["ctx"] }) =>
+		read({ ctx })
+			.fullSubject.customer_products.flatMap(
+				({ customer_entitlements }) => customer_entitlements,
+			)
+			.find(({ id }) => id === "messages_monthly")?.balance;
+
+	test("n deductions between pushes cost n engine steps, not n²", async () => {
+		const { processor, ctx, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		read({ ctx });
+
+		const appends: Promise<unknown>[] = [];
+		const steps = await countEngineSteps(() => {
+			for (let deduction = 0; deduction < 200; deduction++) {
+				appends.push(owe({ journal, value: 1 }));
+				read({ ctx });
+				read({ ctx });
+			}
+		});
+		await Promise.all(appends);
+
+		expect(steps).toEqual({ computeTrack: 200, applyMutation: 200 });
+		expect(balanceOf({ ctx })).toBe(800);
+	});
+
+	test("a push in the middle folds the still-owed entries over the new copy; a rejected entry forces a full fold", async () => {
+		const { processor, ctx, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		read({ ctx });
+
+		const appended = await countEngineSteps(async () => {
+			for (const value of [10, 20, 30]) {
+				await owe({ journal, value });
+				read({ ctx });
+			}
+		});
+		expect([appended.computeTrack, balanceOf({ ctx })]).toEqual([3, 940]);
+
+		const pushed = await countEngineSteps(async () => {
+			await pushBalance({ processor, balance: 500, readAt: 2000 });
+			read({ ctx });
+		});
+		expect([pushed.computeTrack, balanceOf({ ctx })]).toEqual([3, 440]);
+
+		const [first] = journal.owed({ customerId: "cus_1" });
+		const rejected = await countEngineSteps(() => {
+			journal.setStatus({
+				customerId: "cus_1",
+				seq: first?.seq ?? 0,
+				status: { kind: "rejected", code: "insufficient_balance" },
+			});
+			read({ ctx });
+		});
+		expect([rejected.computeTrack, balanceOf({ ctx })]).toEqual([2, 450]);
+
+		const next = await countEngineSteps(async () => {
+			await owe({ journal, value: 5 });
+			read({ ctx });
+		});
+		expect([next.computeTrack, balanceOf({ ctx })]).toEqual([1, 445]);
+	});
+
+	test("a reconciled entry forces a full fold over what is still owed", async () => {
+		const { processor, ctx, journal } = openSlot({
+			seenBy: ({ owed }) => owed.slice(0, 1).map(({ seq }) => seq),
+		});
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+		await owe({ journal, value: 20 });
+		read({ ctx });
+
+		const steps = await countEngineSteps(async () => {
+			await pushBalance({ processor, balance: 990, readAt: 2000 });
+			read({ ctx });
+		});
+
+		expect([steps.computeTrack, balanceOf({ ctx })]).toEqual([1, 970]);
 	});
 });

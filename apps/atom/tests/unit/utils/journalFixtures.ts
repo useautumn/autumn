@@ -44,6 +44,7 @@ export const openSlotProcessor = ({
 	};
 	return {
 		ctx,
+		journal,
 		processor: createSlotProcessor({ ctx }),
 		close: () => {
 			sqliteStore.close();
