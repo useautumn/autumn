@@ -13,6 +13,7 @@ import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import { inFlightTrackingMiddleware } from "./honoMiddlewares/inFlightTrackingMiddleware.js";
+import { listTimeoutMiddleware } from "./honoMiddlewares/listTimeoutMiddleware.js";
 import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import { twTestFileMiddleware } from "./honoMiddlewares/twTestFileMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
@@ -143,6 +144,7 @@ export const createHonoApp = () => {
 	app.use("*", inFlightTrackingMiddleware);
 	app.use("*", baseMiddleware);
 	app.use("*", replicaDbMiddleware);
+	app.use("*", listTimeoutMiddleware);
 
 	// CLI routes (uses Bearer token auth, not session auth)
 	app.route("/cli", cliRouter);

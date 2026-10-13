@@ -15,7 +15,10 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import {
+	assertWithinOrgPaginationLimit,
+	getOrgPaginationMaxLimit,
+} from "../../misc/edgeConfig/orgLimitsStore.js";
 import { CusBatchService } from "../CusBatchService.js";
 import { CusService } from "../CusService.js";
 
@@ -27,6 +30,11 @@ const runOffsetListCustomers = async ({
 	body: ListCustomersV2Params;
 }) => {
 	const ctx = c.get("ctx");
+	assertWithinOrgPaginationLimit({
+		org: ctx.org,
+		limit: body.limit,
+		type: PaginationType.ListCustomers,
+	});
 	const hasFilteredQuery = Boolean(
 		body.plans?.length ||
 			body.search?.trim() ||

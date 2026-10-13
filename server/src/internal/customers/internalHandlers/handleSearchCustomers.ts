@@ -5,12 +5,14 @@ import {
 	FeatureBalanceCursor,
 	FeatureBalanceSortBasisSchema,
 	type FullCusProduct,
+	PaginationType,
 	Scopes,
 	SortOrderSchema,
 	StandardCursor,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { assertWithinOrgPaginationLimit } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
 import { CusBatchService } from "../CusBatchService";
 
 export const handleSearchCustomers = createRoute({
@@ -37,6 +39,11 @@ export const handleSearchCustomers = createRoute({
 			sort_basis,
 			sort_order,
 		} = c.req.valid("json");
+		assertWithinOrgPaginationLimit({
+			org: ctx.org,
+			limit,
+			type: PaginationType.SearchCustomers,
+		});
 
 		const sortBy = sort_by ?? "created_at";
 		const decoded =

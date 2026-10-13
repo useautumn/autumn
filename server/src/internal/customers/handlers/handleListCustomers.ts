@@ -2,10 +2,12 @@ import {
 	AffectedResource,
 	ApiVersion,
 	ListCustomersQuerySchema,
+	PaginationType,
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { assertWithinOrgPaginationLimit } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
 import { CusBatchService } from "../CusBatchService.js";
 
 export const handleListCustomers = createRoute({
@@ -18,6 +20,11 @@ export const handleListCustomers = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const query = c.req.valid("query");
+		assertWithinOrgPaginationLimit({
+			org: ctx.org,
+			limit: query.limit,
+			type: PaginationType.ListCustomers,
+		});
 
 		const [customers, totalCount] = await Promise.all([
 			CusBatchService.getPage({ ctx, query }),

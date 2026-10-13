@@ -28,7 +28,10 @@ import {
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
-import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import {
+	assertWithinOrgPaginationLimit,
+	getOrgPaginationMaxLimit,
+} from "../../misc/edgeConfig/orgLimitsStore.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../repos/cursorListEntitiesQuery.js";
 import { hydrateEntityRowsWithCustomerData } from "../repos/hydrateEntityRowsWithCustomerData.js";
 import {
@@ -114,6 +117,11 @@ const runOffsetListEntities = async ({
 	body: ListEntitiesParams;
 }) => {
 	const ctx = c.get("ctx");
+	assertWithinOrgPaginationLimit({
+		org: ctx.org,
+		limit: body.limit,
+		type: PaginationType.ListEntities,
+	});
 	const inStatuses = getListEntitiesStatuses({
 		subscriptionStatus: body.subscription_status,
 	});
