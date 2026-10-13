@@ -9,23 +9,14 @@ import {
 	findFeatureById,
 	hasCreditDimensionRules,
 	itemsEqualIgnoringFeatureOverride,
-	matchesPlanItemFilter,
 	numberWithCommas,
-	type ProductItem,
-	planItemMatchesFilter,
 	type UpdatePlanOp,
 } from "@autumn/shared";
-import { planIdsFromFilter } from "@/views/migrations/migration/operations/UpdatePlanOpForm";
 import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
 
 type Customize = NonNullable<UpdatePlanOp["customize"]>;
 export type AddItem = NonNullable<Customize["add_items"]>[number];
 export type RemoveFilter = NonNullable<Customize["remove_items"]>[number];
-export type CatalogPlan = {
-	id: string;
-	version?: number;
-	items?: ProductItem[];
-};
 
 /** `value` is the rate card text; `detail` spells out every rule so two different rates never read the same. */
 type RateLine = {
@@ -298,40 +289,14 @@ const pairRemoveIndices = (customize: Customize | undefined) => {
 	});
 };
 
-/** The override on the catalog item a remove filter takes out; undefined when the op spans plans or versions. */
-const catalogOverride = ({
-	filter,
-	op,
-	products,
-}: {
-	filter: RemoveFilter;
-	op: UpdatePlanOp;
-	products: CatalogPlan[];
-}) => {
-	const [planId, ...rest] = planIdsFromFilter(op.plan_filter);
-	const version = op.plan_filter.version;
-	if (!planId || rest.length > 0 || typeof version !== "number")
-		return undefined;
-	const item = products
-		.find((plan) => plan.id === planId && plan.version === version)
-		?.items?.find((planItem) =>
-			matchesPlanItemFilter({ item: planItem, filter }),
-		);
-	return item && (item.config?.feature_override ?? null);
-};
-
-/** The rates an added item sets: old → new against its paired remove's stamp or catalog item, else its own rate card. */
+/** The rates an added item sets: old → new against its paired remove's stamp, else its own rate card. */
 const addItemRateChanges = ({
 	add,
 	remove,
-	op,
-	products,
 	features,
 }: {
 	add: AddItem;
 	remove: RemoveFilter | undefined;
-	op: UpdatePlanOp;
-	products: CatalogPlan[];
 	features: Feature[];
 }): RateChange[] => {
 	const next = add.feature_override
@@ -348,30 +313,18 @@ const addItemRateChanges = ({
 				errorOnNotFound: false,
 			}),
 		});
-	if (!remove) return diff(undefined);
 	// An empty stamp, or a flag with no stamp, means the old item inherited the credit system's rates.
-	if (remove.previous_feature_override)
+	if (remove?.previous_feature_override)
 		return diff(apiFeatureOverrideToDb(remove.previous_feature_override));
-	if (remove.only_feature_override_changed) return diff(null);
-
-	const catalog = catalogOverride({ filter: remove, op, products });
-	const changes = catalog === undefined ? [] : diff(catalog);
-	if (changes.length > 0) return changes;
-	// Older drafts on a catalog updated in place have lost the old rates; show the new card.
-	return catalog === undefined ||
-		planItemMatchesFilter({ item: add, filter: remove })
-		? diff(undefined)
-		: [];
+	return diff(remove?.only_feature_override_changed ? null : undefined);
 };
 
 /** An op's added items as rate rows; a pair the draft stamped as override-only becomes one updated row. */
 export const migrationOpRateRows = ({
 	op,
-	products,
 	features,
 }: {
 	op: UpdatePlanOp;
-	products: CatalogPlan[];
 	features: Feature[];
 }) => {
 	const removes = op.customize?.remove_items ?? [];
@@ -383,8 +336,6 @@ export const migrationOpRateRows = ({
 			const changes = addItemRateChanges({
 				add,
 				remove,
-				op,
-				products,
 				features,
 			});
 			return {

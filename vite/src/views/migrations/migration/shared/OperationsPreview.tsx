@@ -110,11 +110,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];
-					const rateRows = migrationOpRateRows({
-						op: updateOp,
-						products,
-						features,
-					});
+					const rateRows = migrationOpRateRows({ op: updateOp, features });
 					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];

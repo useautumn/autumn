@@ -49,12 +49,6 @@ const rates = (gateway: number, searches = 5): Override => ({
 		{ metered_feature_id: "searches", credit_cost: searches },
 	],
 });
-const inPlace = {
-	schema: [
-		{ metered_feature_id: "gateway", credit_amount: 3.571 },
-		{ metered_feature_id: "searches", credit_amount: 5 },
-	],
-};
 const add = (patch: Partial<AddItem> = {}): AddItem => ({
 	feature_id: "credits",
 	included: 100,
@@ -80,24 +74,9 @@ const op = (customize: UpdatePlanOp["customize"]) =>
 		plan_filter: { plan_id: "pro", version: 1 },
 		customize,
 	}) as UpdatePlanOp;
-const catalog = (override?: DbOverride) => [
-	{
-		id: "pro",
-		version: 1,
-		items: [
-			{
-				feature_id: "credits",
-				included_usage: 100,
-				interval: "month",
-				config: { feature_override: override },
-			} as ProductItem,
-		],
-	},
-];
-const rowsOf = (operation: UpdatePlanOp, products = catalog()) => {
+const rowsOf = (operation: UpdatePlanOp) => {
 	const { rows, mergedRemoveIndices } = migrationOpRateRows({
 		op: operation,
-		products,
 		features,
 	});
 	return {
@@ -272,17 +251,9 @@ describe("migrationOpRateRows", () => {
 		},
 	);
 
-	test("an unchanged override adds nothing", () => {
-		const unchanged = op({
-			add_items: [add({ included: 200 })],
-			remove_items: [remove()],
-		});
-		expect(rowsOf(unchanged, catalog(inPlace)).rows[0].lines).toEqual([]);
-	});
-
-	test("an old unstamped draft on a catalog updated in place shows the new rate card", () => {
+	test("an unstamped pair shows only the new rate card", () => {
 		const old = op({ add_items: [add()], remove_items: [remove()] });
-		expect(rowsOf(old, catalog(inPlace))).toEqual(
+		expect(rowsOf(old)).toEqual(
 			single(["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"]),
 		);
 	});
@@ -299,7 +270,6 @@ describe("migrationOpRateRows", () => {
 					remove({ interval: "day", previous_feature_override: rates(8) }),
 				],
 			}),
-			products: [],
 			features,
 		});
 		expect(rows.map((row) => [row.removeIndex, row.changes[0]?.from])).toEqual([

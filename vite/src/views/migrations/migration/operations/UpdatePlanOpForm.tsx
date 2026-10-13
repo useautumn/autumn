@@ -91,7 +91,6 @@ export function UpdatePlanOpForm({
 	defaultOpenPicker?: boolean;
 }) {
 	const versionOptions = useVersionOptions(value.plan_filter);
-	const { products } = useProductsQuery({ allVersions: true });
 	const { features } = useFeaturesQuery();
 	const { licenseProducts } = useLicenseProductsQuery();
 
@@ -107,7 +106,7 @@ export function UpdatePlanOpForm({
 
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
-	const rateRows = migrationOpRateRows({ op: value, products, features });
+	const rateRows = migrationOpRateRows({ op: value, features });
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
 
 	const customizedLicenseIds = new Set(
