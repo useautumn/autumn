@@ -71,7 +71,9 @@ const balanceWorkerCheckSpy = spyOn(
 const atom = { gate: Promise.resolve(), calls: 0 };
 const server = Bun.serve({
 	port: 0,
-	fetch: async () => {
+	fetch: async (request) => {
+		// The shadow also samples the Atom's /health; only checks are counted.
+		if (new URL(request.url).pathname === "/health") return Response.json({});
 		atom.calls++;
 		await atom.gate;
 		return Response.json(checkResponse);
