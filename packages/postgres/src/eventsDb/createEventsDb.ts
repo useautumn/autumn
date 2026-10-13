@@ -1,16 +1,15 @@
 import { sql } from "drizzle-orm";
 import { createPostgresClient } from "../createPostgresClient.js";
-import type { PostgresLogger } from "../types/postgresClient.js";
+import type {
+	PostgresClientConfig,
+	PostgresLogger,
+} from "../types/postgresClient.js";
 import {
 	insertUsageEvents,
 	markSentToTinybird,
 	readUnsentToTinybirdIds,
 } from "./repos/usageEvents.js";
-import type { EventsDb, EventsDbConfig } from "./types/eventsDb.js";
-
-const CONNECT_TIMEOUT_SECONDS = 10;
-const IDLE_TIMEOUT_SECONDS = 30;
-const QUERY_TIMEOUT_SECONDS = 30;
+import type { EventsDb } from "./types/eventsDb.js";
 
 /** One pool on the events database, with its repos bound to it. The caller owns it and closes it. */
 export const createEventsDb = ({
@@ -18,17 +17,9 @@ export const createEventsDb = ({
 	config,
 }: {
 	ctx: { logger: PostgresLogger };
-	config: EventsDbConfig;
+	config: PostgresClientConfig;
 }): EventsDb => {
-	const postgres = createPostgresClient({
-		ctx: { logger },
-		config: {
-			...config,
-			connectTimeout: CONNECT_TIMEOUT_SECONDS,
-			idleTimeout: IDLE_TIMEOUT_SECONDS,
-			queryTimeout: QUERY_TIMEOUT_SECONDS,
-		},
-	});
+	const postgres = createPostgresClient({ ctx: { logger }, config });
 	const ctx = { db: postgres.db };
 	return {
 		insertUsageEvents: ({ events }) =>

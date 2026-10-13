@@ -906,6 +906,7 @@
       "name": "@autumn/postgres",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "drizzle-orm": "catalog:",
         "pg": "^8.20.0",

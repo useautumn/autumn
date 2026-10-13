@@ -17,6 +17,7 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@autumn/env": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"pg": "^8.20.0",
