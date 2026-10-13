@@ -3,6 +3,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
 import { getSqliteOpenLock } from "../state/newSqliteConnection.js";
+import { removeUnreadableFiles } from "../state/removeUnreadableFiles.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
@@ -169,6 +170,7 @@ export const createAtomThreads = ({
 
 	/** A thread that cannot start takes the others down: a half-started Atom is not left serving. */
 	async function start(): Promise<void> {
+		removeUnreadableFiles({ dataDir: env.ATOM_DATA_DIR, logger: ctx.logger });
 		try {
 			await Promise.all(threads.map((_, index) => startThread({ index })));
 		} catch (error) {
