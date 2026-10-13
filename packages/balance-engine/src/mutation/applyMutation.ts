@@ -1,3 +1,4 @@
+import { advanceAtomSeqs } from "../commands/track/advanceAtomSeqs.js";
 import {
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
@@ -7,7 +8,6 @@ import type { CustomerRowChange } from "../models/mutation/rowChange.js";
 import type { SubjectStateMutation } from "../models/mutation/subjectStateMutation.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { isSameCustomerIdentity } from "../utils/identityUtils/classifyIdentityUtils.js";
-import { advanceAtomSeqs } from "../commands/track/advanceAtomSeqs.js";
 import { applyChanges } from "./applyChanges.js";
 
 /** Only a mutation that inserts the customer row can start a state: an initialize, or a plan that creates the customer. */

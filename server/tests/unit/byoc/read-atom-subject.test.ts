@@ -60,7 +60,11 @@ const org = {
 	],
 } as unknown as Organization;
 
-const orgAtom = { env: AppEnv.Sandbox, encryptedToken: "encrypted_org_atom" };
+const orgAtom = {
+	id: "atom_1",
+	env: AppEnv.Sandbox,
+	encryptedToken: "encrypted_org_atom",
+};
 const logger = { warn() {}, info() {}, error() {}, debug() {} };
 
 /** A worker that answers `reply` (or throws it), recording each read it was asked for. */
@@ -114,6 +118,7 @@ test("3.1 a subject herald pushes to this Atom: the subjects.set body, with the 
 			org: { config: org.config, default_currency: "usd" },
 			log_offset: "180",
 			read_at: expect.any(Number),
+			atom_seq: null,
 		},
 	} as never);
 	expect(worker.reads[0]).toMatchObject({
@@ -126,6 +131,16 @@ test("3.1 a subject herald pushes to this Atom: the subjects.set body, with the 
 			entityId: "ent_1",
 		},
 	});
+});
+
+test("3.10 the pulled body carries how far the subject holds this Atom's own journal, not another's", async () => {
+	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+	const worker = workerAnswering({
+		logOffset: "180",
+		state: { atomSeqs: { atom_1: 5, atom_other: 9 } } as never,
+	});
+	const result = await read({ client: worker.client });
+	expect(result).toMatchObject({ kind: "body", body: { atom_seq: 5 } });
 });
 
 test("3.4 + 3.5 (R13) off the worker, or not one of the subject's targets: not held, and the worker is never read", async () => {

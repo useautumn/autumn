@@ -31,14 +31,17 @@ const applyTrack = ({
 	});
 
 describe("a track an Atom handed in", () => {
-	test.concurrent("moves that Atom's seq on the customer to the command's", () => {
-		const state = applyTrack({
-			state: { ...createState(), atomSeqs: { atom_other: 9 } },
-			source: { atomId: "atom_1", seq: 4 },
-		});
+	test.concurrent(
+		"moves that Atom's seq on the customer to the command's",
+		() => {
+			const state = applyTrack({
+				state: { ...createState(), atomSeqs: { atom_other: 9 } },
+				source: { atomId: "atom_1", seq: 4 },
+			});
 
-		expect(state.atomSeqs).toEqual({ atom_other: 9, atom_1: 4 });
-	});
+			expect(state.atomSeqs).toEqual({ atom_other: 9, atom_1: 4 });
+		},
+	);
 
 	test.concurrent("never moves it back for a lower seq", () => {
 		const state = applyTrack({
@@ -49,10 +52,13 @@ describe("a track an Atom handed in", () => {
 		expect(state.atomSeqs).toEqual({ atom_1: 7 });
 	});
 
-	test.concurrent("a track no Atom handed in leaves the seqs as they were", () => {
-		const held = { ...createState(), atomSeqs: { atom_1: 7 } };
+	test.concurrent(
+		"a track no Atom handed in leaves the seqs as they were",
+		() => {
+			const held = { ...createState(), atomSeqs: { atom_1: 7 } };
 
-		expect(applyTrack({ state: held }).atomSeqs).toEqual({ atom_1: 7 });
-		expect(applyTrack({ state: createState() }).atomSeqs).toBeUndefined();
-	});
+			expect(applyTrack({ state: held }).atomSeqs).toEqual({ atom_1: 7 });
+			expect(applyTrack({ state: createState() }).atomSeqs).toBeUndefined();
+		},
+	);
 });

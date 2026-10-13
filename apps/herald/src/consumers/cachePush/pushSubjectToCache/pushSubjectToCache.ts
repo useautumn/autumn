@@ -1,7 +1,4 @@
-import {
-	atomSubjectBodyFor,
-	readAtomSubjectBody,
-} from "@autumn/byoc/subjects";
+import { atomSubjectBodyFor, readAtomSubjectBody } from "@autumn/byoc/subjects";
 import type { CachePushTiming } from "../pushQueue/createCachePushStats.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
