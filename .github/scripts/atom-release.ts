@@ -109,6 +109,21 @@ const bundleAtom = async ({ root }: { root: string }) => {
 	);
 };
 
+/** Alien compiles the Atom with whatever `bun` is on PATH, and the binary carries that runtime: it must be the repo's. */
+export const assertPinnedBun = ({
+	packageManager,
+	found,
+}: {
+	packageManager: string;
+	found: string;
+}) => {
+	const pinned = packageManager.match(/^bun@(\d+\.\d+\.\d+)$/)?.[1];
+	if (!pinned)
+		throw new Error(`package.json packageManager "${packageManager}" pins no Bun version`);
+	if (found !== pinned)
+		throw new Error(`Expected bun ${pinned} (package.json packageManager), found "${found}"`);
+};
+
 export type Decision =
 	| { release: true; reason: string }
 	| { release: false; reason: string };
@@ -299,6 +314,11 @@ async function main() {
 	const version = (await Bun.$`alien --version`.quiet().text()).trim();
 	if (version !== `alien ${ALIEN_CLI_VERSION}`)
 		throw new Error(`Expected alien ${ALIEN_CLI_VERSION}, found "${version}"`);
+	assertPinnedBun({
+		packageManager: (await Bun.file(join(root, "package.json")).json())
+			.packageManager,
+		found: (await Bun.$`bun --version`.cwd(join(root, STACK_DIR)).quiet().text()).trim(),
+	});
 	const cut = Bun.spawnSync(command, {
 		cwd: join(root, STACK_DIR),
 		stderr: "inherit",
