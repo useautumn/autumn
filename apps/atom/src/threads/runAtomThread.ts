@@ -25,6 +25,7 @@ import type {
 	ThreadInit,
 	ThreadStatus,
 } from "./types/threadMessages.js";
+import { warmCheckPath } from "./warmUp/warmCheckPath.js";
 
 /** One serving thread: its server, and its lines to the other threads, kept current as they come and go. */
 const openThread = ({ init }: { init: ThreadInit }) => {
@@ -94,6 +95,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	async function start(): Promise<void> {
 		await server.start();
 		await replicas.sync.catchUp();
+		await warmCheckPath({ folders });
 		void replicas.sync.runPasses();
 	}
 
