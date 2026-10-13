@@ -6,6 +6,7 @@ import {
 	ListInvoiceTemplatesParamsSchema,
 	PayInvoiceParamsSchema,
 	ReissueInvoiceParamsSchema,
+	UpdateInvoiceParamsSchema,
 	VoidInvoiceParamsSchema,
 } from "@autumn/shared/publicApiSchemas";
 import { createTool } from "@mastra/core/tools";
@@ -41,6 +42,7 @@ const endpoints = {
 	finalizeInvoice: "/v1/invoices.finalize",
 	payInvoice: "/v1/invoices.pay",
 	voidInvoice: "/v1/invoices.void",
+	updateInvoice: "/v1/invoices.update",
 } as const;
 
 const schemas = {
@@ -55,6 +57,7 @@ const schemas = {
 	finalizeInvoice: FinalizeInvoiceParamsSchema,
 	payInvoice: PayInvoiceParamsSchema,
 	voidInvoice: VoidInvoiceParamsSchema,
+	updateInvoice: UpdateInvoiceParamsSchema,
 } as const;
 
 const { operation, confirmedWrite } = createDomainTools({ endpoints, schemas });
@@ -150,6 +153,11 @@ const domain = {
 			description: `Void an open or uncollectible invoice so the customer no longer owes it. Paid invoices cannot be voided; use reissueInvoice to correct one. ${INVOICE_ID_NOTE} Destructive billing write: confirm the invoice with the user first.`,
 			destructive: true,
 		}),
+		operation({
+			id: "updateInvoice",
+			description: `Change which payment methods (payment_method_types, e.g. card, us_bank_account, customer_balance) a draft or open invoice accepts. The hosted invoice page updates straight away; nothing is charged. ${INVOICE_ID_NOTE} Billing write: confirm the invoice and methods with the user first.`,
+			destructive: true,
+		}),
 	],
 	confirmedWrites: [
 		withFixedFields(
@@ -193,7 +201,7 @@ const getInvoiceSchema = z
 const invoiceListSchema = z.object({ list: z.array(z.unknown()) });
 
 /** One invoice by its Autumn ID. It takes the same request as voidInvoice,
- * payInvoice and finalizeInvoice, so it doubles as their approval preview. */
+ * payInvoice, finalizeInvoice and updateInvoice, so it doubles as their approval preview. */
 const getInvoice = async ({
 	auth,
 	invoiceId,

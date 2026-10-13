@@ -573,6 +573,19 @@ export type BillingUpdateCustomize = {
   removeLicenses?: Array<BillingUpdateRemoveLicense> | undefined;
 };
 
+export const BillingUpdatePaymentMethodType = {
+  Card: "card",
+  CustomerBalance: "customer_balance",
+  UsBankAccount: "us_bank_account",
+  SepaDebit: "sepa_debit",
+  BacsDebit: "bacs_debit",
+  AcssDebit: "acss_debit",
+  Link: "link",
+} as const;
+export type BillingUpdatePaymentMethodType = ClosedEnum<
+  typeof BillingUpdatePaymentMethodType
+>;
+
 /**
  * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
  */
@@ -597,6 +610,10 @@ export type BillingUpdateInvoiceMode = {
    * Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
    */
   netTermsDays?: number | undefined;
+  /**
+   * Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Overrides the org's allowed payment methods.
+   */
+  paymentMethodTypes?: Array<BillingUpdatePaymentMethodType> | undefined;
 };
 
 /**
@@ -2180,12 +2197,18 @@ export function billingUpdateCustomizeToJSON(
 }
 
 /** @internal */
+export const BillingUpdatePaymentMethodType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdatePaymentMethodType
+> = z.enum(BillingUpdatePaymentMethodType);
+
+/** @internal */
 export type BillingUpdateInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
   finalize: boolean;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
+  payment_method_types?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -2199,12 +2222,16 @@ export const BillingUpdateInvoiceMode$outboundSchema: z.ZodMiniType<
     finalize: z._default(z.boolean(), true),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
+    paymentMethodTypes: z.optional(
+      z.array(BillingUpdatePaymentMethodType$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
+      paymentMethodTypes: "payment_method_types",
     });
   }),
 );

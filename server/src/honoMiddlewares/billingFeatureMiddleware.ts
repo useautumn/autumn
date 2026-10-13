@@ -1,7 +1,9 @@
 import { type BillingFeatureId, orgHasFeature } from "@autumn/billing";
+import { getAutumnEnv } from "@autumn/env";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { MiddlewareHandler } from "hono";
 import { getBillingAutumnClient } from "@/external/autumn/getBillingAutumnClient.js";
+import { onAwsEcs } from "@/external/aws/ecs/onAwsEcs.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 /** Refuses the route unless the org's plan on Autumn's own billing includes the feature. */
@@ -24,6 +26,8 @@ export const billingFeatureMiddleware =
 					ctx: { autumn: getBillingAutumnClient(), logger: ctx.logger },
 					orgId: ctx.org.id,
 					featureId,
+					// Autumn's own Atom is private to prod's VPC, so only ECS tasks reach it.
+					useEdge: onAwsEcs() && Boolean(getAutumnEnv().AUTUMN_EDGE_URL),
 				})));
 
 		if (!allowed)

@@ -1,13 +1,25 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import type { Auth } from "../auth/types/auth.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
+import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../pushes/applyPushes.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
+import {
+	createDeployedFolders,
+	createMultiTenantFolders,
+} from "../replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
+import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
 import type { Slots } from "../slots/types/slots.js";
+import { shareSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
@@ -34,33 +46,38 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		},
 	});
 	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
+	const health = {
+		bootedAt: init.bootedAt,
+		restarts: new Int32Array(init.restarts),
+		ready: new Int32Array(init.ready),
+		threadsReady: new Int32Array(init.threadsReady),
+		threadStats: init.stats,
+		dataDir: env.ATOM_DATA_DIR,
+		thread: index,
+	};
 	const answerPorts = new Map<number, MessagePort>();
 	let stopping = false;
-	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
-	const replicas =
-		env.ATOM_MODE === "deployed"
-			? openReplicas({
-					env,
-					slots: auth.slotsFor({ atomId: null }),
-					counters,
-					logger,
-					isStopping: () => stopping,
-				})
-			: undefined;
+	const folders = multiTenant
+		? createMultiTenantFolders({ auth: multiTenant.auth })
+		: createDeployedFolders({ slots: ownFolder({ auth }) });
+	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
+	const replicas = openReplicas({
+		env,
+		folders,
+		counters,
+		logger,
+		isStopping: () => stopping,
+	});
 	const server = createAtomServer({
 		ctx: {
 			auth,
 			multiTenant,
 			logger,
-			health: {
-				bootedAt: init.bootedAt,
-				restarts: new Int32Array(init.restarts),
-				ready: new Int32Array(init.ready),
-				threadStats: init.stats,
-			},
+			health,
 			counters,
 			held,
-			replication: replicas?.replication,
+			folders,
+			replication: replicas.replication,
 		},
 		config: {
 			env,
@@ -71,7 +88,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 
 	function join({ peer, ports }: { peer: number; ports: PeerPorts }): void {
 		owners.connect({ thread: peer, port: ports.calls });
-		answerOwnerCalls({ ctx: { auth }, port: ports.answers });
+		answerOwnerCalls({ ctx: { auth, health }, port: ports.answers });
 		answerPorts.set(peer, ports.answers);
 	}
 
@@ -81,11 +98,11 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
+	/** Listens first, so peers can relay to it, then copies what it missed before it answers from its own files. */
 	async function start(): Promise<void> {
 		await server.start();
-		if (!replicas) return;
 		await replicas.sync.catchUp();
+		Atomics.store(health.threadsReady, index, 1);
 		void replicas.sync.runPasses();
 	}
 
@@ -99,25 +116,34 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	return { start, stop, join, leave };
 };
 
-/** The pushes this thread applies, on their way to every other replica, and what this one copies back from them. */
+/** An org's own Atom opens its one folder on every thread. */
+const ownFolder = ({ auth }: { auth: Auth }): Slots => {
+	const slots = auth.slotsFor({ atomId: null });
+	if (!slots)
+		throw new Error("An org's own Atom opens its one folder on every thread");
+	return slots;
+};
+
+/** The pushes and tenants this thread applies, on their way to every other replica, and what this one copies back from them. */
 const openReplicas = ({
 	env,
-	slots,
+	folders,
 	counters,
 	logger,
 	isStopping,
 }: {
-	env: Extract<ThreadInit["env"], { ATOM_MODE: "deployed" }>;
-	slots: Slots | null;
+	env: ThreadInit["env"];
+	folders: ReplicaFolders;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
 	isStopping: () => boolean;
 }) => {
-	if (!slots)
-		throw new Error("An org's own Atom opens its one folder on every thread");
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
+	registry.register(DELETE_PUSH);
 	registry.register(CATALOG_PUSH);
+	registry.register(ATOM_PUT);
+	registry.register(ATOM_DELETE);
 	const replication = createReplication({
 		ctx: {
 			secret: env.ATOM_PEER_SECRET,
@@ -128,7 +154,7 @@ const openReplicas = ({
 			logger,
 		},
 	});
-	// Built before the thread listens: the point it fell behind at must not move once live relays land.
+	// Built before the thread listens: the point each folder fell behind at must not move once live relays land.
 	const sync = createReplicaSync({
 		ctx: {
 			replication,
@@ -138,7 +164,7 @@ const openReplicas = ({
 			now: Date.now,
 			isStopping,
 		},
-		slots,
+		folders,
 	});
 	return { replication, sync };
 };
@@ -152,7 +178,11 @@ export const runAtomThread = (): void => {
 
 	async function receive(control: ThreadControl): Promise<void> {
 		if (control.type === "init") {
+			shareSqliteOpenLock({ lock: control.sqliteOpenLock });
 			thread = openThread({ init: control });
+			// Before it listens: a check it takes must reach its owner thread, not find no line to it yet.
+			for (const { index, ports } of control.peers)
+				thread.join({ peer: index, ports });
 			await thread.start();
 			report({ type: "ready" });
 		} else if (control.type === "peerJoined")

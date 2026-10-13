@@ -1,8 +1,15 @@
-import { CusProductStatus, Scopes } from "@autumn/shared";
+import {
+	CheckoutAction,
+	CusProductStatus,
+	checkoutToUrl,
+	type DeferredAutumnBillingPlanData,
+	Scopes,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeCheckoutSession } from "@/external/stripe/checkoutSessions/operations/getStripeCheckoutSession";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { CusService } from "../CusService";
 
@@ -31,6 +38,22 @@ export const handleGetPendingPaymentLink = createRoute({
 		});
 
 		if (!metadata) return c.json({ url: null });
+
+		// A long-lived link outlives each Stripe session it opens, so share it while it is open.
+		const longLivedCheckout = await getPendingPlanLongLivedCheckout({
+			ctx,
+			deferredData: metadata.data as DeferredAutumnBillingPlanData,
+		});
+		if (longLivedCheckout) {
+			return c.json({
+				url: checkoutToUrl({
+					action: CheckoutAction.Attach,
+					checkoutId: longLivedCheckout.id,
+					longLived: true,
+				}),
+				long_lived: true,
+			});
+		}
 
 		if (metadata.stripe_checkout_session_id) {
 			const session = await getStripeCheckoutSession({

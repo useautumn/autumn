@@ -91,7 +91,7 @@ export const deleteProduct = async ({
 			orgId: org.id,
 			env,
 		}),
-		planLicenseRepo.listCatalogByLicenseInternalProductIds({
+		planLicenseRepo.listByLicenseInternalProductIds({
 			db,
 			licenseInternalProductIds: deletionInternalProductIds,
 		}),

@@ -14,6 +14,7 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { stampPreviousFeatureOverrides } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraftUtils.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -87,6 +88,32 @@ const withPreviousPrice = <T extends { operations: Operations }>({
 				customize: { ...op.customize, previous_price: prices[0] },
 			};
 		}),
+	},
+});
+
+const withPreviousFeatureOverrides = <T extends { operations: Operations }>({
+	draft,
+	itemsByPlanId,
+}: {
+	draft: T;
+	itemsByPlanId: Map<string, ApiPlanV1["items"]>;
+}): T => ({
+	...draft,
+	operations: {
+		...draft.operations,
+		customer: draft.operations.customer?.map((op) =>
+			op.type === "update_plan" && op.customize
+				? {
+						...op,
+						customize: stampPreviousFeatureOverrides({
+							customize: op.customize,
+							previousItemSets: matchedPlanIds(op.plan_filter.plan_id).map(
+								(id) => itemsByPlanId.get(id) ?? [],
+							),
+						}),
+					}
+				: op,
+		),
 	},
 });
 
@@ -236,7 +263,17 @@ export const createPlanMigrationDraft = async ({
 	// should exist before the parent one that follows it.
 	const insertDrafts = async (drafts: (MigrationDraft | null)[]) => {
 		const ids: string[] = [];
-		for (const draft of drafts.filter((draft) => draft !== null)) {
+		const itemsByPlanId = new Map([
+			[planId, fromPlan.items],
+			...selectedVariantsBefore.map(
+				({ product, plan }) => [product.id, plan.items] as const,
+			),
+		]);
+		for (const unstamped of drafts.filter((draft) => draft !== null)) {
+			const draft = withPreviousFeatureOverrides({
+				draft: unstamped,
+				itemsByPlanId,
+			});
 			const migration = await migrationRepo.insert({
 				ctx,
 				insert: withPreviousPrice({

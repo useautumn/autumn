@@ -85,6 +85,10 @@ export type AlienClient = {
 		containers: AlienContainerResources;
 		network: AlienNetwork | null;
 	}): Promise<AlienSetup>;
+	/** The group a start with this external id would reuse; it outlives its deployment until alien deletes it. */
+	findDeploymentGroup(params: {
+		externalId: string;
+	}): Promise<{ id: string } | null>;
 	findDeployment(params: {
 		deploymentGroupId: string;
 	}): Promise<AlienDeployment | null>;

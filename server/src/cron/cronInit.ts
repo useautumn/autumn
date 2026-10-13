@@ -1,4 +1,5 @@
 import { flushErrorReports } from "@autumn/errors";
+import { getPostgresPools } from "@autumn/postgres";
 import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
@@ -29,11 +30,11 @@ import { runProductCron } from "./productCron/runProductCron.js";
 import { runSeatSyncCron } from "./seatSyncCron/runSeatSyncCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
-const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
+const pools = getPostgresPools();
+const { db, client } = initDrizzle({ name: "cron", pool: pools.cron });
 const { db: probeDb, client: probeClient } = initDrizzle({
 	name: "db-probe",
-	maxConnections: 2,
-	connectTimeout: 5,
+	pool: pools.dbProbe,
 });
 startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });

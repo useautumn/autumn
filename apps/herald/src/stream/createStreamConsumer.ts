@@ -20,6 +20,7 @@ import type {
 	JobMembership,
 } from "../slot/types/heraldHeartbeat.js";
 import { landRecords } from "./landRecords/landRecords.js";
+import { readPartitionLagMs } from "./readPartitionLagMs.js";
 import { seedGroupPlaces } from "./seedGroupPlaces.js";
 import {
 	HeraldStoppedMidSliceError,
@@ -51,6 +52,7 @@ export function createStreamConsumer({
 		db?: PostgresExecutor;
 		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
+		now?: () => number;
 	};
 	config: {
 		topic: string;
@@ -71,8 +73,13 @@ export function createStreamConsumer({
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
 	const progress = createProgressTracker();
+	const now = ctx.now ?? Date.now;
 	let membership: JobMembership = "idle";
 	let assignedPartitions: number[] = [];
+	let joiningSinceMs: number | null = null;
+	let joinedAtMs: number | null = null;
+	let consumedAtJoin = new Map<number, bigint | null>();
+	let lastFetchAtMs: number | null = null;
 
 	/** A record that cannot be read is dropped, loudly: one bad record must never hold its partition. */
 	function onRecordError({
@@ -166,6 +173,13 @@ export function createStreamConsumer({
 	function onGroupJoin(event: ConsumerGroupJoinEvent): void {
 		assignedPartitions = event.payload.memberAssignment[config.topic] ?? [];
 		membership = "joined";
+		joinedAtMs = now();
+		consumedAtJoin = new Map(
+			assignedPartitions.map((partition) => [
+				partition,
+				progress.read({ topic: config.topic, partition }),
+			]),
+		);
 		ctx.logger.info(
 			{
 				type: "herald_group_joined",
@@ -176,13 +190,31 @@ export function createStreamConsumer({
 	}
 
 	/** What the heartbeat reports: in the group or not, and how far behind the log this member is. */
+	function readStalledLagMs({ nowMs }: { nowMs: number }): number | null {
+		if (assignedPartitions.length === 0) {
+			if (membership !== "joining" || joiningSinceMs === null) return null;
+			return nowMs - joiningSinceMs;
+		}
+		const lastActiveMs = Math.max(lastFetchAtMs ?? 0, joinedAtMs ?? 0);
+		return lastActiveMs === 0 ? null : nowMs - lastActiveMs;
+	}
+
 	function health(): JobHealth {
+		const nowMs = now();
 		let maxLagRecords: number | null = null;
+		let maxLagMs = readStalledLagMs({ nowMs });
 		for (const partition of assignedPartitions) {
-			const { consumedNextOffset, highWatermark } = progress.readProgress({
-				topic: config.topic,
-				partition,
+			const position = { topic: config.topic, partition };
+			const lagMs = readPartitionLagMs({
+				progress,
+				position,
+				nowMs,
+				joinedAtMs,
+				consumedAtJoin: consumedAtJoin.get(partition) ?? null,
 			});
+			if (lagMs !== null) maxLagMs = Math.max(maxLagMs ?? 0, lagMs);
+			const { consumedNextOffset, highWatermark } =
+				progress.readProgress(position);
 			if (consumedNextOffset === null || highWatermark === null) continue;
 			const lag = Number(highWatermark - consumedNextOffset);
 			maxLagRecords = Math.max(maxLagRecords ?? 0, lag);
@@ -192,6 +224,7 @@ export function createStreamConsumer({
 			membership,
 			partitions: assignedPartitions.length,
 			maxLagRecords,
+			maxLagMs,
 		};
 	}
 	function onRebalancing(): void {
@@ -201,8 +234,13 @@ export function createStreamConsumer({
 		);
 	}
 
+	function onFetch(): void {
+		lastFetchAtMs = now();
+	}
+
 	async function start(): Promise<void> {
 		membership = "joining";
+		joiningSinceMs = now();
 		await seedGroupPlaces({
 			ctx: { admin: ctx.kafka.admin(), logger: ctx.logger },
 			groupId,
@@ -211,6 +249,7 @@ export function createStreamConsumer({
 		consumer.on(consumer.events.CRASH, onCrash);
 		consumer.on(consumer.events.GROUP_JOIN, onGroupJoin);
 		consumer.on(consumer.events.REBALANCING, onRebalancing);
+		consumer.on(consumer.events.FETCH, onFetch);
 		await topicConsumer.start();
 	}
 

@@ -1,10 +1,14 @@
 import { fetchInvalidKeys } from "../auth/secretKeys/fetchInvalidKeys.js";
 import { startSecretKeys } from "../auth/secretKeys/startSecretKeys.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
+import { createDiskEvictor } from "../disk/createDiskEvictor.js";
+import { readVolumeBytes } from "../disk/readVolumeBytes.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPeerApp } from "../http/createPeerApp.js";
+import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
 	AtomServer,
@@ -48,52 +52,63 @@ export const createAtomServer = ({
 						}),
 				})
 			: undefined;
+	const loop = startLoopWatch();
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
 		logger: ctx.logger,
 		health: ctx.health,
 		counters: ctx.counters,
+		loop,
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
-		...(ctx.replication && { peer: { port: env.ATOM_PORT } }),
+		peer: { port: env.ATOM_PORT },
 	};
 	const app = createAtomApp({ ctx: httpContext });
-	// Only an org's own Atom listens to other replicas, on the port the stack keeps off the public endpoint.
-	const peerApp =
-		env.ATOM_MODE === "deployed"
-			? createPeerApp({ ctx: httpContext, secret: env.ATOM_PEER_SECRET })
-			: undefined;
+	// The other replicas are listened to on the port the stack keeps off the public endpoint.
+	const peerApp = createPeerApp({
+		ctx: httpContext,
+		secret: env.ATOM_PEER_SECRET,
+	});
 	const statsTick = startThreadStatsTick({
 		counters: ctx.counters,
 		held: ctx.held,
+	});
+	// The cap follows the mounted volume, so whatever disk the stack gives this replica, grown online included, counts.
+	const diskEvictor = createDiskEvictor({
+		ctx: {
+			folders: ctx.folders,
+			counters: ctx.counters,
+			logger: ctx.logger,
+		},
+		volumeOf: () => readVolumeBytes({ path: env.ATOM_DATA_DIR }),
+		threads: env.ATOM_THREADS,
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
 	let peerListener: ReturnType<typeof Bun.serve> | undefined;
 	let receiving: Promise<void> | undefined;
 
 	function listen(): void {
-		listener = Bun.serve({
+		listener = serveAtomApp({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
-			// Every thread listens on the one port, and Linux gives each connection to one of them.
-			reusePort: true,
 			fetch: app.fetch,
+			logger: ctx.logger,
 		});
-		if (peerApp)
-			peerListener = Bun.serve({
-				hostname: env.ATOM_HOSTNAME,
-				port: env.ATOM_PEER_PORT,
-				reusePort: true,
-				fetch: peerApp.fetch,
-			});
+		peerListener = serveAtomApp({
+			hostname: env.ATOM_HOSTNAME,
+			port: env.ATOM_PEER_PORT,
+			fetch: peerApp.fetch,
+			logger: ctx.logger,
+		});
 	}
 
 	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
 	async function start(): Promise<void> {
 		listen();
 		receiving = pushReceiver?.run();
+		void diskEvictor.run();
 	}
 
 	/** In-flight requests and leased pushes finish before the files close. */
@@ -101,8 +116,10 @@ export const createAtomServer = ({
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
 		// After the last push applied here: what it relays must still reach the peers before the files close.
-		await ctx.replication?.stop();
+		await ctx.replication.stop();
+		diskEvictor.stop();
 		statsTick.stop();
+		loop.stop();
 		secretKeys?.stop();
 		ctx.auth.close();
 	}

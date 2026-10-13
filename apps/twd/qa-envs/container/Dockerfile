@@ -34,6 +34,7 @@ COPY --from=deps /split/5/ /app/node_modules/.bun/
 COPY --from=deps /split/6/ /app/node_modules/.bun/
 COPY --from=deps /split/7/ /app/node_modules/.bun/
 COPY qa/ /qa/
+COPY tb-local/ /qa/tb-local/
 RUN chmod +x /qa/*.sh
 EXPOSE 3000
 ENTRYPOINT ["/usr/bin/tini", "--", "/qa/entrypoint.sh"]

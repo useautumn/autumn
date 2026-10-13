@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import type { Context } from "hono";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -49,7 +50,7 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 	const { code, state, error } = query;
 
 	// Get database connection
-	const { db } = initDrizzle();
+	const { db } = initDrizzle({ pool: getPostgresPools().adHoc });
 
 	// Build frontend redirect URL (default)
 	const frontendUrl = process.env.CLIENT_URL || "http://localhost:3000";

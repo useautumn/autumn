@@ -16,6 +16,7 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
+import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
 import type {
 	PreviewCheckoutActionArgs,
 	PreviewCheckoutActionResult,
@@ -134,6 +135,9 @@ export async function previewCheckoutAction({
 				}),
 				billingContext: updateSubscriptionResult.billingContext,
 				billingPlan,
+				intent: billingPlanToUpdateSubscriptionPreviewIntent({
+					billingContext: updateSubscriptionResult.billingContext,
+				}),
 			});
 
 			return {

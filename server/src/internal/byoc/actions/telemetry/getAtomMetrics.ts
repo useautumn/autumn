@@ -14,7 +14,12 @@ export const getAtomMetrics = async ({
 	ctx: AutumnContext;
 	params: GetAtomMetricsParams;
 }): Promise<GetAtomMetricsResponse> => {
-	const deploymentId = (await cacheDeploymentRepo.find({ ctx }))?.deployment_id;
-	if (!deploymentId) return { period_seconds: 0, points: [], latest: null };
-	return queryAtomMetrics({ deploymentId, range: params.range });
+	const cacheDeployment = await cacheDeploymentRepo.find({ ctx });
+	if (!cacheDeployment?.deployment_id)
+		return { period_seconds: 0, points: [], latest: null };
+	return queryAtomMetrics({
+		deploymentId: cacheDeployment.deployment_id,
+		range: params.range,
+		createdAt: cacheDeployment.created_at,
+	});
 };

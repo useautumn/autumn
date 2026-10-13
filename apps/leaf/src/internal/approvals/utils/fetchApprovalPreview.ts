@@ -55,6 +55,10 @@ const previewRequestForWrite = ({
 		...catalogRequest,
 	});
 	const name = normalizeToolName(toolName);
+	// getInvoice is strict, and updateInvoice also carries payment_method_types.
+	if (writeToPreviewTool(name) === "getInvoice") {
+		return { invoice_id: request.invoice_id };
+	}
 	if (name === "createPlan") {
 		return withCatalogDefaults({
 			expand: ["plan"],

@@ -183,6 +183,14 @@ export const cacheNotRunning = () =>
 		statusCode: 409,
 	});
 
+/** Setup finishes on the first checks, which only reach a connected Atom. */
+export const cacheNotConnected = () =>
+	new RecaseError({
+		message: "Atom is not connected yet, so its setup cannot be finished.",
+		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
 /** Only a deploy that stopped can be resumed. */
 export const cacheNotFailed = () =>
 	new RecaseError({

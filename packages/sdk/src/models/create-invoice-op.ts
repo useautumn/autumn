@@ -1160,6 +1160,19 @@ export type CreateInvoiceAttachDiscount = {
   promotionCode?: string | undefined;
 };
 
+export const CreateInvoicePaymentMethodType = {
+  Card: "card",
+  CustomerBalance: "customer_balance",
+  UsBankAccount: "us_bank_account",
+  SepaDebit: "sepa_debit",
+  BacsDebit: "bacs_debit",
+  AcssDebit: "acss_debit",
+  Link: "link",
+} as const;
+export type CreateInvoicePaymentMethodType = ClosedEnum<
+  typeof CreateInvoicePaymentMethodType
+>;
+
 /**
  * draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
  */
@@ -1213,6 +1226,10 @@ export type CreateInvoiceParams = {
    * Stripe tax rate ID (txr_...) applied to every line.
    */
   taxRateId?: string | undefined;
+  /**
+   * Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.
+   */
+  paymentMethodTypes?: Array<CreateInvoicePaymentMethodType> | undefined;
   /**
    * Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
    */
@@ -4104,6 +4121,11 @@ export function createInvoiceAttachDiscountToJSON(
 }
 
 /** @internal */
+export const CreateInvoicePaymentMethodType$outboundSchema: z.ZodMiniEnum<
+  typeof CreateInvoicePaymentMethodType
+> = z.enum(CreateInvoicePaymentMethodType);
+
+/** @internal */
 export const CreateInvoiceIssueMethod$outboundSchema: z.ZodMiniEnum<
   typeof CreateInvoiceIssueMethod
 > = z.enum(CreateInvoiceIssueMethod);
@@ -4120,6 +4142,7 @@ export type CreateInvoiceParams$Outbound = {
   issue_date?: number | undefined;
   due_date?: number | undefined;
   tax_rate_id?: string | undefined;
+  payment_method_types?: Array<string> | undefined;
   period_start?: number | undefined;
   period_end?: number | undefined;
   preview?: boolean | undefined;
@@ -4146,6 +4169,9 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
     issueDate: z.optional(z.int()),
     dueDate: z.optional(z.int()),
     taxRateId: z.optional(z.string()),
+    paymentMethodTypes: z.optional(
+      z.array(CreateInvoicePaymentMethodType$outboundSchema),
+    ),
     periodStart: z.optional(z.int()),
     periodEnd: z.optional(z.int()),
     preview: z.optional(z.boolean()),
@@ -4161,6 +4187,7 @@ export const CreateInvoiceParams$outboundSchema: z.ZodMiniType<
       issueDate: "issue_date",
       dueDate: "due_date",
       taxRateId: "tax_rate_id",
+      paymentMethodTypes: "payment_method_types",
       periodStart: "period_start",
       periodEnd: "period_end",
       issueMethod: "issue_method",

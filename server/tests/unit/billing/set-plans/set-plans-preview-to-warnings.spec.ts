@@ -952,3 +952,74 @@ describe("setPlansPreviewToWarnings: past_due subscription", () => {
 		).toEqual([]);
 	});
 });
+
+describe("setPlansPreviewToWarnings: cycle reset on a replayed start", () => {
+	const replayedStartWarnings = ({
+		startsAt,
+		billingCycleAnchor,
+		replaced = false,
+	}: {
+		startsAt: number;
+		billingCycleAnchor?: "phase_start";
+		replaced?: boolean;
+	}) =>
+		stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: NOON_UTC + 24 * DAY_MS,
+				stripeSubscription: stripeSubscription({ id: "sub_live" }),
+				...(replaced && {
+					replacedStripeSubscription: stripeSubscription({ id: "sub_live" }),
+					subscriptionBackdateStartMs: startsAt,
+				}),
+				immediatePhase: {
+					starts_at: startsAt,
+					plans: [],
+					...(billingCycleAnchor && {
+						billing_cycle_anchor: billingCycleAnchor,
+					}),
+				},
+			},
+		}).filter(({ type }) => type === "cycle_reset_ignored");
+
+	test("phase_start on the live subscription's past start warns that nothing resets", () => {
+		expect(
+			replayedStartWarnings({
+				startsAt: NOON_UTC - 7 * DAY_MS,
+				billingCycleAnchor: "phase_start",
+			}).map(withoutParts),
+		).toEqual([
+			{
+				type: "cycle_reset_ignored",
+				severity: "warning",
+				message:
+					"Resetting the cycle on the phase start moves nothing: the first phase starts on 22 Sep 2026 when the current cycle started. Start it now to reset the cycle today.",
+			},
+		]);
+	});
+
+	test("phase_start starting now resets the cycle, so it doesn't warn", () => {
+		expect(
+			replayedStartWarnings({
+				startsAt: NOON_UTC,
+				billingCycleAnchor: "phase_start",
+			}),
+		).toEqual([]);
+	});
+
+	test("no anchor on a replayed start doesn't warn", () => {
+		expect(replayedStartWarnings({ startsAt: NOON_UTC - 7 * DAY_MS })).toEqual(
+			[],
+		);
+	});
+
+	test("a backdate recreate restarts the cycle on its start, so it doesn't warn", () => {
+		expect(
+			replayedStartWarnings({
+				startsAt: NOON_UTC - 7 * DAY_MS,
+				billingCycleAnchor: "phase_start",
+				replaced: true,
+			}),
+		).toEqual([]);
+	});
+});

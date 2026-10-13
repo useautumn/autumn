@@ -44,6 +44,7 @@ const createServerAlienClient = (): AlienClient | null => {
 	const client = createAlienClient({ config, logger });
 	return {
 		startSetup: withByocErrors(client.startSetup),
+		findDeploymentGroup: withByocErrors(client.findDeploymentGroup),
 		findDeployment: withByocErrors(client.findDeployment),
 		getDeployment: withByocErrors(client.getDeployment),
 		retryDeployment: withByocErrors(client.retryDeployment),

@@ -1,8 +1,9 @@
 import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 
-/** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema. */
-const SLOT_SCHEMA_VERSION = 6;
+/** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema.
+ * 7: the same tables, rebuilt with auto_vacuum on, so dropped customers' pages go back to the volume. */
+const SLOT_SCHEMA_VERSION = 7;
 
 const dropSlotSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS subject_states");

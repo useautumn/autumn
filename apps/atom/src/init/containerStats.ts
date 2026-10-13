@@ -5,6 +5,8 @@ export type ContainerStats = {
 	cpuUsageSeconds: number | null;
 	cpuLimitCores: number | null;
 	memoryBytes: number | null;
+	/** Of `memoryBytes`, what is not file cache the kernel can drop: what an OOM kill is about. */
+	memoryAnonBytes: number | null;
 	memoryLimitBytes: number | null;
 };
 
@@ -28,6 +30,11 @@ const readCpuUsageSeconds = ({ cgroupDir }: { cgroupDir: string }) => {
 	return usage ? Number(usage[1]) / 1e6 : null;
 };
 
+const readMemoryAnonBytes = ({ cgroupDir }: { cgroupDir: string }) => {
+	const anon = readText(`${cgroupDir}/memory.stat`)?.match(/^anon (\d+)$/m);
+	return anon ? Number(anon[1]) : null;
+};
+
 const readCpuLimitCores = ({ cgroupDir }: { cgroupDir: string }) => {
 	const [quota, period] = readText(`${cgroupDir}/cpu.max`)?.split(" ") ?? [];
 	if (!quota || quota === "max" || !period) return null;
@@ -42,6 +49,7 @@ export const readContainerStatsFrom = ({
 	cpuUsageSeconds: readCpuUsageSeconds({ cgroupDir }),
 	cpuLimitCores: readCpuLimitCores({ cgroupDir }),
 	memoryBytes: toBytes(readText(`${cgroupDir}/memory.current`)),
+	memoryAnonBytes: readMemoryAnonBytes({ cgroupDir }),
 	memoryLimitBytes: toBytes(readText(`${cgroupDir}/memory.max`)),
 });
 

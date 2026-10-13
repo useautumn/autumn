@@ -26,7 +26,7 @@ export const handleStripeCheckoutSessionExpired = async ({
 }) => {
 	const session = event.data.object;
 
-	// Long-lived links keep their grant until the link expires (see runLongLivedCheckoutExpiry).
+	// Long-lived links keep their granted or pending plan until the link expires (see runLongLivedCheckoutExpiry).
 	if (session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY]) return;
 
 	const cusProducts = await CusProductService.getByStripeCheckoutSessionId({

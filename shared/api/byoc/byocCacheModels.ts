@@ -68,7 +68,7 @@ export const ApiByocCacheSchema = z.object({
 		.number()
 		.nullable()
 		.describe(
-			"When Atom first answered a check from your app; setup is done from then on.",
+			"When you finished setup, once Atom answered your app's first checks; setup is done from then on.",
 		),
 	cpu: z
 		.number()

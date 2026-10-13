@@ -60,6 +60,8 @@ export const initInvoiceFromStripe = async ({
 	return {
 		id: generateId("inv"),
 		internal_customer_id: internalCustomerId,
+		org_id: fullCustomer.org_id,
+		env: fullCustomer.env,
 		product_ids: [...new Set(productIds)],
 		internal_product_ids: [...new Set(internalProductIds)],
 		created_at: secondsToMs(stripeInvoice.created),

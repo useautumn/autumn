@@ -34,6 +34,7 @@ const atomDeploymentsIn = ({
 	status
 		? [
 				{
+					id: "atom_1",
 					status,
 					deployment_id: "dep_1",
 					endpoint_url: ORG_ATOM,
@@ -141,6 +142,7 @@ const createPushContext = ({
 			readSubjectState: async () => ({ state: {}, catalog: {} }),
 		},
 		shadowAtomConfig: { get: () => shadowAtom },
+		atomPushQueueOnly: false,
 		getAtomClient: ({ connection }: { connection: AtomConnection }) => {
 			tokens[connection.endpointUrl] = connection.encryptedToken;
 			queues[connection.endpointUrl] = connection.queue;

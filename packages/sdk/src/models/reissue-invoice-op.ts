@@ -36,7 +36,7 @@ export type CustomField = {
   value: string;
 };
 
-export const PaymentMethodType = {
+export const ReissueInvoicePaymentMethodType = {
   Card: "card",
   CustomerBalance: "customer_balance",
   UsBankAccount: "us_bank_account",
@@ -45,7 +45,9 @@ export const PaymentMethodType = {
   AcssDebit: "acss_debit",
   Link: "link",
 } as const;
-export type PaymentMethodType = ClosedEnum<typeof PaymentMethodType>;
+export type ReissueInvoicePaymentMethodType = ClosedEnum<
+  typeof ReissueInvoicePaymentMethodType
+>;
 
 /**
  * Changes that apply to the replacement invoice only.
@@ -78,7 +80,7 @@ export type ReissueInvoiceInvoiceRequestBody = {
   /**
    * Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms.
    */
-  paymentMethodTypes?: Array<PaymentMethodType> | undefined;
+  paymentMethodTypes?: Array<ReissueInvoicePaymentMethodType> | undefined;
 };
 
 /**
@@ -1569,9 +1571,9 @@ export function customFieldToJSON(customField: CustomField): string {
 }
 
 /** @internal */
-export const PaymentMethodType$outboundSchema: z.ZodMiniEnum<
-  typeof PaymentMethodType
-> = z.enum(PaymentMethodType);
+export const ReissueInvoicePaymentMethodType$outboundSchema: z.ZodMiniEnum<
+  typeof ReissueInvoicePaymentMethodType
+> = z.enum(ReissueInvoicePaymentMethodType);
 
 /** @internal */
 export type ReissueInvoiceInvoiceRequestBody$Outbound = {
@@ -1596,7 +1598,9 @@ export const ReissueInvoiceInvoiceRequestBody$outboundSchema: z.ZodMiniType<
     accountTaxIds: z.optional(z.nullable(z.array(z.string()))),
     footer: z.optional(z.nullable(z.string())),
     memo: z.optional(z.nullable(z.string())),
-    paymentMethodTypes: z.optional(z.array(PaymentMethodType$outboundSchema)),
+    paymentMethodTypes: z.optional(
+      z.array(ReissueInvoicePaymentMethodType$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

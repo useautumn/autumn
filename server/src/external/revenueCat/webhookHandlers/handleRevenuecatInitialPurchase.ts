@@ -60,6 +60,7 @@ export const handleInitialPurchase = async ({
 		featureQuantities,
 		appUserId: app_user_id,
 		periodEvent: event,
+		originalTransactionId: event.original_transaction_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (initial purchase)`);

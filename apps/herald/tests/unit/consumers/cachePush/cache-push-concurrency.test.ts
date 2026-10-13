@@ -28,9 +28,11 @@ mock.module(
 	}),
 );
 
-const { CACHE_PUSH_CONCURRENCY, createCachePushConsumer } = await import(
-	"../../../../src/consumers/cachePush/cachePushConsumer.js"
-);
+const {
+	CACHE_PUSH_CONCURRENCY,
+	CACHE_PUSH_LINGER_MS,
+	createCachePushConsumer,
+} = await import("../../../../src/consumers/cachePush/cachePushConsumer.js");
 const { createCachePushQueue } = await import(
 	"../../../../src/consumers/cachePush/pushQueue/createCachePushQueue.js"
 );
@@ -76,6 +78,7 @@ test("a slice is queued, not awaited: handle returns while its pushes are still 
 	});
 	expect(pushed).toEqual([]);
 	openGate();
+	await Bun.sleep(CACHE_PUSH_LINGER_MS + 5);
 	await settle();
 	expect(pushed).toEqual(["cus_a@1"]);
 });
@@ -89,7 +92,7 @@ test("pushes run up to the pool's cap at once, each subject once", async () => {
 		recordFor({ customerId: `cus_${index % 150}`, offset: index }),
 	);
 	await consumer.handle({ records });
-	await Bun.sleep(5);
+	await Bun.sleep(CACHE_PUSH_LINGER_MS + 5);
 	expect(peak).toBe(CACHE_PUSH_CONCURRENCY);
 	openGate();
 	await settle();
@@ -124,6 +127,59 @@ test("a subject still waiting when it changes again is pushed once, at its newes
 	await settle();
 	await Bun.sleep(10);
 	expect(pushed).toEqual(["cus_hot@1", "cus_hot@3"]);
+});
+
+test("a subject lingers from its first change, so changes made meanwhile are pushed once, at the newest offset", async () => {
+	const pushedOffsets: bigint[] = [];
+	const queue = createCachePushQueue({
+		push: async ({ cacheSubject }) => {
+			pushedOffsets.push(cacheSubject.logOffset);
+		},
+		concurrency: 4,
+		maxPending: 100,
+		lingerMs: 30,
+	});
+	const subject = (offset: number) => ({
+		identity: identityOf("cus_linger"),
+		logOffset: BigInt(offset),
+		oldestOccurredAt: offset,
+		customerVersion: null,
+	});
+
+	for (const offset of [1, 2, 3]) {
+		queue.enqueue({ subjects: [subject(offset)] });
+		await Bun.sleep(5);
+	}
+	expect(pushedOffsets).toEqual([]);
+	await Bun.sleep(40);
+
+	expect(pushedOffsets).toEqual([3n]);
+});
+
+test("drain pushes a subject still lingering at once", async () => {
+	const pushedOffsets: bigint[] = [];
+	const queue = createCachePushQueue({
+		push: async ({ cacheSubject }) => {
+			pushedOffsets.push(cacheSubject.logOffset);
+		},
+		concurrency: 1,
+		maxPending: 100,
+		lingerMs: 60_000,
+	});
+	queue.enqueue({
+		subjects: [
+			{
+				identity: identityOf("cus_drain"),
+				logOffset: 7n,
+				oldestOccurredAt: 7,
+				customerVersion: null,
+			},
+		],
+	});
+
+	await queue.drain();
+
+	expect(pushedOffsets).toEqual([7n]);
 });
 
 test("a full queue holds the slice until pushes make room", async () => {

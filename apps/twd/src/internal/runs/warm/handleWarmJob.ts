@@ -39,7 +39,7 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 	let buildEndedAt: number | undefined;
 	const { exitCode } = await spawnTwChild<WarmChildMessage>({
 		entry: WARM_ENTRY,
-		init: { type: "init", sha },
+		init: { type: "init", sha, branch },
 		// Exact-sha images only: a stale :latest hit would not publish this sha.
 		env: { TW_MODAL_NO_STALE: "1" },
 		signal,

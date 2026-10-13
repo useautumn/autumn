@@ -206,6 +206,21 @@ export function createMeteringRecordHandler({
 		return !produced?.has({ offset: position.offset });
 	}
 
+	/** Written under the epoch this process's writer holds, so the writer applies it in order; the follower applying
+	 *  one ahead of the writer's lingering batches would move the bookmark past them. Known before the ack, unlike the offset. */
+	function isOwnWrite({
+		partition,
+		ownerEpoch,
+	}: {
+		partition: number;
+		ownerEpoch: bigint | undefined;
+	}): boolean {
+		if (ownerEpoch === undefined) return false;
+		if (!ctx.producedOffsetsByPartition?.has(partition)) return false;
+		const own = ctx.ownerEpochByPartition?.get(partition)?.();
+		return own !== undefined && BigInt(own) === ownerEpoch;
+	}
+
 	/** Stays synchronous for a resident store: the writer-race offset must be visible before the next record. */
 	function applyRecord({
 		position,
@@ -220,6 +235,8 @@ export function createMeteringRecordHandler({
 			staleRecords.record({ ...position, ownerEpoch, fence });
 			return undefined;
 		}
+		if (isOwnWrite({ partition: position.partition, ownerEpoch }))
+			return undefined;
 		if (ctx.readOnlyPartitions?.has(position.partition)) {
 			ctx.recentCommandsByPartition
 				.get(position.partition)

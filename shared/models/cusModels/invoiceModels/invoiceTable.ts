@@ -9,6 +9,7 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn, sqlNow } from "../../../db/utils.js";
+import type { AppEnv } from "../../genModels/genEnums.js";
 import { customers } from "../cusTable.js";
 import { entities } from "../entityModels/entityTable.js";
 import type { InvoiceDiscount, InvoiceItem } from "./invoiceModels.js";
@@ -23,6 +24,9 @@ export const invoices = pgTable(
 
 		internal_customer_id: text("internal_customer_id").notNull(),
 		internal_entity_id: text("internal_entity_id"),
+		// Copied from the owning customer; nullable until the backfill is verified.
+		org_id: text("org_id"),
+		env: text("env").$type<AppEnv>(),
 
 		stripe_id: text("stripe_id").notNull(),
 		processor_type: text("processor_type"),
@@ -58,6 +62,15 @@ export const invoices = pgTable(
 			.on(table.paid_at)
 			.where(sql`${table.paid_at} IS NOT NULL`)
 			.concurrently(),
+		// Serves org-wide invoices.list pages and the org_id backfill cursor.
+		index("idx_invoices_org_env_created")
+			.on(
+				table.org_id,
+				table.env,
+				sql`${table.created_at} DESC`,
+				sql`${table.id} DESC`,
+			)
+			.concurrently(),
 		// Serves the entities.internal_id delete cascade (both default collation).
 		index("idx_invoices_internal_entity_id")
 			.on(table.internal_entity_id)
@@ -69,4 +82,8 @@ export const invoices = pgTable(
 collatePgColumn(invoices.id, "C");
 
 export type InvoiceRow = InferSelectModel<typeof invoices>;
-export type InsertInvoice = InferInsertModel<typeof invoices>;
+/** Every writer must stamp the owning customer's org/env; the columns stay nullable only until the backfill. */
+export type InsertInvoice = InferInsertModel<typeof invoices> & {
+	org_id: string;
+	env: AppEnv;
+};

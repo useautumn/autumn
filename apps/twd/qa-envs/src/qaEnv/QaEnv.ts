@@ -7,6 +7,7 @@ import { deleteNeonBranch } from "../neon/deleteNeonBranch";
 import { buildProgress } from "../pages/buildProgress";
 import { progressPage } from "../pages/progressPage";
 import { wakingPage } from "../pages/wakingPage";
+import { TINYBIRD_ENV_TOKEN } from "../tinybird/QaTinybird";
 import type {
 	BuildResult,
 	CreateEnvInput,
@@ -16,7 +17,12 @@ import type {
 	QueuedWebhook,
 } from "../types";
 import { sharedEnv } from "./sharedEnv";
-import { qaEnvStub, routerStub } from "./stubs";
+import {
+	qaEnvStub,
+	routerStub,
+	tinybirdHostLabel,
+	tinybirdStub,
+} from "./stubs";
 import { describeRequest, wakesEnv } from "./wakesEnv";
 
 const WORKER_SCRIPT = "qa-envs";
@@ -149,6 +155,7 @@ export class QaEnv extends DurableObject<Env> {
 				DATABASE_URL: builder.config.runtimeEnv.DATABASE_URL ?? "",
 				PUBLIC_URL: builder.config.publicUrl,
 				HOME: "/root",
+				QA_TINYBIRD: builder.config.tinybird ? "1" : "",
 			},
 		});
 		await this.ctx.storage.put(
@@ -302,6 +309,15 @@ export class QaEnv extends DurableObject<Env> {
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
+		if (input.tinybird) {
+			await ensureEnvHostname({
+				env: this.env,
+				name: tinybirdHostLabel(name),
+				script: WORKER_SCRIPT,
+			});
+			// Even if this build never gets adopted, deletion must remove the hostname it created.
+			await this.ctx.storage.put("tinybirdHost", true);
+		}
 		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
 		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
 		const live = await this.config();
@@ -367,6 +383,9 @@ export class QaEnv extends DurableObject<Env> {
 			return;
 		}
 		await this.ctx.storage.put("snapshot", snapshot);
+		const adopted = await this.config();
+		if (adopted?.tinybird && pendingConfig && !pendingConfig.tinybird)
+			await this.removeTinybird(adopted);
 		if (pendingConfig) await this.ctx.storage.put("config", pendingConfig);
 		await this.ctx.storage.put("sha", result.sha);
 		await this.ctx.storage.put("state", "ready" satisfies EnvState);
@@ -402,6 +421,12 @@ export class QaEnv extends DurableObject<Env> {
 			createdAt: config?.createdAt,
 			expiresAt: config?.expiresAt,
 			neonBranchId: config?.neonBranchId,
+			tinybirdUrl: config?.tinybird ? this.tinybirdUrl(config) : null,
+			tinybird: config?.tinybird
+				? await this.tinybird(config)
+						.status()
+						.catch(() => null)
+				: null,
 			pendingBuild: pending && {
 				...pending,
 				progress: await this.builderStub(pending.buildId, config?.name ?? "")
@@ -441,8 +466,10 @@ export class QaEnv extends DurableObject<Env> {
 				...sharedEnv({ env: this.env }),
 				...config.runtimeEnv,
 				PUBLIC_URL: config.publicUrl,
+				...this.tinybirdEnv(config),
 			},
 		});
+		if (config.tinybird) this.ctx.waitUntil(this.keepTinybirdAlive(config));
 		this.ctx.waitUntil(
 			this.container.setInactivityTimeout(IDLE_MS).catch(() => {}),
 		);
@@ -721,6 +748,11 @@ export class QaEnv extends DurableObject<Env> {
 		if (this.container.running) await this.container.destroy("expired");
 		this.ready = false;
 		if (config) {
+			if (
+				config.tinybird ||
+				(await this.ctx.storage.get<boolean>("tinybirdHost"))
+			)
+				await this.removeTinybird(config);
 			await routerStub({ env: this.env }).setAccounts(config.name, []);
 			if (config.neonBranchId)
 				await deleteNeonBranch({
@@ -780,8 +812,46 @@ export class QaEnv extends DurableObject<Env> {
 			return this.ctx.storage.setAlarm(config.expiresAt);
 		}
 		await this.refreshStripeAccounts(config);
+		if (config.tinybird) await this.keepTinybirdAlive(config);
 		await this.ctx.storage.setAlarm(
 			Math.min(config.expiresAt, Date.now() + IDLE_CHECK_MS),
 		);
+	}
+
+	// ---------------------------------------------------------------- tinybird
+
+	private tinybird(config: EnvConfig) {
+		return tinybirdStub({ env: this.env, name: config.name });
+	}
+
+	private tinybirdUrl(config: EnvConfig) {
+		return `https://${tinybirdHostLabel(config.name)}.${this.env.QA_DOMAIN}`;
+	}
+
+	/** The server, workers and Herald reach Tinybird through its public hostname; the token there is swapped. */
+	private tinybirdEnv(config: EnvConfig): Record<string, string> {
+		if (!config.tinybird) return {};
+		const url = this.tinybirdUrl(config);
+		return {
+			QA_TINYBIRD_URL: url,
+			TINYBIRD_US_EAST_API_URL: url,
+			TINYBIRD_US_EAST_CLICKHOUSE_URL: url,
+			TINYBIRD_US_EAST_TOKEN: TINYBIRD_ENV_TOKEN,
+		};
+	}
+
+	private keepTinybirdAlive(config: EnvConfig) {
+		return this.tinybird(config)
+			.keepAlive({ envName: config.name, expiresAt: config.expiresAt })
+			.catch(() => {});
+	}
+
+	private async removeTinybird(config: EnvConfig) {
+		await this.tinybird(config).destroyAll();
+		await deleteEnvHostname({
+			env: this.env,
+			name: tinybirdHostLabel(config.name),
+		});
+		await this.ctx.storage.delete("tinybirdHost");
 	}
 }

@@ -12,6 +12,17 @@ export function parseKafkaOffset({ offset }: { offset: string }): bigint {
 	return parsedOffset;
 }
 
+export function parseKafkaTimestamp({
+	timestamp,
+}: {
+	timestamp: string | undefined;
+}): number | undefined {
+	const timestampMs = Number(timestamp);
+	return Number.isSafeInteger(timestampMs) && timestampMs > 0
+		? timestampMs
+		: undefined;
+}
+
 export function metadataToBaseOffset({
 	metadata,
 	topic,

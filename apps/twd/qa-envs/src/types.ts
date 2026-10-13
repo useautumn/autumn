@@ -1,9 +1,11 @@
 import type { QaEnv } from "./qaEnv/QaEnv";
 import type { QaRouter } from "./router/QaRouter";
+import type { QaTinybird } from "./tinybird/QaTinybird";
 
 export interface Env {
 	QA_ENV: DurableObjectNamespace<QaEnv>;
 	QA_ROUTER: DurableObjectNamespace<QaRouter>;
+	QA_TINYBIRD: DurableObjectNamespace<QaTinybird>;
 	QA_DOMAIN: string;
 	NEON_PROJECT_ID: string;
 	CLOUDFLARE_ZONE_ID: string;
@@ -24,6 +26,8 @@ export type CreateEnvInput = {
 	runtimeEnv: Record<string, string>;
 	neonBranchId?: string;
 	ttlMs?: number;
+	/** Runs a Tinybird Local beside the env at `<name>--tb.<domain>`. */
+	tinybird?: boolean;
 };
 
 export type EnvConfig = CreateEnvInput & {

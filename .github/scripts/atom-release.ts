@@ -1,4 +1,4 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { advanceBasePastPublishCommits, listCommitsAfter } from "./deploy-gate";
 
@@ -107,6 +107,25 @@ const bundleAtom = async ({ root }: { root: string }) => {
 	return Object.keys(result.metafile?.inputs ?? {}).map((file) =>
 		file.startsWith(root) ? file.slice(root.length + 1) : file,
 	);
+};
+
+/** Alien compiles the Atom with whatever `bun` is on PATH, and the binary carries that runtime: it must be the repo's. */
+export const assertPinnedBun = ({
+	packageManager,
+	found,
+}: {
+	packageManager: string;
+	found: string;
+}) => {
+	const pinned = packageManager.match(/^bun@(\d+\.\d+\.\d+)$/)?.[1];
+	if (!pinned)
+		throw new Error(
+			`package.json packageManager "${packageManager}" pins no Bun version`,
+		);
+	if (found !== pinned)
+		throw new Error(
+			`Expected bun ${pinned} (package.json packageManager), found "${found}"`,
+		);
 };
 
 export type Decision =
@@ -299,6 +318,18 @@ async function main() {
 	const version = (await Bun.$`alien --version`.quiet().text()).trim();
 	if (version !== `alien ${ALIEN_CLI_VERSION}`)
 		throw new Error(`Expected alien ${ALIEN_CLI_VERSION}, found "${version}"`);
+	assertPinnedBun({
+		packageManager: (await Bun.file(join(root, "package.json")).json())
+			.packageManager,
+		found: (
+			await Bun.$`bun --version`.cwd(join(root, STACK_DIR)).quiet().text()
+		).trim(),
+	});
+	// Alien's build cache is keyed by source, not by Bun: a binary cached under another Bun would ship as is.
+	rmSync(join(root, STACK_DIR, ".alien", "build"), {
+		recursive: true,
+		force: true,
+	});
 	const cut = Bun.spawnSync(command, {
 		cwd: join(root, STACK_DIR),
 		stderr: "inherit",

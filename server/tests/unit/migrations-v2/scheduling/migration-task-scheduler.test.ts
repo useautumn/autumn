@@ -1,9 +1,9 @@
 // Contract: finite customer tasks share one queue; coordinators do not sleep while holding its only slot.
 import { describe, expect, test } from "bun:test";
+import { getPostgresPools } from "@autumn/postgres";
 import {
 	createMigrationChunkScheduler,
 	MIGRATION_CHUNK_FETCH_SIZE,
-	MIGRATION_DB_POOL_MAX,
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 	MIGRATION_SLICE_DURATION_MS,
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
@@ -31,7 +31,7 @@ describe("migration task scheduler", () => {
 	});
 
 	test("sizes the migration DB pool for two connections per in-flight customer", () => {
-		expect(MIGRATION_DB_POOL_MAX).toBeGreaterThanOrEqual(
+		expect(getPostgresPools().migration.maxConnections).toBeGreaterThanOrEqual(
 			MIGRATION_RUN_CUSTOMER_CONCURRENCY * 2,
 		);
 	});

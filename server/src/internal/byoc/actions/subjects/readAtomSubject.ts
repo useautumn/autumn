@@ -1,7 +1,7 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
 	type AtomSubjectBody,
+	isWorkerSubjectNotFound,
 	orgToAtomTargets,
 	readAtomSubjectBody,
 } from "@autumn/byoc/subjects";
@@ -15,12 +15,6 @@ import { getShadowAtomConfig } from "@/internal/misc/shadowAtom/shadowAtomConfig
 export type ReadAtomSubjectResult =
 	| { kind: "body"; body: AtomSubjectBody }
 	| { kind: "not_found" | "not_held" | "worker_unavailable" };
-
-/** The worker's word that the customer or entity does not exist, rather than a failure to answer. */
-const isSubjectNotFound = (error: unknown): boolean =>
-	error instanceof BalanceWorkerClientError &&
-	(error.workerCode === "CUSTOMER_NOT_FOUND" ||
-		error.workerCode === "ENTITY_NOT_FOUND");
 
 /** A pulled copy stays current only while herald keeps pushing it, so an Atom may pull just what herald pushes it. */
 const isPushedToAtom = ({
@@ -71,7 +65,7 @@ export const readAtomSubject = async ({
 		});
 		return body ? { kind: "body", body } : { kind: "worker_unavailable" };
 	} catch (error) {
-		if (isSubjectNotFound(error)) return { kind: "not_found" };
+		if (isWorkerSubjectNotFound({ error })) return { kind: "not_found" };
 		ctx.logger.warn("An Atom's pull could not read the subject's worker", {
 			type: "atom_subject_read_failed",
 			error,

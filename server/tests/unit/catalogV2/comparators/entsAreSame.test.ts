@@ -518,6 +518,27 @@ describe("entsAreSame", () => {
 			);
 		});
 
+		const excludedB = {
+			metered_feature_id: "action2",
+			excluded: true as const,
+		};
+
+		test("equal excluded rows are same, in any order", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA, excludedB] } },
+				{ feature_override: { schema: [excludedB, flatA] } },
+				true,
+			);
+		});
+
+		test("a rate changing to an exclusion for the same feature differs", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA, flatB] } },
+				{ feature_override: { schema: [flatA, excludedB] } },
+				false,
+			);
+		});
+
 		test("tier order IS semantic — reordered tiers differ", () => {
 			expectSame(
 				{ feature_override: { schema: [graduated] } },

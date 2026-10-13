@@ -42,11 +42,13 @@ export const createAutumnEnv = (
 		server: {
 			AUTUMN_API_URL: originSchema,
 			AUTUMN_PUBLIC_API_URL: originSchema,
+			AUTUMN_EDGE_URL: z.string().optional(),
 		},
 		runtimeEnv: {
 			AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL,
 			AUTUMN_PUBLIC_API_URL:
 				runtimeEnv.AUTUMN_PUBLIC_API_URL || runtimeEnv.AUTUMN_API_URL,
+			AUTUMN_EDGE_URL: runtimeEnv.AUTUMN_EDGE_URL,
 		},
 		emptyStringAsUndefined: true,
 		onValidationError: (issues) => {

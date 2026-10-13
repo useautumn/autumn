@@ -41,6 +41,7 @@ export * from "./planV1Utils/convertCustomize/customizeToKey";
 export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";
 export * from "./planV1Utils/customize";
 export * from "./planV1Utils/diff/applyDiff";
+export * from "./planV1Utils/diff/compareFeatureOverrides";
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";

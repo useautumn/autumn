@@ -794,6 +794,31 @@ export class ProductService {
 		await db.delete(products).where(inArray(products.internal_id, internalIds));
 	}
 
+	/** Junction rows RESTRICT their item rows; dropping the links first frees them. */
+	static async deletePlanLicensesByOrgId({
+		db,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+	}) {
+		const orgProductIds = db
+			.select({ internal_id: products.internal_id })
+			.from(products)
+			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
+
+		await db
+			.delete(planLicenses)
+			.where(
+				or(
+					inArray(planLicenses.parent_internal_product_id, orgProductIds),
+					inArray(planLicenses.license_internal_product_id, orgProductIds),
+				),
+			);
+	}
+
 	static async deleteByOrgId({
 		db,
 		orgId,
@@ -803,6 +828,7 @@ export class ProductService {
 		orgId: string;
 		env: AppEnv;
 	}) {
+		await ProductService.deletePlanLicensesByOrgId({ db, orgId, env });
 		await db
 			.delete(products)
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
@@ -820,6 +846,7 @@ export class ProductService {
 		env: AppEnv;
 		batchSize?: number;
 	}) {
+		await ProductService.deletePlanLicensesByOrgId({ db, orgId, env });
 		while (true) {
 			const batch = await db
 				.select({ internal_id: products.internal_id })

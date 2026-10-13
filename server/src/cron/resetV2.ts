@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { getPostgresPools } from "@autumn/postgres";
 
 type ResetEnvironment = "staging" | "prod";
 
@@ -81,7 +82,7 @@ const runResetV2 = async ({
 
 	const { db, client } = initDrizzle({
 		name: "reset-cron-v2",
-		maxConnections: 10,
+		pool: getPostgresPools().resetCron,
 	});
 	startPgPoolMonitor();
 

@@ -147,15 +147,25 @@ const CodeGroupCode = React.forwardRef<HTMLDivElement, CodeGroupCodeProps>(
 			highlight();
 		}, [children, language, isDark]);
 
+		const codeClassName = cn(
+			"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto p-4",
+			className,
+		);
+		// Plain lines until the highlighter loads, so the block keeps its height as it colours in.
+		if (!highlightedCode)
+			return (
+				<div ref={ref} className={codeClassName} {...props}>
+					<pre>
+						<code>{children}</code>
+					</pre>
+				</div>
+			);
 		return (
 			<div
 				ref={ref}
-				className={cn(
-					"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto p-4",
-					className,
-				)}
+				className={codeClassName}
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed"
-				dangerouslySetInnerHTML={{ __html: highlightedCode || children }}
+				dangerouslySetInnerHTML={{ __html: highlightedCode }}
 				{...props}
 			/>
 		);

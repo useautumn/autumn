@@ -6,6 +6,7 @@ import type {
 	WebhookExpiration,
 	WebhookInitialPurchase,
 	WebhookNonRenewingPurchase,
+	WebhookProductChange,
 	WebhookRenewal,
 	WebhookTransfer,
 	WebhookUnCancellation,
@@ -24,6 +25,7 @@ import { handleCancellation } from "./webhookHandlers/handleRevenuecatCancellati
 import { handleExpiration } from "./webhookHandlers/handleRevenuecatExpiration";
 import { handleInitialPurchase } from "./webhookHandlers/handleRevenuecatInitialPurchase";
 import { handleNonRenewingPurchase } from "./webhookHandlers/handleRevenuecatNonRenewingPurchase";
+import { handleProductChange } from "./webhookHandlers/handleRevenuecatProductChange";
 import { handleTransfer } from "./webhookHandlers/handleRevenuecatTransfer";
 import { handleUncancellation } from "./webhookHandlers/handleRevenuecatUncancellation";
 import type { RevenueCatWebhookHonoEnv } from "./webhookMiddlewares/revenuecatWebhookContext";
@@ -95,6 +97,12 @@ revenuecatWebhookRouter.post(
 				case "UNCANCELLATION":
 					await handleUncancellation({
 						event: body.event as WebhookUnCancellation,
+						ctx,
+					});
+					break;
+				case "PRODUCT_CHANGE":
+					await handleProductChange({
+						event: body.event as WebhookProductChange,
 						ctx,
 					});
 					break;
