@@ -8,6 +8,7 @@ import {
 	getPostgresPools,
 	type PostgresPoolProfile,
 	poolConfigOf,
+	runInTransaction,
 } from "@autumn/postgres";
 import { schemas as schema } from "@autumn/shared";
 import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
@@ -104,13 +105,15 @@ export const initDrizzle = ({
 	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });
 
 	const drizzleDb = drizzle(client, { schema });
-	const transaction = drizzleDb.transaction.bind(drizzleDb);
 	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
+	// runInTransaction, not drizzle's pool transaction: a client whose read timed out leaves the pool
+	// instead of going back still hung.
 	const normalizedTransaction: typeof drizzleDb.transaction = ((fn, config) =>
-		transaction(
-			(tx) => fn(normalizeDbExecute(tx) as typeof tx),
+		runInTransaction({
+			ctx: { db: drizzleDb },
+			run: (tx) => fn(normalizeDbExecute(tx) as typeof tx),
 			config,
-		)) as typeof drizzleDb.transaction;
+		})) as typeof drizzleDb.transaction;
 	db.transaction = normalizedTransaction as typeof db.transaction;
 
 	if (otelConfig.drizzle) {
@@ -147,18 +150,21 @@ const POOL_BUDGET_HEADROOM = 0.85;
 export const computePoolBudgetWarnings = ({
 	criticalPoolMax: critical,
 	generalPoolMax: general,
+	listPoolMax: list,
 	replicaPoolMax: replica,
 	fleetProcesses = BUDGETED_FLEET_PROCESSES,
 }: {
 	criticalPoolMax: number;
 	generalPoolMax: number;
+	listPoolMax: number;
 	replicaPoolMax: number;
 	fleetProcesses?: number;
 }): string[] => {
 	const warnings: string[] = [];
 
 	const primaryFleetConnections =
-		fleetProcesses * (critical + general) + BUDGETED_NON_SERVER_CONNECTIONS;
+		fleetProcesses * (critical + general + list) +
+		BUDGETED_NON_SERVER_CONNECTIONS;
 	if (
 		primaryFleetConnections >
 		PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
@@ -184,6 +190,7 @@ export const computePoolBudgetWarnings = ({
 for (const warning of computePoolBudgetWarnings({
 	criticalPoolMax: pools.critical.maxConnections,
 	generalPoolMax: pools.general.maxConnections,
+	listPoolMax: pools.list.maxConnections,
 	replicaPoolMax:
 		pools.replica.maxConnections + pools.replicaSlow.maxConnections,
 })) {
@@ -199,6 +206,11 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
 	pool: pools.general,
+});
+
+export const { db: dbList, client: clientList } = initDrizzle({
+	name: "list",
+	pool: pools.list,
 });
 
 // Replica pools exist only when DATABASE_REPLICA_URL is configured.

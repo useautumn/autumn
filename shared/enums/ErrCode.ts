@@ -32,6 +32,7 @@ export const ErrCode = {
 	InvalidOptions: "invalid_options",
 	InvalidCursor: "invalid_cursor",
 	RequestTemporarilyDisabled: "request_temporarily_disabled",
+	RequestTimeout: "request_timeout",
 
 	// Org
 	OrgNotFound: "org_not_found",

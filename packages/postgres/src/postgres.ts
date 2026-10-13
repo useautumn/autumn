@@ -6,6 +6,7 @@ export type {
 } from "./catalog/types/catalogRowsEnvelope.js";
 export { attachPoolErrorHandlers } from "./common/attachPoolErrorHandlers.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
+export { runInTransaction } from "./common/runInTransaction.js";
 export {
 	isPostgresConnectionFailure,
 	isTransientPostgresError,

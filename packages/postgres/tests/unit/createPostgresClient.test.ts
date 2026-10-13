@@ -7,7 +7,7 @@ import type { PostgresClient } from "../../src/types/postgresClient.js";
 import {
 	type FakePostgresServer,
 	startFakePostgresServer,
-} from "../fixtures/fakePostgresServer.js";
+} from "../../src/testing/fakePostgresServer.js";
 
 const QUERY_TIMEOUT_MS = 1_000;
 const logger = { warn: () => {} };

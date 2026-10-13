@@ -24,6 +24,15 @@ describe("createPostgresPools", () => {
 			connectTimeoutMs: 5_000,
 			queryTimeoutMs: null,
 		});
+		expect(production.list).toEqual({
+			applicationName: "autumn-list",
+			maxConnections: 4,
+			minConnections: 0,
+			connectTimeoutMs: 5_000,
+			idleTimeoutMs: 30_000,
+			queryTimeoutMs: 10_000,
+			statementTimeoutMs: null,
+		});
 		expect(production.replica).toMatchObject({
 			applicationName: "autumn-replica",
 			maxConnections: 9,
@@ -52,6 +61,10 @@ describe("createPostgresPools", () => {
 			connectTimeoutMs: 30_000,
 		});
 		expect(development.adHoc.maxConnections).toBe(10);
+		expect(development.list).toMatchObject({
+			connectTimeoutMs: 30_000,
+			queryTimeoutMs: 10_000,
+		});
 	});
 
 	test("the other processes' pools don't vary by environment", () => {
