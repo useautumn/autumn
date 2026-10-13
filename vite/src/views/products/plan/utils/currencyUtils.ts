@@ -167,8 +167,12 @@ export const updateTierCurrencyAmount = ({
 	const tier = tiers[tierIndex];
 	if (!tier) return item;
 
+	// Currency flat fees need a base flat field to survive save-time alignment.
+	const flatAmount =
+		field === "flat_amount" ? (tier.flat_amount ?? 0) : tier.flat_amount;
 	tiers[tierIndex] = {
 		...tier,
+		flat_amount: flatAmount,
 		additional_currencies: (tier.additional_currencies ?? []).map((entry) =>
 			entry.currency.toLowerCase() === code.toLowerCase()
 				? {

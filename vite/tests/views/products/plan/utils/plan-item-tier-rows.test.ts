@@ -70,7 +70,7 @@ describe("itemToVolumeTierRule", () => {
 			itemToVolumeTierRule({
 				item: tieredItem({ tierBehavior: TierBehavior.VolumeBased }),
 			}),
-		).toBe("volume: past 100, all units at the reached tier's rate");
+		).toBe("volume: past 100, usage billed at the reached tier's rate");
 	});
 
 	test("graduated items have no volume rule", () => {
@@ -91,7 +91,7 @@ describe("itemToVolumeTierRule", () => {
 				included_usage,
 			}) as ProductItem;
 		expect(itemToVolumeTierRule({ item: singleTier(100) })).toBe(
-			"volume: past 100, all units at the reached tier's rate",
+			"volume: past 100, usage billed at the reached tier's rate",
 		);
 		expect(itemToVolumeTierRule({ item: singleTier(0) })).toBeUndefined();
 	});

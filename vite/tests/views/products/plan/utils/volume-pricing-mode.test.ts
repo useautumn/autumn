@@ -5,7 +5,10 @@ import {
 	type ProductItem,
 	TierBehavior,
 } from "@autumn/shared";
-import { alignTierCurrencyShapes } from "@/views/products/plan/utils/currencyUtils";
+import {
+	alignTierCurrencyShapes,
+	updateTierCurrencyAmount,
+} from "@/views/products/plan/utils/currencyUtils";
 import {
 	itemToVolumePricingModeOnOpen,
 	updateTier,
@@ -142,5 +145,35 @@ describe("typing edits only the mode's field", () => {
 			value: "0.06",
 		});
 		expect(edited.tiers?.[1]).toMatchObject({ amount: 0.06, flat_amount: 10 });
+	});
+});
+
+describe("currency flat fees typed in Flat mode", () => {
+	test("a €4 fee typed on a per-unit tier survives the save", () => {
+		const item = volumeItem([
+			{
+				to: 100,
+				amount: 1,
+				additional_currencies: [{ currency: "eur", amount: 0.9 }],
+			},
+			{
+				to: Infinite,
+				amount: 0.5,
+				additional_currencies: [{ currency: "eur", amount: 0.45 }],
+			},
+		]);
+		const edited = updateTierCurrencyAmount({
+			item,
+			tierIndex: 0,
+			code: "eur",
+			field: "flat_amount",
+			value: "4",
+		});
+		const saved = saveItem(edited);
+
+		expect(saved.tiers?.[0]).toMatchObject({ amount: 1, flat_amount: 0 });
+		expect(saved.tiers?.[0]?.additional_currencies).toEqual([
+			{ currency: "eur", amount: 0.9, flat_amount: 4 },
+		]);
 	});
 });
