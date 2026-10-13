@@ -64,6 +64,7 @@ const getAtomPushQueue = ({
 					token: alien.apiKey,
 				})
 			).queue(PUSH_QUEUE),
+		logger: getHeraldLogger(),
 	});
 	pushQueues.set(externalId, pushQueue);
 	return pushQueue;

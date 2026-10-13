@@ -1,4 +1,5 @@
 import { atomPushFailureLevel } from "../../../atom/atomPushFailureLevel.js";
+import { AtomQueueBackoffError } from "../../../atom/queue/createAtomPushQueue.js";
 import type {
 	AtomConnection,
 	AtomSubjectBody,
@@ -19,6 +20,7 @@ export const sendSubjectToAtom = async ({
 		const atomClient = ctx.getAtomClient({ connection: atomConnection });
 		await atomClient.setSubject({ body });
 	} catch (error) {
+		if (error instanceof AtomQueueBackoffError) return;
 		ctx.logger[atomPushFailureLevel({ atomConnection })](
 			{
 				error,
