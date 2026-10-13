@@ -3,6 +3,7 @@ import { buildMigrationDraftId } from "./buildMigrationDraftId";
 import { buildMigrationPlanFilter } from "./buildMigrationPlanFilter";
 import {
 	sortTargetsByPlanVersion,
+	stampPreviousFeatureOverrides,
 	stampPreviousPrice,
 } from "./buildMigrationDraftUtils";
 import { groupTargetsByCustomize } from "./groupTargetsByCustomize";
@@ -31,7 +32,12 @@ export const buildMigrationDraft = ({
 				includeCustom: bucketTargets.every((target) => target.includeCustom),
 				versionsWithCustomersByPlanId,
 			}),
-			customize: stampPreviousPrice({ customize, targets: bucketTargets }),
+			customize: stampPreviousFeatureOverrides({
+				customize: stampPreviousPrice({ customize, targets: bucketTargets }),
+				previousItemSets: bucketTargets.map(
+					(target) => target.previousItems ?? [],
+				),
+			}),
 		}),
 	);
 

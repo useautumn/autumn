@@ -27,6 +27,11 @@ import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
+import {
+	type ItemRateRow,
+	migrationOpRateRows,
+} from "@/utils/product/featureOverrideRates";
 import {
 	parsePlanKey,
 	planFilterToPlanKeys,
@@ -97,6 +102,11 @@ export function UpdatePlanOpForm({
 
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
+	const rateRows = migrationOpRateRows({ op: value, features });
+	const visibleRemoveItems = (customize?.remove_items ?? []).flatMap(
+		(item, index) =>
+			rateRows.mergedRemoveIndices.has(index) ? [] : [{ item, index }],
+	);
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
 
 	const customizedLicenseIds = new Set(
@@ -163,12 +173,17 @@ export function UpdatePlanOpForm({
 		}
 	};
 
-	const handleRemoveItem = (index: number) => {
-		const items = addItems.filter((_, i) => i !== index);
+	// A merged row is one item, so removing it drops the paired remove filter too.
+	const handleRemoveItem = (row: ItemRateRow) => {
+		const items = addItems.filter((_, i) => i !== row.addIndex);
+		const removeItems = (customize?.remove_items ?? []).filter(
+			(_, i) => !(row.updated && i === row.removeIndex),
+		);
 		update({
 			customize: {
 				...customize,
 				add_items: items.length > 0 ? items : undefined,
+				remove_items: removeItems.length > 0 ? removeItems : undefined,
 			},
 		});
 	};
@@ -267,16 +282,25 @@ export function UpdatePlanOpForm({
 				</div>
 			)}
 
-			{addItems.map((item, index) => (
-				<div key={`add-${index}`} className="flex items-center gap-2 group/row">
-					<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">
-						Add
+			{rateRows.rows.map((row) => (
+				<div
+					key={`add-${row.addIndex}`}
+					className="flex items-start gap-2 group/row"
+				>
+					<span
+						className={cn(
+							"flex items-center h-8 text-xs w-14 shrink-0 select-none",
+							row.updated ? "text-amber-500/80" : "text-green-500/60",
+						)}
+					>
+						{row.updated ? "Update" : "Add"}
 					</span>
 					<ItemSummaryRow
-						item={item}
-						onClick={() => openSheet("edit-feature", index)}
+						changes={row.changes}
+						item={addItems[row.addIndex]}
+						onClick={() => openSheet("edit-feature", row.addIndex)}
 					/>
-					<RemoveButton onClick={() => handleRemoveItem(index)} />
+					<RemoveButton onClick={() => handleRemoveItem(row)} />
 				</div>
 			))}
 
@@ -304,7 +328,7 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			{(customize?.remove_items ?? []).map((item, index) => (
+			{visibleRemoveItems.map(({ item, index }) => (
 				<RemoveItemRows
 					key={`remove-${index}`}
 					item={item}

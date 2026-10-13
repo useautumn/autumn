@@ -440,6 +440,7 @@ test.concurrent(
 			[left]: override({ creditCost: 3 }),
 			[right]: override({ creditCost: 2 }),
 		};
+		const previousOverride = override({ creditCost: 1 });
 		const creditItem = (featureOverride?: object) => ({
 			feature_id: creditSystemId,
 			included: 100,
@@ -470,7 +471,7 @@ test.concurrent(
 				plans: planIds.map((planId) => ({
 					plan_id: planId,
 					name: planId,
-					items: [creditItem()],
+					items: [creditItem(previousOverride)],
 				})),
 			});
 			for (const planId of planIds) {
@@ -511,6 +512,7 @@ test.concurrent(
 										interval: ResetInterval.Month,
 										interval_count: 1,
 										included: 100,
+										previous_feature_override: previousOverride,
 									},
 								],
 								add_items: [

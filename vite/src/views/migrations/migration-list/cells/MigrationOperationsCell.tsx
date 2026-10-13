@@ -1,3 +1,5 @@
+import { StatusChip, StatusChipIcon } from "@autumn/ui";
+import { Fragment } from "react";
 import {
 	AutumnMark,
 	StripeMark,
@@ -44,6 +46,7 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 
 	return (
 		<CellHoverCard
+			className="w-96"
 			trigger={
 				<div className="flex min-w-0 items-center gap-1.5">
 					<ViewChip chip={operations.head} />
@@ -63,19 +66,68 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 			)}
 			<PopoverSeparator />
 			<div className="flex flex-col gap-2.5">
-				{operations.modifications.map((modification, index) => (
-					<div
-						key={`${modification.chip.label}-${index}`}
-						className="flex items-center gap-1.5"
-					>
-						<span
-							className={`w-2.5 shrink-0 text-center font-semibold ${SIGNS[modification.sign].className}`}
-						>
-							{SIGNS[modification.sign].mark}
-						</span>
-						<ViewChip chip={modification.chip} />
-					</div>
-				))}
+				{operations.modifications.map((modification, index) => {
+					const { tile } = modification.chip;
+					const planLabel = modification.planLabel;
+					return (
+						<Fragment key={`${modification.chip.label}-${index}`}>
+							{planLabel &&
+								planLabel !==
+									operations.modifications[index - 1]?.planLabel && (
+									<span className="pt-0.5 text-[11px] font-medium text-tertiary-foreground">
+										{planLabel}
+									</span>
+								)}
+							{/* Rates sit in the label column; an invisible copy of the parent's icon sizes the column before it. */}
+							<div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1.5">
+								<span
+									className={`w-2.5 shrink-0 text-center font-semibold ${SIGNS[modification.sign].className}`}
+								>
+									{SIGNS[modification.sign].mark}
+								</span>
+								<div className="col-span-2 flex min-w-0">
+									<ViewChip chip={modification.chip} />
+								</div>
+								{tile && !!modification.children?.length && (
+									<StatusChipIcon
+										className="invisible col-start-2 self-start"
+										glyph={tile.glyph}
+										tone={tile.tone}
+									/>
+								)}
+								{!!modification.children?.length && (
+									<div className="col-start-3 flex flex-col items-start gap-1.5">
+										{modification.children.map(({ key, tile, change }) => (
+											<StatusChip
+												className="h-auto min-h-[22px] items-start whitespace-normal py-[3px]"
+												glyph={tile.glyph}
+												key={key}
+												tone={tile.tone}
+											>
+												<span className="shrink-0 whitespace-nowrap">
+													{change.label}
+												</span>
+												{change.to !== undefined && (
+													<span className="min-w-0 font-[450] text-tertiary-foreground">
+														{change.from !== undefined && (
+															<span className="text-subtle">
+																<s>{change.from}</s> →{" "}
+															</span>
+														)}
+														<span className="font-medium text-foreground">
+															{change.to}
+														</span>{" "}
+														credits
+													</span>
+												)}
+											</StatusChip>
+										))}
+									</div>
+								)}
+							</div>
+						</Fragment>
+					);
+				})}
 			</div>
 			<PopoverSeparator />
 			<PopoverRow label="Billing">
