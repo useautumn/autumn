@@ -3,7 +3,7 @@ import { Badge } from "@autumn/ui";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
+import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { rateText } from "../../utils/creditRateSummary";
 import { featureDisplayName } from "../../utils/featureDisplayName";
 import type { RateCardRow as Row } from "../../utils/rateCardRows";
@@ -99,12 +99,7 @@ const editableExtras = ({
 	});
 	return {
 		icon: feature && (
-			<span className="shrink-0 text-tertiary-foreground">
-				{
-					getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
-						.icon
-				}
-			</span>
+			<span className="shrink-0">{getFeatureIcon({ feature, size: 14 })}</span>
 		),
 		badge: row.state === "added" && stateBadge("Added"),
 	};
