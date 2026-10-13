@@ -5,16 +5,16 @@ describe("formatVolumeTierRule", () => {
 	test("with no included usage there is no threshold", () => {
 		expect(
 			formatVolumeTierRule({ includedUsage: 0, pricing: "per_unit" }),
-		).toBe("volume: all units at the reached tier's rate");
+		).toBe("volume: usage billed at the reached tier's rate");
 		expect(
 			formatVolumeTierRule({ includedUsage: null, pricing: "per_unit" }),
-		).toBe("volume: all units at the reached tier's rate");
+		).toBe("volume: usage billed at the reached tier's rate");
 	});
 
 	test("with included usage it names the threshold", () => {
 		expect(
 			formatVolumeTierRule({ includedUsage: 1000, pricing: "per_unit" }),
-		).toBe("volume: past 1,000, all units at the reached tier's rate");
+		).toBe("volume: past 1,000, usage billed at the reached tier's rate");
 	});
 
 	test("flat and mixed pricing name the flat fee", () => {
@@ -26,6 +26,6 @@ describe("formatVolumeTierRule", () => {
 				includedUsage: 0,
 				pricing: "per_unit_and_flat_fee",
 			}),
-		).toBe("volume: all units at the reached tier's rate plus its flat fee");
+		).toBe("volume: usage billed at the reached tier's rate plus its flat fee");
 	});
 });

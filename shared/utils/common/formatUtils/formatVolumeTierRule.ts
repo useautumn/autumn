@@ -2,14 +2,14 @@ import type { VolumeTierPricing } from "@utils/productUtils/priceUtils/convertPr
 import { numberWithCommas } from "../../displayUtils";
 
 const PRICING_RULES: Record<VolumeTierPricing, string> = {
-	per_unit: "all units at the reached tier's rate",
+	per_unit: "usage billed at the reached tier's rate",
 	flat_fee: "the reached tier's flat fee",
 	per_unit_and_flat_fee:
-		"all units at the reached tier's rate plus its flat fee",
+		"usage billed at the reached tier's rate plus its flat fee",
 };
 
-/** Volume picks one tier from total usage; past the included amount every unit
- * is charged at that tier, so the copy names the included threshold. */
+/** Volume picks one tier from total usage and bills past the included amount at it,
+ * so the copy names the included threshold. */
 export const formatVolumeTierRule = ({
 	includedUsage,
 	pricing,

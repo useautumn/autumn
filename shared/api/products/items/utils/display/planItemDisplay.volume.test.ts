@@ -49,7 +49,7 @@ describe("getPlanItemDisplay: volume tiers", () => {
 		).toMatchObject({
 			primaryText: "100 messages",
 			secondaryText:
-				"then $1 - $0.5 per message per month (volume: past 100, all units at the reached tier's rate)",
+				"then $1 - $0.5 per message per month (volume: past 100, usage billed at the reached tier's rate)",
 		});
 	});
 
@@ -63,7 +63,7 @@ describe("getPlanItemDisplay: volume tiers", () => {
 		});
 		expect(display(item)).toMatchObject({
 			primaryText:
-				"$1 - $0.5 per message per month (volume: all units at the reached tier's rate plus its flat fee)",
+				"$1 - $0.5 per message per month (volume: usage billed at the reached tier's rate plus its flat fee)",
 			details: ["1 - 200: $1 + $5 flat", "201+: $0.5"],
 		});
 	});
@@ -88,7 +88,7 @@ describe("getPlanItemDisplay: volume tiers", () => {
 			tiers: [{ to: "inf", amount: 0.5 }],
 		});
 		expect(display(item).secondaryText).toBe(
-			"then $0.5 per message per month (volume: past 100, all units at the reached tier's rate)",
+			"then $0.5 per message per month (volume: past 100, usage billed at the reached tier's rate)",
 		);
 	});
 

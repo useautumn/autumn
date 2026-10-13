@@ -67,7 +67,7 @@ describe("getProductItemDisplay: volume tiers", () => {
 			display(tieredItem({ tierBehavior: TierBehavior.VolumeBased })),
 		).toEqual({
 			primary_text:
-				"$1 - $0.5 per message (volume: all units at the reached tier's rate)",
+				"$1 - $0.5 per message (volume: usage billed at the reached tier's rate)",
 			secondary_text: undefined,
 		});
 	});
@@ -83,7 +83,7 @@ describe("getProductItemDisplay: volume tiers", () => {
 		).toEqual({
 			primary_text: "100 messages",
 			secondary_text:
-				"then $1 - $0.5 per message (volume: past 100, all units at the reached tier's rate)",
+				"then $1 - $0.5 per message (volume: past 100, usage billed at the reached tier's rate)",
 		});
 	});
 
@@ -96,7 +96,7 @@ describe("getProductItemDisplay: volume tiers", () => {
 			],
 		});
 		expect(display(item).primary_text).toBe(
-			"$1 - $0.5 per message (volume: all units at the reached tier's rate plus its flat fee)",
+			"$1 - $0.5 per message (volume: usage billed at the reached tier's rate plus its flat fee)",
 		);
 	});
 
@@ -122,7 +122,7 @@ describe("getProductItemDisplay: volume tiers", () => {
 		expect(display(item)).toEqual({
 			primary_text: "100 messages",
 			secondary_text:
-				"then $0.5 per message (volume: past 100, all units at the reached tier's rate)",
+				"then $0.5 per message (volume: past 100, usage billed at the reached tier's rate)",
 		});
 	});
 
