@@ -73,12 +73,18 @@ describe("journal", () => {
 		const journal = open({ databasePath: journalPath() });
 
 		const entries = await Promise.all([
-			journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) }),
+			journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId: "a" }),
+			}),
 			journal.append({
 				customerId: "cus_2",
 				command: commandOf({ commandId: "b", customerId: "cus_2" }),
 			}),
-			journal.append({ customerId: "cus_1", command: commandOf({ commandId: "c" }) }),
+			journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId: "c" }),
+			}),
 		]);
 
 		expect(
@@ -151,7 +157,10 @@ describe("journal", () => {
 		};
 
 		const settled = await Promise.allSettled([
-			journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) }),
+			journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId: "a" }),
+			}),
 			journal.append({ customerId: "cus_1", command: unwritable }),
 		]);
 
@@ -166,8 +175,14 @@ describe("journal", () => {
 	test("a rejected entry is no longer owed, and stays refused after a reopen", async () => {
 		const databasePath = journalPath();
 		const journal = openJournal({ databasePath });
-		await journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) });
-		await journal.append({ customerId: "cus_1", command: commandOf({ commandId: "b" }) });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
 
 		journal.setStatus({
 			customerId: "cus_1",
@@ -175,7 +190,9 @@ describe("journal", () => {
 			status: { kind: "rejected", code: "insufficient_balance" },
 		});
 
-		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual([2]);
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[2],
+		);
 		journal.close();
 		expect(
 			open({ databasePath })
@@ -191,7 +208,10 @@ describe("journal", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toBe(empty);
 		expect(journal.owed({ customerId: "cus_2" })).toBe(empty);
 
-		await journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
 		const one = journal.owed({ customerId: "cus_1" });
 		expect(one).not.toBe(empty);
 		expect(journal.owed({ customerId: "cus_1" })).toBe(one);
@@ -203,7 +223,10 @@ describe("journal", () => {
 			databasePath,
 			seenBy: ({ owed }) => owed.map(({ seq }) => seq),
 		});
-		await journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
 
 		journal.reconcile({
 			customerId: "cus_1",
@@ -222,7 +245,10 @@ describe("journal", () => {
 
 	test("until PR 2's drop rule, a push leaves every entry owed", async () => {
 		const journal = open({ databasePath: journalPath() });
-		await journal.append({ customerId: "cus_1", command: commandOf({ commandId: "a" }) });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
 
 		journal.reconcile({
 			customerId: "cus_1",
