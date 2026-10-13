@@ -6,6 +6,7 @@ import {
 import { HOLD_MS } from "../../src/replication/outbox/createPeerOutbox.js";
 import {
 	assertConverged,
+	assertDeletionsHeld,
 	assertFreshness,
 	assertNoErrors,
 	assertNoLoops,
@@ -84,6 +85,7 @@ type Scenario = {
 		pushesPerSecond?: number;
 		checksPerSecond?: number;
 		newCustomersPerSecond?: number;
+		deletesPerSecond?: number;
 	};
 };
 
@@ -152,6 +154,8 @@ const runScenario = async ({
 			pushedWithinMs: scenario.convergedWithinMs,
 		});
 		assertNoLoops({ cluster });
+		if (scenario.traffic?.deletesPerSecond)
+			await assertDeletionsHeld({ cluster });
 		if (scenario.freshnessBoundMs !== undefined)
 			assertFreshness({ cluster, boundMs: scenario.freshnessBoundMs });
 		if (scenario.noErrors)
@@ -313,6 +317,19 @@ const scenarios: Scenario[] = [
 		entities: 2,
 		planEndRate: 0.1,
 		profile: { delayMs: [1, 200], dropRate: 0.05 },
+		chaos: (cluster) => ({
+			ms: 90_000,
+			onStep: () => {
+				if (cluster.rng.chance(0.004)) restartOne({ cluster, fresh: false });
+			},
+		}),
+		freshnessBoundMs: 15_000,
+	},
+	{
+		name: "customers deleted through restarts and a lossy network: every replica ends holding them and their entities as deleted, and no copy from before a delete is answered",
+		profile: CHAOTIC_NETWORK,
+		entities: 2,
+		traffic: { deletesPerSecond: 0.05 },
 		chaos: (cluster) => ({
 			ms: 90_000,
 			onStep: () => {

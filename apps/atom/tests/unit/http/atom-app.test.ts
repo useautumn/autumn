@@ -24,6 +24,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	deletedPushOf,
 	freshHeld,
 	loopOnTime,
 	noPeer,
@@ -294,6 +295,24 @@ describe("an Atom in an org's cloud", () => {
 		expect(refused.status).toBe(400);
 		expect(await refused.json()).toMatchObject({ code: "invalid_request" });
 		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
+	});
+
+	test("subjects.delete deletes the customer: its check goes to the API, and the route is its own", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+
+		const deleted = await app.request(
+			"/v1/subjects.delete",
+			post({
+				headers: pushedFor({ customerId: "cus_1" }),
+				body: JSON.parse(deletedPushOf({ logOffset: 50n, readAt: 5_000 }).body),
+			}),
+		);
+		const check = await app.request("/v1/balances.check", checkMessages());
+
+		expect(deleted.status).toBe(200);
+		expect(await deleted.json()).toEqual({ stored: true });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_deleted");
 	});
 
 	test("fields the API keeps for itself are dropped from the answer, as the API drops them", async () => {

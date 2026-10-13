@@ -1,7 +1,16 @@
 import { expect } from "bun:test";
-import { type SimCluster, subjectKey, type Version } from "./simCluster.js";
+import {
+	DELETED_BALANCE,
+	type SimCluster,
+	subjectKey,
+	type Version,
+} from "./simCluster.js";
 
-const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
+const PUSH_PATHS = new Set([
+	"/v1/subjects.set",
+	"/v1/subjects.delete",
+	"/v1/catalog.set",
+]);
 
 /**
  * Every replica up at the end holds, for every customer, the newest version applied anywhere, and the newest catalog.
@@ -89,6 +98,42 @@ export const assertConverged = async ({
 			expect(
 				replica.slots.installCatalog({ rows: [], readAt: catalogReadAt - 1 }),
 			).toBe(false);
+};
+
+/** Every replica up at the end holds each customer whose deletion any replica stored, and every entity of it it holds, as deleted. */
+export const assertDeletionsHeld = async ({
+	cluster,
+}: {
+	cluster: SimCluster;
+}) => {
+	const deleted = new Set(
+		cluster.applied
+			.filter(
+				(entry) =>
+					entry.balance === DELETED_BALANCE &&
+					!cluster.lostVolumes.has(entry.on),
+			)
+			.map((entry) => entry.customerId),
+	);
+	expect(deleted.size).toBeGreaterThan(0);
+	for (const replica of cluster.alive()) {
+		const held = await cluster.held(replica);
+		for (const customerId of deleted) {
+			const own = held.get(subjectKey({ customerId, entityId: null }));
+			if (own?.balance !== DELETED_BALANCE)
+				throw new Error(
+					`${replica.address}#${replica.id} holds deleted ${customerId} at balance ${own?.balance ?? "nothing"}`,
+				);
+			for (const [key, { balance }] of held)
+				if (
+					key.startsWith(`${customerId}\u0000`) &&
+					balance !== DELETED_BALANCE
+				)
+					throw new Error(
+						`${replica.address}#${replica.id} holds ${key.replace("\u0000", ":")} of deleted ${customerId} at balance ${balance}`,
+					);
+		}
+	}
 };
 
 /** A check a ready replica answered never shows a balance older than what any replica had applied `boundMs` before. */
