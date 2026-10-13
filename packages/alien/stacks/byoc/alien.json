@@ -27,7 +27,8 @@
 					"ATOM_HOSTNAME": "0.0.0.0",
 					"ATOM_PORT": "8080",
 					"ATOM_DATA_DIR": "/data",
-					"ATOM_PEER_PORT": "8081"
+					"ATOM_PEER_PORT": "8081",
+					"JSC_numberOfGCMarkers": "1"
 				},
 				"healthCheck": {
 					"path": "/health",
