@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv, type CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "../../src/db/initDrizzle.js";
@@ -28,7 +29,7 @@ const PLAN_ID = process.env.PLAN_ID || "enterprise";
 const LIMIT = Number(process.env.LIMIT || 20);
 
 const main = async () => {
-	const { db } = initDrizzle({ maxConnections: 2 });
+	const { db } = initDrizzle({ pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, });
 
 	const query = getCursorPaginatedEntitySubjectsQuery({
 		orgId: ORG_ID,

@@ -4,6 +4,7 @@
  * Spawned as a child process by pgFailover.test.ts.
  */
 
+import { getPostgresPools } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -24,7 +25,9 @@ process.on("SIGINT", () => {
 	running = false;
 });
 
-const { db, client } = initDrizzle({ maxConnections: CONCURRENCY });
+const { db, client } = initDrizzle({
+	pool: { ...getPostgresPools().adHoc, maxConnections: CONCURRENCY },
+});
 
 // Verify connection
 try {

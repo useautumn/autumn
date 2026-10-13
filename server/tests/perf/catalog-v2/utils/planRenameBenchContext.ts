@@ -10,6 +10,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { getPostgresPools } from "@autumn/postgres";
 import {
 	ApiVersionClass,
 	AppEnv,
@@ -134,7 +135,10 @@ export type PlanRenameBenchContext = {
 
 export const openPlanRenameBenchDb = (): PlanRenameBenchDb => {
 	assertBenchDatabaseSafe();
-	return initDrizzle({ maxConnections: 2, name: "plan-rename-bench" });
+	return initDrizzle({
+		pool: { ...getPostgresPools().adHoc, maxConnections: 2 },
+		name: "plan-rename-bench",
+	});
 };
 
 export const createPlanRenameBenchContext = async ({

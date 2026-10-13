@@ -41,9 +41,11 @@ const postgres = createPostgresClient({
 		databaseUrl,
 		applicationName: "subject-snapshot-flush-bench",
 		maxConnections: 1,
-		connectTimeout: 10,
-		idleTimeout: 30,
-		queryTimeout: 30,
+		minConnections: 0,
+		connectTimeoutMs: 10_000,
+		idleTimeoutMs: 30_000,
+		queryTimeoutMs: 30_000,
+		statementTimeoutMs: null,
 	},
 });
 const customers: SeededCustomer[] = [];

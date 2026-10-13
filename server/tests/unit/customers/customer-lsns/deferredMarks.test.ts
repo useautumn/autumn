@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { getPostgresPools } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { withAutocommitDb } from "@/db/autocommit/withAutocommitDb.js";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
@@ -12,7 +13,9 @@ import {
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 // One connection: a mark that checks out a second client inside the transaction starves.
-const { db, client } = initDrizzle({ maxConnections: 1 });
+const { db, client } = initDrizzle({
+	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+});
 
 const orgId = `lsn_deferred_org_${Date.now()}`;
 const env = "sandbox";

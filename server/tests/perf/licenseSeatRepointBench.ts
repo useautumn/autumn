@@ -1,6 +1,7 @@
 /** Benchmarks a pool definition and 100k assigned-seat price repoints.
  * Run with `bun tests/perf/licenseSeatRepointBench.ts`. */
 
+import { getPostgresPools } from "@autumn/postgres";
 import {
 	AppEnv,
 	BillingInterval,
@@ -20,7 +21,9 @@ const SEATS = 100_000;
 const ORG_SLUG = "unit-test-org";
 const ENV = AppEnv.Sandbox;
 
-const { db, client } = initDrizzle({ maxConnections: 5 });
+const { db, client } = initDrizzle({
+	pool: { ...getPostgresPools().adHoc, maxConnections: 5 },
+});
 
 const time = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
 	const start = performance.now();

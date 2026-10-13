@@ -23,10 +23,7 @@ export type {
 	RefusedUsageEvent,
 	UsageEventsInsertResult,
 } from "./eventsDb/repos/usageEvents.js";
-export type {
-	EventsDb,
-	EventsDbConfig,
-} from "./eventsDb/types/eventsDb.js";
+export type { EventsDb } from "./eventsDb/types/eventsDb.js";
 export {
 	commitFlush,
 	FlushBookmarkConflictError,
@@ -49,6 +46,13 @@ export {
 export { getOrgWithFeatures } from "./organizations/repos/getOrgWithFeatures.js";
 export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";
 export { sumPooledContributionGrants } from "./pooledBalances/repos/sumPooledContributionGrants.js";
+export {
+	createPostgresPools,
+	type PostgresPoolName,
+	type PostgresPools,
+} from "./pools/createPostgresPools.js";
+export { getPostgresPools } from "./pools/getPostgresPools.js";
+export type { PostgresPoolProfile } from "./pools/types/postgresPoolProfile.js";
 export {
 	isSubjectRowColumn,
 	SubjectRowColumnNotCounterError,

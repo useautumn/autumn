@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import {
 	AppEnv,
 	type Organization,
@@ -73,7 +74,7 @@ export const handleRevenueCatOAuthCallback = async (c: Context<HonoEnv>) => {
 	const query = c.req.query();
 	const { code, state, error } = query;
 
-	const { db } = initDrizzle();
+	const { db } = initDrizzle({ pool: getPostgresPools().adHoc });
 
 	const frontendUrl = process.env.CLIENT_URL || "http://localhost:3000";
 	let redirectUrl = new URL(`${frontendUrl}`);

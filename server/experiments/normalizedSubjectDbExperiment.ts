@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv, type NormalizedFullSubject, type SubjectQueryRow, normalizedToFullSubject, logFullSubject } from "@autumn/shared";
 import { subjectQueryRowToNormalized, getFullSubjectQuery } from "@server/internal/customers/repos/getFullSubject/index.js";
 import { sql } from "drizzle-orm";
@@ -122,7 +123,7 @@ const runPath = async ({
 };
 
 async function main() {
-	const { db, client } = initDrizzle({ maxConnections: 2 });
+	const { db, client } = initDrizzle({ pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, });
 
 	try {
 		await db.execute(sql`SELECT 1`);

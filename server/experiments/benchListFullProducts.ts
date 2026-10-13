@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv, organizations } from "@autumn/shared";
 import { inArray, sql } from "drizzle-orm";
 import { initDrizzle } from "../src/db/initDrizzle";
@@ -34,7 +35,7 @@ console.log("target:", maskedUrl.slice(0, 90));
 const env =
 	process.env.EXPLAIN_APP_ENV === AppEnv.Sandbox ? AppEnv.Sandbox : AppEnv.Live;
 
-const { db, client } = initDrizzle({ maxConnections: 4, databaseUrl: dbUrl });
+const { db, client } = initDrizzle({ pool: { ...getPostgresPools().adHoc, maxConnections: 4 }, databaseUrl: dbUrl });
 
 const section = (title: string) => console.log(`\n=== ${title} ===`);
 

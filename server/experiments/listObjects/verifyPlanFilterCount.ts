@@ -1,3 +1,4 @@
+import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv, type CusProductStatus } from "@autumn/shared";
 import { initDrizzle } from "../../src/db/initDrizzle.js";
 import { createDualLogger } from "../../src/external/logtail/logtailUtils.js";
@@ -51,7 +52,7 @@ const CASES: { label: string; query: Record<string, unknown> }[] = [
 ];
 
 const main = async () => {
-	const { db } = initDrizzle({ maxConnections: 2 });
+	const { db } = initDrizzle({ pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, });
 	const ctx = await createWorkerContext({
 		db,
 		payload: { orgId: ORG_ID, env: ENV },
