@@ -17,6 +17,7 @@ const source: AtomHealthSource = {
 	bootedAt: "2026-10-07T00:00:00.000Z",
 	restarts: new Int32Array(new SharedArrayBuffer(4)),
 	ready: new Int32Array(new SharedArrayBuffer(4)),
+	threadsReady: new Int32Array(new SharedArrayBuffer(8)),
 	threadStats: createThreadStatsBuffer({ threads: 2 }),
 	dataDir: tmpdir(),
 };
