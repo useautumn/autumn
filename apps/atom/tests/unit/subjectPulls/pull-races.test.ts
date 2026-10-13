@@ -26,6 +26,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	freshHeld,
 	storedEntitySubjectWith,
@@ -85,6 +86,7 @@ const openPullingFolder = () => {
 	const folder = mkdtempSync(join(tmpdir(), "atom-pull-races-"));
 	folders.push(folder);
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount: 2,
 		owners: allSlotsOwnedHere,

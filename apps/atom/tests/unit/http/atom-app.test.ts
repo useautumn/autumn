@@ -24,6 +24,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noPeer,
@@ -88,6 +89,7 @@ const createDeployedApp = ({
 	loop?: { lagMs(): number };
 } = {}) => {
 	const auth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
 		slotCount: 2,
@@ -118,6 +120,7 @@ const createDeployedApp = ({
 /** Our multi-tenant Atom: no orgs until the admin token's holder registers one. */
 const createMultiTenantApp = () => {
 	const auth = createMultiTenantAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir: newDataDir(),
 		slotCount: 2,
 		owners: allSlotsOwnedHere,

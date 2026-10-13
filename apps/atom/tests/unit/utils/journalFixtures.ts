@@ -54,14 +54,24 @@ export const openSlotProcessor = ({
 	};
 };
 
-/** A deduction of `value` messages from `cus_1`, as the Atom journals one it granted. */
+/** A deduction of `value` messages from the customer (`cus_1` unless named), as the Atom journals one it granted. */
 export const owedCommand = ({
 	commandId,
 	value,
+	customerId = "cus_1",
 }: {
 	commandId: string;
 	value: number;
-}): TrackCommand => ({
-	...createTrackCommand({ commandId, value, overageBehavior: "overflow" }),
-	enforceOverdueBlock: true,
-});
+	customerId?: string;
+}): TrackCommand => {
+	const command = createTrackCommand({
+		commandId,
+		value,
+		overageBehavior: "overflow",
+	});
+	return {
+		...command,
+		identity: { ...command.identity, customerId },
+		enforceOverdueBlock: true,
+	};
+};

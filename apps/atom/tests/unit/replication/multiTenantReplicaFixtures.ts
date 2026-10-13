@@ -20,6 +20,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noSubjectPulls,
@@ -69,6 +70,7 @@ export const createMultiTenantReplica = ({
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const auth = createMultiTenantAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		slotCount: SLOT_COUNT,
 		owners: allSlotsOwnedHere,

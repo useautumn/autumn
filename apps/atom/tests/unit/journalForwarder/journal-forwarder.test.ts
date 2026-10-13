@@ -1,0 +1,402 @@
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createAutumnClient } from "../../../src/autumnClient/createAutumnClient.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
+import { openSlots } from "../../../src/slots/openSlots.js";
+import { journalFilePath } from "../../../src/slots/slotFiles.js";
+import {
+	MAX_UNSENT_AGE_MS,
+	openJournal,
+} from "../../../src/state/journal/openJournal.js";
+import type { Journal } from "../../../src/state/journal/types/journal.js";
+import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import {
+	allSlotsOwnedHere,
+	checkRequestFor,
+	checkResponseOf,
+	forwardReasonOf,
+	freshHeld,
+	noSubjectPulls,
+	storedSubjectWith,
+	subjectPushOf,
+} from "../utils/atomFixtures.js";
+import { startFakeAutumn, until } from "../utils/fakeAutumnTracks.js";
+import { openSlotProcessor, owedCommand } from "../utils/journalFixtures.js";
+
+const autumn = startFakeAutumn();
+afterAll(() => autumn.stop());
+
+const cleanups: (() => void)[] = [];
+afterEach(() => {
+	for (const cleanup of cleanups.splice(0)) cleanup();
+	autumn.reset();
+});
+
+const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 16000, 30000];
+const PUSH_GRACE_MS = 60_000;
+
+/** The forwarder's waits, each held until the test lets it pass: a clock it moves by hand. */
+const heldSleeps = () => {
+	const waiting: { ms: number; wake: () => void }[] = [];
+	return {
+		sleep: (ms: number) =>
+			new Promise<void>((wake) => waiting.push({ ms, wake })),
+		/** The next wait of `ms`, once the forwarder is in it. */
+		next: async ({ ms }: { ms: number }) => {
+			await until(() => waiting.some((sleep) => sleep.ms === ms));
+			const index = waiting.findIndex((sleep) => sleep.ms === ms);
+			const [sleep] = waiting.splice(index, 1);
+			if (!sleep) throw new Error(`No wait of ${ms} ms`);
+			return sleep;
+		},
+	};
+};
+
+const forwarderTo = ({
+	sleep,
+	warnings = [],
+}: {
+	sleep: (ms: number) => Promise<void>;
+	warnings?: unknown[];
+}) =>
+	createJournalForwarder({
+		ctx: {
+			autumnClient: createAutumnClient({ autumnApiUrl: autumn.url }),
+			logger: { warn: (fields: unknown) => void warnings.push(fields) },
+			sleep,
+		},
+	});
+
+const asCustomer = ({
+	subject,
+	customerId,
+}: {
+	subject: StoredSubject;
+	customerId: string;
+}): StoredSubject => ({
+	...subject,
+	state: {
+		...subject.state,
+		identity: { ...subject.state.identity, customerId },
+	},
+});
+
+/** `cus_1` and `cus_2` holding 1,000 messages each, their slot's journal handed to Autumn as it fills. */
+const openForwardedSlot = async ({
+	now = Date.now,
+}: {
+	now?: () => number;
+} = {}) => {
+	const sleeps = heldSleeps();
+	const warnings: unknown[] = [];
+	const pulled: string[] = [];
+	const slot = openSlotProcessor({
+		journal: openJournal({ databasePath: ":memory:", now }),
+	});
+	const forwarding = forwarderTo({ sleep: sleeps.sleep, warnings }).forward({
+		journal: slot.journal,
+		tokenHash: () => "hash_folder",
+		pulls: { request: ({ customerId }) => void pulled.push(customerId) },
+	});
+	cleanups.push(() => {
+		forwarding.stop();
+		slot.close();
+	});
+	for (const customerId of ["cus_1", "cus_2"])
+		await slot.processor.setSubject(
+			subjectPushOf({
+				subject: asCustomer({
+					subject: storedSubjectWith({ balance: 1000 }),
+					customerId,
+				}),
+			}),
+		);
+	return { ...slot, sleeps, warnings, pulled };
+};
+
+let requests = 0;
+const sendEvent = ({ customerId = "cus_1" }: { customerId?: string } = {}) => ({
+	...checkRequestFor({
+		params: {
+			customer_id: customerId,
+			send_event: true,
+			required_balance: 10,
+		},
+	}),
+	requestId: `atom_req_${++requests}`,
+});
+
+const remainingOf = async ({
+	processor,
+}: {
+	processor: ReturnType<typeof openSlotProcessor>["processor"];
+}) =>
+	(await checkResponseOf({ processor, request: checkRequestFor() })).balance
+		?.remaining;
+
+const nothingUnsent = ({ journal }: { journal: Journal }) =>
+	journal.unsent({ limit: 1 }).length === 0;
+
+describe("handing the journal to Autumn", () => {
+	test("2xx: the batch is marked sent, and stays in the view until a push shows it", async () => {
+		const { processor, journal } = await openForwardedSlot();
+
+		const reply = await checkResponseOf({ processor, request: sendEvent() });
+
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toEqual([
+			{ customerId: "cus_1", seq: 1, value: 10 },
+		]);
+		expect(reply.balance?.remaining).toBe(990);
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+		expect(await remainingOf({ processor })).toBe(990);
+	});
+
+	test("5xx after Autumn took the batch: the retry is deduplicated, one deduction", async () => {
+		const { processor, journal, sleeps } = await openForwardedSlot();
+		autumn.switches.loseNextAck = true;
+
+		await processor.check({ request: sendEvent() });
+		(await sleeps.next({ ms: 1000 })).wake();
+
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toEqual([
+			{ customerId: "cus_1", seq: 1, value: 10 },
+		]);
+		expect(autumn.requestSizes).toEqual([1, 1]);
+	});
+
+	test("Autumn down 60 s: checks keep answering, retries back off 1 s to 30 s, and the journal drains in order afterwards", async () => {
+		const { processor, journal, sleeps } = await openForwardedSlot();
+		autumn.switches.down = true;
+
+		const remaining: (number | undefined)[] = [];
+		const deduct = async () =>
+			remaining.push(
+				(await checkResponseOf({ processor, request: sendEvent() })).balance
+					?.remaining,
+			);
+		await deduct();
+		let downForMs = 0;
+		for (const delay of RETRY_DELAYS_MS) {
+			const retry = await sleeps.next({ ms: delay });
+			downForMs += retry.ms;
+			await deduct();
+			if (downForMs >= 60_000) autumn.switches.down = false;
+			retry.wake();
+		}
+
+		await until(() => nothingUnsent({ journal }));
+		expect(downForMs).toBeGreaterThanOrEqual(60_000);
+		expect(remaining).toEqual([990, 980, 970, 960, 950, 940, 930]);
+		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+	});
+
+	test("400/401: logged once, kept and retried with backoff, never dropped", async () => {
+		const { processor, journal, sleeps, warnings } = await openForwardedSlot();
+		autumn.switches.refuseWith = 401;
+
+		await processor.check({ request: sendEvent() });
+		(await sleeps.next({ ms: 1000 })).wake();
+		(await sleeps.next({ ms: 2000 })).wake();
+		autumn.switches.refuseWith = 400;
+		const retry = await sleeps.next({ ms: 4000 });
+
+		expect(warnings).toEqual([
+			expect.objectContaining({ type: "atom_journal_forward_failed" }),
+		]);
+		expect(journal.unsent({ limit: 10 })).toHaveLength(1);
+		autumn.switches.refuseWith = null;
+		retry.wake();
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toHaveLength(1);
+	});
+
+	test("batches hold at most 500 tracks, each customer's in seq order", async () => {
+		const { journal } = await openForwardedSlot();
+		autumn.switches.down = true;
+		await Promise.all(
+			Array.from({ length: 1200 }, (_, index) => {
+				const customerId = index % 2 === 0 ? "cus_1" : "cus_2";
+				return journal.append({
+					customerId,
+					command: owedCommand({
+						commandId: `batched_${index}`,
+						value: 1,
+						customerId,
+					}),
+				});
+			}),
+		);
+
+		autumn.switches.down = false;
+		await until(() => nothingUnsent({ journal }));
+
+		expect(autumn.requestSizes.slice(-3)).toEqual([500, 500, 200]);
+		for (const customerId of ["cus_1", "cus_2"])
+			expect(
+				autumn.applied
+					.filter((track) => track.customerId === customerId)
+					.map(({ seq }) => seq),
+			).toEqual(Array.from({ length: 600 }, (_, index) => index + 1));
+	});
+});
+
+describe("a sent deduction no push clears", () => {
+	test("sent but no push within the grace: the customer is pulled, and the read clears it", async () => {
+		const { processor, journal, sleeps, pulled } = await openForwardedSlot();
+		await processor.check({ request: sendEvent() });
+		await until(() => nothingUnsent({ journal }));
+
+		(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
+		await until(() => pulled.length > 0);
+		expect(pulled).toEqual(["cus_1"]);
+
+		const read = subjectPushOf({
+			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+		});
+		await processor.setSubject({
+			customerId: read.customerId,
+			body: JSON.stringify({ ...JSON.parse(read.body), atom_seq: 1 }),
+		});
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
+		expect(await remainingOf({ processor })).toBe(990);
+	});
+
+	test("a push that clears it within the grace pulls nothing", async () => {
+		const { processor, journal, sleeps, pulled } = await openForwardedSlot();
+		await processor.check({ request: sendEvent() });
+		await until(() => nothingUnsent({ journal }));
+
+		const push = subjectPushOf({
+			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+		});
+		await processor.setSubject({
+			customerId: push.customerId,
+			body: JSON.stringify({ ...JSON.parse(push.body), atom_seq: 1 }),
+		});
+		(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
+		await Bun.sleep(10);
+
+		expect(pulled).toEqual([]);
+	});
+});
+
+describe("the journal's ceiling, per customer", () => {
+	test("ceiling reached: that customer's send_event goes to the API, others are deducted here; after the drain it is deducted here again", async () => {
+		let clock = 1_700_000_000_000;
+		const { processor, journal, sleeps } = await openForwardedSlot({
+			now: () => clock,
+		});
+		autumn.switches.down = true;
+
+		await processor.check({ request: sendEvent() });
+		const retry = await sleeps.next({ ms: 1000 });
+		clock += MAX_UNSENT_AGE_MS + 1;
+
+		expect(
+			await forwardReasonOf(() => processor.check({ request: sendEvent() })),
+		).toBe("journal_backlog");
+		expect(
+			(
+				await checkResponseOf({
+					processor,
+					request: sendEvent({ customerId: "cus_2" }),
+				})
+			).allowed,
+		).toBe(true);
+
+		autumn.switches.down = false;
+		retry.wake();
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toHaveLength(2);
+		expect(
+			(await checkResponseOf({ processor, request: sendEvent() })).balance
+				?.remaining,
+		).toBe(980);
+	});
+});
+
+describe("journals found at boot", () => {
+	const folders: string[] = [];
+	afterEach(() => {
+		for (const folder of folders.splice(0))
+			rmSync(folder, { recursive: true, force: true });
+	});
+
+	const newFolder = () => {
+		const folder = mkdtempSync(join(tmpdir(), "atom-forwarded-"));
+		folders.push(folder);
+		return folder;
+	};
+
+	/** A journal file left by an earlier run, owing `values` from `cus_1`. */
+	const leaveJournal = async ({
+		folder,
+		slot,
+		slotCount,
+		values,
+	}: {
+		folder: string;
+		slot: number;
+		slotCount: number;
+		values: number[];
+	}) => {
+		const journal = openJournal({
+			databasePath: journalFilePath({ folder, slot, slotCount }),
+		});
+		for (const [index, value] of values.entries())
+			await journal.append({
+				customerId: "cus_1",
+				command: owedCommand({ commandId: `left_${index}`, value }),
+			});
+		journal.close();
+	};
+
+	const openFolder = ({
+		folder,
+		slotCount,
+	}: {
+		folder: string;
+		slotCount: number;
+	}) => {
+		const slots = openSlots({
+			folder,
+			slotCount,
+			owners: allSlotsOwnedHere,
+			held: freshHeld(),
+			pulls: { subjectPulls: noSubjectPulls, tokenHash: () => "hash_folder" },
+			journalForwarder: forwarderTo({ sleep: () => Bun.sleep(1) }),
+		});
+		cleanups.push(() => slots.close());
+		return slots;
+	};
+
+	test("boot with pending rows forwards them", async () => {
+		const folder = newFolder();
+		await leaveJournal({ folder, slot: 0, slotCount: 1, values: [10, 20] });
+
+		openFolder({ folder, slotCount: 1 });
+
+		await until(() => autumn.applied.length === 2);
+		expect(autumn.applied.map(({ value }) => value)).toEqual([10, 20]);
+	});
+
+	test("old-split journals are forwarded before deletion: a slot-count change never loses a deduction", async () => {
+		const folder = newFolder();
+		await leaveJournal({ folder, slot: 3, slotCount: 4, values: [5, 6] });
+		autumn.switches.down = true;
+		const oldSplit = () =>
+			readdirSync(folder).filter((name) => name.includes("-of-004"));
+
+		openFolder({ folder, slotCount: 2 });
+		await Bun.sleep(20);
+		expect(oldSplit()).not.toEqual([]);
+
+		autumn.switches.down = false;
+		await until(() => oldSplit().length === 0);
+		expect(autumn.applied.map(({ value }) => value)).toEqual([5, 6]);
+	});
+});

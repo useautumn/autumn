@@ -30,6 +30,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	noSubjectPulls,
 } from "../../unit/utils/atomFixtures.js";
 import type { Endpoint, SimNetwork } from "./simNetwork.js";
@@ -108,6 +109,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		now,
 	});
 	const auth: DeployedAuth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir: ctx.volume.folder,
 		tokenHash: ctx.tokenHash,
 		slotCount: SIM_SLOT_COUNT,
