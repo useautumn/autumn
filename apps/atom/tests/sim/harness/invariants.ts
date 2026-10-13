@@ -196,6 +196,7 @@ export const assertNoLoops = ({ cluster }: { cluster: SimCluster }) => {
 		// A row sent again after a restart is what the sender's own file holds, whoever first relayed it; bounded by the resend window.
 		if (
 			record.relayed &&
+			!record.proxied &&
 			!record.resend &&
 			!fromAutumn.get(record.from)?.has(record.body)
 		)

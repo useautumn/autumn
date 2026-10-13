@@ -8,6 +8,8 @@ import { createPeerApp } from "../http/createPeerApp.js";
 import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { createReplicaRing } from "../replicas/createReplicaRing.js";
+import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -63,7 +65,18 @@ export const createAtomServer = ({
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
-		peer: { port: env.ATOM_PORT },
+		peer: {
+			port: env.ATOM_PEER_PORT,
+			secret: env.ATOM_PEER_SECRET,
+			ring: createReplicaRing({
+				ctx: {
+					resolver: ctx.replication,
+					// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
+					own: () =>
+						env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses(),
+				},
+			}),
+		},
 	};
 	const app = createAtomApp({ ctx: httpContext });
 	// The other replicas are listened to on the port the stack keeps off the public endpoint.

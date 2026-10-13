@@ -17,7 +17,7 @@ const scoreOf = ({
 export const createReplicaRing = ({
 	ctx,
 }: {
-	ctx: { resolver: PeerResolver; own: () => string[] };
+	ctx: { resolver: Pick<PeerResolver, "peers">; own: () => string[] };
 }): ReplicaRing => {
 	const self = ctx.own()[0];
 	if (self === undefined)
@@ -51,6 +51,7 @@ export const createReplicaRing = ({
 	}
 
 	return {
+		self,
 		ownerOf,
 		isOwner: async ({ customerId }) => (await ownerOf({ customerId })) === self,
 		members,

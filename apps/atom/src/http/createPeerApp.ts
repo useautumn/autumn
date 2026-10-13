@@ -11,6 +11,7 @@ import {
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
+import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
 import {
 	receiveCatalogSince,
@@ -20,6 +21,8 @@ import {
 } from "./handlers/receivePeerReads.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
+import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import {
 	peerFolderMiddleware,
 	peerRequestMiddleware,
@@ -43,11 +46,14 @@ export function createPeerApp({
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
+	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use(
 		requestLogMiddleware({ ctx, handleError }),
 		requestBodyMiddleware,
 		peerRequestMiddleware({ secret }),
 	);
+	// A check another replica handed on is answered here, whoever this replica's ring says owns it: one hop at most.
+	app.post("/v1/balances.check", clientAuthMiddleware({ ctx }), receiveCheck);
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
 	if (ctx.multiTenant) {
 		const tenants = { ...ctx.multiTenant, replication: ctx.replication };
