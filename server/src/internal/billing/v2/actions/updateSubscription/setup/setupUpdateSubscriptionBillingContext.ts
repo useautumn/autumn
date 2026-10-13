@@ -30,6 +30,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
@@ -44,6 +45,8 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"discounts",
 	"remove_discounts",
 	"custom_line_items",
+	"add_lines",
+	"remove_lines",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
 /**
@@ -289,6 +292,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			: setupIgnoreProrationBehavior({ intent })
 				? undefined
 				: params.proration_behavior,
+		invoiceLineEdits: paramsToInvoiceLineEdits({ params }),
 
 		invoiceMode,
 		paymentBehaviorIntent: contextOverride.paymentBehaviorIntent,

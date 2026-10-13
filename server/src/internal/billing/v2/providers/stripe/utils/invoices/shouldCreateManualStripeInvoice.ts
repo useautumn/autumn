@@ -56,6 +56,14 @@ export const shouldCreateManualStripeInvoice = ({
 		return customTotal !== 0;
 	}
 
+	// Like custom_line_items, edited lines that net to zero create no invoice.
+	if (
+		billingContext.invoiceLineEdits &&
+		!lineItemsCharge({ autumnBillingPlan })
+	) {
+		return false;
+	}
+
 	const { stripeSubscription } = billingContext;
 	if (!stripeSubscription) {
 		return lineItemsCharge({ autumnBillingPlan });

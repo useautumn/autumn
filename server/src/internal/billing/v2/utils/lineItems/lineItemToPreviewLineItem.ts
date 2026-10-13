@@ -22,7 +22,8 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		})),
 		plan_id: line.context.product.id,
 		feature_id: feature?.id ?? null,
-		custom: false,
+		// Lines from add_lines carry an empty price.
+		custom: !line.context.price.config,
 		quantity: line.totalQuantity ?? 1,
 		period: line.context.effectivePeriod,
 	};

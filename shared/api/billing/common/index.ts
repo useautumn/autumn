@@ -16,6 +16,7 @@ export * from "./customizePlan/mappers/customizePlanV1ToV0";
 export * from "./customLineItem";
 export * from "./featureQuantity/featureQuantityParamsV0";
 export * from "./featureQuantity/mappers/featureQuantityParamsToCusProductOptions";
+export * from "./invoiceLineEdits";
 export * from "./invoiceModeParams";
 export * from "./licenseQuantityParams";
 export * from "./mappers/billingParamsV1ToV0";

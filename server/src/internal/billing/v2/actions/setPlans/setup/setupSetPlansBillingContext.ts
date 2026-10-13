@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import {
 	getInitialSetPlansPhase,
@@ -156,6 +157,7 @@ export const setupSetPlansBillingContext = async ({
 			}),
 		}),
 		requestedProrationBehavior: immediatePhaseProrationBehavior({ params }),
+		invoiceLineEdits: paramsToInvoiceLineEdits({ params }),
 		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 			params,
 			currentEpochMs: billingContext.currentEpochMs,

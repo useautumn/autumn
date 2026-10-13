@@ -31,6 +31,7 @@ import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/se
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/markAutumnManagedTrialContext";
+import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -371,6 +372,7 @@ export const setupAttachBillingContext = async ({
 		})
 			? undefined
 			: params.proration_behavior,
+		invoiceLineEdits: paramsToInvoiceLineEdits({ params }),
 
 		invoiceMode,
 		paymentBehaviorIntent,

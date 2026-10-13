@@ -23,6 +23,7 @@ import { handleUncancelErrors } from "./handleUncancelErrors.js";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors.js";
 import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors.js";
 import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
+import { handleUpdateSubscriptionInvoiceLineEditsErrors } from "./handleUpdateSubscriptionInvoiceLineEditsErrors.js";
 import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors.js";
 
 export const handleUpdateSubscriptionErrors = async ({
@@ -81,6 +82,11 @@ export const handleUpdateSubscriptionErrors = async ({
 	// owns the "Update too complex" message for ManualTopUp requests).
 	handleManualTopUpErrors({ billingContext, params });
 	handleUpdateSubscriptionCustomLineItemsErrors({
+		billingContext,
+		billingPlan,
+		params,
+	});
+	handleUpdateSubscriptionInvoiceLineEditsErrors({
 		billingContext,
 		billingPlan,
 		params,

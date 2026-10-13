@@ -1,4 +1,5 @@
 import type { BillingDetailsBillingParams } from "@api/billing/common/billingDetailsBillingParams";
+import type { InvoiceLineEdits } from "@api/billing/common/invoiceLineEdits";
 import type {
 	BillingBehavior,
 	CancelAction,
@@ -81,6 +82,8 @@ export interface BillingContext {
 	requestedProrationBehavior?: BillingBehavior;
 	/** Where proration can't change what's billed, set by set_plans' setup. */
 	prorationOverride?: ProrationBehaviorOverride;
+	/** remove_lines / add_lines: patch the invoice this request creates. */
+	invoiceLineEdits?: InvoiceLineEdits;
 
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;
