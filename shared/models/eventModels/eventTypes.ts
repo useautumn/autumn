@@ -29,6 +29,8 @@ export type TotalEventsParams = {
 	filter_by?: Record<string, string>;
 };
 
+export type AggregateMeasure = "sum" | "count";
+
 export type TimeseriesEventsParams = TotalEventsParams & {
 	group_by?: string;
 	no_count?: boolean;
@@ -36,6 +38,7 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	enforceGroupLimit?: boolean;
 	max_groups?: number;
 	group_ranking?: "bin" | "window";
+	measure?: AggregateMeasure;
 };
 
 export type CalculateDateRangeParams = Omit<

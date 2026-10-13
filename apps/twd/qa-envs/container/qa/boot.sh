@@ -93,6 +93,11 @@ supervise() { # name, dir, cmd...: restart on exit, like dev's restart loop
 	cd /app/apps/balance-worker && bun --config=./bunfig.toml scripts/setupLocalTopics.ts >>"$L/balance-worker.log" 2>&1
 	supervise balance-worker /app/apps/balance-worker bun --config=./bunfig.toml src/main.ts
 	log "balance worker started"
+	if [ -n "${QA_TINYBIRD_URL:-}" ]; then
+		# Herald lands usage events in Postgres and Tinybird; without Svix it delivers no webhooks, as before.
+		SVIX_API_KEY="" supervise herald /app/apps/herald bun --config=./bunfig.toml src/main.ts
+		log "herald started"
+	fi
 	# Commands fail with NO_OWNER until each partition's preparing → ready → claimed records land.
 	until bun /qa/ownership-ready.ts; do sleep 1; done
 	sleep 1
@@ -103,6 +108,20 @@ supervise() { # name, dir, cmd...: restart on exit, like dev's restart loop
 supervise server /app/server bun src/index.ts
 # The rest would compete with the server's 20+ s of module loading on 2 vCPUs.
 wait_port 8080 && log "server listening"
+if [ -n "${QA_TINYBIRD_URL:-}" ]; then
+	# Builds the shipped commit's datafiles into Tinybird; commits without tb:local use the baked copy.
+	(
+		cd /app/server
+		[ -d tinybird/scripts/local ] || cp -r /qa/tb-local tinybird/scripts/local
+		[ -f tinybird/scripts/local/tbLocal.ts ] || { log "no tb:local to build tinybird with"; exit 0; }
+		for _ in $(seq 1 20); do
+			bun tinybird/scripts/local/tbLocal.ts build --url "$QA_TINYBIRD_URL" >>"$L/tinybird-build.log" 2>&1 &&
+				{ log "tinybird built"; exit 0; }
+			sleep 10
+		done
+		log "tinybird build failed, see tinybird-build.log"
+	) &
+fi
 supervise workers /app/server bun src/workers.ts
 supervise cron /app/server bun src/cron.ts
 log "all processes started"

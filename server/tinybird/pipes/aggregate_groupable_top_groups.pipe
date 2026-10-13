@@ -2,6 +2,7 @@ DESCRIPTION >
     Top max_groups customers (or property values when group_column = 'property') per event over the
     whole window, for org-wide grouping with group_ranking='window'. The server passes them to
     aggregate_groupable, which then builds per-period series only for these groups.
+    rank_by='count' ranks by number of events instead of summed value.
 
 TOKEN "aggregate_groupable_top_groups_read" READ
 
@@ -12,6 +13,7 @@ DESCRIPTION >
     hourly rollups. Both include a live final hour from the rollup and read partial edge hours from raw events.
 SQL >
     %
+    {% set by_count = String(rank_by, 'value') == 'count' %}
     WITH
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
@@ -23,7 +25,7 @@ SQL >
     {% if String(group_column, 'customer_id') == 'property' %}
     SELECT event_name, group_value, sum(value) AS total
     FROM (
-        SELECT event_name, property_value AS group_value, sumMerge(total_value) AS value
+        SELECT event_name, property_value AS group_value, {% if by_count %}sumMerge(event_count){% else %}sumMerge(total_value){% end %} AS value
         FROM events_org_property_daily_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -37,7 +39,7 @@ SQL >
 
         UNION ALL
 
-        SELECT event_name, property_value AS group_value, sumMerge(total_value) AS value
+        SELECT event_name, property_value AS group_value, {% if by_count %}sumMerge(event_count){% else %}sumMerge(total_value){% end %} AS value
         FROM events_org_property_hourly_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -55,7 +57,7 @@ SQL >
         SELECT
             event_name,
             {{ column('properties.' + String(property_key, '')) }}::String AS group_value,
-            sum(toFloat64(coalesce(value, 1))) AS value
+            {% if by_count %}count(){% else %}sum(toFloat64(coalesce(value, 1))){% end %} AS value
         FROM events
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -75,7 +77,7 @@ SQL >
     {% else %}
     SELECT event_name, group_value, sum(value) AS total
     FROM (
-        SELECT event_name, customer_id AS group_value, sumMerge(total_value) AS value
+        SELECT event_name, customer_id AS group_value, {% if by_count %}sumMerge(event_count){% else %}sumMerge(total_value){% end %} AS value
         FROM events_customer_daily_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -87,7 +89,7 @@ SQL >
 
         UNION ALL
 
-        SELECT event_name, group_value, sumMerge(total_value) AS value
+        SELECT event_name, group_value, {% if by_count %}sumMerge(event_count){% else %}sumMerge(total_value){% end %} AS value
         FROM events_org_dimension_hourly_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -101,7 +103,7 @@ SQL >
 
         UNION ALL
 
-        SELECT event_name, customer_id AS group_value, sum(toFloat64(coalesce(value, 1))) AS value
+        SELECT event_name, customer_id AS group_value, {% if by_count %}count(){% else %}sum(toFloat64(coalesce(value, 1))){% end %} AS value
         FROM events
         WHERE
             org_id = {{ String(org_id, '') }}

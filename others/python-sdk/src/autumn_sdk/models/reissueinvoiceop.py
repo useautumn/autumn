@@ -64,7 +64,7 @@ class CustomField(BaseModel):
     value: str
 
 
-PaymentMethodType = Literal[
+ReissueInvoicePaymentMethodType = Literal[
     "card",
     "customer_balance",
     "us_bank_account",
@@ -90,7 +90,7 @@ class ReissueInvoiceInvoiceRequestBodyTypedDict(TypedDict):
     r"""Footer text, overriding the original's and any template's."""
     memo: NotRequired[Nullable[str]]
     r"""Memo shown near the top of the invoice."""
-    payment_method_types: NotRequired[List[PaymentMethodType]]
+    payment_method_types: NotRequired[List[ReissueInvoicePaymentMethodType]]
     r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms."""
 
 
@@ -115,7 +115,7 @@ class ReissueInvoiceInvoiceRequestBody(BaseModel):
     memo: OptionalNullable[str] = UNSET
     r"""Memo shown near the top of the invoice."""
 
-    payment_method_types: Optional[List[PaymentMethodType]] = None
+    payment_method_types: Optional[List[ReissueInvoicePaymentMethodType]] = None
     r"""Payment method types the customer can pay the replacement with, e.g. card and customer_balance (bank transfer). Overrides the org's allowed payment methods. A method other than card on a card-charged invoice sends the replacement for payment instead, on net_terms_days or the default terms."""
 
     @model_serializer(mode="wrap")

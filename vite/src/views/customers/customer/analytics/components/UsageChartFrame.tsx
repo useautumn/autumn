@@ -23,6 +23,13 @@ const Y_TICK = {
 	dy: -3,
 } as const;
 const NO_LABEL = () => "";
+const Y_UNIT_LABEL = {
+	position: "insideTopLeft" as const,
+	angle: -90,
+	fontSize: 11,
+	dx: -6,
+	dy: 40,
+};
 
 /** The usage chart's box, grid and axes. The loaded chart and its skeleton both render through it, so the swap cannot move them. */
 export const UsageChartFrame = ({
@@ -32,6 +39,7 @@ export const UsageChartFrame = ({
 	barCategoryGap,
 	formatXTick,
 	showYTicks,
+	yUnit,
 	chartKey,
 	children,
 }: {
@@ -41,6 +49,7 @@ export const UsageChartFrame = ({
 	barCategoryGap: number | string;
 	formatXTick: XAxisProps["tickFormatter"];
 	showYTicks: boolean;
+	yUnit?: string;
 	chartKey?: string;
 	children?: ReactNode;
 }) => (
@@ -82,6 +91,7 @@ export const UsageChartFrame = ({
 				tick={Y_TICK}
 				// Blank labels, not tick={false}, which also drops the ticks the gridlines are drawn on.
 				tickFormatter={showYTicks ? formatCompactNumber : NO_LABEL}
+				label={yUnit ? { ...Y_UNIT_LABEL, value: yUnit } : undefined}
 			/>
 			{children}
 		</BarChart>

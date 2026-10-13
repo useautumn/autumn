@@ -2422,6 +2422,17 @@ class CreateInvoiceAttachDiscount(BaseModel):
         return m
 
 
+CreateInvoicePaymentMethodType = Literal[
+    "card",
+    "customer_balance",
+    "us_bank_account",
+    "sepa_debit",
+    "bacs_debit",
+    "acss_debit",
+    "link",
+]
+
+
 CreateInvoiceIssueMethod = Literal[
     "draft",
     "finalize",
@@ -2450,6 +2461,8 @@ class CreateInvoiceParamsTypedDict(TypedDict):
     r"""When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) applied to every line."""
+    payment_method_types: NotRequired[List[CreateInvoicePaymentMethodType]]
+    r"""Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods."""
     period_start: NotRequired[int]
     r"""Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated."""
     period_end: NotRequired[int]
@@ -2490,6 +2503,9 @@ class CreateInvoiceParams(BaseModel):
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) applied to every line."""
 
+    payment_method_types: Optional[List[CreateInvoicePaymentMethodType]] = None
+    r"""Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods."""
+
     period_start: Optional[int] = None
     r"""Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated."""
 
@@ -2515,6 +2531,7 @@ class CreateInvoiceParams(BaseModel):
                 "issue_date",
                 "due_date",
                 "tax_rate_id",
+                "payment_method_types",
                 "period_start",
                 "period_end",
                 "preview",

@@ -27,6 +27,14 @@ import { Sandboxes } from "./sandboxes.js";
 import { Webhooks } from "./webhooks.js";
 
 export class Autumn extends ClientSDK {
+  private _edge?: Autumn;
+  /**
+   * This client with `useEdge` on: each call the edge serves is asked of the edge at `edgeURL` first, and of the Autumn API when the edge is down.
+   */
+  get edge(): Autumn {
+    return (this._edge ??= new Autumn({ ...this._options, useEdge: true }));
+  }
+
   private _customers?: Customers;
   get customers(): Customers {
     return (this._customers ??= new Customers(this._options));

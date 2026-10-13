@@ -18,6 +18,7 @@ import { isOtherSeries } from "../utils/seriesColors";
 import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
 import type { EventsData } from "./analytics-types";
 import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
+import { formatWithUnit } from "./TooltipItem";
 
 const HEADER_ROW =
 	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
@@ -102,10 +103,12 @@ const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 	);
 };
 
-const numberCell = (value: number): TableCell => ({
-	content: formatCompactNumber(value),
-	title: value.toLocaleString(),
-});
+const numberCell =
+	(unit?: string) =>
+	(value: number): TableCell => ({
+		content: formatCompactNumber(value),
+		title: formatWithUnit({ value, unit }),
+	});
 
 const skeletonCell = ({ seed }: { seed: number }): TableCell => ({
 	content: (
@@ -169,11 +172,14 @@ const chartDataToModel = ({
 	chartData,
 	chartConfig,
 	interval,
+	unit,
 }: {
 	chartData: EventsData;
 	chartConfig: ChartSeriesConfig[];
 	interval: string | null;
+	unit?: string;
 }): TableModel => {
+	const cellOf = numberCell(unit);
 	const rows = chartData.data;
 	const series = orderSeriesForTable({ chartConfig });
 	const valueAt = (rowIndex: number, key: string) =>
@@ -194,8 +200,8 @@ const chartDataToModel = ({
 					</SeriesNameHoverCard>
 				</>
 			),
-			cells: values.map(numberCell),
-			total: numberCell(values.reduce((sum, value) => sum + value, 0)),
+			cells: values.map(cellOf),
+			total: cellOf(values.reduce((sum, value) => sum + value, 0)),
 		};
 	});
 
@@ -209,8 +215,8 @@ const chartDataToModel = ({
 		),
 		seriesRows,
 		totalRow: {
-			cells: periodTotals.map(numberCell),
-			total: numberCell(periodTotals.reduce((sum, value) => sum + value, 0)),
+			cells: periodTotals.map(cellOf),
+			total: cellOf(periodTotals.reduce((sum, value) => sum + value, 0)),
 		},
 		isPlaceholder: false,
 	};
@@ -270,6 +276,7 @@ export const UsageBreakdownTable = ({
 	nameHeader,
 	isLoading,
 	placeholder,
+	unit,
 }: {
 	chartData: EventsData | null;
 	chartConfig: ChartSeriesConfig[] | null;
@@ -277,14 +284,17 @@ export const UsageBreakdownTable = ({
 	nameHeader: string;
 	isLoading: boolean;
 	placeholder: TablePlaceholder | null;
+	unit?: string;
 }) => {
 	const model = useMemo(() => {
 		if (isLoading) {
 			return placeholder ? placeholderToModel({ placeholder }) : null;
 		}
 		if (!chartData?.data.length || !chartConfig?.length) return null;
-		return chartDataToModel({ chartData, chartConfig, interval });
-	}, [isLoading, placeholder, chartData, chartConfig, interval]);
+		return chartDataToModel({ chartData, chartConfig, interval, unit });
+	}, [isLoading, placeholder, chartData, chartConfig, interval, unit]);
+
+	const totalLabel = unit ? `Total ${unit}` : "Total";
 
 	const { scrollRef, edges, updateEdges } = useHiddenColumnEdges({
 		resetKey: `${model?.isPlaceholder}:${model?.periodLabels.join()}:${model?.seriesRows.length}`,
@@ -328,7 +338,7 @@ export const UsageBreakdownTable = ({
 									"flex h-full items-center justify-end pr-4",
 								)}
 							>
-								Total
+								{totalLabel}
 							</div>
 						</div>
 
@@ -394,7 +404,7 @@ export const UsageBreakdownTable = ({
 						>
 							{/* Indented to line up with series names, past the colour swatch. */}
 							<div className={cn(pinnedLeft, "flex h-full items-center pl-9")}>
-								Total
+								{totalLabel}
 							</div>
 							<div className="flex flex-1 justify-end">
 								{model.totalRow.cells.map((cell, index) => (

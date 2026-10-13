@@ -68,6 +68,7 @@ export const createQaEnv = async ({
 	const request = {
 		freshDbRequested: Boolean(body.freshDb),
 		supersedes: body.supersedes ?? null,
+		tinybird: body.tinybird ?? (!isDead && existing?.tinybird) ?? false,
 	};
 	await ctx.db
 		.insert(qaEnvs)
