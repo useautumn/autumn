@@ -11,10 +11,8 @@
  */
 
 import { afterAll, expect, test } from "bun:test";
-import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
 import {
 	ATOM_SUBJECT_READ_PATH,
-	ATOM_TOKEN_HASH_HEADER,
 	ATOM_TRACKS_APPEND_PATH,
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
@@ -31,6 +29,7 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { expectBalanceCorrect } from "../utils/expectBalanceCorrect.js";
+import { atomTrack, postAsAtom } from "./utils/atomHandIn.js";
 import { atomTestClient } from "./utils/atomTestClient.js";
 import {
 	deleteAtomDeployment,
@@ -38,65 +37,10 @@ import {
 } from "./utils/ensureAtomDeployment.js";
 
 const autumn = atomTestClient();
-const serverUrl = autumn.baseUrl.replace(/\/v1$/, "");
 
 afterAll(async () => {
 	await deleteAtomDeployment({ autumn });
 });
-
-/** The worker's own track for `value` messages, as an Atom journals the deduction it granted. */
-const atomTrack = ({
-	customerId,
-	value,
-}: {
-	customerId: string;
-	value: number;
-}): TrackCommand => {
-	const requestId = `atom_req_${crypto.randomUUID()}`;
-	const messages = defaultCtx.features.find(
-		(feature) => feature.id === TestFeature.Messages,
-	);
-	return {
-		schemaVersion: 1,
-		requestId,
-		identity: {
-			orgId: defaultCtx.org.id,
-			env: defaultCtx.env,
-			customerId,
-			entityId: null,
-		},
-		occurredAt: Date.now(),
-		type: "track",
-		org: orgToCommandOrg({ org: defaultCtx.org }),
-		commandId: requestId,
-		featureId: TestFeature.Messages,
-		internalFeatureId: messages?.internal_id ?? "",
-		value,
-		overageBehavior: "overflow",
-		properties: null,
-		enforceOverdueBlock: true,
-		usageEvent: null,
-		idempotency: { key: `track:${requestId}`, ttlMs: 86_400_000 },
-	};
-};
-
-const postAsAtom = ({
-	path,
-	tokenHash,
-	body,
-}: {
-	path: string;
-	tokenHash: string;
-	body: unknown;
-}) =>
-	fetch(`${serverUrl}${path}`, {
-		method: "POST",
-		headers: {
-			"content-type": "application/json",
-			[ATOM_TOKEN_HASH_HEADER]: tokenHash,
-		},
-		body: JSON.stringify(body),
-	});
 
 // A handed-in track only lands through the balance worker's log.
 test.skipIf(!isBalanceWorkerRoute())(
@@ -114,7 +58,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 		const atom = await ensureAtomDeployment({ autumn });
 		const tokenHash = atomTokenToHash({ token: atom.token });
 		const append = (body: unknown) =>
-			postAsAtom({ path: ATOM_TRACKS_APPEND_PATH, tokenHash, body });
+			postAsAtom({ autumn, path: ATOM_TRACKS_APPEND_PATH, tokenHash, body });
 
 		const batch = {
 			writer: "w_1",
@@ -137,6 +81,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 		const readAsAtom = async () =>
 			(await (
 				await postAsAtom({
+					autumn,
 					path: ATOM_SUBJECT_READ_PATH,
 					tokenHash,
 					body: { customer_id: customerId, entity_id: null },
@@ -202,6 +147,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 
 		// A split the Atom might have drawn, riding on the command: everything off the lifetime grant.
 		const handedIn = await postAsAtom({
+			autumn,
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash: atomTokenToHash({ token: atom.token }),
 			body: {
@@ -250,11 +196,13 @@ test.skipIf(!isBalanceWorkerRoute())(
 test(`${chalk.yellowBright("atom-tracks3: an unreadable body is 400 unreadable; an unknown token hash is 401 atom_unknown")}`, async () => {
 	const atom = await ensureAtomDeployment({ autumn });
 	const unreadable = await postAsAtom({
+		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: atomTokenToHash({ token: atom.token }),
 		body: { writer: "w_1", tracks: [{ seq: 1, command: { type: "track" } }] },
 	});
 	const unknownAtom = await postAsAtom({
+		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: "f".repeat(64),
 		body: { writer: "w_1", tracks: [] },

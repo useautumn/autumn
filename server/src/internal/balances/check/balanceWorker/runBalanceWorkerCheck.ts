@@ -1,5 +1,5 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
-import type { CheckParams } from "@autumn/shared";
+import { type CheckParams, RouteGroup } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckResponseWithPreview } from "@/internal/api/check/getCheckPreview.js";
@@ -9,7 +9,9 @@ import {
 	withCreateIfMissing,
 } from "@/internal/balanceWorker/subject/withCreateIfMissing.js";
 import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/withPaidAllocatedFallback.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
+import { toTrackIdempotencyKey } from "../../idempotency/trackBodyIdempotencyKey.js";
 import { parseCheckParamsForLock } from "../../utils/lock/parseCheckParamsForLock.js";
 import { checkAnswerToApiResponse } from "./balanceWorkerCheckReply.js";
 import { checkParamsToCheckCommand } from "./balanceWorkerCheckRequest.js";
@@ -25,10 +27,13 @@ import { triggerAutoTopupFromCheckAnswer } from "./triggerAutoTopupFromCheckAnsw
 export async function runBalanceWorkerCheck({
 	ctx,
 	body: rawBody,
+	idempotencyKey,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: CheckParams;
+	/** The request's Idempotency-Key header. */
+	idempotencyKey?: string;
 	client?: Pick<BalanceWorkerClient, "check" | "track">;
 }): Promise<CheckResponseWithPreview> {
 	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
@@ -84,13 +89,23 @@ export async function runBalanceWorkerCheck({
 			rethrowBalanceWorkerError({ cause });
 		}
 	};
-	return withCreateIfMissing({
+	// A deduction under the client's key claims what an Atom's hand-in of the same deduction claims, so only one lands.
+	return withIdempotencyKey({
 		ctx,
-		createEnabled: apiVersionCreatesCustomer({ ctx }),
-		customerId: body.customer_id,
-		customerData: body.customer_data,
-		entityId: body.entity_id,
-		entityData: body.entity_data,
-		run: checkOnWorker,
+		idempotencyKey:
+			isDeductingCheck && idempotencyKey
+				? toTrackIdempotencyKey({ key: idempotencyKey })
+				: null,
+		routeGroup: RouteGroup.Balances,
+		run: () =>
+			withCreateIfMissing({
+				ctx,
+				createEnabled: apiVersionCreatesCustomer({ ctx }),
+				customerId: body.customer_id,
+				customerData: body.customer_data,
+				entityId: body.entity_id,
+				entityData: body.entity_data,
+				run: checkOnWorker,
+			}),
 	});
 }
