@@ -28,7 +28,7 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 	`);
 };
 
-/** A slot's journal: the only copy of the deductions the Atom granted and has not yet seen Autumn apply, so every commit is synced. */
+/** A slot's journal: the deductions the Atom granted and has not yet seen Autumn apply, kept as lightly as the slot's subjects. */
 export const openJournalDatabase = ({
 	databasePath,
 }: {
@@ -39,5 +39,4 @@ export const openJournalDatabase = ({
 		schemaVersion: JOURNAL_SCHEMA_VERSION,
 		dropSchema: dropJournalSchema,
 		createSchema: createJournalSchema,
-		synchronous: "FULL",
 	});

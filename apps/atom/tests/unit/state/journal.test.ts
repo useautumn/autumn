@@ -13,7 +13,6 @@ import {
 	MAX_UNSENT_AGE_MS,
 	openJournal,
 } from "../../../src/state/journal/openJournal.js";
-import { openJournalDatabase } from "../../../src/state/journal/openJournalDatabase.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
 
 const folders: string[] = [];
@@ -61,18 +60,6 @@ const rowsIn = ({ databasePath }: { databasePath: string }) => {
 };
 
 describe("journal", () => {
-	test("the file commits with synchronous = FULL: an acked deduction survives a power cut", () => {
-		const database = openJournalDatabase({ databasePath: journalPath() });
-		try {
-			const { synchronous } = database
-				.query<{ synchronous: bigint }, []>("PRAGMA synchronous")
-				.get() ?? { synchronous: -1n };
-			expect(synchronous).toBe(2n);
-		} finally {
-			database.close();
-		}
-	});
-
 	test("seq is per customer and strictly increasing, in the order appends arrive", async () => {
 		const journal = open({ databasePath: journalPath() });
 
