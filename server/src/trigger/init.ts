@@ -1,18 +1,14 @@
-import {
-	flushErrorReports,
-	initErrorReporting,
-	reportError,
-} from "@autumn/errors";
+import { initErrorReporting, reportError } from "@autumn/errors";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { createDualLogger } from "@/external/logtail/logtailUtils.js";
 import {
 	addTriggerToLogs,
 	addWorkflowToLogs,
 } from "@/utils/logging/addContextToLogs.js";
-import { flushSazabiLogs } from "@/utils/logging/initLogger.js";
+import { flushTelemetry } from "@/utils/logging/initLogger.js";
 
-// Trigger loads this file before any task, so every run reports errors to Sazabi.
-initErrorReporting({ tracesRequests: false });
+// Trigger loads this before any task; its worker keeps its own uncaught-error handling.
+initErrorReporting({ tracesRequests: false, ownsProcessErrors: false });
 
 tasks.onFailure(async ({ ctx, task, error }) => {
 	const logger = addWorkflowToLogs({
@@ -27,8 +23,5 @@ tasks.onFailure(async ({ ctx, task, error }) => {
 		workflowContext: { id: ctx.run.id, name: task, payload: undefined },
 	});
 	reportError({ ctx: { logger }, error, operation: `trigger task ${task}` });
-	await Promise.all([
-		flushSazabiLogs(),
-		flushErrorReports({ timeoutMs: 2_000 }),
-	]);
+	await flushTelemetry();
 });

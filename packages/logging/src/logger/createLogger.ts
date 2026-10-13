@@ -1,4 +1,5 @@
 import pino from "pino";
+import { LOG_FLUSH_TIMEOUT_MS } from "../config.js";
 import { createSazabiLogStream } from "../otlp/sazabiLogStream.js";
 import {
 	type ConsoleJsonStream,
@@ -12,14 +13,12 @@ import {
 	resolveLoggerOptions,
 } from "./resolveLoggerOptions.js";
 
-const TRANSPORT_FLUSH_TIMEOUT_MS = 2000;
-
 type TransportStream = NodeJS.WritableStream & { writableEnded?: boolean };
 
 const closeTransportStream = (stream: TransportStream) =>
 	new Promise<void>((resolve) => {
 		if (stream.writableEnded || !stream.writable) return resolve();
-		const timer = setTimeout(resolve, TRANSPORT_FLUSH_TIMEOUT_MS);
+		const timer = setTimeout(resolve, LOG_FLUSH_TIMEOUT_MS);
 		stream.once("close", () => {
 			clearTimeout(timer);
 			resolve();

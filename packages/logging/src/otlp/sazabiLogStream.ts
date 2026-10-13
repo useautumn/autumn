@@ -5,12 +5,10 @@ import {
 	LoggerProvider,
 } from "@opentelemetry/sdk-logs";
 import type pino from "pino";
+import { LOG_FLUSH_TIMEOUT_MS, SAZABI_EXPORT } from "../config.js";
 import { resolveDeployment } from "../logger/resolveLoggerOptions.js";
 import type { LoggerLevel } from "../types.js";
 import { isRoutineWarning } from "./isRoutineWarning.js";
-
-const EXPORT_TIMEOUT_MS = 5000;
-const FLUSH_TIMEOUT_MS = 2000;
 
 const SEVERITY_NUMBERS: Record<string, number> = {
 	TRACE: 1,
@@ -21,14 +19,14 @@ const SEVERITY_NUMBERS: Record<string, number> = {
 	FATAL: 21,
 };
 
-/** The intake URL with no trailing slash, or undefined when Sazabi is off; dev/test need SAZABI_DEV_LOGS=1. */
+/** The intake URL with no trailing slash, or undefined when Sazabi is off or misconfigured; dev/test need SAZABI_DEV_LOGS=1. */
 export const sazabiIntakeUrlOf = ({
 	env,
 }: {
 	env: NodeJS.ProcessEnv;
 }): string | undefined => {
 	const intakeUrl = env.SAZABI_INTAKE_URL?.replace(/\/+$/, "");
-	if (!intakeUrl) return undefined;
+	if (!intakeUrl || !URL.canParse(intakeUrl)) return undefined;
 	const isDevOrTest = env.NODE_ENV === "development" || env.NODE_ENV === "test";
 	if (isDevOrTest && env.SAZABI_DEV_LOGS !== "1") return undefined;
 	return intakeUrl;
@@ -81,15 +79,14 @@ export const createSazabiLogStream = ({
 			"deployment.environment": resolveDeployment(env),
 		}),
 		processors: [
-			// Small batches keep each synchronous serialise short; the short timeout bounds a slow intake.
 			new BatchLogRecordProcessor({
 				exporter: new OTLPLogExporter({
 					url: `${intakeUrl}/v1/logs`,
-					timeoutMillis: EXPORT_TIMEOUT_MS,
+					timeoutMillis: SAZABI_EXPORT.timeoutMs,
 				}),
-				maxExportBatchSize: 128,
-				scheduledDelayMillis: 1000,
-				exportTimeoutMillis: EXPORT_TIMEOUT_MS,
+				maxExportBatchSize: SAZABI_EXPORT.maxBatchSize,
+				scheduledDelayMillis: SAZABI_EXPORT.intervalMs,
+				exportTimeoutMillis: SAZABI_EXPORT.timeoutMs,
 			}),
 		],
 	});
@@ -114,7 +111,7 @@ export const createSazabiLogStream = ({
 			Promise.race([
 				provider.forceFlush().catch(() => {}),
 				new Promise<void>((resolve) => {
-					setTimeout(resolve, FLUSH_TIMEOUT_MS).unref?.();
+					setTimeout(resolve, LOG_FLUSH_TIMEOUT_MS).unref?.();
 				}),
 			]),
 	};

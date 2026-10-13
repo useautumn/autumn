@@ -5,9 +5,8 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { logUnknownInput } from "@autumn/balance-engine";
-import { flushErrorReports } from "@autumn/errors";
 import { getRequestListener } from "@hono/node-server";
-import { flushSazabiLogs } from "@/utils/logging/initLogger.js";
+import { flushTelemetry } from "@/utils/logging/initLogger.js";
 import {
 	client,
 	clientCritical,
@@ -372,10 +371,7 @@ async function gracefulShutdown() {
 		if (otelSdk) {
 			await otelSdk.shutdown();
 		}
-		await Promise.all([
-			flushSazabiLogs(),
-			flushErrorReports({ timeoutMs: 2_000 }),
-		]);
+		await flushTelemetry();
 		shutdownPgHealthMonitor();
 		stopPgPoolMonitor();
 		stopReplicaRoutingProber();

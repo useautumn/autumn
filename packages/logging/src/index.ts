@@ -1,3 +1,4 @@
+export { LOG_FLUSH_TIMEOUT_MS } from "./config.js";
 export {
 	addAppContextToLogs,
 	addExtrasToLogs,
