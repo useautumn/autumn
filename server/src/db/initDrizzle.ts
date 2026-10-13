@@ -3,7 +3,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-import { attachPoolErrorHandlers } from "@autumn/postgres";
+import {
+	attachPoolErrorHandlers,
+	getPostgresPools,
+	type PostgresPoolProfile,
+	poolConfigOf,
+	runInTransaction,
+} from "@autumn/postgres";
 import { schemas as schema } from "@autumn/shared";
 import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 
@@ -43,20 +49,25 @@ export const normalizeDbExecute = <
 	});
 };
 
-/** Creates a Drizzle pool with the given configuration. */
+/** Opens one pool from its row in the @autumn/postgres pool table. */
 export const initDrizzle = ({
-	maxConnections = isProd ? 70 : 10,
+	pool = getPostgresPools().adHoc,
+	maxConnections = pool.maxConnections,
+	connectTimeout = pool.connectTimeoutMs / 1000,
 	replica = false,
-	connectTimeout = 5,
 	databaseUrl,
 	poolConfig,
 	name,
 }: {
+	/** The pool's row. Long-lived pools pass theirs; scripts, benches and tests take the ad hoc one. */
+	pool?: PostgresPoolProfile;
+	/** Per-run sizing for scripts and benches, on top of the row. */
 	maxConnections?: number;
+	/** Seconds; per-run override on top of the row. */
+	connectTimeout?: number;
 	replica?: boolean;
-	/** Connect timeout in seconds */
-	connectTimeout?: number | null;
 	databaseUrl?: string;
+	/** pg options the table has no column for, such as a read-only session. */
 	poolConfig?: PoolConfig;
 	/** Pool name for monitor/error logs. Omit to skip registration. */
 	name?: string;
@@ -69,14 +80,17 @@ export const initDrizzle = ({
 	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({
-		connectionString: dbUrl,
+		...poolConfigOf({
+			config: {
+				databaseUrl: dbUrl,
+				...pool,
+				maxConnections,
+				connectTimeoutMs: connectTimeout * 1000,
+			},
+		}),
 		keepAlive: true,
 		keepAliveInitialDelayMillis: 60_000,
-		idleTimeoutMillis: 30_000,
 		...poolConfig,
-		max: maxConnections,
-		connectionTimeoutMillis:
-			connectTimeout === null ? undefined : connectTimeout * 1000,
 	});
 
 	if (name) {
@@ -91,13 +105,15 @@ export const initDrizzle = ({
 	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });
 
 	const drizzleDb = drizzle(client, { schema });
-	const transaction = drizzleDb.transaction.bind(drizzleDb);
 	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
+	// runInTransaction, not drizzle's pool transaction: a client whose read timed out leaves the pool
+	// instead of going back still hung.
 	const normalizedTransaction: typeof drizzleDb.transaction = ((fn, config) =>
-		transaction(
-			(tx) => fn(normalizeDbExecute(tx) as typeof tx),
+		runInTransaction({
+			ctx: { db: drizzleDb },
+			run: (tx) => fn(normalizeDbExecute(tx) as typeof tx),
 			config,
-		)) as typeof drizzleDb.transaction;
+		})) as typeof drizzleDb.transaction;
 	db.transaction = normalizedTransaction as typeof db.transaction;
 
 	if (otelConfig.drizzle) {
@@ -107,19 +123,7 @@ export const initDrizzle = ({
 	return { db, client };
 };
 
-// Strict latency limits in prod; relaxed locally so dev pool warm-up doesn't kill tests.
-const isProd = process.env.NODE_ENV === "production";
-
-const poolMaxFromEnv = ({
-	envVar,
-	fallback,
-}: {
-	envVar: string;
-	fallback: number;
-}): number => {
-	const parsed = Number(process.env[envVar]);
-	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-};
+const pools = getPostgresPools();
 
 /** Frontend ceiling the app's primary pools actually compete for: PgBouncer
  *  max_client_conn (2,000) x 6 pods. */
@@ -141,47 +145,26 @@ const BUDGETED_FLEET_PROCESSES = 20 * getServerForkCount();
 const BUDGETED_NON_SERVER_CONNECTIONS = 362;
 const POOL_BUDGET_HEADROOM = 0.85;
 
-const PROD_POOL_MAX = {
-	critical: 22,
-	general: 14,
-	// 90 processes x 9 = 810 <= 0.85 x replica bouncer max_client_conn (1,000).
-	replica: 9,
-};
-
-const criticalPoolMax = poolMaxFromEnv({
-	envVar: "CRITICAL_DB_POOL_MAX",
-	fallback: isProd ? PROD_POOL_MAX.critical : 10,
-});
-const generalPoolMax = poolMaxFromEnv({
-	envVar: "GENERAL_DB_POOL_MAX",
-	fallback: isProd ? PROD_POOL_MAX.general : 10,
-});
-const replicaPoolMax = poolMaxFromEnv({
-	envVar: "REPLICA_DB_POOL_MAX",
-	fallback: PROD_POOL_MAX.replica,
-});
-const replicaSlowPoolMax = poolMaxFromEnv({
-	envVar: "REPLICA_SLOW_DB_POOL_MAX",
-	fallback: 2,
-});
-
 /** Fleet budget guards. Primary pools count against the primary bouncer's
  *  max_client_conn; the replica pool counts against the replica bouncer's. */
 export const computePoolBudgetWarnings = ({
 	criticalPoolMax: critical,
 	generalPoolMax: general,
+	listPoolMax: list,
 	replicaPoolMax: replica,
 	fleetProcesses = BUDGETED_FLEET_PROCESSES,
 }: {
 	criticalPoolMax: number;
 	generalPoolMax: number;
+	listPoolMax: number;
 	replicaPoolMax: number;
 	fleetProcesses?: number;
 }): string[] => {
 	const warnings: string[] = [];
 
 	const primaryFleetConnections =
-		fleetProcesses * (critical + general) + BUDGETED_NON_SERVER_CONNECTIONS;
+		fleetProcesses * (critical + general + list) +
+		BUDGETED_NON_SERVER_CONNECTIONS;
 	if (
 		primaryFleetConnections >
 		PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
@@ -205,77 +188,43 @@ export const computePoolBudgetWarnings = ({
 };
 
 for (const warning of computePoolBudgetWarnings({
-	criticalPoolMax,
-	generalPoolMax,
-	replicaPoolMax: replicaPoolMax + replicaSlowPoolMax,
+	criticalPoolMax: pools.critical.maxConnections,
+	generalPoolMax: pools.general.maxConnections,
+	listPoolMax: pools.list.maxConnections,
+	replicaPoolMax:
+		pools.replica.maxConnections + pools.replicaSlow.maxConnections,
 })) {
 	logger.warn(warning);
 }
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
-	maxConnections: criticalPoolMax,
-	// connectionTimeoutMillis also bounds checkout waits on a full pool — sized
-	// to ride out PgBouncer backend build-out bursts instead of shedding.
-	connectTimeout: isProd ? 15 : 30,
+	pool: pools.critical,
 	databaseUrl: createDatabaseEnv(process.env).DATABASE_CRITICAL_URL,
-	poolConfig: {
-		application_name: "autumn-critical",
-		// Budgets bouncer queue wait, not execution: the role's server-side 2s
-		// statement_timeout still kills runaway queries once they start running.
-		query_timeout: isProd ? 15_000 : 30_000,
-		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
-		min: Math.min(10, criticalPoolMax),
-	},
 });
 
-// -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
-	maxConnections: generalPoolMax,
-	connectTimeout: isProd ? 5 : 30,
-	poolConfig: {
-		// Preserve startup-warmed capacity so a delayed critical-read backup
-		// never pays cold PgBouncer/TLS setup inside check's 2s deadline.
-		min: 1,
-	},
+	pool: pools.general,
 });
 
-// -- Replica pool: used as fallback when primary is degraded --
-// Only created if DATABASE_REPLICA_URL is configured.
+export const { db: dbList, client: clientList } = initDrizzle({
+	name: "list",
+	pool: pools.list,
+});
+
+// Replica pools exist only when DATABASE_REPLICA_URL is configured.
 const replicaResult = process.env.DATABASE_REPLICA_URL
-	? initDrizzle({
-			name: "replica",
-			replica: true,
-			maxConnections: replicaPoolMax,
-			// Primary is always the fallback, so short beats patient here.
-			connectTimeout: 3,
-			poolConfig: {
-				application_name: "autumn-replica",
-				// Bounds replica-bouncer queue wait as well as execution.
-				query_timeout: 5_000,
-				// pg-pool's min doesn't precreate, it only exempts from idle reaping — the
-				// floor preserves traffic-built warmth (e.g. a 1x warm-up) for the Redis-outage moment.
-				min: Math.min(4, replicaPoolMax),
-			},
-		})
+	? initDrizzle({ name: "replica", replica: true, pool: pools.replica })
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;
 
-// -- Replica slow lane: same replica, long-query budget for dashboard reads.
-// Separate tiny pool so a seconds-long dashboard aggregate can never occupy
-// the 5s outage-fallback lane above.
 const replicaSlowResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({
 			name: "replica-slow",
 			replica: true,
-			maxConnections: replicaSlowPoolMax,
-			connectTimeout: 5,
-			poolConfig: {
-				application_name: "autumn-replica-slow",
-				query_timeout: 60_000,
-			},
+			pool: pools.replicaSlow,
 		})
 	: null;
 export const dbReplicaSlow = replicaSlowResult?.db ?? null;

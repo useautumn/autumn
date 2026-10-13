@@ -120,6 +120,8 @@ export const createStackAtomDeployer = ({
 	const ctx = { atom, machineById: new Map<string, ByocCacheMachine>() };
 	return {
 		start: (params) => startStackAtom({ ctx, ...params }),
+		// A dev stack's Atoms are folders in one process, with no groups to outlive them.
+		hasGroup: () => Promise.resolve(false),
 		find: (params) => findStackAtom({ ctx, ...params }),
 		resize: (params) => resizeStackAtom({ ctx, ...params }),
 		// Nothing deploys on a dev stack, so nothing can fail to.

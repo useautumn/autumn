@@ -421,9 +421,11 @@ describe("a thread whose event loop is behind", () => {
 			shedBefore + 1,
 		);
 		expect(stored.status).toBe(200);
-		expect(logged.map(({ message }) => message)).toEqual([
-			expect.stringContaining("/v1/subjects.set"),
-		]);
+		expect(
+			logged.filter(({ message }) =>
+				String(message).includes("/v1/balances.check"),
+			),
+		).toEqual([]);
 
 		lagMs = 0;
 		const answered = await app.request("/v1/balances.check", checkMessages());
@@ -646,7 +648,8 @@ describe("a check Atom does not answer itself", () => {
 });
 
 describe("the request line", () => {
-	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
+	test("a request's line has status, method, path, duration and who it was about; a stored push's says its sample rate", async () => {
+		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 
@@ -660,7 +663,24 @@ describe("the request line", () => {
 				customer_id: "cus_1",
 			},
 			res: null,
+			sample_rate: 0.01,
 		});
+	});
+
+	test("a stored push outside the sample leaves no line, and is still counted; a refused one is always logged", async () => {
+		sampleEveryAllow({ sampled: false });
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request(
+			"/v1/subjects.set",
+			setSubject({ balance: 10, token: null }),
+		);
+		const health = await (await app.request("/health")).json();
+
+		expect(
+			logged.map((line) => (line.fields as { statusCode: number }).statusCode),
+		).toEqual([401]);
+		expect(health.threads[0].pushes).toBeGreaterThanOrEqual(2);
 	});
 
 	test("an answered check's line has its verdict at res.allowed, where its body has it, and no body; an allow says its sample rate", async () => {

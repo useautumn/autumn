@@ -7,9 +7,9 @@ import type { PostgresClient } from "../../src/types/postgresClient.js";
 import {
 	type FakePostgresServer,
 	startFakePostgresServer,
-} from "../fixtures/fakePostgresServer.js";
+} from "../../src/testing/fakePostgresServer.js";
 
-const QUERY_TIMEOUT_SECONDS = 1;
+const QUERY_TIMEOUT_MS = 1_000;
 const logger = { warn: () => {} };
 
 const elapsedMs = async (run: () => Promise<unknown>) => {
@@ -30,9 +30,11 @@ describe("createPostgresClient", () => {
 				databaseUrl: server.url,
 				applicationName: "postgres-test",
 				maxConnections: 1,
-				connectTimeout: 1,
-				idleTimeout: 30,
-				queryTimeout: QUERY_TIMEOUT_SECONDS,
+				minConnections: 0,
+				connectTimeoutMs: 1_000,
+				idleTimeoutMs: 30_000,
+				queryTimeoutMs: QUERY_TIMEOUT_MS,
+				statementTimeoutMs: null,
 			},
 		});
 	});
@@ -57,9 +59,7 @@ describe("createPostgresClient", () => {
 		const startedAt = performance.now();
 		const error = await selectOne().catch((cause: unknown) => cause);
 
-		expect(performance.now() - startedAt).toBeLessThan(
-			QUERY_TIMEOUT_SECONDS * 1000 + 500,
-		);
+		expect(performance.now() - startedAt).toBeLessThan(QUERY_TIMEOUT_MS + 500);
 		expect(error).toBeInstanceOf(Error);
 		expect((error as Error).message).toBe("Query read timeout");
 		expect(isPostgresConnectionFailure({ error })).toBe(true);
@@ -84,7 +84,7 @@ describe("createPostgresClient", () => {
 				},
 			}),
 		);
-		expect(failedAfterMs).toBeLessThan(2 * QUERY_TIMEOUT_SECONDS * 1000 + 500);
+		expect(failedAfterMs).toBeLessThan(2 * QUERY_TIMEOUT_MS + 500);
 
 		await expect(selectOne()).resolves.toBeDefined();
 		expect(server.connections()).toBe(2);

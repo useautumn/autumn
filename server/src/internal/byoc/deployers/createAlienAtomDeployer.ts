@@ -267,6 +267,8 @@ export const createAlienAtomDeployer = ({
 	const ctx = { alienClient };
 	return {
 		start: (params) => startAlienAtom({ ctx, ...params }),
+		hasGroup: async (params) =>
+			(await ctx.alienClient.findDeploymentGroup(params)) !== null,
 		find: (params) => findAlienAtom({ ctx, ...params }),
 		resize: (params) => resizeAlienAtom({ ctx, ...params }),
 		retry: (params) => retryAlienAtom({ ctx, ...params }),

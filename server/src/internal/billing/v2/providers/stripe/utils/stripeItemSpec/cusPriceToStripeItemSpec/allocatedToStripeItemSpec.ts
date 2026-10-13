@@ -1,4 +1,5 @@
 import {
+	cusEntsToAllowance,
 	cusEntToBillingObjects,
 	ErrCode,
 	type FullCusEntWithFullCusProduct,
@@ -9,6 +10,7 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 
 /**
  * Converts an in-arrear prorated (allocated) price to a StripeItemSpec.
@@ -42,9 +44,13 @@ export const allocatedToStripeItemSpec = ({
 		});
 	}
 
-	const existingUsage = cusEntToInvoiceUsage({
-		cusEnt: cusEntWithCusProduct,
-		subtractReplaceables: true,
+	const existingUsage = allocatedUsageToStripeUsage({
+		price,
+		usage: cusEntToInvoiceUsage({
+			cusEnt: cusEntWithCusProduct,
+			subtractReplaceables: true,
+		}),
+		allowance: cusEntsToAllowance({ cusEnts: [cusEntWithCusProduct] }),
 	});
 
 	// Round existing usage to the nearest billing unit

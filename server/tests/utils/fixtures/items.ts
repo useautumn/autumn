@@ -765,6 +765,49 @@ const tieredConsumableMessages = ({
 		includedUsage,
 	}) as LimitedItem;
 
+type VolumeTier = { to: number | "inf"; amount: number; flat_amount?: number };
+
+/**
+ * Volume consumable - pay-per-use with volume tiers: usage past the included amount
+ * is charged at the rate of the tier total usage lands in, plus that tier's flat fee.
+ * Default tiers: 0-500 units at $0.10/unit, 501+ at $0.05/unit.
+ */
+const volumeConsumable = ({
+	featureId,
+	includedUsage = 0,
+	billingUnits = 1,
+	tiers = [
+		{ to: 500, amount: 0.1 },
+		{ to: "inf", amount: 0.05 },
+	],
+	entityFeatureId,
+	interval = ProductItemInterval.Month,
+}: {
+	featureId: string;
+	includedUsage?: number;
+	billingUnits?: number;
+	tiers?: VolumeTier[];
+	entityFeatureId?: string;
+	interval?: ProductItemInterval;
+}): LimitedItem =>
+	({
+		...constructArrearItem({
+			featureId,
+			tiers: tiers as { to: number; amount: number }[],
+			billingUnits,
+			includedUsage,
+			entityFeatureId,
+			interval,
+		}),
+		tiers,
+		tier_behavior: TierBehavior.VolumeBased,
+	}) as LimitedItem;
+
+const volumeConsumableMessages = (
+	params: Omit<Parameters<typeof volumeConsumable>[0], "featureId"> = {},
+): LimitedItem =>
+	volumeConsumable({ featureId: TestFeature.Messages, ...params });
+
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
 // ═══════════════════════════════════════════════════════════════════
@@ -863,6 +906,45 @@ const allocatedV2Workflows = ({
 		entity_feature_id: entityFeatureId,
 	}) as LimitedItem;
 
+/**
+ * Volume allocated users - seats priced with volume tiers.
+ * Default tiers: 0-10 seats at $10/seat, 11+ at $8/seat.
+ * @param allocatedBillingBehavior - Arrear for allocated v2, omitted for v1 prorated
+ */
+const volumeAllocated = ({
+	featureId,
+	includedUsage = 0,
+	tiers = [
+		{ to: 10, amount: 10 },
+		{ to: "inf", amount: 8 },
+	],
+	allocatedBillingBehavior,
+	entityFeatureId,
+}: {
+	featureId: string;
+	includedUsage?: number;
+	tiers?: VolumeTier[];
+	allocatedBillingBehavior?: AllocatedBillingBehavior;
+	entityFeatureId?: string;
+}): LimitedItem =>
+	({
+		...constructArrearProratedItem({
+			featureId,
+			includedUsage,
+			...(allocatedBillingBehavior
+				? { config: { allocated_billing_behavior: allocatedBillingBehavior } }
+				: {}),
+		}),
+		price: undefined,
+		tiers,
+		tier_behavior: TierBehavior.VolumeBased,
+		entity_feature_id: entityFeatureId,
+	}) as LimitedItem;
+
+const volumeAllocatedUsers = (
+	params: Omit<Parameters<typeof volumeAllocated>[0], "featureId"> = {},
+): LimitedItem => volumeAllocated({ featureId: TestFeature.Users, ...params });
+
 // ═══════════════════════════════════════════════════════════════════
 // BASE PRICES
 // ═══════════════════════════════════════════════════════════════════
@@ -941,6 +1023,10 @@ export const items = {
 	consumableMessages,
 	consumableWords,
 	tieredConsumableMessages,
+	volumeConsumable,
+	volumeConsumableMessages,
+	volumeAllocated,
+	volumeAllocatedUsers,
 
 	// Allocated
 	allocatedUsers,

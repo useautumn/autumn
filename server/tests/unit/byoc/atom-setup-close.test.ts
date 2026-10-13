@@ -52,6 +52,7 @@ const atomContext = ({ found }: { found: AtomDeployment | null }) => {
 	const calls: string[] = [];
 	const deployer: AtomDeployer = {
 		start: async () => ({ deploymentGroupId: "dg_1", setupUrl: null }),
+		hasGroup: async () => false,
 		find: async () => found,
 		resize: async () => {},
 		retry: async () => {},
