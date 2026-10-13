@@ -61,6 +61,17 @@ export const createQueueAtomClient = ({
 			},
 			sendOverHttp: (http) => http.setSubject({ body }),
 		}),
+	deleteSubject: ({ body }) =>
+		push({
+			ctx,
+			message: {
+				type: AtomPushType.DeleteSubject,
+				atomId,
+				customerId: body.identity.customerId,
+				body,
+			},
+			sendOverHttp: (http) => http.deleteSubject({ body }),
+		}),
 	setCatalog: ({ rows, readAt }) =>
 		push({
 			ctx,
