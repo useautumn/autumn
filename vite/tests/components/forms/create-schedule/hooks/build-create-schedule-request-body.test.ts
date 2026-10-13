@@ -1327,3 +1327,75 @@ test("Set Plans never sends a customer-level coupon in remove_discounts", () => 
 
 	expect(body).not.toHaveProperty("remove_discounts");
 });
+
+describe("buildCreateScheduleRequestBody first phase on a saved schedule", () => {
+	const now = Date.UTC(2027, 0, 20);
+	const savedStart = Date.UTC(2027, 0, 13);
+	const paidProducts = [makeProduct({ id: "prod_1", items: [basePriceItem] })];
+	const savedPhases = [
+		schedulePhase({ startsAt: savedStart, persistedStartsAt: savedStart }),
+		schedulePhase({
+			startsAt: Date.UTC(2027, 1, 13),
+			persistedStartsAt: Date.UTC(2027, 1, 13),
+		}),
+	];
+
+	test("a cycle reset starts the first phase now, so phase_start isn't the current anchor", () => {
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: savedPhases,
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+		});
+
+		expect(result!.phases[0].starts_at).toBe(now);
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
+		expect(result!.phases[1].starts_at).toBe(Date.UTC(2027, 1, 13));
+	});
+
+	test("without a reset the first phase keeps its saved start", () => {
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: savedPhases,
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: false,
+		});
+
+		expect(result!.phases[0].starts_at).toBe(savedStart);
+	});
+
+	test("a custom anchor date keeps the saved start", () => {
+		const customAnchor = Date.UTC(2027, 0, 25);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: savedPhases,
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: customAnchor,
+		});
+
+		expect(result!.phases[0].starts_at).toBe(savedStart);
+		expect(result!.phases[0].billing_cycle_anchor).toBe(customAnchor);
+	});
+
+	test("an explicit backdate keeps its own start with a reset", () => {
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: savedPhases,
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			allowFirstPhaseBackdate: true,
+		});
+
+		expect(result!.phases[0].starts_at).toBe(savedStart);
+	});
+});
