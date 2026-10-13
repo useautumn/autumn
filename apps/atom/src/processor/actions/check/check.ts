@@ -28,6 +28,7 @@ export const check = async ({
 			journal: ctx.journal,
 			check: answerableCheck,
 			idempotencyKey: request.idempotencyKey,
+			kind: request.kind,
 			skipEvent: request.params.skip_event === true,
 			subject,
 		});

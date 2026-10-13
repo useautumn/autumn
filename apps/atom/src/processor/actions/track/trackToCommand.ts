@@ -1,6 +1,7 @@
 import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
 import { FeatureType, findFeatureById } from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import type { CheckRequest } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 
 /** As long as the API holds a track's body key, so a command sent again inside it is applied once. */
@@ -15,12 +16,14 @@ export const trackToCommand = ({
 	subject,
 	skipEvent,
 	idempotencyKey,
+	kind,
 }: {
 	command: CheckCommand;
 	subject: CurrentSubject;
 	skipEvent: boolean;
 	/** The caller's own key, which the API's deducting check claims too; else this check's request id. */
 	idempotencyKey: string | null;
+	kind: CheckRequest["kind"];
 }): TrackCommand => {
 	const feature = findFeatureById({
 		features: subject.features,
@@ -34,11 +37,17 @@ export const trackToCommand = ({
 		type: "track",
 		commandId: command.requestId,
 		value: requiredBalance,
-		overageBehavior: "overflow",
-		enforceOverdueBlock: true,
+		// A track is the API's own track command; a deducting check's takes all it granted and honours the overdue block.
+		...(kind === "track"
+			? { overageBehavior: "cap" }
+			: { overageBehavior: "overflow", enforceOverdueBlock: true }),
 		usageEvent: skipEvent
 			? null
-			: { name: command.featureId, idempotencyKey: null, id: null },
+			: {
+					name: command.featureId,
+					idempotencyKey: kind === "track" ? idempotencyKey : null,
+					id: null,
+				},
 		idempotency: {
 			// Never the request id: it is the claim's owner at the worker, and an owner claiming again is resumed, not refused.
 			key: `track:${idempotencyKey ?? command.requestId}`,

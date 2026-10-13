@@ -2,7 +2,7 @@ import { computeCheck } from "@autumn/balance-engine";
 import type { CheckResponseV3 } from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { Journal } from "../../../state/journal/types/journal.js";
-import type { AnswerableCheck } from "../../types/check.js";
+import type { AnswerableCheck, CheckRequest } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { checkToCommand, renderCheck } from "../check/answerCheck.js";
@@ -19,6 +19,7 @@ export const answerDeductingCheck = async ({
 	journal,
 	check,
 	idempotencyKey,
+	kind,
 	skipEvent,
 	subject,
 }: {
@@ -26,14 +27,23 @@ export const answerDeductingCheck = async ({
 	journal: Journal;
 	check: AnswerableCheck;
 	idempotencyKey: string | null;
+	kind: CheckRequest["kind"];
 	skipEvent: boolean;
 	subject: CurrentSubject;
 }): Promise<CheckResponseV3> => {
 	if (journal.isBackedUp({ customerId: check.customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
 	const command = checkToCommand({ check, subject });
-	const track = trackToCommand({ command, subject, skipEvent, idempotencyKey });
+	const track = trackToCommand({
+		command,
+		subject,
+		skipEvent,
+		idempotencyKey,
+		kind,
+	});
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	if (!result.allowed && kind === "track")
+		throw new CannotAnswerError({ reason: "track_denied" });
 	if (!result.allowed)
 		return renderCheck({
 			ctx,

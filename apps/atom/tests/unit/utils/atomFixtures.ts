@@ -151,6 +151,7 @@ export const checkRequestFor = ({
 	query?: CheckRequest["query"];
 	apiVersion?: ApiVersionClass | null;
 } = {}): CheckRequest => ({
+	kind: "check",
 	requestId: "req_check_1",
 	occurredAt,
 	idempotencyKey: null,

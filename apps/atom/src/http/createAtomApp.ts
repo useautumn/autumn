@@ -5,6 +5,7 @@ import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { receiveTrack } from "./handlers/receiveTrack.js";
 import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
 import { checkHopMiddleware } from "./middlewares/checkHopMiddleware.js";
@@ -20,6 +21,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	app.onError(handleError);
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
 	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
+	app.use("/v1/track", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
@@ -36,6 +38,12 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 		checkHopMiddleware({ ctx }),
 		clientAuthMiddleware({ ctx }),
 		receiveCheck,
+	);
+	authorized.post(
+		"/track",
+		checkHopMiddleware({ ctx }),
+		clientAuthMiddleware({ ctx }),
+		receiveTrack,
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));

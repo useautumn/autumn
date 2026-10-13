@@ -23,7 +23,17 @@ export type ForwardReason =
 	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
 	| "secret_key_not_known"
 	/** The replica that owns the customer could not be reached, or shed the check before it ran. */
-	| "owner_unavailable";
+	| "owner_unavailable"
+	/** A track by event name tracks every feature that lists it: the API maps those. */
+	| "track_by_event"
+	/** A track the caller waits on is answered with the API's per-balance deductions. */
+	| "sync_track"
+	/** An overage behaviour, a timestamp or a value that is not a deduction: the API's track semantics. */
+	| "track_option"
+	/** A version before 2.1 shapes a track's request and response its own way. */
+	| "track_version"
+	/** The balance does not cover the track: whether it caps, overflows or is refused is the API's to decide. */
+	| "track_denied";
 
 /**
  * Thrown wherever Atom finds it cannot answer a request itself. One place catches it
