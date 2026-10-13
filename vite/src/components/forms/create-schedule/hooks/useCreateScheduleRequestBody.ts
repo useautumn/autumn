@@ -95,6 +95,12 @@ export function buildCreateScheduleRequestBody({
 		: null;
 	const resetsFirstPhaseCycle =
 		!!resetBillingCycle && (!usesCustomAnchor || customAnchor !== null);
+	// On a saved start, phase_start is the current anchor and resets nothing; a started later phase resets itself.
+	const nextPhaseStartsAt = phases[1]?.startsAt;
+	const resetsCycleNow =
+		resetsFirstPhaseCycle &&
+		customAnchor === null &&
+		(nextPhaseStartsAt == null || nextPhaseStartsAt > now);
 
 	const toApiPlan = (plan: CustomerStatePlan) =>
 		customerStatePlanToApiPlan({ plan, products, features });
@@ -107,6 +113,11 @@ export function buildCreateScheduleRequestBody({
 			if (allowFirstPhaseBackdate || startsLater)
 				startsAt = phase.startsAt ?? now;
 			else if (phase.persistedStartsAt == null) startsAt = now;
+			else if (
+				resetsCycleNow &&
+				(phase.startsAt ?? phase.persistedStartsAt) >= phase.persistedStartsAt
+			)
+				startsAt = now;
 			else
 				startsAt = hasStarted
 					? Math.min(
