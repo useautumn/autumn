@@ -70,10 +70,10 @@ export function useCreditSchemaList({
 		onChange(schema.map((existing, i) => (i === index ? item : existing)));
 	};
 
-	const addSchemaItem = () => {
+	const addSchemaItem = (item: CreditSchemaItem = createSchemaItem()) => {
 		const key = crypto.randomUUID();
 		schemaKeysRef.current = [...schemaKeysRef.current, key];
-		onChange([...schema, createSchemaItem()]);
+		onChange([...schema, item]);
 		setExpandedKey(key);
 	};
 

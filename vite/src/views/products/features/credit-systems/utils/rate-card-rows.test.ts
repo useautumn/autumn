@@ -6,7 +6,11 @@ import {
 	type Feature,
 	FeatureType,
 } from "@autumn/shared";
-import { rateCardItemChanges, rateCardRows } from "./rateCardRows";
+import {
+	addableFeatures,
+	rateCardItemChanges,
+	rateCardRows,
+} from "./rateCardRows";
 
 const rate = (metered_feature_id: string, credit_amount: number) =>
 	({ metered_feature_id, credit_amount }) as CreditSchemaItem;
@@ -32,6 +36,27 @@ test.each<[CreditSchemaOverrideItem[], string]>([
 ])("rateCardRows %#", (override, states) => {
 	expect(statesOf(override).join(" ")).toBe(states);
 });
+
+const candidates = ["a", "b", "c", "d", "e"].map((id) => ({ id }) as Feature);
+
+test.each<[CreditSchemaOverrideItem[], string]>([
+	[[], "d e"],
+	[[excluded("b"), rate("d", 4)], "e"],
+	[[rate("d", 4), rate("e", 1)], ""],
+])(
+	"addableFeatures skips every rate card row, excluded ones included %#",
+	(override, ids) => {
+		const rows = rateCardRows({
+			override,
+			catalog: creditSystem.config.schema,
+		});
+		expect(
+			addableFeatures({ features: candidates, rows })
+				.map((f) => f.id)
+				.join(" "),
+		).toBe(ids);
+	},
+);
 
 const item = (credit_schema?: object[], included = 1000) =>
 	({

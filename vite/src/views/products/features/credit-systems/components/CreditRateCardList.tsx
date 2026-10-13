@@ -44,7 +44,7 @@ export function CreditRateCardList({
 				type="button"
 				variant="muted"
 				size="sm"
-				onClick={addSchemaItem}
+				onClick={() => addSchemaItem()}
 				disabled={schema.length >= allSchemaCandidateFeatures.length}
 				className="w-full text-tertiary-foreground text-xs"
 				icon={<PlusIcon size={10} />}

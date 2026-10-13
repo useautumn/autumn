@@ -61,10 +61,11 @@ const sourceLine = ({
 	creditSystemName?: string;
 }) => {
 	const setOnPlan = row.state === "changed" || row.state === "added";
+	const verb = row.state === "excluded" ? "Removed" : "Set";
 	const label =
 		row.state === "inherited"
 			? `From ${creditSystemName}`
-			: `${row.state === "excluded" ? "Removed" : "Set"} on ${planName}`;
+			: `${verb} on ${planName}`;
 	return (
 		<span
 			className={cn(

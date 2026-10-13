@@ -1,8 +1,14 @@
 import { Button, InlineAction } from "@autumn/ui";
 import { ArrowCounterClockwiseIcon, PlusIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { useCreditSchemaList } from "../hooks/useCreditSchemaList";
 import { useFeatureOverride } from "../hooks/useFeatureOverride";
-import { rateCardRows, rateCardSubtitle } from "../utils/rateCardRows";
+import { createSchemaItem } from "../utils/creditSchemaUtils";
+import {
+	addableFeatures,
+	rateCardRows,
+	rateCardSubtitle,
+} from "../utils/rateCardRows";
 import { CreditRateCardRow } from "./CreditRateCardRow";
 import { RateCardRow } from "./rate-card/RateCardRow";
 import { RateCardTable } from "./rate-card/RateCardTable";
@@ -12,11 +18,17 @@ export function CreditOverrideRateCard() {
 	const { creditSystem, override, schema, setSchema, clear } =
 		useFeatureOverride();
 	const list = useCreditSchemaList({ schema, onChange: setSchema });
+	// The picker row stays out of the override until a feature is chosen.
+	const [picking, setPicking] = useState(false);
 	const rows = rateCardRows({
 		override: override?.schema ?? [],
 		catalog: creditSystem?.config?.schema ?? [],
 	});
 	const creditSystemName = creditSystem?.name ?? "the credit system";
+	const addable = addableFeatures({
+		features: list.allSchemaCandidateFeatures,
+		rows,
+	});
 
 	return (
 		<RateCardTable
@@ -33,8 +45,8 @@ export function CreditOverrideRateCard() {
 					variant="dotted"
 					size="sm"
 					className="w-full text-tertiary-foreground"
-					disabled={schema.length >= list.allSchemaCandidateFeatures.length}
-					onClick={list.addSchemaItem}
+					disabled={picking || addable.length === 0}
+					onClick={() => setPicking(true)}
 				>
 					<PlusIcon size={12} />
 					Add a feature {creditSystemName} does not cover
@@ -93,6 +105,23 @@ export function CreditOverrideRateCard() {
 					/>
 				);
 			})}
+			{picking && (
+				<li className="p-1">
+					<CreditRateCardRow
+						item={createSchemaItem()}
+						availableFeatures={addable}
+						allFeatures={list.allSchemaCandidateFeatures}
+						onChange={(item) => {
+							setPicking(false);
+							list.addSchemaItem(item);
+						}}
+						onRemove={() => setPicking(false)}
+						isExpanded
+						onToggle={() => setPicking(false)}
+						showRateCardControls
+					/>
+				</li>
+			)}
 		</RateCardTable>
 	);
 }

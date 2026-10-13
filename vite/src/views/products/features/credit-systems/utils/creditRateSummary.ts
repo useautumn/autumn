@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { isGraduated } from "./creditSchemaUtils";
 
-export const formatCredits = (amount: number) =>
+const formatCredits = (amount: number) =>
 	`${amount} ${amount === 1 ? "credit" : "credits"}`;
 
 const dimensionCountSuffix = (item: CreditSchemaItem): string => {

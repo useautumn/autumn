@@ -54,6 +54,15 @@ export const rateCardRows = ({
 	];
 };
 
+/** Features a plan can add: anything not already on its rate card, so excluded rows come back only through Restore. */
+export const addableFeatures = ({
+	features,
+	rows,
+}: {
+	features: Feature[];
+	rows: RateCardRow[];
+}) => features.filter((f) => !rows.some((row) => row.featureId === f.id));
+
 /** "From Demo credits · 1 changed · 1 not covered", skipping counts that are zero. */
 export const rateCardSubtitle = ({
 	creditSystemName,
