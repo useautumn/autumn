@@ -101,3 +101,36 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("update inherits send_invoice: an allowance-only edit needs no invoice and still applies")}`,
+	async () => {
+		const customerId = "update-inherit-send-invoice-allowance";
+		const priceItem = items.monthlyPrice({ price: 20 });
+		const pro = products.base({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 }), priceItem],
+		});
+		const { autumnV1, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [s.customer({}), s.products({ list: [pro] })],
+			actions: [],
+		});
+		await autumnV2_4.billing.attach({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: { enabled: true, enable_plan_immediately: true },
+		});
+
+		const result = await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: pro.id,
+			items: [items.monthlyMessages({ includedUsage: 200 }), priceItem],
+		});
+
+		expect(result.required_action).toBeUndefined();
+		expect(result.payment_url ?? null).toBeNull();
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(customer.features.messages?.included_usage).toBe(200);
+	},
+);

@@ -205,7 +205,6 @@ export const setupAttachBillingContext = async ({
 		fullCustomer,
 		params,
 		stripeCustomer,
-		stripeSubscription,
 	});
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,

@@ -1,6 +1,7 @@
 import {
 	type BillingContext,
 	billingContextToCurrency,
+	type InvoicePaymentMethod,
 	type StripeDiscountWithCoupon,
 	type StripeInvoiceAction,
 } from "@autumn/shared";
@@ -41,6 +42,19 @@ const invoiceLinesAllowStripeDiscounts = ({
 	lines: StripeInvoiceAction["addLineParams"]["lines"];
 }) => lines.some((line) => line.discountable !== false);
 
+const sendInvoiceSubscriptionTerms = (
+	stripeSubscription?: Stripe.Subscription,
+) =>
+	stripeSubscription?.collection_method === "send_invoice"
+		? {
+				daysUntilDue: stripeSubscription.days_until_due ?? undefined,
+				paymentMethodTypes: (stripeSubscription.payment_settings
+					?.payment_method_types ?? undefined) as
+					| InvoicePaymentMethod[]
+					| undefined,
+			}
+		: undefined;
+
 export const createInvoiceForBilling = async ({
 	ctx,
 	billingContext,
@@ -62,7 +76,11 @@ export const createInvoiceForBilling = async ({
 		? invoiceMode.finalizeInvoice
 		: true;
 
-	const isInvoiceMode = Boolean(invoiceMode);
+	// A send_invoice subscription invoices a change like its renewals, on its own terms, instead of charging now.
+	const subscriptionInvoiceTerms = sendInvoiceSubscriptionTerms(
+		billingContext.stripeSubscription,
+	);
+	const isInvoiceMode = Boolean(invoiceMode ?? subscriptionInvoiceTerms);
 
 	const collectionMethod = isInvoiceMode
 		? "send_invoice"
@@ -116,8 +134,11 @@ export const createInvoiceForBilling = async ({
 			? undefined
 			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
-		daysUntilDue: invoiceMode?.daysUntilDue,
-		paymentMethodTypes: invoiceMode?.paymentMethodTypes,
+		daysUntilDue:
+			invoiceMode?.daysUntilDue ?? subscriptionInvoiceTerms?.daysUntilDue,
+		paymentMethodTypes:
+			invoiceMode?.paymentMethodTypes ??
+			subscriptionInvoiceTerms?.paymentMethodTypes,
 		footer: invoiceMode?.footer,
 		description: invoiceMode?.memo,
 		metadata: invoiceMetadata,
