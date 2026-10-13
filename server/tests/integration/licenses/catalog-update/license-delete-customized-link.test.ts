@@ -131,6 +131,57 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("licenses-delete: catalogV2 removes parent and customized license in one call, license first")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const parent = productFixtures.base({
+			id: `delete-cv2-parent-${suffix}`,
+			items: [items.dashboard()],
+		});
+		const license = productFixtures.base({
+			id: `delete-cv2-license-${suffix}`,
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
+			customerId: `license-delete-cv2-${suffix}`,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: {
+						add_items: [itemsV2.monthlyWords({ included: 100 })],
+					},
+				},
+			],
+		});
+
+		// Pre-fix: FK 500 when the license row is deleted before its parent.
+		await autumnV2_3.catalogV2.update({
+			remove_plans: [{ plan_id: license.id }, { plan_id: parent.id }],
+		});
+
+		const remaining = await ctx.db.query.products.findMany({
+			where: and(eq(products.org_id, ctx.org.id), eq(products.env, ctx.env)),
+		});
+		expect(
+			remaining.some(
+				(product) => product.id === license.id || product.id === parent.id,
+			),
+		).toBe(false);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("licenses-delete: safeDeleteByOrgId wipes an org holding a customized link")}`,
 	async () => {
 		const suffix = Math.random().toString(36).slice(2, 9);
