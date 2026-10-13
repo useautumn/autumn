@@ -12,6 +12,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { withAtomShadowDeduction } from "@/internal/balances/atomShadowDeduct/withAtomShadowDeduction.js";
 import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queueAtomShadowCheck.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
@@ -110,30 +111,43 @@ export const handleCheck = createRoute({
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
-			const runOnWorker = () =>
-				runBalanceWorkerCheck({
-					ctx,
-					body: rawBody,
-					idempotencyKey: c.req.header("idempotency-key"),
-				});
+			const search = new URL(c.req.url).search;
+			const runOnWorker = ({
+				idempotencyKey,
+			}: {
+				idempotencyKey: string | undefined;
+			}) => runBalanceWorkerCheck({ ctx, body: rawBody, idempotencyKey });
+			const idempotencyKey = c.req.header("idempotency-key");
 			// A lock must settle its reservation, so a lock check never answers without the worker.
-			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
-			const { result, failedOpen } =
-				await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
-					ctx,
-					source: "check",
-					run: runOnWorker,
-					fallback: async ({ error, reason }) =>
-						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
-				});
-			if (!failedOpen)
-				queueAtomShadowCheck({
-					ctx,
-					params: rawBody,
-					search: new URL(c.req.url).search,
-					apiResponse: result,
-				});
-			return c.json(result, failedOpen ? 202 : 200);
+			if (rawBody.lock?.enabled)
+				return c.json(await runOnWorker({ idempotencyKey }));
+			const { body, status } = await withAtomShadowDeduction({
+				ctx,
+				route: "check",
+				atomParams: rawBody.send_event === true ? rawBody : null,
+				search,
+				idempotencyKey,
+				answerOf: ({ body, status }) => ({ body, status }),
+				runOnApi: async ({ idempotencyKey }) => {
+					const { result, failedOpen } =
+						await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
+							ctx,
+							source: "check",
+							run: () => runOnWorker({ idempotencyKey }),
+							fallback: async ({ error, reason }) =>
+								checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
+						});
+					if (!failedOpen)
+						queueAtomShadowCheck({
+							ctx,
+							params: rawBody,
+							search,
+							apiResponse: result,
+						});
+					return { body: result, status: failedOpen ? 202 : 200 };
+				},
+			});
+			return c.json(body, status);
 		}
 
 		const body: ParsedCheckParams = parseCheckParamsForLock({
