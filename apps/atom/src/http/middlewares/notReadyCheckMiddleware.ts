@@ -1,5 +1,5 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
-import { isAtomReady } from "../../init/atomHealth.js";
+import { isServing } from "../../init/atomHealth.js";
 import { forwardRequest } from "../forward/forwardRequest.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
@@ -24,8 +24,8 @@ const neverReachedPeer = (error: unknown): boolean =>
 	NEVER_REACHED_PEER.has(String((error as { code?: unknown })?.code));
 
 /**
- * The load balancer sends checks to a replica as soon as it listens, before /health says ready. Until then this
- * replica may not hold every push yet, so it hands each check to another replica and only answers itself when none can.
+ * The load balancer sends checks to a replica as it listens, before /health says ready, and so to a thread that replaced
+ * a dead one before catching up. Either may lack pushes, so it hands checks to a peer and answers only when none can.
  */
 export function notReadyCheckMiddleware({
 	ctx,
@@ -34,7 +34,7 @@ export function notReadyCheckMiddleware({
 }): MiddlewareHandler<AtomHttpEnv> {
 	const { replication, peer } = ctx;
 	async function proxyWhileStarting(context: Context<AtomHttpEnv>, next: Next) {
-		if (isAtomReady(ctx.health) || context.req.header(PROXIED_HEADER))
+		if (isServing(ctx.health) || context.req.header(PROXIED_HEADER))
 			return next();
 		const [address] = await replication.peers();
 		if (!address) return next();

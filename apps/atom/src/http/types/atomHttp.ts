@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { SecretKeys } from "../../auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../auth/types/auth.js";
-import type { AtomHealthSource } from "../../init/atomHealth.js";
+import type { ThreadHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Replication } from "../../replication/types/replication.js";
 import type { Slots } from "../../slots/types/slots.js";
@@ -13,7 +13,7 @@ export type AtomHttpContext = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	/** Where a request Atom does not answer itself is sent. */
 	autumnApiUrl: string;
-	health: AtomHealthSource;
+	health: ThreadHealthSource;
 	counters: ThreadCounters;
 	/** How far behind this thread is: checks are refused while it is too far. */
 	loop: Pick<LoopWatch, "lagMs">;
