@@ -1,5 +1,6 @@
 import { ATOM_TOKEN_HASH_HEADER, AtomSubjectReadErrorCode } from "@autumn/byoc";
 import type { MiddlewareHandler } from "hono";
+import { findShadowAtomByTokenHash } from "@/internal/misc/shadowAtom/actions/findShadowAtomByTokenHash.js";
 import { cacheDeploymentRepo } from "../repos/cacheDeploymentRepo.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
@@ -10,10 +11,10 @@ export const atomTokenHashMiddleware: MiddlewareHandler<AtomHonoEnv> = async (
 ) => {
 	const tokenHash = c.req.header(ATOM_TOKEN_HASH_HEADER);
 	const atom = tokenHash
-		? await cacheDeploymentRepo.findByTokenHash({
+		? ((await cacheDeploymentRepo.findByTokenHash({
 				db: c.get("ctx").db,
 				tokenHash,
-			})
+			})) ?? findShadowAtomByTokenHash({ tokenHash }))
 		: null;
 	if (!atom)
 		return c.json(
