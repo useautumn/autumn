@@ -7,6 +7,11 @@ import type {
 	DeductionResponse,
 } from "./types/atomDeductReply.js";
 
+const deductionValueOf = ({ call }: { call: AtomDeductCall }): number =>
+	call.route === "track"
+		? (call.params.value ?? 1)
+		: (call.params.required_balance ?? call.params.required_quantity ?? 1);
+
 const errorToCode = (error: unknown): string => {
 	if (error instanceof RecaseError) return error.code;
 	return error instanceof Error ? error.name : "unknown_failure";
@@ -67,6 +72,9 @@ export const withAtomShadowDeduction = async ({
 			env: ctx.env,
 			route: call.route,
 			customer_id: call.params.customer_id,
+			feature_id: call.params.feature_id ?? null,
+			// What this call deducts once acked; P1 sums it per customer against the balance moved.
+			value: deductionValueOf({ call }),
 			atom_reply: reply.kind,
 			atom_reason: reply.kind === "answered" ? null : reply.reason,
 			atom_status: reply.kind === "answered" ? reply.status : null,
