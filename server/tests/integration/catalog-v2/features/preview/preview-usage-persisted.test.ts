@@ -47,9 +47,7 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: "CatalogV2 Preview Usage Credits",
 						type: FeatureType.CreditSystem,
-						credit_schema: [
-							{ metered_feature_id: meteredId, credit_cost: 1 },
-						],
+						credit_schema: [{ metered_feature_id: meteredId, credit_cost: 1 }],
 					},
 				],
 			});
@@ -395,9 +393,7 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: "CatalogV2 Preview Override Credits",
 						type: FeatureType.CreditSystem,
-						credit_schema: [
-							{ metered_feature_id: excludedId, credit_cost: 1 },
-						],
+						credit_schema: [{ metered_feature_id: excludedId, credit_cost: 1 }],
 					},
 				],
 				plans: [
