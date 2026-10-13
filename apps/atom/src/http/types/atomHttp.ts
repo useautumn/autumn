@@ -5,6 +5,7 @@ import type { AtomHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Replication } from "../../replication/types/replication.js";
 import type { Slots } from "../../slots/types/slots.js";
+import type { LoopWatch } from "../../threads/stats/startLoopWatch.js";
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 
 export type AtomHttpContext = {
@@ -14,6 +15,8 @@ export type AtomHttpContext = {
 	autumnApiUrl: string;
 	health: AtomHealthSource;
 	counters: ThreadCounters;
+	/** How far behind this thread is: checks are refused while it is too far. */
+	loop: Pick<LoopWatch, "lagMs">;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
 	/** Present only on an org's own Atom, whose checks open with the org's secret keys. */
