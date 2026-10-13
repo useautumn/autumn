@@ -10,8 +10,10 @@ import {
 import {
 	ApiVersionClass,
 	AppEnv,
+	ErrCode,
 	FeatureType,
 	LATEST_VERSION,
+	RecaseError,
 } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -175,6 +177,11 @@ const post = async ({
 	headers?: Record<string, string>;
 }) => {
 	const app = new Hono<HonoEnv>();
+	app.onError((error, c) =>
+		error instanceof RecaseError
+			? c.json({ code: error.code }, error.statusCode as 409)
+			: c.json({ code: "internal_error" }, 500),
+	);
 	app.use("*", async (c, next) => {
 		c.set("ctx", ctx);
 		await next();
@@ -399,6 +406,30 @@ describe("a track", () => {
 			"atom_shadow_req_1",
 		);
 		expect(deductLogs[0]).toMatchObject({ atom_reply: "down" });
+	});
+
+	test("a fallback whose key Atom's hand-in already claimed is a duplicate, logged apart from errors", async () => {
+		atom.reply = () =>
+			Response.json({ code: "atom_unavailable" }, { status: 503 });
+		workerTrackSpy.mockImplementationOnce(async () => {
+			throw new RecaseError({
+				message: "duplicate",
+				code: ErrCode.DuplicateIdempotencyKey,
+				statusCode: 409,
+			});
+		});
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "track", body: queuedTrack });
+
+		expect(response.status).toBe(409);
+		expect(deductLogs[0]).toMatchObject({
+			atom_reply: "down",
+			answered_by: "api",
+			status: null,
+			api_error: ErrCode.DuplicateIdempotencyKey,
+			fallback_duplicate: true,
+		});
 	});
 
 	test("from an org not allowlisted is unchanged", async () => {

@@ -1,3 +1,4 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { askAtomToDeduct } from "./askAtomToDeduct.js";
 import { allowedOf, atomShadowDeductTarget } from "./atomShadowDeductGuards.js";
@@ -5,6 +6,11 @@ import type {
 	AtomDeductCall,
 	DeductionResponse,
 } from "./types/atomDeductReply.js";
+
+const errorToCode = (error: unknown): string => {
+	if (error instanceof RecaseError) return error.code;
+	return error instanceof Error ? error.name : "unknown_failure";
+};
 
 /**
  * Staging only: an allowlisted org's deduction goes to the shadow Atom first, as its SDK's edge would send it, and the
@@ -52,7 +58,7 @@ export const withAtomShadowDeduction = async ({
 		response = atomAnswer ?? (await runOnApi({ idempotencyKey: key }));
 		return response;
 	} catch (error) {
-		apiError = error instanceof Error ? error.name : "unknown_failure";
+		apiError = errorToCode(error);
 		throw error;
 	} finally {
 		ctx.logger.info("atom_shadow_deduct", {
@@ -72,6 +78,8 @@ export const withAtomShadowDeduction = async ({
 					? atomAnswer.status === 202
 					: allowedOf({ body: response?.body }),
 			api_error: apiError,
+			// The fallback reused a key Atom's hand-in already claimed: the deduction landed once, not an error.
+			fallback_duplicate: apiError === ErrCode.DuplicateIdempotencyKey,
 			atom_ms: Math.round(atomMs),
 			latency_ms: Math.round(performance.now() - startedAt),
 			key_minted: !idempotencyKey,
