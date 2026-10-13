@@ -168,6 +168,9 @@ function createFixture({
 	function stats() {
 		return { requests, refreshes };
 	}
+	function claim(next: PartitionOwner): void {
+		currentOwner = next;
+	}
 	const client = createBalanceWorkerClient({
 		ctx: { owners: { findOwner, refresh }, http: { postJson } },
 		config: {
@@ -177,7 +180,7 @@ function createFixture({
 			batchTracks: false,
 		},
 	});
-	return { client, stats, budgets, refreshed: refreshed.promise };
+	return { client, stats, budgets, claim, refreshed: refreshed.promise };
 }
 
 async function usesCachedOwner(): Promise<void> {
@@ -902,4 +905,49 @@ async function dropsAHintTheSuccessorDeclines(): Promise<void> {
 test(
 	"a hinted successor that also answers NOT_OWNER drops the hint and falls back to a refresh",
 	dropsAHintTheSuccessorDeclines,
+);
+
+async function waitsForAClaimOnAnOwnerlessPartition(): Promise<void> {
+	const fixture = createFixture({ owner: null, nextOwner: null });
+	setTimeout(fixture.claim, 120, replacement);
+	expect(await fixture.client.track({ command })).toEqual(trackReply);
+	expect(fixture.stats().refreshes).toBe(1);
+	expect(fixture.stats().requests).toEqual([
+		{
+			url: "http://worker-b:8080/v1/track",
+			body: { route: { partition: 0, routeEpoch: "2" }, command },
+		},
+	]);
+}
+
+test(
+	"a partition with no owner after a settled refresh is sent once its successor claims it",
+	waitsForAClaimOnAnOwnerlessPartition,
+);
+
+async function givesUpOnAnOwnerlessPartitionWithBudgetToSpare(): Promise<void> {
+	const fixture = createFixture({
+		owner: null,
+		nextOwner: null,
+		timeoutMs: 400,
+	});
+	const startedAt = performance.now();
+	const failure = await fixture.client
+		.check({ command: checkCommand })
+		.catch((cause: unknown) => cause);
+	expect(failure).toMatchObject({
+		code: "NO_OWNER",
+		outcome: "not_submitted",
+		routing: { sends: 0, refreshes: 1 },
+	});
+	expect(
+		(failure as { routing: { ownerlessWaits: number } }).routing.ownerlessWaits,
+	).toBeGreaterThan(0);
+	expect(performance.now() - startedAt).toBeLessThan(400);
+	expect(fixture.stats().requests).toHaveLength(0);
+}
+
+test(
+	"a partition nobody claims fails NO_OWNER while the request still has budget",
+	givesUpOnAnOwnerlessPartitionWithBudgetToSpare,
 );

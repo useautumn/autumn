@@ -149,10 +149,14 @@ function createFixture({
 		ctx: { owners: { findOwner, refresh }, http: { postJson } },
 		config: { partitionCount, timeoutMs, maxTrackBatchSize },
 	});
+	function claim(next: PartitionOwner | null): void {
+		currentOwner = next;
+	}
 	return {
 		client,
 		requests,
 		sent,
+		claim,
 		refreshes: () => refreshes,
 	};
 }
@@ -229,9 +233,14 @@ test("partitions batch independently", async () => {
 		if (partition !== basePartition) break;
 	}
 	const fixture = createFixture({ partitionCount: 2 });
-	fixture.client.track({ command: commandFor("a") });
-	fixture.client.track({ command: commandFor("b", otherCustomer) });
+	const first = fixture.client.track({ command: commandFor("a") });
+	const second = fixture.client.track({
+		command: commandFor("b", otherCustomer),
+	});
 	expect(fixture.requests.map(idsOf)).toEqual([["a"], ["b"]]);
+	fixture.requests[0].respond(okResults(["a"]));
+	fixture.requests[1].respond(okResults(["b"]));
+	await Promise.all([first, second]);
 });
 
 test("per-item results settle each caller with today's error mapping", async () => {
@@ -624,12 +633,48 @@ test("a batch whose worker refused the connection never reached it, so it refres
 });
 
 test("a partition with no owner refreshes once, then fails NO_OWNER unsent", async () => {
-	const fixture = createFixture({ owner: null, nextOwner: null });
+	const fixture = createFixture({
+		owner: null,
+		nextOwner: null,
+		timeoutMs: 400,
+	});
 	await expect(
 		fixture.client.track({ command: commandFor("a") }),
 	).rejects.toMatchObject({ code: "NO_OWNER", outcome: "not_submitted" });
 	expect(fixture.refreshes()).toBe(1);
 	expect(fixture.requests).toHaveLength(0);
+});
+
+test("an ownerless partition's batch is sent once its successor claims it", async () => {
+	const fixture = createFixture({ owner: null, nextOwner: null });
+	const pending = fixture.client.track({ command: commandFor("a") });
+	setTimeout(fixture.claim, 120, replacement);
+	await fixture.sent(1);
+	expect(fixture.requests[0].url).toBe("http://worker-b:8080/v1/track-batch");
+	fixture.requests[0].respond(okResults(["a"]));
+	expect(await pending).toEqual(replyFor("a"));
+	expect(fixture.refreshes()).toBe(1);
+});
+
+test("an ownerless batch stops waiting while its most impatient item still has budget", async () => {
+	const fixture = createFixture({ nextOwner: null });
+	const blocker = fixture.client.track({ command: commandFor("blocker") });
+	const early = fixture.client.track({ command: commandFor("early") });
+	await Bun.sleep(500);
+	const late = fixture.client.track({ command: commandFor("late") });
+	fixture.claim(null);
+	fixture.requests[0].respond(okResults(["blocker"]));
+	await blocker;
+	const [earlyResult, lateResult] = await Promise.allSettled([early, late]);
+	expect(earlyResult).toMatchObject({
+		status: "rejected",
+		reason: { code: "NO_OWNER" },
+	});
+	expect(lateResult).toMatchObject({
+		status: "rejected",
+		reason: { code: "NO_OWNER" },
+	});
+	expect(fixture.requests).toHaveLength(1);
 });
 
 test("a transport failure is uncertain for in-flight items only", async () => {
