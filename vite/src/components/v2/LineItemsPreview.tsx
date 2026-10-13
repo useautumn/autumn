@@ -6,7 +6,11 @@ import {
 	AccordionTrigger,
 	Badge,
 } from "@autumn/ui";
+import { ArrowCounterClockwiseIcon, XIcon } from "@phosphor-icons/react";
 import { Decimal } from "decimal.js";
+import type { ReactNode } from "react";
+import { AddInvoiceLineForm } from "@/components/forms/shared/invoiceLineEdits/AddInvoiceLineForm";
+import type { InvoiceLineEditsController } from "@/components/forms/shared/invoiceLineEdits/useInvoiceLineEdits";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +33,8 @@ export interface LineItemsContentProps<T extends BillingLineItem> {
 	}[];
 	/** Accordion title for line items */
 	accordionTitle?: string;
+	/** Set when the previewed invoice accepts add_lines / remove_lines. */
+	lineEdits?: InvoiceLineEditsController;
 }
 
 export interface LineItemsPreviewProps<T extends BillingLineItem>
@@ -68,21 +74,71 @@ const amountLabel = ({
 	});
 
 /** Line items accordion plus totals rows, with no section chrome of its own. */
+/** Index of the added line a preview line came from, matched by description. */
+const addedLineIndexes = <T extends BillingLineItem>({
+	items,
+	lineEdits,
+}: {
+	items: T[];
+	lineEdits?: InvoiceLineEditsController;
+}) => {
+	const used = new Set<number>();
+	return items.map((item) => {
+		if (!lineEdits || !item.custom) return -1;
+		const index = lineEdits.added.findIndex(
+			(line, i) => !used.has(i) && line.description === item.description,
+		);
+		if (index !== -1) used.add(index);
+		return index;
+	});
+};
+
+const RowIconButton = ({
+	label,
+	onClick,
+	children,
+}: {
+	label: string;
+	onClick: () => void;
+	children: ReactNode;
+}) => (
+	<button
+		aria-label={label}
+		className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary-foreground hover:bg-interactive-secondary-hover hover:text-foreground"
+		onClick={onClick}
+		title={label}
+		type="button"
+	>
+		{children}
+	</button>
+);
+
+/** Line items accordion plus totals rows, with no section chrome of its own. */
 export function LineItemsContent<T extends BillingLineItem>({
 	lineItems,
 	currency = "usd",
 	filterZeroAmounts = true,
 	totals = [],
 	accordionTitle = "Line Items",
+	lineEdits,
 }: LineItemsContentProps<T>) {
 	const filteredItems = visibleLineItems({ lineItems, filterZeroAmounts });
+	const addedIndexes = addedLineIndexes({ items: filteredItems, lineEdits });
+	const removedLines = lineEdits?.removed ?? [];
+	const showLineList =
+		filteredItems.length > 0 || removedLines.length > 0 || !!lineEdits;
 
-	if (filteredItems.length === 0 && totals.length === 0) return null;
+	if (!showLineList && totals.length === 0) return null;
 
 	return (
 		<div className="flex flex-col gap-2">
-			{filteredItems.length > 0 && (
-				<Accordion type="single" collapsible className="w-full">
+			{showLineList && (
+				<Accordion
+					type="single"
+					collapsible
+					className="w-full"
+					defaultValue={lineEdits?.hasEdits ? ["line-items"] : undefined}
+				>
 					<AccordionItem value="line-items" className="border-none">
 						<AccordionTrigger
 							className={cn(
@@ -95,26 +151,74 @@ export function LineItemsContent<T extends BillingLineItem>({
 						</AccordionTrigger>
 						<AccordionContent className="pb-2 pt-1">
 							<div className="space-y-2">
-								{filteredItems.map((item) => (
+								{filteredItems.map((item, itemIndex) => {
+									const addedIndex = addedIndexes[itemIndex];
+									const removeLine = item.remove_line;
+									return (
+										<div
+											key={`${item.description}-${itemIndex}`}
+											className="flex items-center gap-3"
+										>
+											<span className="min-w-0 flex-1 truncate text-sm text-tertiary-foreground">
+												{item.description}
+											</span>
+											{addedIndex !== -1 && (
+												<Badge variant="muted">Added</Badge>
+											)}
+											<div className="flex shrink-0 items-center justify-end gap-1.5">
+												{item.subtotal !== item.total && (
+													<span className="text-sm text-tertiary-foreground line-through">
+														{amountLabel({ amount: item.subtotal, currency })}
+													</span>
+												)}
+												<span className="text-sm text-foreground font-semibold text-right">
+													{amountLabel({ amount: item.total, currency })}
+												</span>
+											</div>
+											{lineEdits &&
+												(addedIndex !== -1 ? (
+													<RowIconButton
+														label="Delete added line"
+														onClick={() =>
+															lineEdits.removeAddedLine(addedIndex)
+														}
+													>
+														<XIcon size={12} />
+													</RowIconButton>
+												) : removeLine ? (
+													<RowIconButton
+														label="Remove line from invoice"
+														onClick={() => lineEdits.removeLine(item)}
+													>
+														<XIcon size={12} />
+													</RowIconButton>
+												) : (
+													<span className="size-5 shrink-0" />
+												))}
+										</div>
+									);
+								})}
+								{removedLines.map(({ lineItem }, removedIndex) => (
 									<div
-										key={item.description}
+										key={`removed-${lineItem.description}-${removedIndex}`}
 										className="flex items-center gap-3"
 									>
-										<span className="min-w-0 flex-1 truncate text-sm text-tertiary-foreground">
-											{item.description}
+										<span className="min-w-0 flex-1 truncate text-sm text-tertiary-foreground line-through">
+											{lineItem.description}
 										</span>
-										<div className="flex shrink-0 items-center justify-end gap-1.5">
-											{item.subtotal !== item.total && (
-												<span className="text-sm text-tertiary-foreground line-through">
-													{amountLabel({ amount: item.subtotal, currency })}
-												</span>
-											)}
-											<span className="text-sm text-foreground font-semibold text-right">
-												{amountLabel({ amount: item.total, currency })}
-											</span>
-										</div>
+										<Badge variant="muted">Removed</Badge>
+										<span className="shrink-0 text-sm text-tertiary-foreground line-through">
+											{amountLabel({ amount: lineItem.total, currency })}
+										</span>
+										<RowIconButton
+											label="Undo remove"
+											onClick={() => lineEdits?.undoRemove(removedIndex)}
+										>
+											<ArrowCounterClockwiseIcon size={12} />
+										</RowIconButton>
 									</div>
 								))}
+								{lineEdits && <AddInvoiceLineForm onAdd={lineEdits.addLine} />}
 							</div>
 						</AccordionContent>
 					</AccordionItem>

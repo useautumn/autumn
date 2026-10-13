@@ -34,6 +34,10 @@ import {
 	useState,
 } from "react";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
+import {
+	type InvoiceLineEditsController,
+	useInvoiceLineEdits,
+} from "@/components/forms/shared/invoiceLineEdits/useInvoiceLineEdits";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
@@ -105,6 +109,7 @@ interface AttachFormContextValue {
 	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
+	lineEdits: InvoiceLineEditsController;
 	/** Preview with invoice mode on, so tax reflects the send_invoice path. */
 	invoicePreview: {
 		path: string;
@@ -552,10 +557,27 @@ export function AttachFormProvider({
 	const billingOperation = isMultiPlan
 		? BILLING_OPERATIONS.multiAttach
 		: BILLING_OPERATIONS.attach;
-	const operationRequestBody = isMultiPlan ? multiRequestBody : requestBody;
+	const hasCustomLineItems = Array.isArray(requestBody?.custom_line_items);
+	const lineEdits = useInvoiceLineEdits({
+		resetKey: JSON.stringify(requestBody),
+		enabled: !isMultiPlan && !hasCustomLineItems,
+	});
+	const { applyToBody: applyLineEdits } = lineEdits;
+	const editedRequestBody = useMemo(
+		() => applyLineEdits(requestBody),
+		[applyLineEdits, requestBody],
+	);
+	const buildEditedRequestBody = useCallback(
+		(params?: Parameters<typeof buildRequestBody>[0]) =>
+			applyLineEdits(buildRequestBody(params)),
+		[applyLineEdits, buildRequestBody],
+	);
+	const operationRequestBody = isMultiPlan
+		? multiRequestBody
+		: editedRequestBody;
 	const buildOperationRequestBody = isMultiPlan
 		? buildMultiRequestBody
-		: buildRequestBody;
+		: buildEditedRequestBody;
 
 	const generation = useAttachGeneration({
 		form,
@@ -660,6 +682,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			lineEdits,
 			invoicePreview,
 			previewDiff,
 			generation,
@@ -697,6 +720,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			lineEdits,
 			invoicePreview,
 			previewDiff,
 			generation,

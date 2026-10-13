@@ -8,7 +8,8 @@ import { previewErrorToSetPlansErrorCopy } from "../utils/previewErrorToSetPlans
 import { SetPlansErrorAlert } from "./errors/SetPlansErrorAlert";
 
 export function SchedulePreview() {
-	const { preview, isPreviewLoading, error } = useCreateScheduleFormContext();
+	const { preview, isPreviewLoading, error, lineEdits } =
+		useCreateScheduleFormContext();
 	const { subscriptionLinks } = useCustomerStateContext();
 
 	const previewQuery = useMemo(
@@ -32,5 +33,5 @@ export function SchedulePreview() {
 		);
 	}
 
-	return <PreviewSection previewQuery={previewQuery} />;
+	return <PreviewSection previewQuery={previewQuery} lineEdits={lineEdits} />;
 }
