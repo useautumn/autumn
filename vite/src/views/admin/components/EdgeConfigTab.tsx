@@ -16,8 +16,6 @@ import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { MiscRedisDialog } from "./MiscRedisDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
-import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
-import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
@@ -154,16 +152,6 @@ export function EdgeConfigTab() {
 
 			<OrgLimitsDialog
 				open={openConfig === "org-limits"}
-				onOpenChange={closeDialog}
-			/>
-
-			<RateLimitOverridesDialog
-				open={openConfig === "rate-limit-overrides"}
-				onOpenChange={closeDialog}
-			/>
-
-			<RateLimitRedisAllowlistDialog
-				open={openConfig === "rate-limit-redis-allowlist"}
 				onOpenChange={closeDialog}
 			/>
 

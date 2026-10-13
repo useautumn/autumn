@@ -11,6 +11,7 @@ import {
 	type Product,
 	type Reward,
 	RewardType,
+	stripeRefToId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -173,7 +174,7 @@ export const getPromoCouponId = (
 		promo.promotion?.coupon ??
 		(promo as unknown as { coupon?: Stripe.Coupon | string }).coupon;
 	if (!coupon) return null;
-	return typeof coupon === "string" ? coupon : (coupon.id ?? null);
+	return stripeRefToId(coupon) ?? null;
 };
 
 export const createStripeCoupon = async ({

@@ -34,6 +34,7 @@ import {
 	useState,
 } from "react";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
+import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
 import {
@@ -124,12 +125,7 @@ interface AttachFormContextValue {
 
 	isPending: boolean;
 	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
-	handleInvoiceAttach: (params: {
-		enableProductImmediately: boolean;
-		finalizeInvoice?: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-	}) => Promise<{
+	handleInvoiceAttach: (params: SendInvoiceSubmitParams) => Promise<{
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;

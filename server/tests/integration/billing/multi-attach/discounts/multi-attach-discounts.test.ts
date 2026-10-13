@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import {
 	createAmountCoupon,
 	createPercentCoupon,
@@ -72,7 +73,7 @@ test.concurrent(
 		const couponIds = subscription.discounts?.map((discount) => {
 			if (typeof discount === "string") return discount;
 			const coupon = discount.source?.coupon;
-			return typeof coupon === "string" ? coupon : coupon?.id;
+			return stripeRefToId(coupon);
 		});
 		expect(couponIds).toEqual(
 			expect.arrayContaining([globalCoupon.id, scopedCoupon.id]),

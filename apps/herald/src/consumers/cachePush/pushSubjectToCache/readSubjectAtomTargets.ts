@@ -1,7 +1,7 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import { orgToAtomTargets } from "@autumn/byoc/subjects";
 import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
-import { orgToAtomTargets } from "../../../atom/orgToAtomTargets.js";
 import { getOrgWithFeaturesCached } from "../../../orgs/getOrgWithFeaturesCached.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { SubjectAtomTargets } from "../types/subjectAtomTargets.js";
@@ -29,6 +29,7 @@ export const readSubjectAtomTargets = async ({
 		org,
 		env,
 		customerId: identity.customerId,
+		orgAtomsOverQueue: ctx.atomPushQueueOnly,
 	});
 	if (atomConnections.length === 0) return null;
 	return { org, atomConnections };

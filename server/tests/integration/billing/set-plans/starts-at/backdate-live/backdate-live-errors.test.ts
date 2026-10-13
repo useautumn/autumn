@@ -1,21 +1,19 @@
 /**
  * A backdate over a live subscription is rejected, before anything is written, when recreating
- * it would lose or rebill something: a trial on it, Stripe Checkout, a start past Stripe's
- * 250-line backdate limit, or another entity's plan on it the request doesn't cover.
+ * it would lose or rebill something: a trial added to a paid one, Stripe Checkout, a start past
+ * Stripe's 250-line backdate limit, or another entity's plan on it the request doesn't cover.
+ * Backdating a trialing subscription is allowed (backdate-trialing/).
  */
 
 import { expect, test } from "bun:test";
 import {
 	addInterval,
 	BillingInterval,
+	FreeTrialDuration,
 	ms,
 	type SetPlansParamsV0Input,
 } from "@autumn/shared";
-import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
 	initLiveProScenario,
@@ -25,44 +23,34 @@ import {
 const BEYOND_STRIPE_BACKDATE_LIMIT_MONTHS = 251;
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans backdate live: a trialing subscription is rejected and left untouched")}`,
+	`${chalk.yellowBright("set-plans backdate live: a trial requested on a paid subscription is rejected and left untouched")}`,
 	async () => {
-		const proWithTrial = products.proWithTrial({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const { customerId, autumnV2_4, ctx } = await initScenario({
+		const { pro, customerId, autumnV2_4, ctx } = await initLiveProScenario({
 			customerId: "set-plans-backdate-live-trial",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proWithTrial] }),
-			],
-			actions: [
-				s.billing.attach({ productId: proWithTrial.id }),
-				s.advanceTestClock({ days: 2 }),
-			],
+			advanceDays: 10,
 		});
-		const trialing = await findStripeSubscriptionByStatus({
-			ctx,
-			customerId,
-			status: "trialing",
-		});
+		const live = await liveSubscriptionPeriod({ ctx, customerId });
 
 		await expectAutumnError({
-			errMessage: "A trial can't be backdated to",
+			errMessage: "A paid subscription can't start a trial when backdated to",
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
+					free_trial: {
+						duration_length: 7,
+						duration_type: FreeTrialDuration.Day,
+					},
 					phases: [
 						{
-							starts_at: trialing.start_date * 1000 - ms.days(10),
-							plans: [{ plan_id: proWithTrial.id }],
+							starts_at: live.startMs - ms.days(10),
+							plans: [{ plan_id: pro.id }],
 						},
 					],
 				}),
 		});
 		expect(
-			(await ctx.stripeCli.subscriptions.retrieve(trialing.id)).status,
-		).toBe("trialing");
+			(await ctx.stripeCli.subscriptions.retrieve(live.subscription.id)).status,
+		).toBe("active");
 	},
 );
 

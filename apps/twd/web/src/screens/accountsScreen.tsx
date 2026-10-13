@@ -160,8 +160,10 @@ export const AccountsScreen = () => {
 						<p className="text-xs text-subtle tabular-nums">
 							{cap.queuedRuns > 0 &&
 								`${cap.queuedRuns} run${cap.queuedRuns === 1 ? "" : "s"} queued for accounts · `}
-							{num(cap.accountsWanted)} more wanted by live runs · pool cap{" "}
-							{num(cap.poolCap)}
+							{num(cap.accountsWanted)} more wanted by live runs ·{" "}
+							{cap.slotsAwaitingWarm > 0 &&
+								`${num(cap.slotsAwaitingWarm)} more once warm builds finish · `}
+							pool cap {num(cap.poolCap)}
 						</p>
 					</div>
 				) : (

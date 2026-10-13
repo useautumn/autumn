@@ -1,6 +1,8 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import { CopySimpleIcon, InfoIcon } from "@phosphor-icons/react";
 import { resolveCopySourceScope } from "@/components/forms/customer-state/customerStateUtils";
+import {
+	CopyExistingPlansRow,
+	copyExistingPlansTooltip,
+} from "@/components/forms/shared/plan-tray/CopyExistingPlansRow";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 
 /** Seeds the opening phase with the customer's current plans at this row's scope. */
@@ -31,32 +33,14 @@ export function CopyExistingPlansButton({
 	}
 
 	return (
-		<div className="flex w-full items-center gap-2 border-b border-border/50 px-2 py-1.5 text-xs text-tertiary-foreground transition-colors hover:bg-interactive-secondary-hover">
-			<button
-				type="button"
-				className="flex min-w-0 flex-1 items-center gap-2"
-				onClick={() =>
-					handleCopyExistingPlans({ planIndex, entityId: copySource.entityId })
-				}
-			>
-				<CopySimpleIcon size={12} />
-				Copy existing plans
-			</button>
-			{(copySource.isFallback || scopeLabel) && (
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<InfoIcon
-							size={13}
-							className="shrink-0 cursor-default text-subtle transition-colors hover:text-muted-foreground"
-						/>
-					</TooltipTrigger>
-					<TooltipContent>
-						{copySource.isFallback
-							? "No customer-level plans — copies the first entity's plans"
-							: `Copies from selected scope: ${scopeLabel}`}
-					</TooltipContent>
-				</Tooltip>
-			)}
-		</div>
+		<CopyExistingPlansRow
+			tooltip={copyExistingPlansTooltip({
+				isFallback: copySource.isFallback,
+				scopeLabel,
+			})}
+			onCopy={() =>
+				handleCopyExistingPlans({ planIndex, entityId: copySource.entityId })
+			}
+		/>
 	);
 }

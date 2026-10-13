@@ -13,9 +13,15 @@ import { CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { type PopupSide, pickPopupSide } from "./pickPopupSide";
 import { ValueChip } from "./ValueChip";
 
 const MAX_VISIBLE_CHIPS = 3;
+const POPUP_MAX_HEIGHT = 340;
+const SIDE_OFFSET = 4;
+// Base UI's default collisionPadding, which --available-height subtracts.
+const COLLISION_PADDING = 5;
+const POPUP_FOOTPRINT = POPUP_MAX_HEIGHT + SIDE_OFFSET + COLLISION_PADDING;
 
 export type ValuePickerOption = {
 	value: string;
@@ -41,53 +47,71 @@ export function ValuePicker({
 	className?: string;
 	defaultOpen?: boolean;
 }) {
-	const [open, setOpen] = useState(defaultOpen);
+	const [popup, setPopup] = useState<{ open: boolean; side: PopupSide }>({
+		open: defaultOpen,
+		side: "bottom",
+	});
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
 
 	return (
 		<div className={cn("min-w-0", triggerClassName)}>
-			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger asChild>
-					<button
-						type="button"
-						className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
-					>
-						{selectedValues.length === 0 ? (
-							<span className="text-tertiary-foreground">{placeholder}</span>
-						) : (
-							<>
-								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
-									const opt = getOption(val);
-									return (
-										<ValueChip
-											key={val}
-											label={opt?.label ?? val}
-											icon={opt?.icon}
-											onRemove={() => onRemove(val)}
-											interactive={false}
-										/>
-									);
-								})}
-								{selectedValues.length > MAX_VISIBLE_CHIPS && (
-									<span className="text-sm text-tertiary-foreground px-1 shrink-0">
-										+{selectedValues.length - MAX_VISIBLE_CHIPS}
-									</span>
-								)}
-							</>
-						)}
-					</button>
+			<Popover
+				open={popup.open}
+				onOpenChange={(open, { trigger }) =>
+					setPopup({
+						open,
+						side: open
+							? pickPopupSide({ trigger, popupHeight: POPUP_FOOTPRINT })
+							: popup.side,
+					})
+				}
+			>
+				<PopoverTrigger
+					render={
+						<button
+							type="button"
+							className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
+						/>
+					}
+				>
+					{selectedValues.length === 0 ? (
+						<span className="text-tertiary-foreground">{placeholder}</span>
+					) : (
+						<>
+							{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
+								const opt = getOption(val);
+								return (
+									<ValueChip
+										key={val}
+										label={opt?.label ?? val}
+										icon={opt?.icon}
+										onRemove={() => onRemove(val)}
+										interactive={false}
+									/>
+								);
+							})}
+							{selectedValues.length > MAX_VISIBLE_CHIPS && (
+								<span className="text-sm text-tertiary-foreground px-1 shrink-0">
+									+{selectedValues.length - MAX_VISIBLE_CHIPS}
+								</span>
+							)}
+						</>
+					)}
 				</PopoverTrigger>
 				<PopoverContent
+					side={popup.side}
+					sideOffset={SIDE_OFFSET}
 					align="start"
-					className="w-(--anchor-width) p-0 z-200 overflow-hidden"
+					collisionAvoidance={{ side: "none", fallbackAxisSide: "none" }}
+					className="flex flex-col w-(--anchor-width) p-0 overflow-hidden"
 					style={{
-						transformOrigin: "var(--radix-popover-content-transform-origin)",
+						maxHeight: `min(var(--available-height), ${POPUP_MAX_HEIGHT}px)`,
 					}}
 				>
-					<Command className="bg-interactive-secondary">
+					<Command className="bg-interactive-secondary *:data-[slot=command-input-wrapper]:shrink-0">
 						<CommandInput placeholder="Search..." className="text-sm" />
-						<CommandList>
+						<CommandList className="max-h-none min-h-0">
 							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
 								No results
 							</CommandEmpty>

@@ -19,10 +19,15 @@
 				"commandsEnabled": false,
 				"cpu": { "min": "3", "desired": "3" },
 				"memory": { "min": "6Gi", "desired": "6Gi" },
+				"resourceChoices": {
+					"cpu": { "min": "1", "max": "15", "default": "3" },
+					"memory": { "min": "0.625Gi", "max": "24Gi", "default": "6Gi" }
+				},
 				"environment": {
 					"ATOM_HOSTNAME": "0.0.0.0",
 					"ATOM_PORT": "8080",
-					"ATOM_DATA_DIR": "/data"
+					"ATOM_DATA_DIR": "/data",
+					"ATOM_PEER_PORT": "8081"
 				},
 				"healthCheck": {
 					"path": "/health",
@@ -33,8 +38,8 @@
 				"kubernetesSecretMounts": [],
 				"links": [{ "type": "queue", "id": "pushes" }],
 				"permissions": "atom",
-				"persistentStorage": { "mountPath": "/data", "size": "10Gi" },
-				"ports": [{ "port": 8080 }],
+				"persistentStorage": { "mountPath": "/data", "size": "20Gi" },
+				"ports": [{ "port": 8080 }, { "port": 8081 }],
 				"publicEndpoints": [
 					{
 						"name": "api",
@@ -44,12 +49,24 @@
 					}
 				],
 				"stateful": true,
-				"replicas": 1
+				"replicas": 2
 			},
 			"lifecycle": "live",
 			"dependencies": []
 		}
 	},
+	"inputs": [
+		{
+			"id": "atomPeerSecret",
+			"kind": "secret",
+			"providedBy": ["developer"],
+			"required": true,
+			"label": "Atom peer secret",
+			"description": "What the Atom's replicas sign their requests to each other with. Alien generates it once per deployment; nobody outside the deployment holds it.",
+			"generate": { "length": 64 },
+			"env": [{ "name": "ATOM_PEER_SECRET", "type": "secret", "targetResources": ["atom"] }]
+		}
+	],
 	"permissions": {
 		"profiles": {
 			"atom": { "*": ["queue/data-read", "queue/data-write"] }

@@ -12,24 +12,24 @@
  */
 
 import { expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
-import chalk from "chalk";
+import { CusProductStatus, stripeRefToId } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
+import chalk from "chalk";
 import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService";
-import {
-	expectVercelWebhookSuccess,
-	VercelWebhookClient,
-} from "./utils/vercel-webhook-client";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
 import {
 	seedVercelCustomer,
 	seedVercelResource,
 	setupVercelOrg,
 } from "./utils/vercel-test-helpers";
+import {
+	expectVercelWebhookSuccess,
+	VercelWebhookClient,
+} from "./utils/vercel-webhook-client";
 
 const TEST_CASE = "vpaid";
 const HMAC_SECRET = "test_vercel_client_secret_paid";
@@ -97,10 +97,7 @@ const provisionAndGetInvoice = async ({
 	if (!subscription)
 		throw new Error("Expected Stripe subscription from provisionVercel");
 
-	const latestInvoiceId =
-		typeof subscription.latest_invoice === "string"
-			? subscription.latest_invoice
-			: subscription.latest_invoice?.id;
+	const latestInvoiceId = stripeRefToId(subscription.latest_invoice);
 	if (!latestInvoiceId)
 		throw new Error("Expected subscription.latest_invoice id");
 
@@ -225,8 +222,7 @@ test.concurrent(
 			),
 		);
 
-		const invoice =
-			await ctx.stripeCli.invoices.retrieve(externalInvoiceId);
+		const invoice = await ctx.stripeCli.invoices.retrieve(externalInvoiceId);
 		expect(invoice.status).toBe("paid");
 	},
 );

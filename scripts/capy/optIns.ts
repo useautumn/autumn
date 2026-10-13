@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 /** Stack pieces a Capy machine runs only after an agent opts in; markers survive sleep and reboot. */
 const OPT_INS = {
+	frontend: { envKeys: [], devServices: ["vite"] },
 	alien: { envKeys: ["ALIEN_API_KEY"], devServices: [] },
 	trigger: { envKeys: [], devServices: ["trigger"] },
 	eve: { envKeys: [], devServices: ["eve", "leaf"] },
@@ -14,13 +15,12 @@ const OPT_INS = {
 	{ envKeys: readonly string[]; devServices: readonly string[] }
 >;
 
-/** scripts/dev.ts service names every Capy stack runs. */
+/** scripts/dev.ts service names every Capy stack runs: what integration tests need, no frontend. */
 const DEFAULT_DEV_SERVICES = [
 	"server",
 	"workers",
 	"cron",
 	"balance-worker",
-	"vite",
 	"stripe",
 ];
 
@@ -79,16 +79,23 @@ export function withheldEnvKeys({
 	);
 }
 
-/** scripts/dev.ts services to launch: the defaults plus every opted-in piece. */
+/** Browser apps that integration tests never reach. */
+const FRONTEND_DEV_SERVICES = ["vite", "checkout", "leaf"];
+
+/** scripts/dev.ts services to launch: the defaults plus every opted-in piece, minus frontends when serverOnly. */
 export function capyDevServices({
 	dir = CAPY_OPT_IN_DIR,
+	serverOnly = false,
 }: {
 	dir?: string;
+	serverOnly?: boolean;
 } = {}): string[] {
-	return [
+	const services = [
 		...DEFAULT_DEV_SERVICES,
 		...CAPY_OPT_INS.filter((name) => isOptedIn({ name, dir })).flatMap(
 			(name) => [...OPT_INS[name].devServices],
 		),
 	];
+	if (!serverOnly) return services;
+	return services.filter((name) => !FRONTEND_DEV_SERVICES.includes(name));
 }

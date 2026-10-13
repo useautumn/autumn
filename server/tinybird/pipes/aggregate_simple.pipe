@@ -4,6 +4,7 @@ DESCRIPTION >
     use_monthly_rollup=1 (server-set, UTC month bins only) serves the complete months of the window
     from events_customer_monthly_mv and only the partial months at either end from the hourly rollup.
     A window ending at now (or later) reads its open hour from the hourly rollup instead of raw events.
+    Returns (period, event_name, total_value, event_count).
 
 TOKEN "aggregate_simple_read" READ
 
@@ -23,12 +24,14 @@ SQL >
     SELECT
         period,
         event_name,
-        sum(total_value_value) as total_value
+        sum(total_value_value) as total_value,
+        sum(event_count_value) as event_count
     FROM (
         SELECT
             formatDateTime(month, '%F %T') as period,
             event_name,
-            sumMerge(total_value) as total_value_value
+            sumMerge(total_value) as total_value_value,
+            sumMerge(event_count) as event_count_value
         FROM events_customer_monthly_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -53,7 +56,8 @@ SQL >
         SELECT
             formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
             event_name,
-            sum(total_value) as total_value_value
+            sum(total_value) as total_value_value,
+            sum(event_count) as event_count_value
         FROM events_customer_hourly_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -95,7 +99,8 @@ SQL >
         formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         event_name,
-        sum(total_value) as total_value
+        sum(total_value) as total_value,
+        sum(event_count) as event_count
     FROM {% if not no_property_filters %}events_hourly_mv{% elif use_org_rollup %}events_org_hourly_mv{% else %}events_customer_hourly_mv{% end %}
     WHERE
         org_id = {{ String(org_id, '') }}
@@ -152,7 +157,8 @@ SQL >
         formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         event_name,
-        sum(toFloat64(coalesce(value, 1))) as total_value
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
     FROM events
     WHERE org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
@@ -188,11 +194,11 @@ SQL >
 NODE endpoint
 TYPE endpoint
 SQL >
-    SELECT period, event_name, sum(total_value) as total_value
+    SELECT period, event_name, sum(total_value) as total_value, sum(event_count) as event_count
     FROM (
-        SELECT period, event_name, total_value FROM rollup
+        SELECT period, event_name, total_value, event_count FROM rollup
         UNION ALL
-        SELECT period, event_name, total_value FROM boundary_events
+        SELECT period, event_name, total_value, event_count FROM boundary_events
     )
     GROUP BY period, event_name
     ORDER BY period, event_name

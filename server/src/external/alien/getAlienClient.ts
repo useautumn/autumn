@@ -3,9 +3,9 @@ import {
 	type AlienClient,
 	type AlienConfig,
 	createAlienClient,
-	isAlienRequestError,
 } from "@autumn/alien";
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import { alienErrorToByocUnavailable } from "./alienErrorToByocUnavailable.js";
 
 let alienClient: AlienClient | null | undefined;
 
@@ -27,16 +27,6 @@ const envToAlienConfig = (): AlienConfig | null => {
 	return null;
 };
 
-const toByocUnavailable = ({ error }: { error: unknown }) => {
-	if (!isAlienRequestError(error)) return error;
-	return new RecaseError({
-		message: "Cache deployments are unavailable right now. Try again shortly.",
-		code: ErrCode.ByocUnavailable,
-		statusCode: 503,
-		data: { path: error.path, status: error.status, detail: error.detail },
-	});
-};
-
 /** An unanswered or refused alien call reaches API callers as a 503, never a 500. */
 const withByocErrors =
 	<Params, Result>(call: (params: Params) => Promise<Result>) =>
@@ -44,20 +34,25 @@ const withByocErrors =
 		try {
 			return await call(params);
 		} catch (error) {
-			throw toByocUnavailable({ error });
+			throw alienErrorToByocUnavailable({ error });
 		}
 	};
 
 const createServerAlienClient = (): AlienClient | null => {
 	const config = envToAlienConfig();
 	if (!config) return null;
-	const client = createAlienClient({ config });
+	const client = createAlienClient({ config, logger });
 	return {
 		startSetup: withByocErrors(client.startSetup),
+		findDeploymentGroup: withByocErrors(client.findDeploymentGroup),
 		findDeployment: withByocErrors(client.findDeployment),
+		getDeployment: withByocErrors(client.getDeployment),
+		retryDeployment: withByocErrors(client.retryDeployment),
 		updateDeploymentCompute: withByocErrors(client.updateDeploymentCompute),
 		deleteDeployment: withByocErrors(client.deleteDeployment),
-		revokeSetupLinks: withByocErrors(client.revokeSetupLinks),
+		revokeSetupLinksOnceDeleted: withByocErrors(
+			client.revokeSetupLinksOnceDeleted,
+		),
 	};
 };
 

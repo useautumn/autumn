@@ -1,10 +1,11 @@
 import {
+	CusProductStatus,
 	customerProducts,
 	customers,
 	type FullCustomer,
 	products,
 } from "@autumn/shared";
-import { and, eq, isNotNull, or } from "drizzle-orm";
+import { and, eq, isNotNull, ne, or } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
 /** Fetch all customer_products rows with a free trial for a given customer (or matching fingerprint). */
@@ -43,6 +44,7 @@ export const fetchCustomerProductFreeTrials = async ({
 				eq(products.org_id, org.id),
 				eq(products.env, env),
 				isNotNull(customerProducts.trial_ends_at),
+				ne(customerProducts.status, CusProductStatus.Pending),
 			),
 		);
 

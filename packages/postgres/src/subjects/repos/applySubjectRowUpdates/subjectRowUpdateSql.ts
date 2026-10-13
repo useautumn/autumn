@@ -59,6 +59,15 @@ const tableNames: Record<SubjectRowTable, string> = {
 	locks: "balance_locks",
 };
 
+/** The columns this build's table has: a newer build's column is not among them and must not reach the SQL. */
+export const isSubjectRowColumn = ({
+	table,
+	column,
+}: {
+	table: SubjectRowTable;
+	column: string;
+}): boolean => column in getTableColumns(tables[table]);
+
 export class UnknownSubjectRowColumnError extends Error {
 	constructor({ table, column }: { table: string; column: string }) {
 		super(`Unknown column for ${table}: ${column}`);

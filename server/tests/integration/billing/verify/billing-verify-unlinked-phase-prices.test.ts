@@ -20,6 +20,7 @@ import {
 	type CreateScheduleParamsV0Input,
 	findPriceByFeatureId,
 	ms,
+	stripeRefToId,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -55,7 +56,7 @@ const activeSubscriptionFor = async ({
 };
 
 const phaseItemPriceId = (item: Stripe.SubscriptionSchedule.Phase.Item) =>
-	typeof item.price === "string" ? item.price : item.price.id;
+	stripeRefToId(item.price);
 
 const phaseItemPrice = (item: Stripe.SubscriptionSchedule.Phase.Item) =>
 	typeof item.price !== "string" && "recurring" in item.price
@@ -63,9 +64,7 @@ const phaseItemPrice = (item: Stripe.SubscriptionSchedule.Phase.Item) =>
 		: undefined;
 
 const scheduleIdOf = (subscription: Stripe.Subscription) =>
-	typeof subscription.schedule === "string"
-		? subscription.schedule
-		: subscription.schedule?.id;
+	stripeRefToId(subscription.schedule);
 
 const phaseUpdateParams = (
 	phase: Stripe.SubscriptionSchedule.Phase,

@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { msToSeconds, stripeToAtmnAmount } from "@autumn/shared";
+import { msToSeconds, stripeRefToId, stripeToAtmnAmount } from "@autumn/shared";
 import {
 	calculateProration,
 	calculateProrationFromPeriod,
@@ -70,10 +70,7 @@ export const expectNextCycleTotalMatchesStripe = async ({
 		customerId,
 		status: "active",
 	});
-	const scheduleId =
-		typeof subscription.schedule === "string"
-			? subscription.schedule
-			: subscription.schedule?.id;
+	const scheduleId = stripeRefToId(subscription.schedule);
 	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
 	const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
 		customer: subscription.customer as string,

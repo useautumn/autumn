@@ -9,6 +9,7 @@ import type {
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { autoTopupLimitRepo } from "../../repos";
+import { DELAYED_PAYMENT_SUSPENDED_REASON } from "../delayedPaymentMethods.js";
 import {
 	addToLimitsUpdate,
 	normalizeWindowCounter,
@@ -23,12 +24,14 @@ export const preflightAutoTopupLimits = async ({
 	fullCustomer,
 	autoTopupConfig,
 	paymentMethod,
+	invoiceMode = false,
 }: {
 	ctx: AutumnContext;
 	payload: AutoTopupJobPayload;
 	fullCustomer: FullCustomer;
 	autoTopupConfig: AutoTopup;
 	paymentMethod?: Stripe.PaymentMethod | null;
+	invoiceMode?: boolean;
 }): Promise<{
 	allowed: boolean;
 	reason?: BillingAutoTopupFailureReason;
@@ -47,7 +50,11 @@ export const preflightAutoTopupLimits = async ({
 
 	// Durable circuit breaker. Checked before any window arithmetic so that an
 	// expired window can never resurrect a customer whose card keeps declining.
-	if (state.suspended_at) {
+	// Invoice mode never charges the saved method, so a slow-method suspension doesn't apply.
+	const bypassesDelayedSuspension =
+		invoiceMode && state.suspended_reason === DELAYED_PAYMENT_SUSPENDED_REASON;
+
+	if (state.suspended_at && !bypassesDelayedSuspension) {
 		const currentFingerprint = paymentMethodToFingerprint({ paymentMethod });
 		const hasNewPaymentInfo =
 			Boolean(currentFingerprint) &&

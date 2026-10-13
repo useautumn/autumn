@@ -234,8 +234,8 @@ export function CustomerListTable({
 						Customers
 					</Table.Heading>
 					<Table.Actions>
-						<CustomerListCreateButton />
 						<CustomerListExportMenu />
+						<CustomerListCreateButton />
 					</Table.Actions>
 				</Table.Toolbar>
 				<div className="flex flex-wrap items-center gap-2 pb-4">

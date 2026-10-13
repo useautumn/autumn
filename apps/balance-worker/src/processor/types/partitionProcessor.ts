@@ -31,6 +31,8 @@ import type {
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	ColdStartScope,
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -42,6 +44,7 @@ import type { InlineTrackBatchOutcome } from "../commands/trackBatchInline.js";
 import type { InlineTrackDecision } from "../commands/trackInline.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
+import type { ResidentDrop } from "../writer/subjectMap/types/subjectMap.js";
 import type { CommitPositionSink } from "../writer/types/commitPositionSink.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
 import type {
@@ -88,6 +91,8 @@ export type PartitionProcessor = {
 		command: EvictCommand;
 		waitsForSnapshotDelete?: boolean;
 	}): Promise<EvictReply>;
+	/** Leaves the partition cold once its earlier writes are stored; Postgres keeps every row true, so nothing is logged. */
+	evictResident(params: { coldStart: ColdStartScope }): Promise<ResidentDrop>;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {
@@ -129,10 +134,12 @@ export type PartitionProcessorDependencies = {
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	/** Where the partition's writer publishes its commit position. */
 	commitPositions?: CommitPositionSink;
+	onRecoveryRequired?: PartitionWriterContext["onRecoveryRequired"];
 	assertCanRead(): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };

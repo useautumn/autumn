@@ -15,6 +15,7 @@ import {
 	isSubjectNotFound,
 } from "../../utils/getSubjectFullCustomer.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import { toTokenFeatureDeduction } from "./tokenFeatureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
 	features,
@@ -142,9 +143,8 @@ export const getTokenTrackParams = async ({
 	const cost = pricing.cost;
 
 	const featureDeductions: FeatureDeduction[] = [
-		{
+		toTokenFeatureDeduction({
 			feature: aiCreditFeature,
-			deduction: 1,
 			tokens: {
 				usage: {
 					modelName: input.model_id,
@@ -153,7 +153,7 @@ export const getTokenTrackParams = async ({
 				},
 				cost,
 			},
-		},
+		}),
 	];
 
 	const body: TrackParams = {

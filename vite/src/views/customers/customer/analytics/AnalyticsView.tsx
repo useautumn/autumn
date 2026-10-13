@@ -2,16 +2,14 @@ import { ErrCode } from "@autumn/shared";
 import { PageContainer } from "@autumn/ui";
 import { ChartBarIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
 import type { EventRow, EventsData } from "./components/analytics-types";
-import { ChartSkeleton } from "./components/ChartSkeleton";
-import { FirstLoadNotice } from "./components/FirstLoadNotice";
+import { ChartLoadingStubs } from "./components/ChartLoadingStubs";
 import { QueryStrip } from "./components/query/QueryStrip";
-import { UpdatingBar } from "./components/UpdatingBar";
 import {
 	type TablePlaceholder,
 	UsageBreakdownTable,
@@ -22,18 +20,12 @@ import {
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import { useFadeTransition } from "./hooks/useFadeTransition";
 import { type ShownChart, useLastShownChart } from "./hooks/useLastShownChart";
 import { useResetQuery } from "./hooks/useResetQuery";
 import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
-import {
-	DEFAULT_PLOT_INSETS,
-	getCachedPlotInsets,
-	niceAxisTicks,
-	type PlotInsets,
-	plotInsetsEqual,
-	predictBinStarts,
-	setCachedPlotInsets,
-} from "./utils/chartGeometry";
+import { niceAxisTicks, predictBinStarts } from "./utils/chartGeometry";
+import { chartGeometryOf, chartLoadingState } from "./utils/chartLoadingState";
 import { deductionsToEventsData } from "./utils/deductionsToEventsData";
 import { SOURCE_FEATURE_GROUP } from "./utils/displayLabels";
 import { dropZeroRowsKeepingPeriods } from "./utils/dropZeroRowsKeepingPeriods";
@@ -46,7 +38,7 @@ import {
 	hideGroupSeries,
 } from "./utils/hideGroupValues";
 import { formatBinStartLabel } from "./utils/parseTimestamp";
-import { assignSeriesColors } from "./utils/seriesColors";
+import { assignSeriesColors, eventColor } from "./utils/seriesColors";
 import {
 	dropZeroSeries,
 	generateChartConfig,
@@ -55,10 +47,10 @@ import {
 	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
 
-// Quick cross-fade: a staged reveal read as the chart vanishing and popping back.
-const CHART_FADE = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const MAX_CHART_SERIES = 30;
-const STALE_OPACITY = 0.35;
+// The last result stays readable behind a load that only changes the data.
+const STALE_CHART_OPACITY = 0.35;
+const STALE_TABLE_OPACITY = 0.5;
 // Matches the default of charting the top three events.
 const PLACEHOLDER_TABLE_ROWS = 3;
 
@@ -99,20 +91,15 @@ export const AnalyticsView = () => {
 
 	const env = useEnv();
 	const resetQuery = useResetQuery();
+	const fade = useFadeTransition();
 	const { queryStates } = useAnalyticsQueryState();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
-	const [plotInsets, setPlotInsets] = useState<PlotInsets>(
-		() => getCachedPlotInsets() ?? DEFAULT_PLOT_INSETS,
-	);
-	const handlePlotGeometry = useCallback((insets: PlotInsets) => {
-		setCachedPlotInsets(insets);
-		setPlotInsets((prev) => (plotInsetsEqual(prev, insets) ? prev : insets));
-	}, []);
 
 	const {
 		customer,
 		deductions,
 		aggregateOn,
+		measure,
 		features,
 		events,
 		queryLoading,
@@ -195,7 +182,7 @@ export const AnalyticsView = () => {
 	const chartGroupBy = isDeducted ? (groupBy ?? SOURCE_FEATURE_GROUP) : groupBy;
 	const chartSource = isDeducted ? deductionEvents : events;
 
-	// Ranked before hiding groups, so hiding one never repaints the others.
+	// Coloured before hiding groups, so hiding one never repaints the others.
 	const seriesColors = useMemo(() => {
 		if (!chartSource) return {};
 		return assignSeriesColors({
@@ -205,8 +192,9 @@ export const AnalyticsView = () => {
 				chartGroupBy,
 				isDeducted,
 			}),
+			eventNames: responseEventNames,
 		});
-	}, [chartSource, groupBy, chartGroupBy, isDeducted]);
+	}, [chartSource, groupBy, chartGroupBy, isDeducted, responseEventNames]);
 
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
@@ -273,18 +261,17 @@ export const AnalyticsView = () => {
 		return niceAxisTicks({ max: Math.max(...totals, 1) });
 	}, [chartData, chartConfig]);
 
-	// Only an ungrouped chart has one colour per event; grouped series belong to groups.
-	const eventColors = useMemo(() => {
-		const colorsByEvent: Record<string, string> = {};
-		if (groupBy || isDeducted || !chartConfig) return colorsByEvent;
-		for (const name of responseEventNames) {
-			const series = chartConfig.find(
-				(c) => c.yKey === `${name}_count` || c.yKey === name,
-			);
-			if (series) colorsByEvent[name] = series.fill;
-		}
-		return colorsByEvent;
-	}, [chartConfig, groupBy, isDeducted, responseEventNames]);
+	// Each selected event's own colour, known before data lands and kept when grouping recolours its series.
+	const eventColors = useMemo(
+		() =>
+			Object.fromEntries(
+				responseEventNames.map((name: string, eventIndex: number) => [
+					name,
+					eventColor({ eventIndex }),
+				]),
+			),
+		[responseEventNames],
+	);
 
 	// A group can own several series (one per event); its first colour stands for it.
 	const groupColors = useMemo(() => {
@@ -353,6 +340,76 @@ export const AnalyticsView = () => {
 		],
 	);
 
+	const showRevenueMetrics =
+		env === "live" &&
+		!isFeatureFlagsLoading &&
+		!flags.maintenanceModes.analytics.disableRevenueMetrics;
+
+	const { interval, bin_size, start, end } = queryStates;
+	const geometry = chartGeometryOf({ interval, binSize: bin_size, start, end });
+
+	const freshChart = useMemo<ShownChart | null>(
+		() =>
+			!queryLoading && chartData && chartConfig && chartData.data.length > 0
+				? {
+						chartData,
+						chartConfig,
+						chartTicks,
+						unit: measure === "count" ? "events" : undefined,
+						geometry: chartGeometryOf({
+							interval,
+							binSize: bin_size,
+							start,
+							end,
+						}),
+					}
+				: null,
+		[
+			queryLoading,
+			chartData,
+			chartConfig,
+			chartTicks,
+			measure,
+			interval,
+			bin_size,
+			start,
+			end,
+		],
+	);
+	const lastChart = useLastShownChart({
+		chart: freshChart,
+		isLoading: queryLoading,
+	});
+	const loadingState = queryLoading
+		? chartLoadingState({
+				current: geometry,
+				previous: lastChart?.geometry ?? null,
+			})
+		: null;
+	const isStale = loadingState === "dim";
+	const isShowingStubs = loadingState === "stubs";
+	const displayedChart = freshChart ?? (isStale ? lastChart : null);
+
+	// The new range's bins, known before any data: stubs on the chart, columns in the table.
+	const loadingBinStarts = useMemo(
+		() =>
+			isShowingStubs
+				? predictBinStarts({ interval, binSize: bin_size, start, end })
+				: null,
+		[isShowingStubs, interval, bin_size, start, end],
+	);
+	const tablePlaceholder = useMemo<TablePlaceholder | null>(
+		() =>
+			loadingBinStarts && {
+				rowCount: PLACEHOLDER_TABLE_ROWS,
+				periodLabels: loadingBinStarts.map((binStart) =>
+					formatBinStartLabel({ binStart, interval }),
+				),
+			},
+		[loadingBinStarts, interval],
+	);
+	const isEmpty = !queryLoading && !freshChart;
+
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
@@ -362,45 +419,6 @@ export const AnalyticsView = () => {
 			</div>
 		);
 	}
-
-	const showRevenueMetrics =
-		env === "live" &&
-		!isFeatureFlagsLoading &&
-		!flags.maintenanceModes.analytics.disableRevenueMetrics;
-
-	const freshChart = useMemo<ShownChart | null>(
-		() =>
-			!queryLoading && chartData && chartConfig && chartData.data.length > 0
-				? {
-						chartData,
-						chartConfig,
-						chartTicks,
-						interval: queryStates.interval,
-					}
-				: null,
-		[queryLoading, chartData, chartConfig, chartTicks, queryStates.interval],
-	);
-	const { displayedChart, isStale } = useLastShownChart({
-		chart: freshChart,
-		isLoading: queryLoading,
-	});
-	const isFirstLoad = queryLoading && !displayedChart;
-
-	// Fixed shape so the table changes once, when names and numbers land together.
-	const tablePlaceholder = useMemo<TablePlaceholder | null>(() => {
-		if (!isFirstLoad) return null;
-		const { interval, bin_size, start, end } = queryStates;
-		return {
-			rowCount: PLACEHOLDER_TABLE_ROWS,
-			periodLabels: predictBinStarts({
-				interval,
-				binSize: bin_size,
-				start,
-				end,
-			}).map((binStart) => formatBinStartLabel({ binStart, interval })),
-		};
-	}, [isFirstLoad, queryStates]);
-	const isEmpty = !queryLoading && !freshChart;
 
 	const emptyMessage =
 		eventNames.length === 0
@@ -430,16 +448,14 @@ export const AnalyticsView = () => {
 					<div className="flex flex-col flex-1 min-h-0 min-w-0">
 						<div className="pb-8 shrink-0">
 							<div className="relative flex flex-col h-[300px]">
-								{isStale && <UpdatingBar />}
 								<AnimatePresence initial={false}>
-									{isFirstLoad && (
-										<motion.div
-											key="skeleton"
-											className="absolute inset-0 flex flex-col"
-											exit={{ opacity: 0, transition: CHART_FADE }}
-										>
-											<ChartSkeleton geometry={plotInsets} />
-										</motion.div>
+									{loadingBinStarts && (
+										<ChartLoadingStubs
+											key="stubs"
+											binStarts={loadingBinStarts}
+											interval={interval}
+											seriesCount={lastChart?.chartConfig.length ?? 1}
+										/>
 									)}
 								</AnimatePresence>
 								<AnimatePresence>
@@ -449,10 +465,10 @@ export const AnalyticsView = () => {
 											className="absolute inset-0 flex flex-col"
 											initial={{ opacity: 0 }}
 											animate={{
-												opacity: isStale ? STALE_OPACITY : 1,
-												transition: CHART_FADE,
+												opacity: isStale ? STALE_CHART_OPACITY : 1,
+												transition: fade,
 											}}
-											exit={{ opacity: 0, transition: CHART_FADE }}
+											exit={{ opacity: 0, transition: fade }}
 											inert={isStale}
 										>
 											<div className="flex-1 min-h-0">
@@ -464,13 +480,12 @@ export const AnalyticsView = () => {
 													}
 													chartConfig={displayedChart.chartConfig}
 													ticks={displayedChart.chartTicks}
-													onGeometry={handlePlotGeometry}
+													unit={displayedChart.unit}
 												/>
 											</div>
 										</motion.div>
 									)}
 								</AnimatePresence>
-								<FirstLoadNotice active={isFirstLoad} />
 								{isEmpty && (
 									<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
 										<ChartBarIcon
@@ -486,21 +501,29 @@ export const AnalyticsView = () => {
 							</div>
 						</div>
 
-						<div className="flex-1 min-h-0 overflow-y-auto pb-2">
+						<div className="flex flex-1 min-h-0 flex-col pb-2">
 							<motion.div
-								key={isFirstLoad ? "table-placeholder" : "table"}
+								key={isShowingStubs ? "table-placeholder" : "table"}
+								className="flex min-h-0 flex-col"
 								initial={{ opacity: 0 }}
-								animate={{ opacity: isStale ? STALE_OPACITY : 1 }}
-								transition={CHART_FADE}
+								animate={{ opacity: isStale ? STALE_TABLE_OPACITY : 1 }}
+								transition={fade}
 								inert={isStale}
 							>
 								<UsageBreakdownTable
 									chartData={displayedChart?.chartData ?? chartData}
 									chartConfig={displayedChart?.chartConfig ?? chartConfig}
-									interval={displayedChart?.interval ?? queryStates.interval}
+									interval={displayedChart?.geometry.interval ?? interval}
 									nameHeader={chartGroupBy ? "Series" : "Event"}
-									isLoading={isFirstLoad}
+									isLoading={isShowingStubs}
 									placeholder={tablePlaceholder}
+									unit={
+										displayedChart
+											? displayedChart.unit
+											: measure === "count"
+												? "events"
+												: undefined
+									}
 								/>
 							</motion.div>
 						</div>

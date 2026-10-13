@@ -262,7 +262,7 @@ Plans combine features with pricing to create your subscription tiers, add-ons a
 </ParamField>
 
 <ParamField body="config" type="object">
-  `{ ignorePastDue: true }` keeps this plan's balances resetting on schedule even when the customer is past due.
+  `{ ignorePastDue: true }` keeps this plan's balances resetting on schedule even when the customer is past due. `{ anchorToMonthStart: true }` bills and resets on the 1st of each month (UTC). Leave `config` out to manage these flags elsewhere; once stated, it is the full set, so a flag it leaves out is off and `config: {}` turns them all off.
 </ParamField>
 
 <ParamField body="metadata" type="object">

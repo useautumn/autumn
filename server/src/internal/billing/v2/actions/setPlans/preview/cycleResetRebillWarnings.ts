@@ -2,6 +2,7 @@ import {
 	boldText,
 	type FullCusProduct,
 	type LineItem,
+	type ProrationBehaviorOverride,
 	plainText,
 	punctuationText,
 	type SetPlansPreviewWarning,
@@ -40,10 +41,13 @@ const listedLabels = (labels: string[]): SetPlansTextPart[] =>
  */
 export const cycleResetRebillWarnings = ({
 	resetsCycleNow,
+	prorationOverride,
 	lineItems,
 	liveCustomerProducts,
 }: {
 	resetsCycleNow: boolean;
+	/** Ending a trial with the reset bills the full period instead of prorating it. */
+	prorationOverride?: ProrationBehaviorOverride;
 	/** The line items the immediate invoice bills. */
 	lineItems: LineItem[];
 	/** Plans live on the subscription before the request. */
@@ -78,14 +82,25 @@ export const cycleResetRebillWarnings = ({
 	];
 	if (rebilledLabels.length === 0) return [];
 
+	const billsFullPeriod = prorationOverride === "bills_full_period";
 	return [
 		{
 			type: "cycle_reset_rebills_plans",
-			...warningText([
-				plainText("Resetting the billing cycle also re-bills"),
-				...listedLabels(rebilledLabels),
-				punctuationText(", prorated, as Stripe does."),
-			]),
+			...warningText(
+				billsFullPeriod
+					? [
+							plainText("The trial ends now, so"),
+							...listedLabels(rebilledLabels),
+							plainText(
+								`${rebilledLabels.length === 1 ? "is" : "are"} billed for the full period now.`,
+							),
+						]
+					: [
+							plainText("Resetting the billing cycle also re-bills"),
+							...listedLabels(rebilledLabels),
+							punctuationText(", prorated, as Stripe does."),
+						],
+			),
 		},
 	];
 };

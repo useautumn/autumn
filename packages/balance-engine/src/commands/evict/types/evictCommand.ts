@@ -11,13 +11,13 @@ export const evictCommandSchema = baseCommandSchema
 		/** The owner rebuilds the customer's snapshot rows after the drop: only for a customer the worker keeps writing, never on a rollback; absent is no. */
 		refreshSnapshots: z.boolean().optional(),
 	})
-	.strict();
+	.loose();
 
 export type EvictCommand = z.infer<typeof evictCommandSchema>;
 
 /** The evict as the worker logs it, under an id it mints: nothing moves, but readers learn the rows changed. */
 const loggedEvictCommandSchema = mutatingCommandSchema
 	.extend({ type: z.literal("evict") })
-	.strict();
+	.loose();
 
 export type LoggedEvictCommand = z.infer<typeof loggedEvictCommandSchema>;

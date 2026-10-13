@@ -1,5 +1,4 @@
 import {
-	isCustomerProductOnStripeSubscription,
 	type MultiUpdatePreviewResponseV0,
 	type MultiUpdateSubscriptionPreviewV0,
 	orgToCurrency,
@@ -41,11 +40,7 @@ export const buildMultiUpdatePreviewResponse = async ({
 				stripe: subscriptionPlan.stripeBillingPlan,
 				preview,
 			},
-			nextCycleCustomerProductFilter: (customerProduct) =>
-				isCustomerProductOnStripeSubscription({
-					customerProduct,
-					stripeSubscriptionId: subscriptionPlan.subscriptionId,
-				}) === true,
+			nextCycleStripeSubscriptionId: subscriptionPlan.subscriptionId,
 		});
 
 		subscriptions.push({

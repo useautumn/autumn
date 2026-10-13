@@ -11,7 +11,7 @@ import {
 	groupValueLabel,
 	RESERVED_GROUP,
 } from "./displayLabels";
-import { isOtherSeries, OTHER_SERIES_COLOR } from "./seriesColors";
+import { eventColor, isOtherSeries } from "./seriesColors";
 
 /**
  * Chart series configuration
@@ -289,7 +289,8 @@ export function generateChartConfig({
 	customerNames?: Record<string, CustomerDisplayInfo>;
 	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
-	const colorFor = (key: string) => seriesColors[key] ?? OTHER_SERIES_COLOR;
+	const colorFor = (key: string) =>
+		seriesColors[key] ?? eventColor({ eventIndex: 0 });
 
 	if (!groupBy) {
 		return events.meta

@@ -6,12 +6,9 @@ import { z } from "zod/v4";
 import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetAdminShadowAtomConfig } from "@/internal/admin/handleGetAdminShadowAtomConfig.js";
-import { handleMintAdminShadowAtomToken } from "@/internal/admin/handleMintAdminShadowAtomToken.js";
 import { handleSetAdminShadowAtomOrgPercent } from "@/internal/admin/handleSetAdminShadowAtomOrgPercent.js";
 import { handleUpsertAdminShadowAtomConfig } from "@/internal/admin/handleUpsertAdminShadowAtomConfig.js";
-import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
-import { decryptData } from "@/utils/encryptUtils.js";
 
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
 process.env.ENCRYPTION_PASSWORD = "shadow-atom-admin-test-password";
@@ -60,10 +57,6 @@ const createApp = ({ scopes }: { scopes: string[] }) => {
 	);
 	app.get("/admin/shadow-atom-config", ...handleGetAdminShadowAtomConfig);
 	app.put("/admin/shadow-atom-config", ...handleUpsertAdminShadowAtomConfig);
-	app.post(
-		"/admin/shadow-atom-config/token",
-		...handleMintAdminShadowAtomToken,
-	);
 	app.patch(
 		"/admin/shadow-atom-config/orgs/:org_id",
 		...handleSetAdminShadowAtomOrgPercent,
@@ -157,29 +150,6 @@ test("a save cannot touch the admin token or the registered orgs, and answers wi
 		"orgs",
 	]);
 	expect(body.orgs).toEqual({ org_1: { registeredAt: 7, percent: 40 } });
-});
-
-const mint = ({ scopes }: { scopes: string[] }) =>
-	createApp({ scopes }).request("/admin/shadow-atom-config/token", {
-		method: "POST",
-	});
-
-test("staff mint the admin token: stored encrypted, its hash returned once for the multi-tenant Atom's ATOM_TOKEN_HASH", async () => {
-	const response = await mint({ scopes: [Scopes.Superuser] });
-
-	expect(response.status).toBe(200);
-	const body = await response.json();
-	const saved = write.mock.calls[0][0].config;
-	const token = decryptData(saved.adminEncryptedToken ?? "");
-	expect(token).toStartWith("atom_");
-	expect(body).toEqual({ admin_token_hash: atomTokenToHash({ token }) });
-});
-
-test("an org's own key cannot mint the shadow Atom's admin token", async () => {
-	const response = await mint({ scopes: [Scopes.Organisation.Write] });
-
-	expect(response.status).toBe(403);
-	expect(write).not.toHaveBeenCalled();
 });
 
 const setPercent = ({

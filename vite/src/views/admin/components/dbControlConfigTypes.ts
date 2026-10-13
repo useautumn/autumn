@@ -2,6 +2,10 @@ export type DbControlConfig = {
 	balanceCommitter: {
 		/** Flushes in flight per balance worker; null keeps the worker's pool size. */
 		concurrency: number | null;
+		/** How long committed batches gather before one flush; null keeps the worker's boot value. */
+		applyLingerMs: number | null;
+		/** Committed batches one flush takes; null keeps the worker's boot value. */
+		maxBatchesPerFlush: number | null;
 	};
 	configHealthy?: boolean;
 	configConfigured?: boolean;
@@ -10,11 +14,17 @@ export type DbControlConfig = {
 };
 
 export const DB_CONTROL_DEFAULTS: DbControlConfig = {
-	balanceCommitter: { concurrency: null },
+	balanceCommitter: {
+		concurrency: null,
+		applyLingerMs: null,
+		maxBatchesPerFlush: null,
+	},
 };
 
 export const DB_CONTROL_LIMITS = {
 	concurrency: { min: 1, max: 64 },
+	applyLingerMs: { min: 0, max: 5_000 },
+	maxBatchesPerFlush: { min: 1, max: 64 },
 } as const;
 
 export const DB_CONTROL_QUERY_KEY = [

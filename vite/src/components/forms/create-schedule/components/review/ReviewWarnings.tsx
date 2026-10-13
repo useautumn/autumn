@@ -6,7 +6,6 @@ import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextL
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"subscription_replaced",
 	"open_invoice_not_collected",
-	"discount_not_carried",
 	"usage_not_billed",
 	"unmanaged_stripe_item_removed",
 	"future_phase_removed",

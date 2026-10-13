@@ -4,22 +4,14 @@ import { createContext, SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getKeyGate } from "../../keys/repos/keyGateRepo.ts";
 import { LIVE_RUN_STATUSES } from "../../runs/repos/runsRepo.ts";
-import {
-	type ClaimedAccount,
-	claimAccountsForRun,
-} from "../actions/accountLedger.ts";
+import { claimAccountsForRun } from "../actions/accountLedger.ts";
 import { countHeldAccountsByRun } from "../repos/accountCountsRepo.ts";
+import { type RunDemand, runDemands } from "./runDemands.ts";
 import { topUpPool } from "./topUpPool.ts";
 
 const TICK_MS = 2_000;
 
-/** A swarm job ready to take accounts. The allocator lowers `wants` by what it delivers. */
-export type RunDemand = {
-	wants: number;
-	deliver: (accounts: ClaimedAccount[]) => void;
-};
-
-const demands = new Map<string, RunDemand>();
+const demands = runDemands;
 let allocatorCtx: TwdContext | undefined;
 let ticking: Promise<void> | undefined;
 let tickAgain = false;
@@ -105,10 +97,6 @@ export const registerRunDemand = ({
 		if (demands.get(runId) === demand) demands.delete(runId);
 	};
 };
-
-/** Accounts a registered run can still use now; undefined when the run is not taking accounts. */
-export const getRunDemand = ({ runId }: { runId: string }) =>
-	demands.get(runId)?.wants;
 
 export const startAllocator = (): (() => void) => {
 	allocatorCtx = createContext({ actor: SYSTEM_ACTOR });

@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionScheduleToPhaseIndex } from "./convertStripeSubscriptionScheduleUtils";
 
@@ -27,7 +28,7 @@ const phaseItemToPriceId = ({
 	item,
 }: {
 	item: Stripe.SubscriptionSchedule.Phase.Item;
-}): string => (typeof item.price === "string" ? item.price : item.price.id);
+}): string => stripeRefToId(item.price);
 
 /** Each ongoing item bills on as the previous phase billed it; a changed quantity is a scheduled change. */
 const continuesOngoingItems = ({

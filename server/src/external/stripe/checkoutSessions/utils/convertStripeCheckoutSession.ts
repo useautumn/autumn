@@ -1,4 +1,9 @@
-import { type FullProduct, type Price, priceToEnt } from "@autumn/shared";
+import {
+	type FullProduct,
+	type Price,
+	priceToEnt,
+	stripeRefToId,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeCheckoutSessionUtils } from "@/external/stripe/checkoutSessions/utils";
 import { stripeItemToFeatureOptionsQuantity } from "@/external/stripe/common/utils/stripeItemToFeatureOptionsQuantity";
@@ -8,9 +13,7 @@ export const stripeCheckoutSessionToSubscriptionId = async ({
 }: {
 	stripeCheckoutSession: Stripe.Checkout.Session;
 }) => {
-	return typeof stripeCheckoutSession.subscription === "string"
-		? stripeCheckoutSession.subscription
-		: (stripeCheckoutSession.subscription?.id ?? null);
+	return stripeRefToId(stripeCheckoutSession.subscription) ?? null;
 };
 
 export const stripeCheckoutSessionToInvoiceId = async ({
@@ -18,9 +21,7 @@ export const stripeCheckoutSessionToInvoiceId = async ({
 }: {
 	stripeCheckoutSession: Stripe.Checkout.Session;
 }) => {
-	return typeof stripeCheckoutSession.invoice === "string"
-		? stripeCheckoutSession.invoice
-		: (stripeCheckoutSession.invoice?.id ?? null);
+	return stripeRefToId(stripeCheckoutSession.invoice) ?? null;
 };
 
 export const stripeCheckoutSessionToFeatureOptionsQuantity = ({

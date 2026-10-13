@@ -15,6 +15,7 @@ import {
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { orgRateLimitExceededError } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -53,6 +54,13 @@ export const getOrCreateApiCustomerByRollout = async ({
 				});
 			}
 		: undefined;
+
+	// Over the org cap a creation cannot run: queue it for serialized replay
+	// and let the SDK retry the 429.
+	if (ctx.orgRateLimitDegraded) {
+		await queueRecovery?.();
+		throw orgRateLimitExceededError();
+	}
 
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (

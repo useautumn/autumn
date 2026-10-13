@@ -1,6 +1,6 @@
 import { CreateByocCacheParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { createCache } from "../actions/createCache.js";
+import { createCache } from "../actions/lifecycle/createCache.js";
 
 export const handleCreateCache = createRoute({
 	scopes: [Scopes.Organisation.Write],

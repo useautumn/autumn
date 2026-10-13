@@ -62,6 +62,25 @@ describe("fetchApprovalPreview", () => {
 		]);
 	});
 
+	test("previews updateInvoice with only the invoice id getInvoice accepts", async () => {
+		const calls: Array<{ args: unknown; toolName: string }> = [];
+		await fetchApprovalPreview({
+			env: AppEnv.Sandbox,
+			executeTool: async ({ args, toolName }) => {
+				calls.push({ args, toolName });
+				return { stripe_id: "in_1", status: "open", total: 50 };
+			},
+			logger: silentLogger,
+			request: { invoice_id: "inv_1", payment_method_types: ["card"] },
+			token: "tok",
+			toolName: "updateInvoice",
+		});
+
+		expect(calls).toEqual([
+			{ args: { request: { invoice_id: "inv_1" } }, toolName: "getInvoice" },
+		]);
+	});
+
 	test("maps write tools to their preview tool", async () => {
 		const calls: Array<{ args: unknown; toolName: string }> = [];
 		const preview = await fetchApprovalPreview({

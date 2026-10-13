@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { toDeploymentGroupName } from "@autumn/alien";
 import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
 	type ApiByocCache,
@@ -28,16 +30,93 @@ export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
 	return externalId;
 };
 
-/** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
-export const cacheExternalId = ({
+/** Whose Atoms these are: an org's env, or our shadow Atom. Its parts start every Atom's external id, and its base every default stack name. */
+export type AtomOwner = { idParts: string[]; stackNameBase: string };
+
+export const cacheOwner = ({
 	org,
 	env,
 }: {
-	org: Pick<Organization, "id">;
+	org: Pick<Organization, "id" | "slug">;
 	env: AppEnv;
-}) => toAlienExternalId({ parts: [org.id, env] });
+}): AtomOwner => ({
+	idParts: [org.id, env],
+	stackNameBase: `atom-${org.slug}-${env}`,
+});
 
-/** The deployment group's name, which also names the org's stack in AWS. */
+/** An org's external id always holds `.<env>` after its id, so no org's Atom can take the shadow Atom's group. */
+export const SHADOW_ATOM_OWNER: AtomOwner = {
+	idParts: [SHADOW_ATOM_EXTERNAL_ID],
+	stackNameBase: "atom-shadow",
+};
+
+/** One Atom, as its deployer knows it: one deployment group each, so an Atom being removed never shares a group with its replacement. Records from before Atom ids keep the owner's bare id. */
+export const atomExternalId = ({
+	owner,
+	atomId,
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+}) =>
+	toAlienExternalId({
+		parts: [...owner.idParts, atomId].filter((part) => part !== undefined),
+	});
+
+/** The id the owner's next Atom takes, fixed by the Atoms it has, so the page can show its stack name before it exists. */
+export const nextAtomId = ({
+	owner,
+	existingAtomIds,
+}: {
+	owner: AtomOwner;
+	existingAtomIds: string[];
+}) =>
+	`atom_${createHash("sha256")
+		.update([...owner.idParts, ...[...existingAtomIds].sort()].join("."))
+		.digest("hex")
+		.slice(0, 24)}`;
+
+/** Six hex chars of the external id, so every Atom, and every dev stack, names its stack apart. */
+export const atomStackNameSuffix = ({
+	owner,
+	atomId,
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+}) =>
+	createHash("sha256")
+		.update(atomExternalId({ owner, atomId }))
+		.digest("hex")
+		.slice(0, 6);
+
+/** The stack's name in the owner's cloud, which is also its deployment group's: the chosen base, or the owner's, then the suffix. */
+export const atomStackName = ({
+	owner,
+	atomId,
+	base = owner.stackNameBase,
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+	base?: string;
+}) =>
+	toDeploymentGroupName({
+		label: [base, atomStackNameSuffix({ owner, atomId })].join("-"),
+	});
+
+/** An Atom's names, as its deployer starts it. */
+export const atomNames = ({
+	owner,
+	atomId,
+	stackName = atomStackName({ owner, atomId }),
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+	stackName?: string;
+}) => ({
+	externalId: atomExternalId({ owner, atomId }),
+	label: stackName,
+});
+
+/** The label records made before stack names could be chosen were set up under. */
 export const cacheGroupLabel = ({
 	org,
 	env,
@@ -47,21 +126,22 @@ export const cacheGroupLabel = ({
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
 
-/** An org's Atom names, as `createCache` starts it. */
-export const cacheNames = ({
+/** A record from before stack names were stored keeps the name it was set up under. */
+export const cacheDeploymentStackName = ({
+	cacheDeployment,
 	org,
-	env,
 }: {
-	org: Organization;
-	env: AppEnv;
-}) => ({
-	externalId: cacheExternalId({ org, env }),
-	label: cacheGroupLabel({ org, env }),
-});
+	cacheDeployment: ByocCacheDeployment;
+	org: Pick<Organization, "slug">;
+}) =>
+	cacheDeployment.stack_name ??
+	toDeploymentGroupName({
+		label: cacheGroupLabel({ org, env: cacheDeployment.env }),
+	});
 
-/** Our one shadow Atom's names. An org's external id always ends `.<env>` and its label reads `autumn-byoc-…`, so neither can match. */
-export const shadowAtomCacheNames = () => ({
-	externalId: toAlienExternalId({ parts: [SHADOW_ATOM_EXTERNAL_ID] }),
+/** The names our shadow Atom was set up under before it took Atom ids like an org's. */
+export const legacyShadowAtomNames = () => ({
+	externalId: atomExternalId({ owner: SHADOW_ATOM_OWNER }),
 	label: [cacheNamePrefix(), SHADOW_ATOM_EXTERNAL_ID].filter(Boolean).join("-"),
 });
 
@@ -79,7 +159,7 @@ export const resourcesToMachine = ({
 	const machine = findByocCacheMachine({ cpu, memory });
 	if (machine) return machine;
 	throw new RecaseError({
-		message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
+		message: `No Atom machine has ${cpu} vCPU / ${memory} GiB`,
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
@@ -98,8 +178,24 @@ export const cacheDeploymentToMachine = ({
 /** A resize moves a running cache; one still being set up takes its machine from `create_atom`. */
 export const cacheNotRunning = () =>
 	new RecaseError({
-		message: "The cache is not running yet, so it cannot be resized.",
+		message: "Atom is not running yet, so it cannot be resized.",
 		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
+/** Setup finishes on the first checks, which only reach a connected Atom. */
+export const cacheNotConnected = () =>
+	new RecaseError({
+		message: "Atom is not connected yet, so its setup cannot be finished.",
+		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
+/** Only a deploy that stopped can be resumed. */
+export const cacheNotFailed = () =>
+	new RecaseError({
+		message: "Atom's deploy has not failed, so there is nothing to retry.",
+		code: ErrCode.InvalidRequest,
 		statusCode: 409,
 	});
 
@@ -109,31 +205,38 @@ export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
-	env,
+	org,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
+	org: Pick<Organization, "slug">;
 }): ApiByocCache => ({
-	env,
+	id: cacheDeployment.id,
+	env: cacheDeployment.env,
+	stack_name: cacheDeploymentStackName({ cacheDeployment, org }),
 	status: cacheDeployment.status,
 	deployment_id: cacheDeployment.deployment_id,
 	endpoint_url: cacheDeployment.endpoint_url,
 	created_at: cacheDeployment.created_at,
+	first_check_at: cacheDeployment.first_check_at,
 	cpu: cacheDeployment.cpu,
 	memory: cacheDeployment.memory,
+	region: cacheDeployment.region,
+	network: cacheDeployment.network,
+	stages: cacheDeployment.stages,
+	error: cacheDeployment.error,
 });
 
 /** Only a create hands out the token, so reading a cache never reveals it. */
 export const cacheDeploymentToCreateResponse = ({
 	cacheDeployment,
-	env,
+	org,
 	setupUrl,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
+	org: Pick<Organization, "slug">;
 	setupUrl: string | null;
 }): CreateByocCacheResponse => ({
-	...cacheDeploymentToApiCache({ cacheDeployment, env }),
+	...cacheDeploymentToApiCache({ cacheDeployment, org }),
 	setup_url: setupUrl,
 	token: cacheDeploymentToAtomToken({ cacheDeployment }),
 });

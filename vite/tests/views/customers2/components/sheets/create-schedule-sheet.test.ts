@@ -12,10 +12,8 @@ import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedu
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
-import {
-	buildInitialValues,
-	getActiveCustomerPlans,
-} from "@/views/customers2/components/sheets/CreateScheduleSheet";
+import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
+import { buildInitialValues } from "@/views/customers2/components/sheets/CreateScheduleSheet";
 
 // ---------------------------------------------------------------------------
 // Fixtures

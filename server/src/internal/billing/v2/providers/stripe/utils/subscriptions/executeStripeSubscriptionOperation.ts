@@ -80,6 +80,10 @@ export const executeStripeSubscriptionOperation = async ({
 				stripeSubscription?.default_payment_method;
 			const shouldResetBillingCycleAnchorNow =
 				billingContext.requestedBillingCycleAnchor === "now";
+			// Stripe rejects an anchor now before a trial that runs past it, so a trial ending now ends in the same call.
+			const endsTrialWithReset =
+				shouldResetBillingCycleAnchorNow &&
+				subscriptionAction.params.trial_end === "now";
 
 			if (shouldResetBillingCycleAnchorNow) {
 				stripeSubscription = await stripeClient.subscriptions.update(
@@ -88,6 +92,7 @@ export const executeStripeSubscriptionOperation = async ({
 						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 						...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 						billing_cycle_anchor: "now",
+						...(endsTrialWithReset && { trial_end: "now" }),
 						proration_behavior: "none",
 						payment_behavior: "error_if_incomplete",
 						expand: ["latest_invoice"],
@@ -98,14 +103,18 @@ export const executeStripeSubscriptionOperation = async ({
 
 			// Strip `automatic_tax` from the action params so we can re-apply
 			// it here conditioned on `wantsAutoTax` (invoice-mode skip).
-			const { automatic_tax: _builtAutoTax, ...paramsWithoutAutoTax } =
-				subscriptionAction.params;
+			const {
+				automatic_tax: _builtAutoTax,
+				trial_end: builtTrialEnd,
+				...paramsWithoutAutoTax
+			} = subscriptionAction.params;
 
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
 				buildStripeSubscriptionUpdateParams({
 					params: {
 						...paramsWithoutAutoTax,
+						...(!endsTrialWithReset && { trial_end: builtTrialEnd }),
 						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 						...(updateWillCreateInvoice ? invoiceModeParams : {}),
 						...(autumnMeta && { metadata: autumnMeta }),

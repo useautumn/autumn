@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 // The running phase trialing to its own boundary says nothing about what the
@@ -12,14 +13,10 @@ const billingShapeOf = ({
 }) =>
 	JSON.stringify({
 		priceIds: (phase.items ?? [])
-			.map((item) =>
-				typeof item.price === "string" ? item.price : item.price?.id,
-			)
+			.map((item) => stripeRefToId(item.price))
 			.sort((left, right) => String(left).localeCompare(String(right))),
 		addInvoiceItems: (phase.add_invoice_items ?? [])
-			.map((item) =>
-				typeof item.price === "string" ? item.price : item.price?.id,
-			)
+			.map((item) => stripeRefToId(item.price))
 			.sort((left, right) => String(left).localeCompare(String(right))),
 		trialEnd:
 			isCurrentPhase &&

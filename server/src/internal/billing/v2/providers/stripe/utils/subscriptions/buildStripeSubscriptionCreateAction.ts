@@ -28,9 +28,13 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
+	const sendsInvoice =
+		!!billingContext.invoiceMode ||
+		billingContext.carriedSubscriptionParams?.collection_method ===
+			"send_invoice";
 	// Stripe rejects trial_settings.missing_payment_method together with send_invoice.
 	const freeTrialNoCardRequired =
-		trialContext?.cardRequired === false && !billingContext.invoiceMode;
+		trialContext?.cardRequired === false && !sendsInvoice;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const skipsBackdatedCycles =
@@ -59,8 +63,7 @@ export const buildStripeSubscriptionCreateAction = ({
 			? msToSeconds(billingContext.subscriptionBackdateStartMs)
 			: undefined,
 
-		collection_method: "charge_automatically",
-
+		// Stripe defaults to charge_automatically; a recreate keeps the old method and invoice mode overrides both.
 		...billingContext.carriedSubscriptionParams,
 
 		payment_behavior:
@@ -96,6 +99,7 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		...(isCustomPaymentMethod && {
 			payment_settings: {
+				...billingContext.carriedSubscriptionParams?.payment_settings,
 				save_default_payment_method: "on_subscription",
 			},
 		}),

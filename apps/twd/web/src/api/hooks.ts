@@ -19,6 +19,7 @@ import {
 	Job,
 	KeysOverview,
 	Me,
+	QaEnv,
 	RetryBrokenAccountsResponse,
 	RunDetail,
 	RunSummary,
@@ -44,6 +45,7 @@ export const qk = {
 	accounts: ["accounts"] as const,
 	costs: (q: CostsFilter) => ["costs", q] as const,
 	apiKeys: ["api-keys"] as const,
+	qaEnvs: ["qa-envs"] as const,
 };
 
 export type CostsFilter = { from: string; bucket: "day" | "week" };
@@ -241,6 +243,36 @@ export const useApiKeys = () =>
 		queryKey: qk.apiKeys,
 		queryFn: () => api({ path: "/api-keys", schema: z.array(ApiKey) }),
 	});
+
+/** Polls fast while any env is building, slowly otherwise. */
+export const useQaEnvs = () =>
+	useQuery({
+		queryKey: qk.qaEnvs,
+		queryFn: async () =>
+			(
+				await api({
+					path: "/qa",
+					schema: z.object({ envs: z.array(QaEnv) }),
+				})
+			).envs,
+		refetchInterval: (query) =>
+			query.state.data?.some((e) => e.building || e.state === "building")
+				? 5_000
+				: 30_000,
+	});
+
+export const useDeleteQaEnv = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (name: string) =>
+			api({
+				method: "DELETE",
+				path: `/qa/${encodeURIComponent(name)}`,
+				schema: z.object({ name: z.string(), deleted: z.boolean() }),
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: qk.qaEnvs }),
+	});
+};
 
 export const useRefreshBranches = () => {
 	const qc = useQueryClient();

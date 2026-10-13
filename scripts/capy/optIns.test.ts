@@ -44,15 +44,22 @@ describe("capy opt-ins", () => {
 		expect(applyOptInFlags({ args: ["--alien"], dir })).toBe(false);
 	});
 
-	test("the default stack leaves trigger, eve, checkout and atom out", () => {
+	test("the default stack is server-only: no vite, trigger, eve, checkout or atom", () => {
 		expect(capyDevServices({ dir: createDir() })).toEqual([
 			"server",
 			"workers",
 			"cron",
 			"balance-worker",
-			"vite",
 			"stripe",
 		]);
+	});
+
+	test("--frontend adds vite and --no-frontend removes it", () => {
+		const dir = createDir();
+		applyOptInFlags({ args: ["--frontend"], dir });
+		expect(capyDevServices({ dir })).toContain("vite");
+		applyOptInFlags({ args: ["--no-frontend"], dir });
+		expect(capyDevServices({ dir })).not.toContain("vite");
 	});
 
 	test("--trigger and --eve add their dev services", () => {
@@ -62,5 +69,28 @@ describe("capy opt-ins", () => {
 			expect.arrayContaining(["trigger", "eve", "leaf"]),
 		);
 		expect(capyDevServices({ dir })).not.toContain("checkout");
+	});
+
+	test("serverOnly keeps backend services and opt-ins but drops every frontend", () => {
+		const dir = createDir();
+		applyOptInFlags({
+			args: ["--frontend", "--trigger", "--eve", "--checkout"],
+			dir,
+		});
+		const services = capyDevServices({ dir, serverOnly: true });
+		expect(services).toEqual(
+			expect.arrayContaining([
+				"server",
+				"workers",
+				"cron",
+				"balance-worker",
+				"stripe",
+				"trigger",
+				"eve",
+			]),
+		);
+		for (const frontend of ["vite", "checkout", "leaf"]) {
+			expect(services).not.toContain(frontend);
+		}
 	});
 });

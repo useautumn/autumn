@@ -7,12 +7,15 @@ import {
 	type FullCusProduct,
 	hasCustomerProductEnded,
 	hasCustomerProductStarted,
+	isCustomerProductInStripeSubscriptionScope,
 	isCustomerProductOnStripeSubscription,
 	timestampsMatch,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
 	billingPlanToNextCycleLineItems,
@@ -143,18 +146,64 @@ const scaleNextCycleAmounts = ({
 	};
 };
 
+/** A trial ending before a later anchor bills the stub up to it, as Stripe prorates the anchored invoice. */
+const trialEndStubAnchorMs = ({
+	billingContext,
+	nextCycleStart,
+	anchorMs,
+}: {
+	billingContext: BillingContext;
+	nextCycleStart: number;
+	anchorMs: number;
+}) => {
+	const trialEndsAt = billingContextToFutureTrialEnd({ billingContext });
+	if (trialEndsAt === undefined) return undefined;
+	if (!timestampsMatch(nextCycleStart, trialEndsAt)) return undefined;
+	return anchorMs > nextCycleStart ? anchorMs : undefined;
+};
+
+/** Plans the subscription's next invoice bills: on it, on its schedule, or inserted by
+ * this plan and not yet linked to any subscription. */
+const isCustomerProductBilledOnNextInvoice = ({
+	customerProduct,
+	stripeSubscriptionId,
+	stripeSubscriptionScheduleId,
+	insertedCustomerProductIds,
+}: {
+	customerProduct: FullCusProduct;
+	stripeSubscriptionId: string;
+	stripeSubscriptionScheduleId?: string;
+	insertedCustomerProductIds: Set<string>;
+}) => {
+	if (
+		isCustomerProductInStripeSubscriptionScope({
+			customerProduct,
+			stripeSubscriptionId,
+			stripeSubscriptionScheduleId,
+		})
+	) {
+		return true;
+	}
+
+	return (
+		insertedCustomerProductIds.has(customerProduct.id) &&
+		!customerProduct.subscription_ids?.length &&
+		!customerProduct.scheduled_ids?.length
+	);
+};
+
 export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
 	billingPlan,
-	customerProductFilter,
+	nextCycleStripeSubscriptionId,
 	options,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	/** Scope the preview to a subset of products (e.g. one subscription's). */
-	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	/** Scope the preview to the plans this Stripe subscription's next invoice bills. */
+	nextCycleStripeSubscriptionId?: string;
 	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
@@ -163,8 +212,23 @@ export const billingPlanToNextCyclePreview = ({
 		billingContext,
 		autumnBillingPlan: billingPlan.autumn,
 	});
-	const allCustomerProducts = customerProductFilter
-		? finalFullCustomer.customer_products.filter(customerProductFilter)
+	const stripeSubscriptionScheduleId = stripeSubscriptionToScheduleId({
+		stripeSubscription: billingContext.stripeSubscription,
+	});
+	const insertedCustomerProductIds = new Set(
+		billingPlan.autumn.insertCustomerProducts.map(
+			(customerProduct) => customerProduct.id,
+		),
+	);
+	const allCustomerProducts = nextCycleStripeSubscriptionId
+		? finalFullCustomer.customer_products.filter((customerProduct) =>
+				isCustomerProductBilledOnNextInvoice({
+					customerProduct,
+					stripeSubscriptionId: nextCycleStripeSubscriptionId,
+					stripeSubscriptionScheduleId,
+					insertedCustomerProductIds,
+				}),
+			)
 		: finalFullCustomer.customer_products;
 
 	const customerProducts = allCustomerProducts.filter((customerProduct) => {
@@ -377,17 +441,21 @@ export const billingPlanToNextCyclePreview = ({
 		customerProducts,
 		startsAtMs: nextCycleStart - MS_PER_SECOND,
 	});
+	const proratedChargeAnchorMs =
+		event.kind === "anchor_reset"
+			? nextCycleStart
+			: trialEndStubAnchorMs({ billingContext, nextCycleStart, anchorMs });
 	let lineItemsResult = billingPlanToNextCycleLineItems({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
 		lineItemSpecs:
-			event.kind === "anchor_reset"
+			proratedChargeAnchorMs !== undefined
 				? [
 						{
 							customerProducts: filteredCustomerProducts,
 							direction: "charge",
-							billingCycleAnchorMs: nextCycleStart,
+							billingCycleAnchorMs: proratedChargeAnchorMs,
 							filterBillingPeriodStart: false,
 							priceFilters: { excludeOneOffPrices: true },
 						},

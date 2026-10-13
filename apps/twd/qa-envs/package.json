@@ -1,0 +1,14 @@
+{
+	"name": "@autumn/qa-envs",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"deploy": "bash scripts/stageDeps.sh && wrangler deploy",
+		"ts": "tsc --noEmit -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "5.20261008.1",
+		"typescript": "^5.9.0",
+		"wrangler": "4.148.0"
+	}
+}

@@ -93,15 +93,21 @@ describe("computeReset", () => {
 		).toBeNull();
 	});
 
-	test("a due row refills to its grant on the next cycle, guarded by the cycle that ended", () => {
+	test("a due row refills to its grant on the next cycle, guarded by the cycle that ended and the balances it replaces", () => {
 		const state = stateWith();
+		const [due] = state.customerEntitlements;
 		const mutation = resetOf({ state });
 		expect(mutation?.changes).toEqual([
 			{
 				table: "customerEntitlements",
 				op: "update",
 				id: "messages_monthly",
-				before: { next_reset_at: asOf - 1 },
+				before: {
+					next_reset_at: asOf - 1,
+					balance: due?.balance,
+					additional_balance: due?.additional_balance,
+					adjustment: due?.adjustment,
+				},
 				after: {
 					balance: ALLOWANCE,
 					additional_balance: 0,

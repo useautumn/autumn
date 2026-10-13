@@ -65,6 +65,16 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/blog/everything-we-learned-after-running-100s-of-load-tests",
+        destination: "/blog/using-claude-to-improve-throughput-by-3x",
+        permanent: true,
+      },
+      {
+        source: "/blog/everything-we-learned-after-running-100s-of-load-tests.md",
+        destination: "/blog/using-claude-to-improve-throughput-by-3x.md",
+        permanent: true,
+      },
+      {
         source: "/docs",
         destination: "https://docs.useautumn.com",
         permanent: false,

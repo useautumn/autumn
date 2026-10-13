@@ -4,6 +4,7 @@ import { createErrorLogHook } from "@autumn/errors";
 import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
+import { createMapleLogStreams } from "@/external/maple/createMapleLogStreams.js";
 import { classifyInfraError } from "./classifyInfraError.js";
 
 /**
@@ -250,6 +251,8 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 			});
 		}
 	}
+
+	streams.push(...createMapleLogStreams());
 
 	const logger = pino(
 		{

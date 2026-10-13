@@ -9,23 +9,32 @@ export async function trackOnBalanceWorker({
 	ctx,
 	body,
 	isAsync,
+	recordsCreditCost,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	isAsync: boolean;
+	/** A track_tokens request, whose event records `credit_cost`. */
+	recordsCreditCost?: boolean;
 }): Promise<{ result: TrackResponseV3; status: 200 | 202 }> {
 	if (isAsync)
 		return {
-			result: await runBalanceWorkerTrack({ ctx, body, isAsync: true }),
+			result: await runBalanceWorkerTrack({
+				ctx,
+				body,
+				isAsync: true,
+				recordsCreditCost,
+			}),
 			status: 202,
 		};
 	const { result, failedOpen } = await withBalanceWorkerFailOpen({
 		ctx,
 		source: "track",
-		run: () => runBalanceWorkerTrack({ ctx, body }),
+		run: () => runBalanceWorkerTrack({ ctx, body, recordsCreditCost }),
 		// Queued on the command log, applied once the worker has room; each feature keeps its command id, so a
 		// command the worker did take before going quiet is a no-op on replay, never a second deduction.
-		fallback: () => runBalanceWorkerTrack({ ctx, body, isAsync: true }),
+		fallback: () =>
+			runBalanceWorkerTrack({ ctx, body, isAsync: true, recordsCreditCost }),
 	});
 	return { result, status: failedOpen ? 202 : 200 };
 }

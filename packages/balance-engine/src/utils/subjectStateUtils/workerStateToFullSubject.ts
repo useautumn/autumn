@@ -13,6 +13,7 @@ import {
 	type Subscription,
 } from "@autumn/shared";
 import type { Catalog } from "../../models/catalog/catalog.js";
+import { openSchema } from "../../models/common/openSchema.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import type {
 	WorkerFullCustomerEntitlement,
@@ -23,6 +24,18 @@ import {
 	catalogToFullPlanLicense,
 } from "../catalogUtils/convertCatalogUtils.js";
 import { subjectStateToFullSubject } from "../subjectUtils/convertSubjectUtils.js";
+
+// The shared row schemas as the worker's rows need them read: a newer build's columns and values pass through.
+const fullCustomerEntitlementSchema = openSchema({
+	name: "fullCustomerEntitlement",
+	schema: FullCustomerEntitlementSchema,
+});
+const entitySchema = openSchema({ name: "entity", schema: EntitySchema });
+const customerSchema = openSchema({ name: "customer", schema: CustomerSchema });
+const fullCusProductSchema = openSchema({
+	name: "fullCusProduct",
+	schema: FullCusProductSchema,
+});
 
 /** A pool's source row holds no balance; the worker keeps it for apply-plan, the Postgres read never loads it. */
 const isPooledContributionSource = ({
@@ -52,7 +65,7 @@ const toFullCustomerEntitlement = ({
 	customerEntitlement: WorkerFullCustomerEntitlement;
 	now: number;
 }): FullCustomerEntitlement =>
-	FullCustomerEntitlementSchema.parse(
+	fullCustomerEntitlementSchema.parse(
 		withoutExpiredRollovers({ customerEntitlement, now }),
 	);
 
@@ -188,7 +201,7 @@ const subjectEntityOf = ({
 	// A pending entity has no id, so it is named by its internal id, as legacy names it.
 	const entityKey = state.entity?.id ?? state.entity?.internal_id;
 	if (!entityId || entityKey !== entityId) return { subjectType: "customer" };
-	const entity = EntitySchema.parse(state.entity);
+	const entity = entitySchema.parse(state.entity);
 	return {
 		subjectType: "entity",
 		entityId,
@@ -221,7 +234,7 @@ export const workerStateToFullSubject = ({
 		catalog,
 		entityId: state.identity.entityId,
 	});
-	const customer = CustomerSchema.parse(workerFullSubject.customer);
+	const customer = customerSchema.parse(workerFullSubject.customer);
 
 	const customerProducts = [...workerFullSubject.customer_products].sort(
 		compareCustomerProductsForRender({
@@ -251,7 +264,7 @@ export const workerStateToFullSubject = ({
 		internalCustomerId: customer.internal_id,
 		customer,
 		customer_products: customerProducts.map((customerProduct) =>
-			FullCusProductSchema.parse({
+			fullCusProductSchema.parse({
 				...customerProduct,
 				free_trial: catalogToFreeTrial({
 					catalog,

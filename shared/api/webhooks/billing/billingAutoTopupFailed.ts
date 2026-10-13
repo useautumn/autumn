@@ -10,6 +10,8 @@ export const BillingAutoTopupFailureReasonSchema = z
 		"customer_unavailable",
 		"configuration_unavailable",
 		"missing_payment_method",
+		"payment_method_not_supported",
+		"payment_method_delayed",
 		"missing_customer_product",
 		"invalid_amount",
 		"grant_limit_reached",

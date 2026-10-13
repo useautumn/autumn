@@ -1,6 +1,6 @@
 import { ResizeByocCacheParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { resizeCache } from "../actions/resizeCache.js";
+import { resizeCache } from "../actions/lifecycle/resizeCache.js";
 
 export const handleResizeCache = createRoute({
 	scopes: [Scopes.Organisation.Write],

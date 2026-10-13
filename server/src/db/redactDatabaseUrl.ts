@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createDatabaseEnv } from "@autumn/env/database";
 
 const hash = (value: string) =>
 	createHash("sha256").update(value).digest("hex").slice(0, 12);
@@ -32,10 +33,13 @@ export const redactDatabaseUrl = (databaseUrl?: string) => {
 	}
 };
 
-export const getRedactedDatabaseUrls = () => ({
-	primary: redactDatabaseUrl(process.env.DATABASE_URL),
-	replica: redactDatabaseUrl(process.env.DATABASE_REPLICA_URL),
-	critical: redactDatabaseUrl(
-		process.env.DATABASE_CRITICAL_URL || process.env.DATABASE_URL,
-	),
-});
+export const getRedactedDatabaseUrls = () => {
+	const databaseEnv = createDatabaseEnv(process.env);
+	return {
+		primary: redactDatabaseUrl(databaseEnv.DATABASE_URL),
+		replica: redactDatabaseUrl(databaseEnv.DATABASE_REPLICA_URL),
+		critical: redactDatabaseUrl(
+			databaseEnv.DATABASE_CRITICAL_URL || databaseEnv.DATABASE_URL,
+		),
+	};
+};

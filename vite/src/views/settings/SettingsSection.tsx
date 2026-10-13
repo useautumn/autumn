@@ -6,6 +6,7 @@ import {
 	CardTitle,
 } from "@autumn/ui";
 import { createContext, useContext } from "react";
+import { LabelTag } from "@/components/general/LabelTag";
 
 /** Label of the settings group the active section belongs to, shown above its title. */
 export const SettingsGroupContext = createContext<string | undefined>(
@@ -14,6 +15,8 @@ export const SettingsGroupContext = createContext<string | undefined>(
 
 interface SettingsSectionProps {
 	readonly title: string;
+	/** A tag beside the title, e.g. PREVIEW. */
+	readonly badge?: string;
 	readonly description: string;
 	readonly actions?: React.ReactNode;
 	readonly children: React.ReactNode;
@@ -25,6 +28,7 @@ interface SettingsSectionProps {
 
 export const SettingsSection = ({
 	title,
+	badge,
 	description,
 	actions,
 	children,
@@ -41,9 +45,12 @@ export const SettingsSection = ({
 							{groupLabel}
 						</span>
 					)}
-					<h2 className="font-semibold text-[23px] text-foreground leading-7 tracking-[-0.02em]">
-						{title}
-					</h2>
+					<div className="flex items-center gap-2">
+						<h2 className="font-semibold text-[23px] text-foreground leading-7 tracking-[-0.02em]">
+							{title}
+						</h2>
+						{badge && <LabelTag label={badge} />}
+					</div>
 					<p className="max-w-[480px] text-sm text-tertiary-foreground leading-5">
 						{description}
 					</p>

@@ -41,7 +41,9 @@
 		0 4px 4px 0 rgba(0, 0, 0, 0.04);
 } */
 
-.btn-secondary-active {
+/* Opt-in for popup triggers: the active treatment while their menu is open. */
+.btn-secondary-active,
+.btn-secondary-popup[data-popup-open] {
 	border: 1px solid var(--primary);
 	background-color: var(--color-interactive-secondary-hover);
 	box-shadow: 0 0 0 0.2px var(--primary);

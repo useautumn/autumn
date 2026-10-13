@@ -132,12 +132,9 @@ describe("worker rows", () => {
 		},
 	);
 
-	test("unknown columns are rejected, so the subset stays deliberate", () => {
-		expect(
-			workerCustomerEntitlementSchema.safeParse({
-				...customerEntitlement,
-				cache_version: 3,
-			}).success,
-		).toBe(false);
+	test("a column this build does not read is carried, so a newer build's column survives the row", () => {
+		const row = { ...customerEntitlement, cache_version: 3 };
+
+		expect(workerCustomerEntitlementSchema.parse(row)).toEqual(row);
 	});
 });

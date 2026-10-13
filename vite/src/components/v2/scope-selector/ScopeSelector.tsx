@@ -19,6 +19,11 @@ export type ScopeSelectorProps = {
 	 * set is disabled with a tooltip explaining the caller can't grant it.
 	 */
 	availableScopes?: readonly string[];
+	/**
+	 * Optional: the exact scopes an OAuth app requested. Any other scope is
+	 * disabled, since the grant must be a subset of the original request.
+	 */
+	requestedScopes?: readonly string[];
 	/** Optional: limit the picker to these resources (defaults to all). */
 	resources?: readonly ResourceType[];
 	allowUnrestricted?: boolean;
@@ -43,6 +48,7 @@ const TRI_OPTIONS_FULL: TriOption[] = [
 ];
 
 const UNAVAILABLE_TOOLTIP = "You don't have this scope on your current session";
+const NOT_REQUESTED_TOOLTIP = "This app didn't request this scope";
 const READ_ONLY_RESOURCE_TOOLTIP =
 	"This resource is read-only — no write scope exists";
 
@@ -83,22 +89,16 @@ function TriStatePicker({
 	options,
 	value,
 	onChange,
-	readEnabled,
-	writeEnabled,
+	readUnavailableReason,
 	writeUnavailableReason,
 	disabled,
 }: {
 	options: TriOption[];
 	value: TriState;
 	onChange: (next: TriState) => void;
-	readEnabled: boolean;
-	writeEnabled: boolean;
-	/**
-	 * Override tooltip text for a disabled `write` option. Used for the
-	 * analytics resource, which has no write scope at all (distinct from
-	 * "caller can't grant it").
-	 */
-	writeUnavailableReason?: string | null;
+	/** Tooltip for a disabled option; null means the option is selectable. */
+	readUnavailableReason: string | null;
+	writeUnavailableReason: string | null;
 	disabled: boolean;
 }) {
 	return (
@@ -110,15 +110,13 @@ function TriStatePicker({
 				const isFirst = index === 0;
 				const isLast = index === options.length - 1;
 
-				let optionDisabled = disabled;
-				let tooltip: string | null = null;
-				if (option.value === "write" && !writeEnabled) {
-					optionDisabled = true;
-					tooltip = writeUnavailableReason ?? UNAVAILABLE_TOOLTIP;
-				} else if (option.value === "read" && !readEnabled) {
-					optionDisabled = true;
-					tooltip = UNAVAILABLE_TOOLTIP;
-				}
+				const tooltip =
+					option.value === "write"
+						? writeUnavailableReason
+						: option.value === "read"
+							? readUnavailableReason
+							: null;
+				const optionDisabled = disabled || !!tooltip;
 
 				const button = (
 					<button
@@ -162,6 +160,7 @@ export function ScopeSelector({
 	onChange,
 	allowUnrestricted = true,
 	availableScopes,
+	requestedScopes,
 	resources = RESOURCES,
 	disabled = false,
 	showPresets = false,
@@ -180,7 +179,7 @@ export function ScopeSelector({
 		[availableScopes],
 	);
 
-	const isScopeAvailable = (scope: ScopeString): boolean => {
+	const isScopeOnSession = (scope: ScopeString): boolean => {
 		if (!expandedAvailable) return true;
 		// The `admin` meta-scope is a product-level bypass that grants
 		// every modern R/W scope. Without this short-circuit, a caller
@@ -189,6 +188,16 @@ export function ScopeSelector({
 		if (expandedAvailable.has("admin")) return true;
 		return expandedAvailable.has(scope);
 	};
+
+	const getUnavailableReason = (scope: ScopeString): string | null => {
+		if (requestedScopes && !requestedScopes.includes(scope)) {
+			return NOT_REQUESTED_TOOLTIP;
+		}
+		return isScopeOnSession(scope) ? null : UNAVAILABLE_TOOLTIP;
+	};
+
+	const isScopeAvailable = (scope: ScopeString) =>
+		getUnavailableReason(scope) === null;
 
 	const handleToggleRestricted = (checked: boolean) => {
 		setRestricted(checked);
@@ -211,9 +220,9 @@ export function ScopeSelector({
 		}
 		list.push({ id: "read", label: "Read only", scopes: readOnlyScopes });
 		return list;
-		// isScopeAvailable is derived from expandedAvailable; depend on that.
+		// isScopeAvailable is derived from expandedAvailable and requestedScopes.
 		// biome-ignore lint/correctness/useExhaustiveDependencies: stable derived fn
-	}, [resources, defaultScopes, expandedAvailable]);
+	}, [resources, defaultScopes, expandedAvailable, requestedScopes]);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -250,22 +259,18 @@ export function ScopeSelector({
 						const meta = RESOURCE_METADATA[resource];
 						const isAnalytics = resource === "analytics";
 
-						const readScope = `${resource}:read` as ScopeString;
-						const readAvailable = isScopeAvailable(readScope);
-						const writeAvailable = isAnalytics
-							? false
-							: isScopeAvailable(`${resource}:write` as ScopeString);
+						const readReason = getUnavailableReason(
+							`${resource}:read` as ScopeString,
+						);
+						// Always render 3 segments so every row has the same
+						// width. For analytics, `Write` is permanently disabled.
+						const writeReason = isAnalytics
+							? READ_ONLY_RESOURCE_TOOLTIP
+							: getUnavailableReason(`${resource}:write` as ScopeString);
 
-						const fullyUnavailable =
-							!!expandedAvailable &&
-							!readAvailable &&
-							(isAnalytics || !writeAvailable);
+						const fullyUnavailable = !!readReason && !!writeReason;
 
 						const triValue = deriveTriState(value, resource);
-						// Always render 3 segments so every row has the same
-						// width. For analytics, `Write` is permanently disabled
-						// with an explanatory tooltip.
-						const writeReason = isAnalytics ? READ_ONLY_RESOURCE_TOOLTIP : null;
 
 						return (
 							<div
@@ -290,8 +295,7 @@ export function ScopeSelector({
 									onChange={(next) =>
 										onChange(applyTriState(value, resource, next))
 									}
-									readEnabled={readAvailable}
-									writeEnabled={writeAvailable}
+									readUnavailableReason={readReason}
 									writeUnavailableReason={writeReason}
 									disabled={disabled}
 								/>

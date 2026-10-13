@@ -32,6 +32,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type Stripe from "stripe";
+import { PaymentMethodTypesSelect } from "@/components/forms/shared/PaymentMethodTypesSelect";
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import {
 	LayoutGroup,
@@ -50,7 +51,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
 import { ReissueBillingDetails } from "./reissue/ReissueBillingDetails";
-import { ReissuePaymentMethodTypesSelect } from "./reissue/ReissuePaymentMethodTypesSelect";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
 import {
 	buildReissuePayload,
@@ -377,7 +377,7 @@ function ReissueInvoiceForm({
 								/>
 							</div>
 
-							<ReissuePaymentMethodTypesSelect
+							<PaymentMethodTypesSelect
 								value={form.paymentMethodTypes}
 								onValueChange={(paymentMethodTypes) =>
 									patch({ paymentMethodTypes })

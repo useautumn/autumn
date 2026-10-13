@@ -1,4 +1,7 @@
-/** set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both and bills now. */
+/**
+ * set_plans on a trialing subscription keeps the trial in Stripe and Autumn. `free_trial: null` ends it in both by recreating
+ * the subscription on the old trial end, billing nothing until then (the trial-end-anchor tests cover each proration).
+ */
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";
@@ -66,9 +69,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trialing: free_trial null ends the trial on both sides")}`,
+	`${chalk.yellowBright("set-plans trialing: free_trial null ends the trial on both sides, recreated on the old trial end")}`,
 	async () => {
-		const { customerId, autumnV2_4, ctx, proTrial, trialing, advancedTo } =
+		const { customerId, autumnV2_4, ctx, proTrial, trialing } =
 			await setupTrialingPro({ customerId: "set-plans-trial-ended" });
 
 		const setPlansParams = {
@@ -78,24 +81,33 @@ test.concurrent(
 				{ starts_at: "now" as const, plans: [{ plan_id: proTrial.id }] },
 			],
 		};
-		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
-			type: "trial_ended",
-		});
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
+		expectPreviewWarning({ preview, type: "subscription_replaced" });
+		expect(preview.total).toBe(0);
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
-		expect(ended.status).toBe("active");
-		expect(secondsToMs(ended.trial_end!)).toBeLessThanOrEqual(advancedTo);
+		expect(ended.status).toBe("canceled");
+		const recreated = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		expect({
+			trialEnd: recreated.trial_end,
+			billingCycleAnchor: recreated.billing_cycle_anchor,
+		}).toEqual({
+			trialEnd: null,
+			billingCycleAnchor: trialing.trial_end!,
+		});
 		await expectSubscriptionNotTrialing({
 			customer: await autumnV2_4.customers.get<ApiCustomerV5>(customerId),
 			productId: proTrial.id,
 		});
 		await expectCustomerInvoiceCorrect({
 			customerId,
-			count: 2,
-			latestStatus: "paid",
-			latestTotal: 20,
+			count: 1,
+			latestTotal: 0,
 		});
 	},
 );

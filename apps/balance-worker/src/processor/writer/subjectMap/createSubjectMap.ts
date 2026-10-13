@@ -1,9 +1,15 @@
 import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
-import type { OnSubjectEvicted, SubjectMap } from "./types/subjectMap.js";
+import type {
+	OnSubjectEvicted,
+	ResidentDrop,
+	SubjectMap,
+} from "./types/subjectMap.js";
 
 /** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
+
+export const SUBJECT_MAP_IDLE_SCAN_PER_WRITE = 32;
 
 type Entry = {
 	state: SubjectState;
@@ -11,9 +17,11 @@ type Entry = {
 	customerKey: string | null;
 	bytes: number;
 	pins: number;
-	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
+	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
+	/** Last read or write, on the map's clock. */
+	touchedAt: number;
 };
 
 const weigh = ({ value }: { value: unknown }): number =>
@@ -78,9 +86,13 @@ export const reweighSubjectState = ({
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
 	onEvicted,
+	idleExpiryMs,
+	now = () => performance.now(),
 }: {
 	maxBytes?: number | (() => number);
 	onEvicted?: OnSubjectEvicted;
+	idleExpiryMs?: number;
+	now?: () => number;
 } = {}): SubjectMap => {
 	if (typeof maxBytes === "number" && !(maxBytes > 0))
 		throw new RangeError("maxBytes must be positive");
@@ -99,6 +111,7 @@ export const createSubjectMap = ({
 		subjectKey: string;
 		entry: Entry;
 	}) => {
+		entry.touchedAt = now();
 		entries.delete(subjectKey);
 		entries.set(subjectKey, entry);
 	};
@@ -113,6 +126,7 @@ export const createSubjectMap = ({
 			pins: 0,
 			evictOnUnpin: false,
 			baselineAt: null,
+			touchedAt: now(),
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -125,6 +139,19 @@ export const createSubjectMap = ({
 			if (totalBytes <= bound) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
 			dropState({ subjectKey, entry });
+		}
+	};
+
+	const dropIdle = () => {
+		if (idleExpiryMs === undefined) return;
+		const idleBefore = now() - idleExpiryMs;
+		let scanned = 0;
+		for (const [subjectKey, entry] of entries) {
+			const isIdle = entry.touchedAt < idleBefore;
+			if (!isIdle || scanned === SUBJECT_MAP_IDLE_SCAN_PER_WRITE) return;
+			scanned += 1;
+			if (entry.pins > 0) touch({ subjectKey, entry });
+			else dropState({ subjectKey, entry });
 		}
 	};
 
@@ -189,6 +216,7 @@ export const createSubjectMap = ({
 		entry.state = state;
 		totalBytes += entry.bytes;
 		touch({ subjectKey, entry });
+		dropIdle();
 		evictUntilWithinBound({ except: subjectKey });
 	};
 
@@ -235,11 +263,58 @@ export const createSubjectMap = ({
 		]) {
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
-			if (entry.pins > 0) entry.evictOnUnpin = true;
-			else dropState({ subjectKey, entry });
-			pinned += entry.pins > 0 ? 1 : 0;
+			if (entry.pins === 0) {
+				dropState({ subjectKey, entry });
+				continue;
+			}
+			hide({ entry });
+			entry.evictOnUnpin = true;
+			pinned += 1;
 		}
 		if (pinned === 0) onEvicted?.({ customerKey });
+	};
+
+	/** Unreadable at once; the entry stays indexed until an unpin or `evictCustomer` drops it. */
+	const hide = ({ entry }: { entry: Entry }) => {
+		totalBytes -= entry.bytes;
+		entry.state = null as unknown as SubjectState;
+		entry.bytes = 0;
+		entry.baselineAt = null;
+	};
+
+	const hideCustomer = ({ customerKey }: { customerKey: string }) => {
+		for (const subjectKey of subjectKeysByCustomer.get(customerKey) ?? []) {
+			const entry = entries.get(subjectKey);
+			if (entry) hide({ entry });
+		}
+	};
+
+	// Only a hidden entry is indexed with nothing resident: a pin-only placeholder is never indexed.
+	const isEvicting = ({ customerKey }: { customerKey: string }) =>
+		[...(subjectKeysByCustomer.get(customerKey) ?? [])].some(
+			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
+		);
+
+	/** As a restart would: each resident subject `drops` picks goes unless a pin holds an unapplied write; hidden ones stay with their writes. */
+	const dropResident: SubjectMap["dropResident"] = ({ drops }) => {
+		const result: ResidentDrop = { evicted: 0, kept: 0, resident: 0 };
+		const nowMs = now();
+		for (const [subjectKey, entry] of [...entries]) {
+			if (entry.bytes === 0 || entry.customerKey === null) continue;
+			if (
+				!drops({
+					customerKey: entry.customerKey,
+					idleMs: nowMs - entry.touchedAt,
+				})
+			)
+				result.kept += 1;
+			else if (entry.pins > 0) result.resident += 1;
+			else {
+				dropState({ subjectKey, entry });
+				result.evicted += 1;
+			}
+		}
+		return result;
 	};
 
 	const clear = () => {
@@ -256,6 +331,9 @@ export const createSubjectMap = ({
 		pin,
 		unpin,
 		evictCustomer,
+		hideCustomer,
+		isEvicting,
+		dropResident,
 		clear,
 		sizeBytes: () => totalBytes,
 		bytesOf: ({ subjectKey }: { subjectKey: string }) =>

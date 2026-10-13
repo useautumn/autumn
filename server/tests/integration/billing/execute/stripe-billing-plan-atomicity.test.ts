@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, BillingContext, BillingPlan } from "@autumn/shared";
-import { InvoiceStatus } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	BillingContext,
+	BillingPlan,
+} from "@autumn/shared";
+import { InvoiceStatus, stripeRefToId } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -20,7 +24,7 @@ const getDefaultPaymentMethod = async ({
 	stripeCustomer: Stripe.Customer;
 }): Promise<Stripe.PaymentMethod> => {
 	const defaultPm = stripeCustomer.invoice_settings.default_payment_method;
-	const defaultPmId = typeof defaultPm === "string" ? defaultPm : defaultPm?.id;
+	const defaultPmId = stripeRefToId(defaultPm);
 	if (!defaultPmId) throw new Error("Missing default payment method");
 	return stripeCli.paymentMethods.retrieve(defaultPmId);
 };

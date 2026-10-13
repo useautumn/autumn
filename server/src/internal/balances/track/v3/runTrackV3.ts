@@ -3,9 +3,7 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	applyResponseVersionChanges,
-	ErrCode,
 	type FullSubject,
-	RecaseError,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
@@ -55,15 +53,6 @@ export const runTrackV3 = async ({
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
 }) => {
-	if (body.event_name && body.overage_behavior === "reject") {
-		throw new RecaseError({
-			message:
-				'overage_behavior "reject" is not supported with event_name. Use feature_id or set overage_behavior to "cap".',
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
 	const fullSubject = await getTrackFullSubject({
 		ctx,
 		body,

@@ -9,6 +9,7 @@ export const coreStripe: TestGroup = {
 		"stripe-webhooks/subscription-deleted/subscription-deleted.test.ts",
 		"stripe-webhooks/subscription-deleted/subscription-deleted-invoice.test.ts",
 		"stripe-webhooks/invoice-created/invoice-created-consumable.test.ts",
-		"stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
+		"stripe-webhooks/invoice-created/invoice-created-entity-consumable-renewal.test.ts",
+		"stripe-webhooks/invoice-created/invoice-created-entity-consumable-multi-product.test.ts",
 	],
 };

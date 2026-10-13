@@ -12,7 +12,9 @@ export type HttpMethodFilter =
 
 export const isBillingUrl = ({
 	urlExpression = "['req.url']",
-}: { urlExpression?: string } = {}) => {
+}: {
+	urlExpression?: string;
+} = {}) => {
 	const path = `tostring(parse_url(${urlExpression}).path)`;
 
 	return `(${path} startswith '/v1/billing' or ${path} startswith '/billing' or ${path} startswith '/v1/attach' or ${path} startswith '/v1/cancel')`;

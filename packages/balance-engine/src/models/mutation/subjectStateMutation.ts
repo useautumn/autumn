@@ -12,7 +12,11 @@ import { updateBalanceResultSchema } from "../../commands/updateBalance/types/up
 import type { MutatingCommand } from "../command/mutatingCommand.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
-import { changesInsertCustomer, rowChangeSchema } from "./rowChange.js";
+import {
+	changesInsertCustomer,
+	rowChangeSchema,
+	skipUnknownRowChanges,
+} from "./rowChange.js";
 
 /** The command as it was sent, cast rather than parsed: never replayed, so a newer writer's fields must not break an older reader. */
 const mutationCommandSchema = z.custom<MutationCommand>(
@@ -37,7 +41,7 @@ export const mutationSubjectSchema = z
 		internalCustomerId: nonEmptyStringSchema,
 		internalEntityId: nonEmptyStringSchema.nullable(),
 	})
-	.strict();
+	.loose();
 
 export type MutationSubject = z.infer<typeof mutationSubjectSchema>;
 
@@ -46,7 +50,7 @@ const mutationRevisionSchema = z
 		before: z.number().int().nonnegative(),
 		after: z.number().int().positive(),
 	})
-	.strict();
+	.loose();
 
 /** The fields a command produces; the writer's record adds its receipt on top. */
 export const subjectStateMutationShape = {
@@ -133,10 +137,13 @@ export const refineSubjectStateMutation = (
 };
 
 /** What a command decided: the changes to one subject and the result readers see. Knows nothing about dedup. */
-export const subjectStateMutationSchema = z
-	.object(subjectStateMutationShape)
-	.strict()
-	.superRefine(refineSubjectStateMutation);
+export const subjectStateMutationSchema = z.preprocess(
+	skipUnknownRowChanges,
+	z
+		.object(subjectStateMutationShape)
+		.loose()
+		.superRefine(refineSubjectStateMutation),
+);
 
 export type MutationCommand = MutatingCommand;
 export type MutationResult = z.infer<typeof mutationResultSchema>;

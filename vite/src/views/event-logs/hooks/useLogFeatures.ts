@@ -1,14 +1,11 @@
 import { type Feature, FeatureType } from "@autumn/shared";
 import { useMemo } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import {
-	OTHER_SERIES_COLOR,
-	seriesSlotColor,
-} from "@/views/customers/customer/analytics/utils/seriesColors";
+import { eventColor } from "@/views/customers/customer/analytics/utils/seriesColors";
 
-/** Trackable features, with a stable dot color and display name per feature id. */
+/** Trackable features, with a stable dot colour and display name per feature id. */
 export const useLogFeatures = () => {
-	const { features, isLoading } = useFeaturesQuery();
+	const { features } = useFeaturesQuery();
 
 	return useMemo(() => {
 		const trackable: Feature[] = features.filter(
@@ -17,14 +14,11 @@ export const useLogFeatures = () => {
 		const indexById = new Map(trackable.map((f, i) => [f.id, i]));
 		const nameById = new Map(trackable.map((f) => [f.id, f.name]));
 
-		const colorFor = (featureId: string) => {
-			const index = indexById.get(featureId);
-			return index === undefined
-				? OTHER_SERIES_COLOR
-				: seriesSlotColor({ index });
-		};
+		// Features outside the trackable list share the next slot, so they still read as colour.
+		const colorFor = (featureId: string) =>
+			eventColor({ eventIndex: indexById.get(featureId) ?? trackable.length });
 		const nameFor = (featureId: string) => nameById.get(featureId) ?? featureId;
 
-		return { features: trackable, isLoading, colorFor, nameFor };
-	}, [features, isLoading]);
+		return { features: trackable, colorFor, nameFor };
+	}, [features]);
 };

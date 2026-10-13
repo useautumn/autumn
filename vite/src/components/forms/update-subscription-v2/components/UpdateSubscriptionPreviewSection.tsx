@@ -1,8 +1,18 @@
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
+import { CollectionMethodSwitchNotice } from "./CollectionMethodSwitchNotice";
 
 export function UpdateSubscriptionPreviewSection() {
-	const { previewQuery, hasChanges } = useUpdateSubscriptionFormContext();
+	const { previewQuery, hasChanges, collectionMethodSwitch } =
+		useUpdateSubscriptionFormContext();
 
-	return <PreviewSection previewQuery={previewQuery} hidden={!hasChanges} />;
+	return (
+		<>
+			<CollectionMethodSwitchNotice />
+			<PreviewSection
+				previewQuery={previewQuery}
+				hidden={!hasChanges && !collectionMethodSwitch.isActive}
+			/>
+		</>
+	);
 }

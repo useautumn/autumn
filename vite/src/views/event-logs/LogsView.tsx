@@ -1,4 +1,5 @@
 import type { ApiEventsListItem } from "@autumn/shared";
+import { PageContainer } from "@autumn/ui";
 import { useState } from "react";
 import { UsagePageHeader } from "@/views/customers/customer/analytics/components/UsagePageHeader";
 import { LogDetailPane } from "./components/LogDetailPane";
@@ -35,21 +36,16 @@ export const LogsView = () => {
 	}
 
 	return (
-		<div className="flex flex-col h-full min-h-0 w-full text-sm">
-			{/* Same box as PageContainer on the Overview tab, so the header lines up. */}
-			<div className="w-full max-w-[1600px] mx-auto pt-4 sm:pt-8 px-4 sm:px-10 shrink-0">
-				<UsagePageHeader activeTab="logs" />
-			</div>
+		<PageContainer className="h-full min-h-0 overflow-hidden text-sm">
+			<UsagePageHeader activeTab="logs" />
 			<LogsToolbar />
-			<div className="px-4 pt-3.5 pb-2.5 shrink-0 border-b">
-				<LogsVolumeStrip />
-			</div>
+			<LogsVolumeStrip />
 			{error ? (
 				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
 					Couldn't load events. {error.message}
 				</div>
 			) : (
-				<div className="flex flex-1 min-h-0">
+				<div className="flex flex-1 min-h-0 gap-3">
 					<LogsList
 						events={events}
 						isLoading={isLoading}
@@ -64,6 +60,6 @@ export const LogsView = () => {
 					)}
 				</div>
 			)}
-		</div>
+		</PageContainer>
 	);
 };

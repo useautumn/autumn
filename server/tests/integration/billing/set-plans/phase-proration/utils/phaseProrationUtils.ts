@@ -4,6 +4,7 @@ import {
 	type PhaseProrationBehavior,
 	type SetPlansParamsV0Input,
 	type SetPlansPreviewResponse,
+	stripeRefToId,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
@@ -111,10 +112,7 @@ const activeSubscriptionScheduleId = async ({
 		customerId,
 		status: "active",
 	});
-	const scheduleId =
-		typeof subscription.schedule === "string"
-			? subscription.schedule
-			: subscription.schedule?.id;
+	const scheduleId = stripeRefToId(subscription.schedule);
 	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
 	return scheduleId;
 };

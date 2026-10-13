@@ -1,8 +1,55 @@
+import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
+import { fullCustomerWithDerivedIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/fullCustomerWithDerivedIsCustom.js";
+import type { BaseProductCache } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
 import { createMigrationStripeCache } from "@/internal/migrations/v2/stripeCache/index.js";
 import type { MigrationRuntime } from "../../../types/migrationDefinition.js";
+
+/** A run's catalog versions don't change mid-run, so the run shares one cache. */
+const baseProductsByMigration = new WeakMap<
+	MigrationRuntime,
+	BaseProductCache
+>();
+
+const baseProductsForMigration = ({
+	migration,
+}: {
+	migration: MigrationRuntime;
+}): BaseProductCache => {
+	const cached = baseProductsByMigration.get(migration);
+	if (cached) return cached;
+	const baseProducts: BaseProductCache = new Map();
+	baseProductsByMigration.set(migration, baseProducts);
+	return baseProducts;
+};
+
+// The custom guard is already in plan_filter by setup, so only the version is checked.
+const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
+	Boolean(
+		migration.operations?.customer?.some(
+			(op) => op.type === "update_plan" && op.version !== undefined,
+		),
+	);
+
+/** Drift onto a row stored as not custom is likely the catalog edit the migration applies. */
+const keepStoredNotCustomFlags = ({
+	stored,
+	derived,
+}: {
+	stored: FullCustomer;
+	derived: FullCustomer;
+}): FullCustomer => ({
+	...derived,
+	customer_products: derived.customer_products.map(
+		(customerProduct, index) => ({
+			...customerProduct,
+			is_custom:
+				customerProduct.is_custom && stored.customer_products[index].is_custom,
+		}),
+	),
+});
 
 /** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
@@ -16,15 +63,29 @@ export const setupMigrateCustomerContext = async ({
 	customerId: string;
 	preview: boolean;
 }): Promise<MigrateCustomerContext> => {
-	const fullCustomer = await setupFullCustomerContext({
+	const storedFullCustomer = await setupFullCustomerContext({
 		ctx,
 		params: { customer_id: customerId },
 	});
+	const { fullCustomer: derivedFullCustomer, corrections } =
+		await fullCustomerWithDerivedIsCustom({
+			ctx,
+			fullCustomer: storedFullCustomer,
+			baseProducts: baseProductsForMigration({ migration }),
+		});
+	// Version bumps spare every derived-custom plan; the billing-plan hook re-derives after ops.
+	const fullCustomer = bumpsVersion({ migration })
+		? derivedFullCustomer
+		: keepStoredNotCustomFlags({
+				stored: storedFullCustomer,
+				derived: derivedFullCustomer,
+			});
 
 	return {
 		migration,
 		fullCustomer,
 		preview,
+		isCustomCorrections: corrections,
 		stripeCache: createMigrationStripeCache({
 			ctx,
 			fullCustomer,

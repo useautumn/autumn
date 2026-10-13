@@ -34,6 +34,6 @@ export const subjectStateSchema = z
 		customerLicenses: z.array(workerCustomerLicenseSchema).default([]),
 		entity: workerEntitySchema.nullable(),
 	})
-	.strict();
+	.loose();
 
 export type SubjectState = z.infer<typeof subjectStateSchema>;

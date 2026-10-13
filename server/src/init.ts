@@ -4,6 +4,7 @@ await import("./sentry.js");
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
+import { logUnknownInput } from "@autumn/balance-engine";
 import { flushErrorReports } from "@autumn/errors";
 import { getRequestListener } from "@hono/node-server";
 import {
@@ -107,6 +108,7 @@ const init = async ({
 	startupStartedAt: number;
 }): Promise<http.Server> => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
+	logUnknownInput({ logger });
 
 	const app = createHonoApp();
 

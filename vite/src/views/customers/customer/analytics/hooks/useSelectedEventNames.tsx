@@ -23,8 +23,21 @@ export const useSelectedEventNames = () => {
 		binSize: queryStates.bin_size,
 	});
 
-	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames({ customerId, entityId, interval, binSize, start, end });
+	// The last window's names stay up while a new one loads, so labels never flash empty.
+	const {
+		eventNames: cachedEventNames,
+		isLoading,
+		isRefreshing,
+	} = useEventNames({
+		customerId,
+		entityId,
+		interval,
+		binSize,
+		start,
+		end,
+		keepPrevious: true,
+	});
+	const eventNamesLoading = isLoading || isRefreshing;
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 

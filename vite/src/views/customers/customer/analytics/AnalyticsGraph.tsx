@@ -1,46 +1,31 @@
-import { type ChartConfig, ChartContainer } from "@autumn/ui";
+import type { ChartConfig } from "@autumn/ui";
 import { X } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
-import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
+import {
+	formatWithUnit,
+	TooltipItem,
+	tooltipItemHref,
+} from "./components/TooltipItem";
+import { UsageChartFrame } from "./components/UsageChartFrame";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
-import {
-	BAR_CATEGORY_GAP,
-	CHART_MARGIN,
-	type PlotInsets,
-	Y_AXIS_WIDTH,
-} from "./utils/chartGeometry";
-import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
+import { barLayout } from "./utils/chartGeometry";
+import { formatPeriodLabel } from "./utils/parseTimestamp";
 import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
 const MAX_TOOLTIP_ITEMS = 5;
-// Busy stacks get a hairline gap so small segments keep their colour.
-const SEGMENT_GAP = 2;
-const BUSY_SEGMENT_GAP = 1;
-const BUSY_SERIES_COUNT = 20;
-// Past this many bins a bar is only a few pixels wide, so the gap stroke would hide it.
-const DENSE_BIN_COUNT = 90;
 const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
-const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
-const X_TICK = { fontSize: 11, fill: "#666" } as const;
-const Y_TICK = {
-	fontSize: 11,
-	fill: "#666",
-	textAnchor: "middle" as const,
-	dx: -15,
-	dy: -3,
-} as const;
 
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
 	ticks,
-	onGeometry,
+	unit,
 }: {
 	data: {
 		meta: any[];
@@ -49,7 +34,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 	};
 	chartConfig: ChartSeriesConfig[];
 	ticks?: number[];
-	onGeometry?: (insets: PlotInsets) => void;
+	unit?: string;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
 	const selectedInterval = queryStates.interval;
@@ -66,7 +51,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		handleChartMouseLeave,
 		handleChartClick,
 		unpin,
-	} = usePinnedChartTooltip({ data, chartConfig, onGeometry });
+	} = usePinnedChartTooltip({ data, chartConfig });
 
 	const formatXAxis = useCallback(
 		(value: string): string => {
@@ -92,85 +77,53 @@ export const EventsBarChart = memo(function EventsBarChart({
 	// Recharts stacks bars in mount order, so a changed series set must remount to restack.
 	const seriesSetKey = chartConfig.map((series) => series.yKey).join("|");
 
-	const segmentGap =
-		data.data.length > DENSE_BIN_COUNT
-			? 0
-			: chartConfig.length >= BUSY_SERIES_COUNT
-				? BUSY_SEGMENT_GAP
-				: SEGMENT_GAP;
+	const { categoryGap, segmentGap } = barLayout({
+		barCount: data.data.length,
+		seriesCount: chartConfig.length,
+	});
 
 	const chart = useMemo(
 		() => (
-			<ChartContainer
+			<UsageChartFrame
+				chartKey={seriesSetKey}
 				config={rechartsConfig}
-				className={cn(
-					"h-full w-full",
-					"[&_*:focus]:outline-none",
-					"[&_.recharts-bar-rectangle]:transition-opacity [&_.recharts-bar-rectangle]:duration-150",
-					"[&:has(.recharts-bar-rectangle:hover)_.recharts-bar-rectangle:not(:hover)]:opacity-35",
-				)}
+				data={data.data}
+				ticks={ticks}
+				barCategoryGap={categoryGap}
+				formatXTick={formatXAxis}
+				showYTicks
+				yUnit={unit}
 			>
-				<BarChart
-					key={seriesSetKey}
-					data={data.data}
-					className="pt-3 pr-2"
-					margin={CHART_MARGIN}
-					barCategoryGap={BAR_CATEGORY_GAP}
-					style={CHART_STYLE}
-					throttleDelay="raf"
-				>
-					<CartesianGrid
-						vertical={false}
-						strokeDasharray="2 2"
-						stroke="var(--chart-grid-stroke)"
-						strokeWidth={1}
+				{chartConfig.map((series, si) => (
+					<Bar
+						key={series.yKey}
+						dataKey={series.yKey}
+						stackId="a"
+						fill={series.fill}
+						// Read as currentColor by the hover dim, which mixes it toward the background.
+						color={series.fill}
+						// A background-colored stroke reads as a gap between stacked segments.
+						stroke="var(--background)"
+						strokeWidth={segmentGap}
+						radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
+						activeBar={false}
+						style={BAR_STYLE}
+						onMouseEnter={barHandlers[si]}
+						onMouseLeave={handleBarMouseLeave}
+						isAnimationActive={false}
 					/>
-					<XAxis
-						dataKey="period"
-						tickLine={false}
-						tickMargin={4}
-						axisLine={false}
-						interval="equidistantPreserveStart"
-						tick={X_TICK}
-						tickFormatter={formatXAxis}
-					/>
-					<YAxis
-						tickLine={false}
-						axisLine={false}
-						width={Y_AXIS_WIDTH}
-						tickMargin={0}
-						ticks={ticks}
-						domain={ticks ? [0, ticks[ticks.length - 1]] : undefined}
-						tick={Y_TICK}
-						tickFormatter={formatCompactNumber}
-					/>
-					{chartConfig.map((series, si) => (
-						<Bar
-							key={series.yKey}
-							dataKey={series.yKey}
-							stackId="a"
-							fill={series.fill}
-							// A background-colored stroke reads as a gap between stacked segments.
-							stroke="var(--background)"
-							strokeWidth={segmentGap}
-							radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
-							activeBar={false}
-							style={BAR_STYLE}
-							onMouseEnter={barHandlers[si]}
-							onMouseLeave={handleBarMouseLeave}
-							isAnimationActive={false}
-						/>
-					))}
-				</BarChart>
-			</ChartContainer>
+				))}
+			</UsageChartFrame>
 		),
 		[
 			seriesSetKey,
+			categoryGap,
 			segmentGap,
 			data,
 			rechartsConfig,
 			chartConfig,
 			ticks,
+			unit,
 			formatXAxis,
 			barHandlers,
 			handleBarMouseLeave,
@@ -180,7 +133,11 @@ export const EventsBarChart = memo(function EventsBarChart({
 	return (
 		<div
 			ref={containerRef}
-			className="h-full w-full relative"
+			className={cn(
+				"h-full w-full relative",
+				// Greyed with an opaque mix, not opacity, so the gridlines stay hidden behind the bars.
+				"[&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)_path]:[fill:color-mix(in_oklab,currentColor_35%,var(--background))]",
+			)}
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleChartMouseLeave}
 			onClick={handleChartClick}
@@ -223,6 +180,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 										item.dataKey
 									}
 									href={pinned ? tooltipItemHref({ item }) : undefined}
+									unit={unit}
 								/>
 							))}
 							{overflowItems.length > 0 && (
@@ -230,7 +188,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 									<span className="h-2.5 w-2.5 shrink-0" />
 									<span className="flex-1">+{overflowItems.length} more</span>
 									<span className="tabular-nums">
-										{overflowSum.toLocaleString()}
+										{formatWithUnit({ value: overflowSum, unit })}
 									</span>
 								</div>
 							)}

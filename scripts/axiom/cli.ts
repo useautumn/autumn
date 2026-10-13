@@ -2,15 +2,18 @@
  * Axiom provisioning CLI. Secrets (AXIOM_ADMIN_TOKEN) are injected by infisical
  * via the package.json scripts:
  *
- *   bun axiom <action>          # dev   (infisical --env=dev)
- *   bun axiom:prod <action>     # prod  (infisical --env=prod)
+ *   bun axiom <action>          # dev     (infisical --env=dev)
+ *   bun axiom:staging <action>  # staging (infisical --env=staging)
+ *   bun axiom:prod <action>     # prod    (infisical --env=prod)
  *
  * Add a new action by registering it in the `actions` map below.
  */
 import "dotenv/config";
+import { createAtomDataset } from "./createAtomDataset.js";
 import { createLeafDataset } from "./createLeafDataset.js";
 
 const actions = {
+	"create-atom": createAtomDataset,
 	"create-leaf": createLeafDataset,
 } satisfies Record<string, () => Promise<void>>;
 
@@ -21,7 +24,7 @@ const isAction = (value: string | undefined): value is Action =>
 
 const usage = () =>
 	[
-		"Usage: bun axiom <action>   (or bun axiom:prod <action>)",
+		"Usage: bun axiom <action>   (or bun axiom:staging / bun axiom:prod <action>)",
 		"",
 		"Actions:",
 		...Object.keys(actions).map((action) => `  - ${action}`),

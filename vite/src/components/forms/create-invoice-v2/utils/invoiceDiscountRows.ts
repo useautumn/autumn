@@ -1,6 +1,6 @@
 import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
-import type { FormDiscount } from "../../attach-v2/utils/discountUtils";
+import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 
 export type InvoiceDiscountRow = { label: string; amount: number };
 

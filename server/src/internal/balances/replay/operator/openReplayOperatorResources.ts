@@ -1,4 +1,4 @@
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import type { KafkaSaslCredentials } from "@autumn/kafka";
 import type { ReplayManifest } from "../manifest/replayManifestContracts.js";
 import type { ValidatedReplayStagingTarget } from "../targets/replayStagingTargetContracts.js";
 import {
@@ -73,17 +73,18 @@ type ReplayOperatorModules = Awaited<
 function createReplayOwnershipConsumer({
 	modules,
 	target,
+	kafkaSasl,
 }: {
 	modules: ReplayOperatorModules;
 	target: ValidatedReplayStagingTarget;
+	kafkaSasl: KafkaSaslCredentials;
 }) {
-	const { KAFKA_AUTH_MODE, KAFKA_SASL } = getBalanceWorkerClientEnv();
 	const kafkaConfig = modules.createKafkaClient({
 		clientId: `${REPLAY_OPERATOR_CLIENT_ID}-${crypto.randomUUID()}`,
 		brokers: [...target.brokers],
 		transport: modules.createKafkaTransport({
-			authMode: KAFKA_AUTH_MODE,
-			sasl: KAFKA_SASL,
+			authMode: "scram",
+			sasl: kafkaSasl,
 		}),
 		limits: REPLAY_KAFKA_LIMITS,
 	});
@@ -196,18 +197,24 @@ export async function openReplayOperatorResources({
 	manifest,
 	target,
 	databaseUrl,
+	kafkaSasl,
 	signal,
 }: {
 	manifest: ReplayManifest;
 	target: ValidatedReplayStagingTarget;
 	databaseUrl: string;
+	kafkaSasl: KafkaSaslCredentials;
 	signal?: AbortSignal;
 }): Promise<ReplayOperatorResources<ReplayArchiveReport>> {
 	signal?.throwIfAborted();
 	const modules = await loadReplayOperatorModules();
 	const ports: ReplayOperatorClosePorts = {};
 	try {
-		const owners = createReplayOwnershipConsumer({ modules, target });
+		const owners = createReplayOwnershipConsumer({
+			modules,
+			target,
+			kafkaSasl,
+		});
 		ports.stopOwners = () => owners.stop();
 		await owners.start();
 		signal?.throwIfAborted();
@@ -250,8 +257,11 @@ export async function openReplayOperatorResources({
 
 export function createReplayOperatorResourceFactory({
 	databaseUrl,
+	kafkaSasl,
 }: {
 	databaseUrl: string;
+	kafkaSasl: KafkaSaslCredentials;
 }): ReplayOperatorResourceFactory<ReplayArchiveReport> {
-	return (input) => openReplayOperatorResources({ ...input, databaseUrl });
+	return (input) =>
+		openReplayOperatorResources({ ...input, databaseUrl, kafkaSasl });
 }

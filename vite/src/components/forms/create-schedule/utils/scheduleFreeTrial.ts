@@ -7,7 +7,9 @@ import {
 	type FullCusProduct,
 	getRemainingTrialDays,
 	isCustomerProductTrialing,
+	isPastStartDate,
 	type ProductV2,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 } from "@autumn/shared";
 import type { CustomerStatePhase } from "@/components/forms/customer-state/customerStateSchema";
 import {
@@ -107,21 +109,47 @@ export const defaultScheduleTrialFormValues = ({
 	return DISABLED_FREE_TRIAL_FORM_VALUES;
 };
 
-/** set_plans rejects a trial when the first phase starts later or is backdated. */
+/** set_plans rejects a trial when the first phase starts later, or backdates a subscription that isn't trialing. */
 export const canScheduleFreeTrial = ({
 	phases,
 	nowMs,
+	liveSubscriptionTrialing,
 }: {
 	phases: CustomerStatePhase[];
 	nowMs: number;
+	liveSubscriptionTrialing: boolean;
 }) => {
 	const firstPhase = phases[0];
 	if (!firstPhase) return false;
 	if (firstPhase.persistedStartsAt != null) {
 		return firstPhase.persistedStartsAt <= nowMs;
 	}
-	return firstPhase.startsAt === null;
+	if (firstPhase.startsAt === null) return true;
+
+	const backdates = isPastStartDate(
+		firstPhase.startsAt,
+		nowMs,
+		SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
+	);
+	// A backdate keeps or ends a running trial; a paid one continues the period it paid, with no trial.
+	return backdates && liveSubscriptionTrialing;
 };
+
+/** Switching a running trial off on a first phase starting now ends it now (set_plans' `free_trial: null`). */
+export const endsCurrentTrialNow = ({
+	phases,
+	nowMs,
+	formValues,
+	currentTrial,
+}: {
+	phases: CustomerStatePhase[];
+	nowMs: number;
+	formValues: Pick<FreeTrialFormValues, "trialEnabled">;
+	currentTrial: CurrentScheduleTrial | null;
+}) =>
+	currentTrial !== null &&
+	!formValues.trialEnabled &&
+	canScheduleFreeTrial({ phases, nowMs, liveSubscriptionTrialing: true });
 
 /**
  * Untouched, a running trial is omitted so set_plans carries it on. Switched off, null ends a running

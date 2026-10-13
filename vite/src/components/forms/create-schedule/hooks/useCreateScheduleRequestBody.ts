@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	Feature,
 	FreeTrial,
 	ProductV2,
@@ -15,6 +16,11 @@ import {
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { carryOverParam } from "@/components/forms/shared/utils/carryOverParam";
+import {
+	buildDiscountParams,
+	type DiscountsFormFields,
+	type FormDiscount,
+} from "@/components/forms/shared/utils/discountUtils";
 import type { FreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
@@ -45,6 +51,11 @@ export function buildCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial = null,
 	catalogFreeTrial = null,
+	defaultFirstPhaseProration,
+	omitFirstPhaseProration = false,
+	discounts = [],
+	removedRewardIds = [],
+	removableRewardIds,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -65,6 +76,13 @@ export function buildCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	/** What the Proration row shows when untouched, sent so the request bills what the sheet displays. */
+	defaultFirstPhaseProration?: BillingBehavior;
+	omitFirstPhaseProration?: boolean;
+	discounts?: FormDiscount[];
+	removedRewardIds?: string[];
+	/** Marked discounts outside this list, like customer-level coupons, are never sent. */
+	removableRewardIds?: string[];
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -124,8 +142,12 @@ export function buildCreateScheduleRequestBody({
 			index,
 		) => {
 			const isFirstPhase = index === 0;
+			// Where proration can't change what's billed, the server applies its own rule.
+			const firstPhaseProration = omitFirstPhaseProration
+				? undefined
+				: (phases[0]?.prorationBehavior ?? defaultFirstPhaseProration);
 			const prorationBehavior = isFirstPhase
-				? phases[0]?.prorationBehavior
+				? firstPhaseProration
 				: ownProration;
 			const billingCycleAnchor = phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor },
@@ -165,7 +187,12 @@ export function buildCreateScheduleRequestBody({
 	}
 
 	const freeTrialParam =
-		freeTrial && canScheduleFreeTrial({ phases, nowMs: now })
+		freeTrial &&
+		canScheduleFreeTrial({
+			phases,
+			nowMs: now,
+			liveSubscriptionTrialing: !!currentTrial,
+		})
 			? scheduleFreeTrialParam({
 					formValues: freeTrial,
 					currentTrial,
@@ -173,6 +200,10 @@ export function buildCreateScheduleRequestBody({
 				})
 			: undefined;
 	if (freeTrialParam !== undefined) body.free_trial = freeTrialParam;
+	Object.assign(
+		body,
+		buildDiscountParams({ discounts, removedRewardIds, removableRewardIds }),
+	);
 	return body as SetPlansParamsV0;
 }
 
@@ -208,6 +239,10 @@ export function useCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial,
 	catalogFreeTrial,
+	defaultFirstPhaseProration,
+	omitFirstPhaseProration = false,
+	discounts,
+	removedRewardIds,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -227,6 +262,10 @@ export function useCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	defaultFirstPhaseProration?: BillingBehavior;
+	omitFirstPhaseProration?: boolean;
+	discounts?: FormDiscount[];
+	removedRewardIds?: string[];
 }) {
 	return useMemo(
 		() =>
@@ -249,6 +288,10 @@ export function useCreateScheduleRequestBody({
 				freeTrial,
 				currentTrial,
 				catalogFreeTrial,
+				defaultFirstPhaseProration,
+				omitFirstPhaseProration,
+				discounts,
+				removedRewardIds,
 			}),
 		[
 			customerId,
@@ -269,6 +312,10 @@ export function useCreateScheduleRequestBody({
 			freeTrial,
 			currentTrial,
 			catalogFreeTrial,
+			defaultFirstPhaseProration,
+			omitFirstPhaseProration,
+			discounts,
+			removedRewardIds,
 		],
 	);
 }
@@ -287,6 +334,9 @@ export function useBuildCreateScheduleRequestBody({
 	getAllowFirstPhaseBackdate,
 	getCarryOverUsages,
 	getFreeTrial,
+	getOmitFirstPhaseProration,
+	getDiscounts,
+	defaultFirstPhaseProration,
 	currentTrial,
 	catalogFreeTrial,
 	stripeSubscriptionId,
@@ -310,6 +360,9 @@ export function useBuildCreateScheduleRequestBody({
 		"carryOverUsages" | "carryOverUsageFeatureIds"
 	>;
 	getFreeTrial?: () => FreeTrialFormValues;
+	getOmitFirstPhaseProration?: () => boolean;
+	getDiscounts?: () => DiscountsFormFields & { removableRewardIds?: string[] };
+	defaultFirstPhaseProration?: BillingBehavior;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
 	stripeSubscriptionId?: string | null;
@@ -335,6 +388,9 @@ export function useBuildCreateScheduleRequestBody({
 					freeTrial: getFreeTrial?.(),
 					currentTrial,
 					catalogFreeTrial,
+					omitFirstPhaseProration: getOmitFirstPhaseProration?.() ?? false,
+					defaultFirstPhaseProration,
+					...getDiscounts?.(),
 				}),
 		[
 			customerId,
@@ -350,6 +406,9 @@ export function useBuildCreateScheduleRequestBody({
 			getAllowFirstPhaseBackdate,
 			getCarryOverUsages,
 			getFreeTrial,
+			getOmitFirstPhaseProration,
+			getDiscounts,
+			defaultFirstPhaseProration,
 			currentTrial,
 			catalogFreeTrial,
 			stripeSubscriptionId,

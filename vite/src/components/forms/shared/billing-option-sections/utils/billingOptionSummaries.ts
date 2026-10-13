@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import {
 	type FormDiscount,
 	filterValidDiscounts,
-} from "@/components/forms/attach-v2/utils/discountUtils";
+} from "@/components/forms/shared/utils/discountUtils";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import type { BillingOptionSummary } from "../types/billingOptionSectionTypes";
 
@@ -189,4 +189,22 @@ export const carryOverSummary = ({
 			? "all features"
 			: countLabel({ count: featureIds.length, noun: "feature" });
 	return changedTo(`Carries ${noun} (${scope})`);
+};
+
+export const collectionMethodSummary = ({
+	switchesMethod,
+	isActive,
+	sendsInvoice,
+}: {
+	switchesMethod: boolean;
+	isActive: boolean;
+	sendsInvoice: boolean;
+}): BillingOptionSummary => {
+	if (!isActive) return null;
+	if (!switchesMethod) return changedTo("Updates invoice settings");
+	return changedTo(
+		sendsInvoice
+			? "Switches to invoicing"
+			: "Switches to charging automatically",
+	);
 };

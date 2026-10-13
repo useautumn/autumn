@@ -12,12 +12,14 @@ import {
 import { PanelButton } from "@autumn/ui";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
+import { useIsInvoiceEditor } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function BillingType() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
+	const isInvoiceEditor = useIsInvoiceEditor();
 
 	if (!item) return null;
 
@@ -99,8 +101,11 @@ export function BillingType() {
 					config: getConfigForBillingType({
 						usageModel: UsageModel.PayPerUse,
 					}),
+					// An invoice bills priced items without grants.
 					included_usage:
-						item.included_usage === Infinite ? 0 : item.included_usage,
+						isInvoiceEditor || item.included_usage === Infinite
+							? 0
+							: item.included_usage,
 					interval: getPricedInterval(),
 				});
 			}

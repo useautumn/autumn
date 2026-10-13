@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	type FullCusProduct,
 	filterCustomerProductsByStripeSubscriptionId,
+	stripeRefToId,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -18,7 +19,7 @@ import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpda
 
 const stripeProductId = (
 	product: string | Stripe.Product | Stripe.DeletedProduct,
-) => (typeof product === "string" ? product : product.id);
+) => stripeRefToId(product);
 
 const priceOrProductChanged = ({
 	subscriptionUpdatedContext,

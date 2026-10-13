@@ -7,8 +7,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
-import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { currentSubscriptionTerms } from "./currentSubscriptionTerms";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
 import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
@@ -31,26 +31,19 @@ export const buildSetPlansPreview = async ({
 		timeline,
 		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	} = result;
-	// Stripe invoices each subscription on its own, so next_cycle covers only the one this request bills.
-	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
 
 	const [
 		attachPreview,
 		stripePrices,
 		replacedSubscriptionInputs,
 		liveOpenInvoices,
+		subscriptionTerms,
 	] = await Promise.all([
 		billingPlanToAttachPreview({
 			ctx,
 			billingContext,
 			billingPlan,
-			nextCycleCustomerProductFilter: stripeSubscriptionId
-				? (customerProduct) =>
-						!isCustomerProductOnOtherSubscription({
-							customerProduct,
-							stripeSubscriptionId,
-						})
-				: undefined,
+			nextCycleStripeSubscriptionId: billingContext.stripeSubscription?.id,
 		}),
 		buildStripePriceLookup({
 			ctx,
@@ -65,6 +58,7 @@ export const buildSetPlansPreview = async ({
 			billedLineItems: billingPlan.autumn.lineItems ?? [],
 		}),
 		fetchPastDueOpenInvoices({ ctx, billingContext }),
+		currentSubscriptionTerms({ ctx, billingContext }),
 	]);
 	const processorItemContext: ProcessorItemContext = {
 		priceIndex: buildAutumnStripePriceIndex({
@@ -96,6 +90,7 @@ export const buildSetPlansPreview = async ({
 
 	return {
 		...attachPreview,
+		...subscriptionTerms,
 		phases: previewPhases,
 		removed_phases: review.removedPhases,
 		processor_changes: processorChanges,
@@ -123,6 +118,7 @@ export const buildSetPlansPreview = async ({
 			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
 			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			prorationOverride: billingContext.prorationOverride,
 			liveCustomerProducts: billingContext.stripeSubscription
 				? filterCustomerProductsByStripeSubscriptionId({
 						customerProducts: billingContext.fullCustomer.customer_products,

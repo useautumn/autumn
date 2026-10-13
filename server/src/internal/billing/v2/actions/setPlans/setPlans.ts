@@ -12,6 +12,7 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { carryReplacedSubscriptionSettings } from "@/internal/billing/v2/setup/carryReplacedSubscription/carryReplacedSubscriptionSettings";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { hashJson } from "@/utils/hash/hashJson";
@@ -22,7 +23,6 @@ import {
 	handleSetPlansErrors,
 } from "./errors/handleSetPlansErrors";
 import { logSetPlansContext } from "./logs/logSetPlansContext";
-import { carryReplacedSubscriptionSettings } from "./setup/carryReplacedSubscription/carryReplacedSubscriptionSettings";
 import { setupSetPlansBillingContext } from "./setup/setupSetPlansBillingContext";
 import type { SetPlansResult } from "./types/setPlansResult";
 import { buildReplacedSubscriptionAction } from "./utils/buildReplacedSubscriptionAction";
@@ -102,6 +102,9 @@ export const setPlans = async ({
 		...(await carryReplacedSubscriptionSettings({
 			ctx,
 			billingContext: plannedBillingContext,
+			removedRewardIds: resolvedParams.remove_discounts?.map(
+				(discount) => discount.reward_id,
+			),
 			preview,
 		})),
 	};

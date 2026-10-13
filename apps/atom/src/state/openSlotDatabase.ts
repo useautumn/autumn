@@ -1,8 +1,9 @@
 import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 
-/** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema. */
-const SLOT_SCHEMA_VERSION = 5;
+/** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema.
+ * 7: the same tables, rebuilt with auto_vacuum on, so dropped customers' pages go back to the volume. */
+const SLOT_SCHEMA_VERSION = 7;
 
 const dropSlotSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS subject_states");
@@ -20,11 +21,17 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			entity_id TEXT NOT NULL,
 			log_offset INTEGER NOT NULL CHECK (log_offset >= 0),
 			read_at INTEGER NOT NULL,
+			applied_at INTEGER NOT NULL,
 			state_json TEXT NOT NULL,
 			slice_hash TEXT NOT NULL,
+			-- On the customer's own row: the log offset of its latest evict. It only rises, even past rows older than held.
+			customer_version INTEGER NOT NULL DEFAULT 0 CHECK (customer_version >= 0),
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);
+	database.run(
+		"CREATE INDEX IF NOT EXISTS subject_states_applied_at ON subject_states (applied_at)",
+	);
 	database.run(`
 		CREATE TABLE IF NOT EXISTS subject_slices (
 			customer_id TEXT NOT NULL,

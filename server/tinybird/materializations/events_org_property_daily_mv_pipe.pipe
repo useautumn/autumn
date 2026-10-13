@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Collapses the org-hour property states into mergeable UTC daily states.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        property_key,
+        property_value,
+        toStartOfDay(hour) as day,
+        sumMergeState(total_value) as total_value,
+        sumMergeState(event_count) as event_count
+    FROM events_org_property_hourly_mv
+    GROUP BY org_id, env, event_name, property_key, property_value, day
+
+TYPE materialized
+DATASOURCE events_org_property_daily_mv

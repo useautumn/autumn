@@ -110,6 +110,18 @@ test(`${chalk.yellowBright("migration list summary: dry run then run all report 
 		queue_position: null,
 	});
 
+	const { list: withoutCounts } = await autumnV2_2.migrationsV2.list({
+		customer_counts: false,
+	});
+	const { list: customerCounts } =
+		await autumnV2_2.migrationsV2.customerCounts();
+	expect(
+		withoutCounts.find((candidate) => candidate.id === migrationId)?.summary,
+	).toEqual({ ...draft, customer_count: null });
+	expect(
+		customerCounts.find((candidate) => candidate.id === migrationId),
+	).toEqual({ id: migrationId, customer_count: 2 });
+
 	await runAndSettle({
 		ctx,
 		migrationClient: autumnV2_2,

@@ -17,7 +17,7 @@ export const workerPooledContributionSchema = z
 		created_at: finiteNumberSchema,
 		updated_at: finiteNumberSchema,
 	})
-	.strict();
+	.loose();
 
 export type WorkerPooledContribution = z.infer<
 	typeof workerPooledContributionSchema

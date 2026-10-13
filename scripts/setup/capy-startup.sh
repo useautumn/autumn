@@ -2,7 +2,7 @@
 #
 # capy-startup.sh — Startup lifecycle for Capy v2 VMs.
 #
-# Runs whenever Capy starts or resumes a VM. Idempotent.
+# Run by `bun capy` on demand; nothing runs it on boot. Idempotent.
 # Delegates the real work to scripts/capy/provision.ts so the heavy lifting
 # (Neon branching, migrations, env-file writing) is one type-checked bun
 # script instead of bash. This wrapper handles shell-only lifecycle work:
@@ -26,14 +26,25 @@ exec > >(tee -a "$STARTUP_LOG") 2> >(tee -a "$STARTUP_LOG" >&2)
 log() { echo "[capy-startup] $*"; }
 die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
+# Two `bun capy` runs can overlap; the second waits here, then finds this boot
+# already provisioned and skips.
+exec 9>"$CAPY_PREFIX/startup.lock"
+if ! flock -n 9; then
+  log "another Capy startup is running; waiting for it to finish"
+  flock 9
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
 TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
 . "$SCRIPT_DIR/capy-kafka.sh"
+. "$SCRIPT_DIR/capy-bubble.sh"
 
 export PATH="$HOME/.bun/bin:$PATH"
+
+install_capy_bubble "[capy-startup]"
 
 command -v bun >/dev/null 2>&1 || die "bun not on PATH"
 docker info >/dev/null 2>&1 || die "Docker Engine is unavailable"
@@ -96,6 +107,7 @@ else
     -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger stop >/dev/null 2>&1 || true
 fi
 
-start_capy_kafka "[capy-startup]"
+# Kafka outlives this script, so it must not inherit the startup lock.
+start_capy_kafka "[capy-startup]" 9>&-
 
 exec bun scripts/capy/provision.ts "$@"

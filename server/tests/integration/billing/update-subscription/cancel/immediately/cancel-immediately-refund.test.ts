@@ -12,6 +12,7 @@ import {
 	applyProration,
 	type BillingPreviewResponse,
 	ErrCode,
+	stripeRefToId,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -116,14 +117,10 @@ const createDirectStripeRefund = async ({
 
 	if (payment.type === "charge") {
 		chargeId =
-			typeof payment.charge === "string"
-				? payment.charge
-				: (payment.charge?.id ?? null);
+			(stripeRefToId(payment.charge) ?? null);
 	} else if (payment.type === "payment_intent") {
 		const paymentIntentId =
-			typeof payment.payment_intent === "string"
-				? payment.payment_intent
-				: payment.payment_intent?.id;
+			stripeRefToId(payment.payment_intent);
 
 		if (!paymentIntentId) {
 			throw new Error("Expected payment_intent on Stripe invoice payment");
@@ -135,9 +132,7 @@ const createDirectStripeRefund = async ({
 		);
 
 		chargeId =
-			typeof paymentIntent.latest_charge === "string"
-				? paymentIntent.latest_charge
-				: (paymentIntent.latest_charge?.id ?? null);
+			(stripeRefToId(paymentIntent.latest_charge) ?? null);
 	}
 
 	if (!chargeId) {

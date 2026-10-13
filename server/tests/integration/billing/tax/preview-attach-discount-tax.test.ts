@@ -12,6 +12,7 @@ import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1,
 	type AttachPreviewResponse,
+	stripeRefToId,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { createAmountCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
@@ -128,10 +129,7 @@ test.concurrent(
 		const { stripeCli, subscription } = await getStripeSubscription({
 			customerId,
 		});
-		const latestInvoiceId =
-			typeof subscription.latest_invoice === "string"
-				? subscription.latest_invoice
-				: subscription.latest_invoice?.id;
+		const latestInvoiceId = stripeRefToId(subscription.latest_invoice);
 		expect(latestInvoiceId).toBeDefined();
 		const invoice = await stripeCli.invoices.retrieve(latestInvoiceId!);
 		const toAmount = (amount: number) =>

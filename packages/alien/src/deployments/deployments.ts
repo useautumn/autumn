@@ -1,11 +1,13 @@
 import { z } from "zod/v4";
 import { alienRequest } from "../common/alienRequest.js";
+import { isAlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
 import type { AlienApi } from "../types/alienApi.js";
 import type { AlienDeployment, AlienFixedPools } from "../types/alienClient.js";
 import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
+	isDeploymentDeleted,
 } from "./classifyDeployments.js";
 import {
 	AlienDeploymentListSchema,
@@ -30,6 +32,23 @@ const deploymentsQuery = ({
 	});
 };
 
+const listGroupDeployments = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: { api: AlienApi };
+	deploymentGroupId: string;
+}): Promise<AlienDeployment[]> => {
+	const query = deploymentsQuery({ api: ctx.api, deploymentGroupId });
+	const { items } = await alienRequest({
+		api: ctx.api,
+		method: "GET",
+		path: `/v1/deployments?${query}`,
+		schema: AlienDeploymentListSchema,
+	});
+	return items;
+};
+
 /** The group's live deployment: the one its setup created. One being deleted is already gone for every caller. */
 export const findDeployment = async ({
 	ctx,
@@ -38,17 +57,57 @@ export const findDeployment = async ({
 	ctx: { api: AlienApi };
 	deploymentGroupId: string;
 }): Promise<AlienDeployment | null> => {
-	const query = deploymentsQuery({ api: ctx.api, deploymentGroupId });
-	const { items } = await alienRequest({
-		api: ctx.api,
-		method: "GET",
-		path: `/v1/deployments?${query}`,
-		schema: AlienDeploymentListSchema,
-	});
+	const items = await listGroupDeployments({ ctx, deploymentGroupId });
 	const live = items.find(
 		(deployment) => !isDeploymentBeingDeleted({ deployment }),
 	);
 	return live ? readDeployment({ ctx, deployment: live }) : null;
+};
+
+/** Until alien has deleted every deployment of the group, a stack may still need the setup link it was launched with. */
+export const hasUndeletedDeployment = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: { api: AlienApi };
+	deploymentGroupId: string;
+}): Promise<boolean> => {
+	const items = await listGroupDeployments({ ctx, deploymentGroupId });
+	return items.some((deployment) => !isDeploymentDeleted({ deployment }));
+};
+
+const NOT_FOUND = 404;
+
+const deploymentPath = ({
+	api,
+	deploymentId,
+	action = "",
+}: {
+	api: AlienApi;
+	deploymentId: string;
+	action?: string;
+}) =>
+	`/v1/deployments/${encodeURIComponent(deploymentId)}${action}${hostedQuery({ api })}`;
+
+/** One deployment by id, deletes included; a deployment alien has dropped reads as null. */
+export const getDeployment = async ({
+	ctx,
+	deploymentId,
+}: {
+	ctx: { api: AlienApi };
+	deploymentId: string;
+}): Promise<AlienDeployment | null> => {
+	try {
+		return await alienRequest({
+			api: ctx.api,
+			method: "GET",
+			path: deploymentPath({ api: ctx.api, deploymentId }),
+			schema: AlienDeploymentSchema,
+		});
+	} catch (error) {
+		if (isAlienRequestError(error) && error.status === NOT_FOUND) return null;
+		throw error;
+	}
 };
 
 /** The hosted list leaves out `stackState`, so the endpoint is read from the record itself. */
@@ -64,7 +123,7 @@ const readDeployment = ({
 		: alienRequest({
 				api: ctx.api,
 				method: "GET",
-				path: `/v1/deployments/${encodeURIComponent(deployment.id)}${hostedQuery({ api: ctx.api })}`,
+				path: deploymentPath({ api: ctx.api, deploymentId: deployment.id }),
 				schema: AlienDeploymentSchema,
 			});
 
@@ -83,7 +142,11 @@ export const deleteDeployment = async ({
 	await alienRequest({
 		api: ctx.api,
 		method: "POST",
-		path: `/v1/deployments/${encodeURIComponent(deployment.id)}/delete${hostedQuery({ api: ctx.api })}`,
+		path: deploymentPath({
+			api: ctx.api,
+			deploymentId: deployment.id,
+			action: "/delete",
+		}),
 		body: { action },
 		schema: z.unknown(),
 	});
@@ -103,8 +166,32 @@ export const updateDeploymentCompute = async ({
 	await alienRequest({
 		api: ctx.api,
 		method: "PATCH",
-		path: `/v1/deployments/${encodeURIComponent(deployment.id)}/compute${hostedQuery({ api: ctx.api })}`,
+		path: deploymentPath({
+			api: ctx.api,
+			deploymentId: deployment.id,
+			action: "/compute",
+		}),
 		body: { compute: fixedPoolsToCompute({ pools }) },
+		schema: z.unknown(),
+	});
+};
+
+/** alien resumes a failed deployment from the step that failed. */
+export const retryDeployment = async ({
+	ctx,
+	deployment,
+}: {
+	ctx: { api: AlienApi };
+	deployment: AlienDeployment;
+}): Promise<void> => {
+	await alienRequest({
+		api: ctx.api,
+		method: "POST",
+		path: deploymentPath({
+			api: ctx.api,
+			deploymentId: deployment.id,
+			action: "/retry",
+		}),
 		schema: z.unknown(),
 	});
 };

@@ -4,6 +4,7 @@ import {
 	AUTO_TOPUP_ATTEMPTS_RATE_LIMIT,
 	DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
 } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupRateLimitConfigs.js";
+import { listRateLimitPolicies } from "@/internal/misc/rateLimiter/policySummaries/listRateLimitPolicies.js";
 import {
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
@@ -12,10 +13,13 @@ import {
 	getRateLimitOverridesFromSource,
 	getRuntimeRateLimitOverridesStatus,
 } from "@/internal/misc/rateLimiter/rateLimitOverridesStore.js";
+import { listApiEndpoints } from "@/routers/listApiEndpoints.js";
+import { findRateLimitOverrideOrgs } from "./rateLimitOverrides/findRateLimitOverrideOrgs.js";
 
 export const handleGetAdminRateLimitOverridesConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
+		const ctx = c.get("ctx");
 		const status = getRuntimeRateLimitOverridesStatus();
 		const config = await getRateLimitOverridesFromSource();
 
@@ -41,6 +45,12 @@ export const handleGetAdminRateLimitOverridesConfig = createRoute({
 		return c.json({
 			...config,
 			defaults,
+			policies: listRateLimitPolicies({ overrides: config }),
+			knownEndpoints: listApiEndpoints(),
+			orgsByKey: await findRateLimitOverrideOrgs({
+				ctx,
+				orgKeys: Object.keys(config.orgs),
+			}),
 			configHealthy: status.healthy,
 			configConfigured: status.configured,
 			lastSuccessAt: status.lastSuccessAt ?? null,

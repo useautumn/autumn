@@ -120,6 +120,19 @@ describe("cycleResetRebillWarnings", () => {
 		);
 	});
 
+	test("ending a trial with the reset bills the full period, never prorated", () => {
+		const [warning] = cycleResetRebillWarnings({
+			resetsCycleNow: true,
+			prorationOverride: "bills_full_period",
+			lineItems: [lineItem({ customerProduct: proSeat1, lineEntity: seat1 })],
+			liveCustomerProducts: [proSeat1],
+		});
+
+		expect(warning?.message).toBe(
+			"The trial ends now, so Pro (Seat 1) is billed for the full period now.",
+		);
+	});
+
 	test("lists three or more plans with commas", () => {
 		const [warning] = cycleResetRebillWarnings({
 			resetsCycleNow: true,

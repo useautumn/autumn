@@ -16,7 +16,7 @@ export const recalculateBalanceCommandSchema = mutatingCommandSchema
 		/** Answer with the diff and write nothing. */
 		preview: z.boolean(),
 	})
-	.strict();
+	.loose();
 
 export type RecalculateBalanceCommand = z.infer<
 	typeof recalculateBalanceCommandSchema

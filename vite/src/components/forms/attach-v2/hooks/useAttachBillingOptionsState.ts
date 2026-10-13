@@ -7,6 +7,7 @@ import {
 	type PlanTiming,
 } from "@autumn/shared";
 import { useCallback, useEffect } from "react";
+import { defaultProrationBehavior } from "@/components/forms/shared/utils/defaultProrationBehavior";
 import type { AttachForm } from "../attachFormSchema";
 import {
 	getAttachProrationVisibility,
@@ -124,9 +125,11 @@ export function useAttachBillingOptionsState({
 		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
+	const openingProrationBehavior = defaultProrationBehavior({
+		noChargesAllowed: isNoChargesAllowed,
+	});
 	const effectiveProrationBehavior =
-		normalizedProrationBehavior ??
-		(isNoChargesAllowed ? "none" : "prorate_immediately");
+		normalizedProrationBehavior ?? openingProrationBehavior;
 	const noChargesDisabledReason = getNoChargesDisabledReason({
 		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
@@ -172,9 +175,14 @@ export function useAttachBillingOptionsState({
 	useEffect(() => {
 		if (!showProrationBehavior) return;
 		if (prorationBehavior !== null) return;
-		if (!isNoChargesAllowed) return;
-		form.setFieldValue("prorationBehavior", "none");
-	}, [showProrationBehavior, prorationBehavior, isNoChargesAllowed, form]);
+		if (openingProrationBehavior !== "none") return;
+		form.setFieldValue("prorationBehavior", openingProrationBehavior);
+	}, [
+		showProrationBehavior,
+		prorationBehavior,
+		openingProrationBehavior,
+		form,
+	]);
 
 	useEffect(() => {
 		if (prorationBehavior !== "none") return;

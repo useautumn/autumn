@@ -2,13 +2,17 @@ import { z } from "zod/v4";
 import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
 import { commandOrgSchema } from "../../../models/command/commandOrg.js";
 import { propertiesSchema } from "../../../models/common/json.js";
+import { openEnum } from "../../../models/common/openSchema.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../../models/common/primitives.js";
 
-export const overageBehaviorSchema = z.enum(["cap", "reject", "overflow"]);
+export const overageBehaviorSchema = openEnum({
+	name: "track.overageBehavior",
+	values: ["cap", "reject", "overflow"],
+});
 
 export type OverageBehavior = z.infer<typeof overageBehaviorSchema>;
 
@@ -20,9 +24,12 @@ export const trackLockSchema = z
 		/** The caller's id, unique among the customer's open locks. */
 		lockId: nonEmptyStringSchema,
 		expiresAt: timestampSchema,
-		expiryAction: z.enum(["release", "confirm"]),
+		expiryAction: openEnum({
+			name: "track.lock.expiryAction",
+			values: ["release", "confirm"],
+		}),
 	})
-	.strict();
+	.loose();
 
 export type TrackLock = z.infer<typeof trackLockSchema>;
 
@@ -33,7 +40,7 @@ export const trackIdempotencySchema = z
 		key: nonEmptyStringSchema,
 		ttlMs: z.number().int().positive(),
 	})
-	.strict();
+	.loose();
 
 export type TrackIdempotency = z.infer<typeof trackIdempotencySchema>;
 
@@ -46,8 +53,10 @@ export const trackUsageEventSchema = z
 		idempotencyKey: nonEmptyStringSchema.nullable(),
 		/** A caller-named event id (`x-event-id`); null lets the event be named by its place in the log. */
 		id: nonEmptyStringSchema.nullable(),
+		/** Set on a track_tokens command: its event records what parent credit pools were charged as `credit_cost`. */
+		recordsCreditCost: z.boolean().optional(),
 	})
-	.strict();
+	.loose();
 
 export type TrackUsageEvent = z.infer<typeof trackUsageEventSchema>;
 
@@ -67,7 +76,9 @@ export const trackCommandSchema = mutatingCommandSchema
 		idempotency: trackIdempotencySchema.optional(),
 		/** Null when this command records none: the caller skipped it, or a fan-out already records it on its first feature. */
 		usageEvent: trackUsageEventSchema.nullable(),
+		/** Loose for a newer server's fields, but the writer's receipt never rides in a command. */
+		receipt: z.never().optional(),
 	})
-	.strict();
+	.loose();
 
 export type TrackCommand = z.infer<typeof trackCommandSchema>;

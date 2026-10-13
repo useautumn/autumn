@@ -6,6 +6,7 @@ export const JOB_KINDS: JobKind[] = [
 	"swarm",
 	"warm",
 	"nuke",
+	"qa",
 ];
 
 export const JOB_RUNNER_DEFAULTS = {
@@ -15,6 +16,7 @@ export const JOB_RUNNER_DEFAULTS = {
 		nuke: 64,
 		reinit_keys: 1,
 		full_nuke_key: 8,
+		qa: 10,
 	} satisfies Record<JobKind, number>,
 	leaseMs: 30_000,
 	heartbeatMs: 10_000,

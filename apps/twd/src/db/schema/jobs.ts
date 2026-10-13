@@ -15,7 +15,8 @@ export type JobKind =
 	| "swarm"
 	| "nuke"
 	| "reinit_keys"
-	| "full_nuke_key";
+	| "full_nuke_key"
+	| "qa";
 export type JobStatus =
 	| "queued"
 	| "running"

@@ -14,11 +14,13 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { calculateNewSubscriptionAnchorStub } from "@tests/integration/billing/utils/proration";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 
 const previewCreateSchedule = async ({
 	autumnV1,
@@ -117,7 +119,7 @@ test.concurrent(
 			id: "clear-trial-addon-b",
 			items: [items.monthlyUsers()],
 		});
-		const { customerId, autumnV1, ctx } = await initScenario({
+		const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 			customerId: "cs-immediate-clear-trial",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -135,7 +137,25 @@ test.concurrent(
 			freeTrial: null,
 		});
 
-		expect((await previewCreateSchedule({ autumnV1, params })).total).toBe(60);
+		// Ending a trial with no anchor keeps the cycle on the old trial end (set_plans' trial-end recreate),
+		// so each plan bills a prorated stub up to it and the full period from there, as Stripe does.
+		const trialEndsAt = await expectProductTrialing({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			productId: pro.id,
+		});
+		const expectedTotal = new Decimal(
+			calculateNewSubscriptionAnchorStub({
+				advancedTo,
+				anchorMs: trialEndsAt!,
+				amount: 20,
+			}),
+		)
+			.mul(3)
+			.toNumber();
+
+		expect((await previewCreateSchedule({ autumnV1, params })).total).toBe(
+			expectedTotal,
+		);
 		await autumnV1.billing.createSchedule(params);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -146,7 +166,11 @@ test.concurrent(
 		for (const productId of [pro.id, addonA.id, addonB.id]) {
 			await expectProductNotTrialing({ customer, productId });
 		}
-		await expectCustomerInvoiceCorrect({ customer, count: 2, latestTotal: 60 });
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,

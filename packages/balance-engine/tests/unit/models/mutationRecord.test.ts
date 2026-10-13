@@ -3,7 +3,9 @@ import {
 	applyMutation,
 	computeTrack,
 	type MutationEffect,
+	onUnknownInput,
 	parseMutationRecord,
+	type UnknownInput,
 } from "../../../src/balanceEngine.js";
 import {
 	createState,
@@ -81,26 +83,72 @@ describe("a record from a newer writer", () => {
 		);
 	});
 
-	test("is still refused for an unknown key in its changes: replay must derive the same rows", () => {
+	test("keeps an unknown key on a change and an unknown counter in it: an older build carries them through replay", () => {
 		const logged = fromNewerWriter();
 		logged.changes[0].futureField = true;
+		logged.changes[0].add.futureCounter = 2;
+		const parsed = parseMutationRecord({ input: logged });
 
-		expect(() => parseMutationRecord({ input: logged })).toThrow(
-			"Unrecognized key",
-		);
+		expect(parsed.changes[0]).toEqual(logged.changes[0]);
 	});
 
-	test("is still refused for an unknown key on the record, its receipt or its source", () => {
-		const onRecord = { ...fromNewerWriter(), futureField: true };
-		const onReceipt = fromNewerWriter();
-		onReceipt.receipt.futureField = true;
-		const onSource = {
+	test("keeps an unknown key on the record, its receipt and its source", () => {
+		const logged = {
 			...fromNewerWriter(),
+			futureField: true,
 			source: { commandOffset: "7", futureField: true },
 		};
+		logged.receipt.futureField = true;
 
-		for (const input of [onRecord, onReceipt, onSource]) {
-			expect(() => parseMutationRecord({ input })).toThrow("Unrecognized key");
+		expect(parseMutationRecord({ input: logged })).toEqual(logged);
+	});
+
+	test("skips a change of an unknown kind, applies the rest, and reports the kind once", () => {
+		const sightings: UnknownInput[] = [];
+		onUnknownInput((input) => sightings.push(input));
+		const logged = fromNewerWriter();
+		logged.changes = [
+			{ table: "futureTable", op: "insert", row: { id: "ft_1" } },
+			...logged.changes,
+			{ table: "customerEntitlements", op: "futureOp", id: "ce_1" },
+		];
+
+		const parsed = parseMutationRecord({ input: logged });
+		parseMutationRecord({ input: logged });
+
+		expect(parsed.changes).toEqual(record.changes);
+		expect(applyMutation({ state: createState(), mutation: parsed })).toEqual(
+			applyMutation({ state: createState(), mutation: record }),
+		);
+		expect(sightings).toEqual([
+			{
+				kind: "row_change",
+				table: "futureTable",
+				op: "insert",
+				commandId: record.id,
+				identity: record.identity,
+			},
+			{
+				kind: "row_change",
+				table: "customerEntitlements",
+				op: "futureOp",
+				commandId: record.id,
+				identity: record.identity,
+			},
+		]);
+	});
+
+	test("a malformed change is still refused, not skipped: a known kind with a bad field, or a discriminator that is not a string", () => {
+		for (const malformed of [
+			{ table: "customerEntitlements", op: "delete", id: 5 },
+			{ table: "customerEntitlements", op: null, id: "ce_1" },
+			{ table: 7, op: "delete", id: "ce_1" },
+			{ op: "delete", id: "ce_1" },
+		]) {
+			const logged = fromNewerWriter();
+			logged.changes = [malformed, ...logged.changes];
+
+			expect(() => parseMutationRecord({ input: logged })).toThrow();
 		}
 	});
 });

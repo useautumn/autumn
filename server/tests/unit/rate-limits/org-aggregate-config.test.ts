@@ -1,54 +1,85 @@
 import { describe, expect, test } from "bun:test";
 import {
-	getOrgAggregateType,
+	getRateLimitRouteGroup,
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
-describe("org aggregate rate limits", () => {
-	test("high-volume per-customer types map to an org aggregate", () => {
-		expect(getOrgAggregateType(RateLimitType.Track)).toBe(
+describe("org rate limits", () => {
+	test("high-volume per-customer buckets name their org cap", () => {
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.Track].orgLimit).toBe(
 			RateLimitType.TrackOrg,
 		);
-		expect(getOrgAggregateType(RateLimitType.Check)).toBe(
-			RateLimitType.CheckOrg,
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.CheckCustomerGet].orgLimit).toBe(
+			RateLimitType.CheckCustomerGetOrg,
 		);
-		expect(getOrgAggregateType(RateLimitType.CustomerEntitiesGet)).toBe(
-			RateLimitType.EntitiesGetOrg,
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.CustomerEntitiesGet].orgLimit).toBe(
+			RateLimitType.CustomerEntitiesGetOrg,
 		);
 	});
 
-	test("types without an aggregate return undefined", () => {
-		expect(getOrgAggregateType(RateLimitType.General)).toBeUndefined();
-		expect(getOrgAggregateType(RateLimitType.Attach)).toBeUndefined();
-		expect(getOrgAggregateType(RateLimitType.TrackOrg)).toBeUndefined();
+	test("buckets without an org cap have none", () => {
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.General].orgLimit).toBeUndefined();
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.Attach].orgLimit).toBeUndefined();
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.TrackOrg].orgLimit).toBeUndefined();
 	});
 
-	test("aggregate configs are org-scoped, redis-backed, 60s windows", () => {
-		const aggregates = [
+	test("track and check count per customer in memory, per org in Redis", () => {
+		for (const type of [RateLimitType.Track, RateLimitType.CheckCustomerGet]) {
+			expect(RATE_LIMIT_CONFIGS[type]).toMatchObject({
+				scope: RateLimitScope.Customer,
+				store: "memory",
+				windowMs: 1000,
+			});
+		}
+		const orgCaps = [
 			RateLimitType.TrackOrg,
-			RateLimitType.CheckOrg,
-			RateLimitType.EntitiesGetOrg,
+			RateLimitType.CheckCustomerGetOrg,
+			RateLimitType.CustomerEntitiesGetOrg,
 		];
-		for (const type of aggregates) {
-			const config = RATE_LIMIT_CONFIGS[type];
-			expect(config.scope).toBe(RateLimitScope.Org);
-			expect(config.notInRedis).toBe(false);
-			expect(config.windowMs).toBe(60_000);
-			expect(config.limit).toBeGreaterThan(0);
+		for (const type of orgCaps) {
+			expect(RATE_LIMIT_CONFIGS[type]).toMatchObject({
+				scope: RateLimitScope.Org,
+				store: "redis",
+				windowMs: 60_000,
+			});
+			expect(RATE_LIMIT_CONFIGS[type].limit).toBeGreaterThan(0);
 		}
 	});
 
-	test("check/track aggregates degrade (fail open) instead of rejecting", () => {
-		expect(RATE_LIMIT_CONFIGS[RateLimitType.CheckOrg].overLimit).toBe(
-			"degrade",
+	test("check and track degrade at their org cap, customer reads and entities.get reject", () => {
+		const groupFor = ({ method, path }: { method: string; path: string }) =>
+			getRateLimitRouteGroup({
+				req: { method, path },
+				get: () => undefined,
+			} as never);
+
+		expect(groupFor({ method: "POST", path: "/v1/check" })).toEqual({
+			type: RateLimitType.CheckCustomerGet,
+			overLimit: "degrade",
+		});
+		expect(groupFor({ method: "POST", path: "/v1/track" })).toEqual({
+			type: RateLimitType.Track,
+			overLimit: "degrade",
+		});
+		expect(groupFor({ method: "GET", path: "/v1/customers/cus_1" })).toEqual({
+			type: RateLimitType.CheckCustomerGet,
+			overLimit: "reject",
+		});
+		expect(groupFor({ method: "POST", path: "/v1/entities.get" })).toEqual({
+			type: RateLimitType.CustomerEntitiesGet,
+			overLimit: undefined,
+		});
+	});
+
+	test("enum renames keep the counter keys and override names byte-identical", () => {
+		expect(RateLimitType.CheckCustomerGet).toBe("check" as RateLimitType);
+		expect(RateLimitType.CheckCustomerGetOrg).toBe(
+			"check_org" as RateLimitType,
 		);
-		expect(RATE_LIMIT_CONFIGS[RateLimitType.TrackOrg].overLimit).toBe(
-			"degrade",
+		expect(RateLimitType.CustomerEntitiesGetOrg).toBe(
+			"entities_get_org" as RateLimitType,
 		);
-		expect(
-			RATE_LIMIT_CONFIGS[RateLimitType.EntitiesGetOrg].overLimit,
-		).toBeUndefined();
 	});
 });

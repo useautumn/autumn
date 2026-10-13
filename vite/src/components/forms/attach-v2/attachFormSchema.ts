@@ -6,8 +6,8 @@ import {
 	RedirectModeSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { DiscountsFormFieldsSchema } from "@/components/forms/shared/utils/discountUtils";
 import { FreeTrialFormFieldsSchema } from "../shared/utils/freeTrialFormValues";
-import type { FormDiscount } from "./utils/discountUtils";
 import type { InvoiceBillingDetailsForm } from "./utils/invoiceBillingDetails";
 
 export interface FormCustomLineItem {
@@ -59,8 +59,7 @@ export const AttachFormSchema = z.object({
 	resetBillingCycle: z.boolean(),
 	billingCycleAnchorMode: z.enum(["now", "custom"]),
 	billingCycleAnchorDate: z.number().nullable(),
-	discounts: z.custom<FormDiscount[]>(),
-	removedRewardIds: z.array(z.string()),
+	...DiscountsFormFieldsSchema.shape,
 	grantFree: z.boolean(),
 	currency: z.string().nullable(),
 

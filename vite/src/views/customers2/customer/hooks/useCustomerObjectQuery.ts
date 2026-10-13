@@ -29,11 +29,13 @@ export function useCustomerObjectQuery({
 	scopeEntityId,
 	enabled,
 	staleTime = CUSTOMER_OBJECT_GC_TIME,
+	refetchOnWindowFocus,
 }: {
 	customerId?: string;
 	scopeEntityId?: string | null;
 	enabled: boolean;
 	staleTime?: number;
+	refetchOnWindowFocus?: boolean;
 }) {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
@@ -49,5 +51,6 @@ export function useCustomerObjectQuery({
 		enabled: enabled && !!customerId,
 		gcTime: CUSTOMER_OBJECT_GC_TIME,
 		staleTime,
+		refetchOnWindowFocus,
 	});
 }

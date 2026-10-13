@@ -240,6 +240,28 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 
+/** Billed on the Stripe subscription itself or on its schedule. */
+export const isCustomerProductInStripeSubscriptionScope = ({
+	customerProduct,
+	stripeSubscriptionId,
+	stripeSubscriptionScheduleId,
+}: {
+	customerProduct: FullCusProduct;
+	stripeSubscriptionId?: string | null;
+	stripeSubscriptionScheduleId?: string | null;
+}): boolean =>
+	Boolean(
+		(stripeSubscriptionId &&
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId,
+			})) ||
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripeSubscriptionScheduleId ?? undefined,
+			}),
+	);
+
 /** Free and billed on no Stripe subscription or schedule, so no single subscription owns it
  * (it may still be scoped to an entity). */
 export const isCustomerProductUnlinkedFree = (

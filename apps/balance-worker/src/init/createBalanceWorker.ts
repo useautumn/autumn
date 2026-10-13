@@ -1,4 +1,5 @@
 import { cpus } from "node:os";
+import { logUnknownInput } from "@autumn/balance-engine";
 import { defaultBalanceWorkerThreadsEdgeConfig } from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
@@ -14,6 +15,7 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
@@ -68,7 +70,7 @@ import {
 } from "./workerConfig.js";
 import {
 	openWorkerResources,
-	WORKER_KAFKA_CLIENT_LIMITS,
+	WORKER_KAFKA_PRODUCER_LIMITS,
 } from "./workerResources.js";
 
 /** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
@@ -83,6 +85,7 @@ export async function createBalanceWorker({
 }): Promise<BalanceWorker> {
 	const { env } = config;
 	assertIdempotentCommits({ mode: env.BALANCE_WORKER_COMMIT_MODE });
+	logUnknownInput({ logger: dependencies.logger });
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
 	const identity = await resolveTaskIdentity({
@@ -187,6 +190,7 @@ export async function createBalanceWorker({
 				bootstrapper: resources.bootstrapper,
 				checkpointMaintenance: resources.checkpoints?.maintenance,
 				subjectSnapshotsConfig: resources.edgeConfigs?.subjectSnapshotsConfig,
+				dbControl: resources.edgeConfigs?.dbControl,
 				commandOffsets: { commit: commitCommandOffsets },
 			},
 			config: runtimeConfig,
@@ -309,7 +313,7 @@ export async function createBalanceWorker({
 						brokers: env.KAFKA_BROKERS,
 						authMode: env.KAFKA_AUTH_MODE,
 						sasl: env.KAFKA_SASL,
-						limits: WORKER_KAFKA_CLIENT_LIMITS,
+						limits: WORKER_KAFKA_PRODUCER_LIMITS,
 						sendRingBytes: threads.sendRingBytes,
 						ackRingBytes: PRODUCER_ACK_RING_BYTES,
 					},
@@ -341,6 +345,16 @@ export async function createBalanceWorker({
 			},
 		});
 		const reportsHealth = process.env.NODE_ENV === "production";
+		const coldStart = resources.edgeConfigs?.coldStart
+			? createColdStart({
+					ctx: {
+						requests: resources.edgeConfigs.coldStart,
+						partitions,
+						logger: dependencies.logger,
+						onAcked: writeColdStartAck,
+					},
+				})
+			: undefined;
 		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
 		const slotHeartbeat =
 			slotGate && resources.edgeConfigs && fleetId
@@ -353,6 +367,7 @@ export async function createBalanceWorker({
 							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
 							probes: { kafka: probeKafka, postgres: probePostgres },
+							readColdStart: coldStart?.readAck,
 							logger: dependencies.logger,
 						},
 						config: {
@@ -363,6 +378,9 @@ export async function createBalanceWorker({
 						},
 					})
 				: undefined;
+		function writeColdStartAck(): void {
+			slotHeartbeat?.writeSoon();
+		}
 		function readSlotStoreHealthy(): boolean {
 			return resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false;
 		}
@@ -446,6 +464,7 @@ export async function createBalanceWorker({
 			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
 			healthReporter: { start: startTelemetry, stop: stopTelemetry },
 			catalogInvalidations: resources.catalogInvalidations,
+			coldStart,
 			listen,
 			settleResources: resources.settleResources,
 			closeStore: resources.closeStore,

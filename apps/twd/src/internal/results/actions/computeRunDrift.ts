@@ -8,7 +8,7 @@ const NEW_FAILURE_MIN_PASS_RATE = 0.9;
 const SLOW_FACTOR = 1.5;
 const SLOW_MIN_MS = 30_000;
 
-/** Flags files that newly fail (baseline pass rate ≥ 0.9) or run > 1.5× baseline p90 (and > 30s); none for repeat runs. */
+/** Flags files that newly fail (baseline pass rate ≥ 0.9) or run > 1.5× a swarm baseline p90 (and > 30s); none for repeat runs. */
 export const computeRunDrift = async ({
 	ctx,
 	runId,
@@ -36,6 +36,7 @@ export const computeRunDrift = async ({
 		duration_ms: number;
 		p90_ms: number;
 		pass_rate: number;
+		source: string;
 	}>(sql`
 		with final as (
 			select distinct on (file) file, status, duration_ms
@@ -43,7 +44,7 @@ export const computeRunDrift = async ({
 			where run_id = ${runId}
 			order by file, attempt desc, created_at desc
 		)
-		select f.file, f.status, f.duration_ms, b.p90_ms, b.pass_rate
+		select f.file, f.status, f.duration_ms, b.p90_ms, b.pass_rate, b.source
 		from final f
 		join file_baselines b on b.file = f.file
 	`);
@@ -60,6 +61,7 @@ export const computeRunDrift = async ({
 			});
 		}
 		if (
+			row.source === "swarm" &&
 			row.duration_ms > SLOW_MIN_MS &&
 			row.duration_ms > SLOW_FACTOR * row.p90_ms
 		) {

@@ -17,7 +17,9 @@
 //      with the per-machine DATABASE_URL + localhost service URLs.
 //
 // Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
-// no-op for the Neon branch and refreshes env files in place.
+// no-op for the Neon branch and refreshes env files in place. A run in the
+// same boot with unchanged migrations, SQL functions and env files exits
+// right after the infra checks (see provisionStamp.ts); `--force` redoes it.
 //
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import {
@@ -44,8 +46,15 @@ import {
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
+import { capyBranchExpiresAt, hasCapyBranchExpired } from "./branchExpiry.ts";
 import { getMachineId, stateForMachine } from "./machineIdentity.ts";
 import { isOptedIn } from "./optIns.ts";
+import {
+	isProvisionCurrent,
+	provisionFingerprint,
+	readBootId,
+	writeProvisionStamp,
+} from "./provisionStamp.ts";
 import {
 	capyEnvFiles,
 	DRAGONFLY_PORT,
@@ -67,6 +76,7 @@ const SCRIPT_DIR = new URL(".", import.meta.url).pathname;
 const PROJECT_ROOT = join(SCRIPT_DIR, "..", "..");
 const CAPY_PREFIX = process.env.CAPY_PREFIX ?? join(homedir(), ".autumn-capy");
 const CAPY_STATE = join(CAPY_PREFIX, "state.json");
+const PROVISION_STAMP = join(CAPY_PREFIX, "provisioned");
 
 const NEON_TEMPLATE_BRANCH = "dw-template";
 
@@ -117,6 +127,7 @@ type State = {
 	branchName?: string;
 	branchId?: string;
 	databaseUrl?: string;
+	branchExpiresAt?: string;
 	createdAt: number;
 	// Per-machine secrets — generated once on first run, persisted, then
 	// re-used so a server restart doesn't invalidate every session.
@@ -534,7 +545,11 @@ function ensureNeonBranch(
 			log(`reusing existing Neon branch ${branchName} (${state.branchId})`);
 			const pooledUrl = connectionString(branchName, { pooled: true });
 			return {
-				state: { ...state, databaseUrl: pooledUrl },
+				state: {
+					...state,
+					databaseUrl: pooledUrl,
+					branchExpiresAt: existing.expires_at,
+				},
 				created: false,
 			};
 		}
@@ -555,6 +570,7 @@ function ensureNeonBranch(
 				branchName,
 				branchId: existingByName.id,
 				databaseUrl: pooledUrl,
+				branchExpiresAt: existingByName.expires_at,
 				createdAt: state?.createdAt ?? Date.now(),
 			},
 			created: false,
@@ -566,7 +582,11 @@ function ensureNeonBranch(
 		`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`,
 	);
 	ensureTemplateBranch();
-	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
+	const createdAt = Date.now();
+	const branchExpiresAt = capyBranchExpiresAt({ createdAt });
+	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH, {
+		expiresAt: branchExpiresAt,
+	});
 	waitForNeonBranchOperations(branch);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
@@ -575,7 +595,8 @@ function ensureNeonBranch(
 			branchName,
 			branchId: branch.id,
 			databaseUrl: pooledUrl,
-			createdAt: Date.now(),
+			branchExpiresAt,
+			createdAt,
 		},
 		created: true,
 	};
@@ -670,6 +691,40 @@ async function main(): Promise<void> {
 	]);
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.
 	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
+
+	// Startup already provisioned this boot; `bun capy` then only adds the app.
+	const bootId = readBootId();
+	const fingerprint = () =>
+		bootId &&
+		provisionFingerprint({
+			repoRoot: PROJECT_ROOT,
+			bootId,
+			machineId,
+			optIns: triggerOptedIn ? ["trigger"] : [],
+		});
+	const currentFingerprint = fingerprint();
+	const stampedBranchExpiresAt = stateForMachine({
+		state: loadState(),
+		machineId,
+	})?.branchExpiresAt;
+	if (
+		currentFingerprint &&
+		!process.argv.includes("--force") &&
+		!hasCapyBranchExpired({
+			expiresAt: stampedBranchExpiresAt,
+			now: Date.now(),
+		}) &&
+		isProvisionCurrent({
+			stampPath: PROVISION_STAMP,
+			fingerprint: currentFingerprint,
+		})
+	) {
+		log(
+			"already provisioned this boot with the same migrations and env files; skipping (pass --force to redo)",
+		);
+		return;
+	}
+
 	const trigger = triggerOptedIn ? ensureTriggerProject() : undefined;
 
 	// 2. Neon auth + branch + migrations.
@@ -711,6 +766,14 @@ async function main(): Promise<void> {
 
 	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);
+
+	const provisionedFingerprint = fingerprint();
+	if (provisionedFingerprint) {
+		writeProvisionStamp({
+			stampPath: PROVISION_STAMP,
+			fingerprint: provisionedFingerprint,
+		});
+	}
 
 	log(
 		`capy provision complete — run \`bun capy\` to start the stack (fresh=${created})`,

@@ -53,7 +53,10 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
+import type {
+	ApplyWaits,
+	SqliteStateStore,
+} from "../../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -1645,6 +1648,56 @@ describe("partition writer", () => {
 		}
 	});
 
+	test("each apply hears how long its oldest batch sat committed before it", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		const waits: (ApplyWaits | undefined)[] = [];
+		let now = 0;
+		try {
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender: new RecordingCommittedAppender(),
+				now: () => now,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						waits.push(params.waits);
+						if (waits.length === 1) await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			now = 10;
+			await writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+			await waitForBatch();
+			now = 25;
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_3" }),
+			});
+			now = 40;
+
+			gate.resolve();
+			await writer.waitForStore();
+			expect(waits).toEqual([{ unappliedMs: 0 }, { unappliedMs: 30 }]);
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
 	test("a failed apply behind committed batches still stops the partition", async () => {
 		const fixture = createFixture({
 			identities: [firstIdentity, secondIdentity],
@@ -1831,6 +1884,47 @@ describe("partition writer", () => {
 			expect(appender.batches).toHaveLength(2);
 		} finally {
 			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	test("by default keeps committing while a full store write is still landing", async () => {
+		const fixture = createFixture({ identities: [firstIdentity] });
+		const gate = Promise.withResolvers<void>();
+		const submitted: Promise<unknown>[] = [];
+		const committedWhileStoreWaits = 32;
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: { ...defaultLimits, maxBatchSize: 1 },
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			for (let index = 0; index < committedWhileStoreWaits; index++)
+				submitted.push(
+					writer.submitTrack({
+						command: createCommand({ commandId: `cmd_${index}` }),
+					}),
+				);
+			for (
+				let tick = 0;
+				tick < 200 && appender.batches.length < committedWhileStoreWaits;
+				tick++
+			)
+				await waitForBatch();
+
+			expect(appender.batches).toHaveLength(committedWhileStoreWaits);
+		} finally {
+			gate.resolve();
+			await Promise.allSettled(submitted);
 			closeFixture(fixture);
 		}
 	});

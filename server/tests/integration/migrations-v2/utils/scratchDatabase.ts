@@ -31,3 +31,26 @@ export const withScratchSchema = async ({
 		await admin.end();
 	}
 };
+
+/** Runs `run` against a fresh database the test owns. Unlike a scratch schema,
+ * this works through PgBouncer, which rejects the `options` startup parameter. */
+export const withScratchDatabase = async ({
+	databaseUrl,
+	run,
+}: {
+	databaseUrl: string;
+	run: (args: { databaseUrl: string }) => Promise<void>;
+}) => {
+	const name = `migration_test_${randomUUID().replaceAll("-", "")}`;
+	const admin = new pg.Client({ connectionString: databaseUrl });
+	await admin.connect();
+	try {
+		await admin.query(`CREATE DATABASE ${name}`);
+		const scratchUrl = new URL(databaseUrl);
+		scratchUrl.pathname = `/${name}`;
+		await run({ databaseUrl: scratchUrl.toString() });
+	} finally {
+		await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+		await admin.end();
+	}
+};

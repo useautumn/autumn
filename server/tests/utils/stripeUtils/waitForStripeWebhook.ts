@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { timeout } from "@tests/utils/genUtils.js";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect.js";
 import type Stripe from "stripe";
@@ -141,10 +142,7 @@ const replayStripeEvents = async ({
 		};
 		if (objectId) return object.id === objectId;
 		if (customerStripeId) {
-			const owner =
-				typeof object.customer === "string"
-					? object.customer
-					: object.customer?.id;
+			const owner = stripeRefToId(object.customer);
 			return owner === customerStripeId;
 		}
 		return true;
@@ -161,10 +159,7 @@ const replayStripeEvents = async ({
 					id?: string;
 					customer?: string | { id?: string };
 				};
-				const owner =
-					typeof object.customer === "string"
-						? object.customer
-						: object.customer?.id;
+				const owner = stripeRefToId(object.customer);
 				return `${object.id}/${owner ?? "no-customer"}`;
 			})
 			.slice(0, 6);

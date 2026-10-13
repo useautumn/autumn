@@ -4,7 +4,7 @@ import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 
 export function CreateInvoicePreviewSection() {
-	const { previewQuery, requestBody, blockingReason } =
+	const { previewQuery, requestBody, blockingReason, planIdsOutsidePeriod } =
 		useCreateInvoiceFormContext();
 
 	if (blockingReason) {
@@ -36,7 +36,8 @@ export function CreateInvoicePreviewSection() {
 								: {}),
 						}
 					: null,
-				error: previewQuery.error,
+				// A row already explains a rejected service period inline.
+				error: planIdsOutsidePeriod.size > 0 ? null : previewQuery.error,
 				isLoading: previewQuery.isLoading,
 			}}
 			showCreditNote={false}

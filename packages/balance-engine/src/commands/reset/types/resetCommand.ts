@@ -24,6 +24,6 @@ export const resetCommandSchema = mutatingCommandSchema
 		/** "store" keeps the sender waiting until the refill is in Postgres; absent means once Kafka has it. */
 		durability: commandDurabilitySchema.optional(),
 	})
-	.strict();
+	.loose();
 
 export type ResetCommand = z.infer<typeof resetCommandSchema>;

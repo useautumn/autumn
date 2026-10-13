@@ -10,5 +10,7 @@ export type CatalogStore = {
 	set(params: { rows: CatalogRow[]; readAt: number }): boolean;
 	/** Holds a catalog another thread has stored, without writing it again; false when a later one is held. */
 	install(params: { rows: CatalogRow[]; readAt: number }): boolean;
+	/** The rows as the file holds them, for a replica copying the catalog; null until Autumn has sent one. */
+	rows(): { rows: CatalogRow[]; readAt: number } | null;
 	close(): void;
 };

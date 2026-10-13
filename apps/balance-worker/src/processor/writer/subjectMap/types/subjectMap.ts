@@ -1,5 +1,8 @@
 import type { SubjectState } from "@autumn/balance-engine";
 
+/** `kept`: resident subjects `drops` spared. `resident`: picked but pinned by a write that landed meanwhile. */
+export type ResidentDrop = { evicted: number; kept: number; resident: number };
+
 /** Synchronous, called once an evict has left nothing of the customer resident. */
 export type OnSubjectEvicted = (params: { customerKey: string }) => void;
 
@@ -24,8 +27,16 @@ export type SubjectMap = {
 	/** Held while a mutation is pending for the subject; released once the store holds it. */
 	pin(params: { subjectKey: string }): void;
 	unpin(params: { subjectKey: string }): void;
-	/** Drops the customer's resident rows, entities included. A pinned subject goes when its last pin is released. */
+	/** Drops the customer's resident rows, entities included. A pinned subject is unreadable at once and goes when its last pin is released. */
 	evictCustomer(params: { customerKey: string }): void;
+	/** Makes the customer's rows unreadable at once, ahead of an `evictCustomer` that waits for the store. */
+	hideCustomer(params: { customerKey: string }): void;
+	/** A subject of the customer is hidden and not yet dropped: Postgres may lack a write its rows carried. */
+	isEvicting(params: { customerKey: string }): boolean;
+	/** Drops each resident subject `drops` picks and no write pins; nothing reaches `onEvicted`, since Postgres holds them true. */
+	dropResident(params: {
+		drops: (subject: { customerKey: string; idleMs: number }) => boolean;
+	}): ResidentDrop;
 	clear(): void;
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;

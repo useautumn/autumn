@@ -9,11 +9,11 @@ const emptyForm = (): CreateInvoiceForm => ({
 	discounts: [],
 	invoiceTemplateId: null,
 	netTermsDays: null,
+	paymentMethodTypes: null,
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
 	issueDay: null,
-	dueDay: null,
 });
 
 const planItems = [
@@ -33,6 +33,10 @@ const planWith = (
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
+	period: null,
+	featurePeriods: {},
+	overageQuantities: {},
 	...overrides,
 });
 
@@ -44,6 +48,76 @@ describe("buildCreateInvoiceRequestBody", () => {
 				form: { ...emptyForm(), plans: [planWith()] },
 			}),
 		).toBeNull();
+	});
+
+	test("sends payment terms and never a due or issue date", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: { ...emptyForm(), plans: [planWith()], netTermsDays: 14 },
+		});
+		expect(body?.net_terms_days).toBe(14);
+		expect(body).not.toHaveProperty("due_date");
+		expect(body).not.toHaveProperty("issue_date");
+	});
+
+	test("sends payment methods only once they are chosen", () => {
+		const form = { ...emptyForm(), plans: [planWith()] };
+		expect(
+			buildCreateInvoiceRequestBody({ customerId: "cus_1", form }),
+		).not.toHaveProperty("payment_method_types");
+		expect(
+			buildCreateInvoiceRequestBody({
+				customerId: "cus_1",
+				form: { ...form, paymentMethodTypes: ["card", "customer_balance"] },
+			})?.payment_method_types,
+		).toEqual(["card", "customer_balance"]);
+	});
+
+	test("sends each plan row's scope, with customer-level as null", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({ _id: "a", entityId: "workspace_a" }),
+					planWith({ _id: "b", entityId: "workspace_b" }),
+					planWith({ _id: "c", planId: "addon", entityId: null }),
+				],
+			},
+		});
+
+		expect(body?.plans?.map((plan) => [plan.plan_id, plan.entity_id])).toEqual([
+			["pro", "workspace_a"],
+			["pro", "workspace_b"],
+			["addon", null],
+		]);
+		expect(body).not.toHaveProperty("entity_id");
+	});
+
+	test("keeps feature quantities on their own plan row when a plan repeats", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						_id: "a",
+						entityId: "workspace_a",
+						featureQuantities: { seats: 3 },
+					}),
+					planWith({
+						_id: "b",
+						entityId: "workspace_b",
+						featureQuantities: { seats: 7 },
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.map((plan) => plan.feature_quantities)).toEqual([
+			[{ feature_id: "seats", billing_behavior: "prepaid", quantity: 3 }],
+			[{ feature_id: "seats", billing_behavior: "prepaid", quantity: 7 }],
+		]);
 	});
 
 	test("returns null when there is nothing to charge", () => {
@@ -99,6 +173,65 @@ describe("buildCreateInvoiceRequestBody", () => {
 				billing_behavior: "usage_based",
 				quantity: 2500,
 			},
+		]);
+	});
+
+	test("bills a feature priced both ways as a prepaid line and a usage line, each with its own period", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						items: [
+							{ feature_id: "messages", usage_model: UsageModel.PayPerUse },
+							{ feature_id: "messages", usage_model: UsageModel.Prepaid },
+						] as CreateInvoiceForm["plans"][number]["items"],
+						featureQuantities: { messages: 1000 },
+						overageQuantities: { messages: 400 },
+						featurePeriods: {
+							"messages:prepaid": { start: OCT_1, end: OCT_15 },
+							"messages:usage_based": { start: OCT_15, end: NOV_1 },
+						},
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{
+				feature_id: "messages",
+				billing_behavior: "prepaid",
+				quantity: 1000,
+				period_start: OCT_1,
+				period_end: OCT_15,
+			},
+			{
+				feature_id: "messages",
+				billing_behavior: "usage_based",
+				quantity: 400,
+				period_start: OCT_15,
+				period_end: NOV_1,
+			},
+		]);
+	});
+
+	test("drops an overage quantity once the feature is no longer priced both ways", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						featureQuantities: { seats: 5 },
+						overageQuantities: { seats: 9 },
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{ feature_id: "seats", billing_behavior: "prepaid", quantity: 5 },
 		]);
 	});
 
@@ -247,6 +380,52 @@ describe("buildCreateInvoiceRequestBody", () => {
 		]);
 	});
 
+	test("derives a license feature's billing_behavior from the linked license version, not the parent or the latest version", () => {
+		const latestEditorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.PayPerUse },
+			{ feature_id: "exports", usage_model: UsageModel.PayPerUse },
+		] as CreateInvoiceForm["plans"][number]["items"];
+		const pinnedEditorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.Prepaid },
+			{ feature_id: "exports", usage_model: UsageModel.Prepaid },
+		] as CreateInvoiceForm["plans"][number]["items"];
+
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			catalogItemsByPlanId: new Map([
+				["pro", planItems ?? undefined],
+				["editor", latestEditorItems ?? undefined],
+			]),
+			licenseItemsByPlanId: new Map([
+				["pro", new Map([["editor", pinnedEditorItems ?? []]])],
+			]),
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						licenses: [
+							{
+								_id: "l1",
+								licensePlanId: "editor",
+								quantity: 1,
+								featureQuantities: { credits: 100, exports: 5 },
+								featureUsage: {},
+								prorate: undefined,
+							},
+						],
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0].license_quantities?.[0].feature_quantities).toEqual(
+			[
+				{ feature_id: "credits", billing_behavior: "prepaid", quantity: 100 },
+				{ feature_id: "exports", billing_behavior: "prepaid", quantity: 5 },
+			],
+		);
+	});
+
 	test("sends the period as a pair and flags preview", () => {
 		const body = buildCreateInvoiceRequestBody({
 			customerId: "cus_1",
@@ -266,25 +445,6 @@ describe("buildCreateInvoiceRequestBody", () => {
 		});
 	});
 
-	test("sends the issue and due dates", () => {
-		const body = buildCreateInvoiceRequestBody({
-			customerId: "cus_1",
-			form: {
-				...emptyForm(),
-				issueDay: new Date(2026, 8, 7).getTime(),
-				dueDay: new Date(2099, 9, 14).getTime(),
-				customLineItems: [{ _id: "c1", description: "Setup", amount: 10 }],
-			},
-		});
-
-		expect(new Date(body?.issue_date ?? 0).toISOString()).toBe(
-			"2026-09-07T12:00:00.000Z",
-		);
-		expect(new Date(body?.due_date ?? 0).toISOString()).toBe(
-			"2099-10-14T12:00:00.000Z",
-		);
-	});
-
 	test("ignores a half-set period", () => {
 		const body = buildCreateInvoiceRequestBody({
 			customerId: "cus_1",
@@ -298,4 +458,90 @@ describe("buildCreateInvoiceRequestBody", () => {
 		expect(body).not.toHaveProperty("period_start");
 		expect(body).not.toHaveProperty("period_end");
 	});
+
+	test("sends a row's service period override on that plan only", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				periodStart: OCT_1,
+				periodEnd: NOV_1,
+				plans: [
+					planWith({ _id: "a", period: { start: OCT_1, end: OCT_15 } }),
+					planWith({ _id: "b" }),
+				],
+			},
+		});
+
+		expect(body).toMatchObject({ period_start: OCT_1, period_end: NOV_1 });
+		expect(body?.plans?.[0]).toMatchObject({
+			period_start: OCT_1,
+			period_end: OCT_15,
+		});
+		expect(body?.plans?.[1]).not.toHaveProperty("period_start");
+		expect(body?.plans?.[1]).not.toHaveProperty("period_end");
+	});
+
+	test("sends a feature's period on its own feature quantity line", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						featureQuantities: { seats: 3, credits: 40 },
+						featurePeriods: {
+							"credits:usage_based": { start: OCT_15, end: NOV_1 },
+							"seats:usage_based": { start: OCT_1, end: OCT_15 },
+						},
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{ feature_id: "seats", billing_behavior: "prepaid", quantity: 3 },
+			{
+				feature_id: "credits",
+				billing_behavior: "usage_based",
+				quantity: 40,
+				period_start: OCT_15,
+				period_end: NOV_1,
+			},
+		]);
+	});
+
+	test("sends a backdated issue day at midday UTC", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			now: new Date(2026, 9, 8, 15),
+			form: {
+				...emptyForm(),
+				issueDay: new Date(2026, 9, 1).getTime(),
+				plans: [planWith()],
+			},
+		});
+
+		expect(new Date(body?.issue_date ?? 0).toISOString()).toBe(
+			"2026-10-01T12:00:00.000Z",
+		);
+	});
+
+	test("leaves an issue day of today to Stripe", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			now: new Date(2026, 9, 8, 15),
+			form: {
+				...emptyForm(),
+				issueDay: new Date(2026, 9, 8).getTime(),
+				plans: [planWith()],
+			},
+		});
+
+		expect(body).not.toHaveProperty("issue_date");
+	});
 });
+
+const OCT_1 = Date.UTC(2026, 9, 1);
+const OCT_15 = Date.UTC(2026, 9, 15);
+const NOV_1 = Date.UTC(2026, 10, 1);

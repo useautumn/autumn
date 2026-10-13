@@ -8,6 +8,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { removeDiscountsByRewardIds } from "../utils/discounts/removeDiscountsByRewardIds";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
+import { stripeCouponToRewardId } from "../utils/discounts/stripeCouponToRewardId";
 import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
 import { validateFirstTimeDiscounts } from "../utils/discounts/validateFirstTimeDiscounts";
@@ -119,11 +120,14 @@ export const fetchStripeDiscountsForBilling = async ({
 	});
 
 	// Re-sent codes already on the subscription are deduped below, not re-redeemed
-	const existingCouponIds = new Set(
-		existingDiscounts.map((discount) => discount.source.coupon.id),
+	const existingRewardIds = new Set(
+		existingDiscounts.map((discount) =>
+			stripeCouponToRewardId(discount.source.coupon),
+		),
 	);
 	const newParamDiscounts = resolvedParamDiscounts.filter(
-		(discount) => !existingCouponIds.has(discount.source.coupon.id),
+		(discount) =>
+			!existingRewardIds.has(stripeCouponToRewardId(discount.source.coupon)),
 	);
 
 	await validateFirstTimeDiscounts({
@@ -139,7 +143,7 @@ export const fetchStripeDiscountsForBilling = async ({
 	const discountByCouponId = new Map<string, StripeDiscountWithCoupon>();
 
 	for (const d of [...resolvedParamDiscounts, ...existingDiscounts]) {
-		const couponId = d.source.coupon.id;
+		const couponId = stripeCouponToRewardId(d.source.coupon);
 		const current = discountByCouponId.get(couponId);
 
 		if (!current) {

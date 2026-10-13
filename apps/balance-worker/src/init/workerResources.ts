@@ -54,13 +54,19 @@ export type WorkerBootstrapConfig = {
 	checkpointSource?: PartitionCheckpointSource;
 };
 
-/** The client limits every worker Kafka client uses. */
+/** The client limits the worker's consumers and admin client use. */
 export const WORKER_KAFKA_CLIENT_LIMITS = {
 	connectionTimeoutMs: 5000,
 	requestTimeoutMs: 30000,
-	retryCount: 2,
+	retryCount: 5,
 	initialRetryTimeMs: 100,
 	maxRetryTimeMs: 1000,
+};
+
+export const WORKER_KAFKA_PRODUCER_LIMITS = {
+	...WORKER_KAFKA_CLIENT_LIMITS,
+	requestTimeoutMs: 5000,
+	retryCount: 2,
 };
 
 export async function openWorkerResources({
@@ -112,7 +118,10 @@ export async function openWorkerResources({
 				logger: dependencies.logger,
 				s3Client: dependencies.edgeConfigS3Client,
 			},
-			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
+			config: {
+				location: { bucket: env.S3_BUCKET, region: env.S3_REGION },
+				coldStart: env.BALANCE_WORKER_STAGING,
+			},
 		});
 		const postgres = createWorkerPostgresClient({
 			ctx: { logger: dependencies.logger },

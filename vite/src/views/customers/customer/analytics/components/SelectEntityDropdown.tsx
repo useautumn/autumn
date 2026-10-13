@@ -1,10 +1,9 @@
 import type { Entity } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
+import { SelectOptionLabel } from "./SelectOptionLabel";
 
 const ALL_ENTITIES = "__all_entities__";
 const SEARCH_THRESHOLD = 5;
@@ -19,11 +18,11 @@ export const SelectEntityDropdown = ({
 }) => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 	const { customer } = useAnalyticsContext();
-	const entities: Entity[] = customer?.entities || [];
+	// Shown as soon as a customer is picked, so the row never reflows when their record lands.
+	if (!filterStates.customer_id) return null;
 
-	if (!customer || entities.length === 0) {
-		return null;
-	}
+	const entities: Entity[] = customer?.entities ?? [];
+	const hasNoEntities = Boolean(customer) && entities.length === 0;
 
 	const options: EntityOption[] = [
 		{ id: ALL_ENTITIES, name: `All entities (${entities.length})` },
@@ -43,24 +42,20 @@ export const SelectEntityDropdown = ({
 			getOptionValue={(option) => option.id}
 			getOptionLabel={(option) => option.name}
 			searchable={entities.length > SEARCH_THRESHOLD}
+			disabled={hasNoEntities}
 			searchPlaceholder="Search entities..."
 			emptyText="No entities found"
 			trigger={renderTrigger(
-				entities.find((entity) => entity.id === filterStates.entity_id)?.name ??
-					filterStates.entity_id ??
-					"All entities",
+				hasNoEntities
+					? "None"
+					: (entities.find((entity) => entity.id === filterStates.entity_id)
+							?.name ??
+							filterStates.entity_id ??
+							"All entities"),
 			)}
-			contentClassName="min-w-[220px]"
+			contentClassName="min-w-[220px] rounded-xl"
 			renderOption={(option, isSelected) => (
-				<>
-					<span className="flex-1 truncate min-w-0">{option.name}</span>
-					<CheckIcon
-						className={cn(
-							"size-4 shrink-0 transition-opacity",
-							isSelected ? "opacity-100" : "opacity-0",
-						)}
-					/>
-				</>
+				<SelectOptionLabel name={option.name} isSelected={isSelected} />
 			)}
 		/>
 	);

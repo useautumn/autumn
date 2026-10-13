@@ -1,4 +1,5 @@
 import { expect } from "bun:test";
+import { stripeRefToId } from "@autumn/shared";
 import { getStripeSubscription } from "./discountTestUtils.js";
 
 /**
@@ -19,7 +20,7 @@ export const expectSubscriptionDiscountsCorrect = async ({
 	const appliedCouponIds = (subscription.discounts ?? []).map((discount) => {
 		if (typeof discount === "string") return discount;
 		const coupon = discount.source?.coupon;
-		return typeof coupon === "string" ? coupon : coupon?.id;
+		return stripeRefToId(coupon);
 	});
 
 	expect(

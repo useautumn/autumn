@@ -2,7 +2,6 @@ import type {
 	AttachBillingContext,
 	AttachPreviewResponse,
 	BillingPlan,
-	FullCusProduct,
 	MultiAttachBillingContext,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -13,7 +12,7 @@ export const billingPlanToAttachPreview = async ({
 	ctx,
 	billingContext,
 	billingPlan,
-	nextCycleCustomerProductFilter,
+	nextCycleStripeSubscriptionId,
 }: {
 	ctx: AutumnContext;
 	billingContext:
@@ -21,15 +20,15 @@ export const billingPlanToAttachPreview = async ({
 		| MultiAttachBillingContext
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
-	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	/** Scope next_cycle to the plans this Stripe subscription's next invoice bills. */
+	nextCycleStripeSubscriptionId?: string;
 }): Promise<AttachPreviewResponse> => {
 	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
 		{
 			ctx,
 			billingContext,
 			billingPlan,
-			nextCycleCustomerProductFilter,
+			nextCycleStripeSubscriptionId,
 		},
 	);
 

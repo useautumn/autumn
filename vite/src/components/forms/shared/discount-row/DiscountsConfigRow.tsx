@@ -2,8 +2,8 @@ import { IconButton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
 import { ConfigRow } from "@/components/forms/shared/advanced-section";
+import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 import { DiscountRow } from "./DiscountRow";
 
 export function DiscountsConfigRow({

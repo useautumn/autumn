@@ -40,6 +40,14 @@ export type SDKOptions = {
    */
   serverURL?: string | undefined;
   /**
+   * The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
+   */
+  edgeURL?: string | undefined;
+  /**
+   * Send every call the edge serves (e.g. `check`) to `edgeURL` first, falling back to the Autumn API when the edge is down
+   */
+  useEdge?: boolean | undefined;
+  /**
    * Allows overriding the default user agent used by the SDK
    */
   userAgent?: string | undefined;
@@ -70,8 +78,8 @@ export function serverURLFromOptions(options: SDKOptions): URL | null {
 
 export const SDK_METADATA = {
   language: "typescript",
-  openapiDocVersion: "2.4.0",
+  openapiDocVersion: "2.5.0",
   sdkVersion: "0.10.18",
   genVersion: "2.884.13",
-  userAgent: "speakeasy-sdk/typescript 0.10.18 2.884.13 2.4.0 @useautumn/sdk",
+  userAgent: "speakeasy-sdk/typescript 0.10.18 2.884.13 2.5.0 @useautumn/sdk",
 } as const;

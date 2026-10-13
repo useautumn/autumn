@@ -1,22 +1,31 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import {
+	RATE_LIMIT_CONFIGS,
+	RateLimitType,
+} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Red: unscoped entity lists entered the shared `:undefined` customer bucket.
 // Green: only customer-scoped lists enter the inner customer limiter.
 const limiterCalls: RateLimitType[] = [];
+const recordingLimiter =
+	(type: RateLimitType) => async (_c: unknown, next: () => Promise<void>) => {
+		limiterCalls.push(type);
+		await next();
+	};
 
 await mockModuleWithRestore(
 	"@/internal/misc/rateLimiter/rateLimitFactory",
 	() => ({
-		getLimiterForType:
-			(type: RateLimitType) =>
-			async (_c: unknown, next: () => Promise<void>) => {
-				limiterCalls.push(type);
-				await next();
-			},
+		getLimiterForType: (type: RateLimitType) => recordingLimiter(type),
+		getOrgLimiterFor: ({ type }: { type: RateLimitType }) => {
+			const orgLimit = RATE_LIMIT_CONFIGS[type].orgLimit;
+			return (
+				orgLimit && { type: orgLimit, limiter: recordingLimiter(orgLimit) }
+			);
+		},
 		getRateLimitKey: ({ rateLimitType }: { rateLimitType: RateLimitType }) =>
 			`key:${rateLimitType}`,
 		setRateLimitKeyInContext: () => undefined,

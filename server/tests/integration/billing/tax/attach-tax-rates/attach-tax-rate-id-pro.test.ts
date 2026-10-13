@@ -6,6 +6,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { stripeRefToId } from "@autumn/shared";
 import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -13,9 +14,7 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 
 const subTaxRateIds = (sub: Stripe.Subscription): string[] =>
-	(sub.default_tax_rates ?? []).map((rate) =>
-		typeof rate === "string" ? rate : rate.id,
-	);
+	(sub.default_tax_rates ?? []).map((rate) => stripeRefToId(rate));
 
 test.concurrent(
 	`${chalk.yellowBright("attach-tax-rate-id (v2 /v1/billing.attach): pro $20/mo + explicit 10% tax_rate_id = $22 invoice")}`,

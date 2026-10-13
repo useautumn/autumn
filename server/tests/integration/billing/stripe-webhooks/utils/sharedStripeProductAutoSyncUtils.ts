@@ -16,6 +16,7 @@ import {
 	ProductItemFeatureType,
 	type ProductV2,
 	ResetInterval,
+	stripeRefToId,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
@@ -348,7 +349,7 @@ export const findSubscriptionItemByStripeProductId = ({
 }) => {
 	const item = subscription.items.data.find((item) => {
 		const product = item.price.product;
-		const productId = typeof product === "string" ? product : product.id;
+		const productId = stripeRefToId(product);
 		return productId === stripeProductId;
 	});
 	if (!item) {

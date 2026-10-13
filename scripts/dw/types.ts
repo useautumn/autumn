@@ -29,6 +29,7 @@ export type NeonBranch = {
 	id: string;
 	name: string;
 	created_at?: string;
+	expires_at?: string;
 };
 
 export type WorktreeAliases = {

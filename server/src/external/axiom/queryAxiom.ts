@@ -1,3 +1,4 @@
+import type { Axiom } from "@axiomhq/js";
 import { getAxiomClient } from "./initAxiom.js";
 
 export const queryAxiom = async ({
@@ -14,11 +15,13 @@ export const queryAxiom = async ({
 export const queryAxiomTabular = async ({
 	apl,
 	options,
+	client = getAxiomClient(),
 }: {
 	apl: string;
 	options?: { startTime?: string; endTime?: string };
+	client?: Axiom;
 }): Promise<Record<string, unknown>[]> => {
-	const result = await getAxiomClient().query(apl, {
+	const result = await client.query(apl, {
 		...options,
 		format: "tabular",
 	});

@@ -9,3 +9,28 @@ export const INVOICE_PAYMENT_METHOD_OPTIONS = [
 	{ value: "acss_debit", label: "Pre-authorized debit (Canada)" },
 	{ value: "link", label: "Link" },
 ] as const satisfies readonly { value: InvoicePaymentMethod; label: string }[];
+
+const OTHER_PAYMENT_METHOD_LABELS: Record<string, string> = {
+	affirm: "Affirm",
+	afterpay_clearpay: "Afterpay",
+	alipay: "Alipay",
+	apple_pay: "Apple Pay",
+	bancontact: "Bancontact",
+	blik: "BLIK",
+	cashapp: "Cash App Pay",
+	eps: "EPS",
+	giropay: "giropay",
+	google_pay: "Google Pay",
+	ideal: "iDEAL",
+	klarna: "Klarna",
+	p24: "Przelewy24",
+	paypal: "PayPal",
+	wechat_pay: "WeChat Pay",
+};
+
+/** Display name for any Stripe payment method type, invoice-specific or not. */
+export const paymentMethodLabel = (type: string) =>
+	INVOICE_PAYMENT_METHOD_OPTIONS.find((option) => option.value === type)
+		?.label ??
+	OTHER_PAYMENT_METHOD_LABELS[type] ??
+	type.replace(/_/g, " ");

@@ -1,12 +1,15 @@
 import {
 	type ApiBalanceV1,
 	type CheckResponseV3,
+	compareBillingIntervals,
 	cusProductToProduct,
 	type Feature,
 	FeaturePreviewScenario,
 	type FullCusProduct,
 	type FullEntitlement,
 	type FullProduct,
+	getLargestInterval,
+	isOneOffProduct,
 } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -21,6 +24,37 @@ import {
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../customers/CusService.js";
+
+const isUpgradeFrom = ({ from, to }: { from: FullProduct; to: FullProduct }) =>
+	isProductUpgrade({
+		prices1: from.prices,
+		prices2: to.prices,
+		usageAlwaysUpgrade: false,
+	});
+
+/** isProductUpgrade also passes an equal-price plan on the same interval; the preview only suggests a pricier one. */
+const isPricierPlan = ({
+	current,
+	candidate,
+}: {
+	current: FullProduct;
+	candidate: FullProduct;
+}) => {
+	if (!isUpgradeFrom({ from: current, to: candidate })) return false;
+	if (isOneOffProduct(current) || isOneOffProduct(candidate)) return true;
+
+	const currentInterval = getLargestInterval({ prices: current.prices });
+	const candidateInterval = getLargestInterval({ prices: candidate.prices });
+	const sameInterval =
+		currentInterval && candidateInterval
+			? compareBillingIntervals({
+					configA: currentInterval,
+					configB: candidateInterval,
+				}) === 0
+			: currentInterval === candidateInterval;
+
+	return !(sameInterval && isUpgradeFrom({ from: candidate, to: current }));
+};
 
 export const getCheckPreview = async ({
 	ctx,
@@ -59,9 +93,6 @@ export const getCheckPreview = async ({
 
 	sortProductsByPrice({ products: cusOwnedProducts });
 
-	const highestTierProd =
-		cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
-
 	const products: FullProduct[] = await ProductService.getByFeature({
 		db,
 		internalFeatureId: feature.internal_id,
@@ -84,25 +115,22 @@ export const getCheckPreview = async ({
 	}
 
 	let mainProds: FullProduct[] = [];
-	if (!highestTierProd) {
+	if (cusOwnedProducts.length === 0) {
 		mainProds = products.filter((product: FullProduct) => !product.is_add_on);
 	} else {
 		for (const prod of products) {
-			if (prod.is_add_on) {
+			if (prod.is_add_on) continue;
+			if (mainCusProds.some((cp: FullCusProduct) => cp.product.id === prod.id))
 				continue;
-			}
+
+			const heldInGroup = cusOwnedProducts.find(
+				(owned) => owned.group === prod.group,
+			);
 			if (
-				mainCusProds.some((cp: FullCusProduct) => cp.product.id === prod.id)
-			) {
-			} else if (
-				isProductUpgrade({
-					prices1: highestTierProd.prices,
-					prices2: prod.prices,
-					usageAlwaysUpgrade: false,
-				})
-			) {
+				heldInGroup &&
+				isPricierPlan({ current: heldInGroup, candidate: prod })
+			)
 				mainProds.push(prod);
-			}
 		}
 	}
 

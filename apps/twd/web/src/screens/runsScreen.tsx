@@ -249,8 +249,9 @@ export const RunsScreen = () => {
 	const status = params.get("status");
 	const finishedFilter: FinishedFilter =
 		FINISHED_FILTERS.find((f) => f === status) ?? "all";
-	const baselinesOnly = params.get("baselines") === "1";
-	// `?status=baselines` came from the replaced layout; rewrite old links to the switch's own param.
+	// `?status=baselines` came from the replaced layout: honour it until the effect rewrites it to the switch's param.
+	const baselinesOnly =
+		params.get("baselines") === "1" || status === "baselines";
 	useEffect(() => {
 		if (status !== "baselines") return;
 		const next = new URLSearchParams(params);

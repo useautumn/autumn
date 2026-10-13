@@ -60,6 +60,7 @@ const job = (overrides: Partial<JobHealth>): JobHealth => ({
 	membership: "joined",
 	partitions: 16,
 	maxLagRecords: 3,
+	maxLagMs: 40,
 	...overrides,
 });
 

@@ -1,25 +1,31 @@
 import {
 	type AlienClient,
+	type AlienContainerResources,
 	type AlienDeployment,
 	type AlienFixedPools,
+	type AlienNetwork,
+	deploymentToErrorMessage,
 	deploymentToPoolMachine,
 	deploymentToPublicEndpointUrl,
 	hasDeploymentFailed,
-	isDeploymentAwaitingSetup,
+	isDeploymentAwaitingTeardown,
+	isDeploymentDeleted,
+	isDeploymentRemoving,
 	isDeploymentRunning,
 } from "@autumn/alien";
 import { getAutumnEnv } from "@autumn/env";
 import {
-	type AppEnv,
+	BYOC_CACHE_REPLICAS,
 	type ByocCacheMachine,
+	type ByocCacheNetwork,
 	ByocCacheStatus,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
+import { cacheNotRunning } from "../utils/byocCacheUtils.js";
 import {
-	cacheExternalId,
-	cacheGroupLabel,
-	cacheNotRunning,
-} from "../utils/byocCacheUtils.js";
+	alienDeploymentToDoneStages,
+	alienDeploymentToRemovedStages,
+} from "./alienDeploymentToDoneStages.js";
 import type {
 	AtomAuth,
 	AtomDeployer,
@@ -35,13 +41,25 @@ const ATOM_RESOURCE_ID = "atom";
 const ATOM_ENDPOINT_NAME = "api";
 const ATOM_POOL = "stateful";
 
-/** One Atom is one stateful container, so its pool is one machine. */
+/** Each Atom replica fills its own machine. */
 const machineToAtomPools = ({
 	machine,
 }: {
 	machine: ByocCacheMachine;
 }): AlienFixedPools => ({
-	[ATOM_POOL]: { machine: machine.instanceType, machines: 1 },
+	[ATOM_POOL]: { machine: machine.instanceType, machines: BYOC_CACHE_REPLICAS },
+});
+
+/** The Atom container's share of its machine; the release's resource ranges must hold every size's. */
+const machineToAtomContainers = ({
+	machine,
+}: {
+	machine: ByocCacheMachine;
+}): AlienContainerResources => ({
+	[ATOM_RESOURCE_ID]: {
+		cpu: machine.container.cpu,
+		memory: `${machine.container.memory}Gi`,
+	},
 });
 
 const deploymentToAtomMachine = ({
@@ -54,16 +72,34 @@ const deploymentToAtomMachine = ({
 	return findByocCacheMachineByInstanceType({ instanceType }) ?? null;
 };
 
+/** Removal states come first: a deleted deployment's last steps also read as failed. */
 const alienDeploymentToCacheStatus = ({
 	deployment,
 }: {
 	deployment: AlienDeployment;
 }): ByocCacheStatus => {
-	if (isDeploymentAwaitingSetup({ deployment }))
-		return ByocCacheStatus.AwaitingSetup;
+	if (isDeploymentAwaitingTeardown({ deployment }))
+		return ByocCacheStatus.TeardownRequired;
+	if (isDeploymentRemoving({ deployment })) return ByocCacheStatus.Removing;
 	if (isDeploymentRunning({ deployment })) return ByocCacheStatus.Ready;
 	if (hasDeploymentFailed({ deployment })) return ByocCacheStatus.Failed;
 	return ByocCacheStatus.Provisioning;
+};
+
+/** An existing VPC keeps Atom on its private subnets, so alien gets no public ones. */
+const cacheNetworkToAlienNetwork = ({
+	network,
+}: {
+	network: ByocCacheNetwork | null;
+}): AlienNetwork | null => {
+	if (!network) return null;
+	if (network.type === "new_vpc") return { type: "create" };
+	return {
+		type: "byo-vpc-aws",
+		vpc_id: network.vpc_id,
+		private_subnet_ids: network.subnet_ids,
+		public_subnet_ids: [],
+	};
 };
 
 const plainVariable = ({ name, value }: { name: string; value: string }) => ({
@@ -86,15 +122,22 @@ const startAlienAtom = ({
 	names,
 	auth,
 	machine,
+	region,
+	network = null,
 }: {
 	ctx: AlienContext;
 	names: AtomNames;
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
+	region: string;
+	network?: ByocCacheNetwork | null;
 }): Promise<AtomSetup> =>
 	ctx.alienClient.startSetup({
 		...names,
+		region,
 		pools: machineToAtomPools({ machine }),
+		containers: machineToAtomContainers({ machine }),
+		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),
 			// A check Atom forwards must reach this environment's API, not the production default.
@@ -105,27 +148,68 @@ const startAlienAtom = ({
 		],
 	});
 
-const findAlienAtom = async ({
+/** The deployment we know by id until alien drops it; a deleted one gives way to whatever the group runs now. */
+const findAlienDeployment = async ({
 	ctx,
 	deploymentGroupId,
+	deploymentId,
 }: {
 	ctx: AlienContext;
 	deploymentGroupId: string;
-}): Promise<AtomDeployment | null> => {
-	const deployment = await ctx.alienClient.findDeployment({
-		deploymentGroupId,
+	deploymentId?: string | null;
+}): Promise<AlienDeployment | null> => {
+	const known = deploymentId
+		? await ctx.alienClient.getDeployment({ deploymentId })
+		: null;
+	if (known && !isDeploymentDeleted({ deployment: known })) return known;
+	return ctx.alienClient.findDeployment({ deploymentGroupId });
+};
+
+const alienDeploymentToAtom = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}): AtomDeployment => {
+	const endpointUrl = deploymentToPublicEndpointUrl({
+		deployment,
+		resourceId: ATOM_RESOURCE_ID,
+		endpointName: ATOM_ENDPOINT_NAME,
 	});
-	if (!deployment) return null;
 	return {
 		id: deployment.id,
 		status: alienDeploymentToCacheStatus({ deployment }),
-		endpointUrl: deploymentToPublicEndpointUrl({
-			deployment,
-			resourceId: ATOM_RESOURCE_ID,
-			endpointName: ATOM_ENDPOINT_NAME,
-		}),
+		endpointUrl,
 		machine: deploymentToAtomMachine({ deployment }),
+		region: deployment.region ?? null,
+		doneStages: alienDeploymentToDoneStages({
+			deployment,
+			atomResourceId: ATOM_RESOURCE_ID,
+			endpointUrl,
+		}),
+		removedStages: alienDeploymentToRemovedStages({
+			deployment,
+			atomResourceId: ATOM_RESOURCE_ID,
+			endpointUrl,
+		}),
+		error: deploymentToErrorMessage({ deployment }),
 	};
+};
+
+const findAlienAtom = async ({
+	ctx,
+	deploymentGroupId,
+	deploymentId,
+}: {
+	ctx: AlienContext;
+	deploymentGroupId: string;
+	deploymentId?: string | null;
+}): Promise<AtomDeployment | null> => {
+	const deployment = await findAlienDeployment({
+		ctx,
+		deploymentGroupId,
+		deploymentId,
+	});
+	return deployment ? alienDeploymentToAtom({ deployment }) : null;
 };
 
 const resizeAlienAtom = async ({
@@ -147,7 +231,20 @@ const resizeAlienAtom = async ({
 	});
 };
 
-/** Tears down the deployment and the setup links that could start another. */
+const retryAlienAtom = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: AlienContext;
+	deploymentGroupId: string;
+}): Promise<void> => {
+	const deployment = await ctx.alienClient.findDeployment({
+		deploymentGroupId,
+	});
+	if (deployment) await ctx.alienClient.retryDeployment({ deployment });
+};
+
+/** Tears down the deployment; its setup links stay, because deleting the customer's stack calls alien with them. */
 const deleteAlienAtom = async ({
 	ctx,
 	deploymentGroupId,
@@ -159,7 +256,6 @@ const deleteAlienAtom = async ({
 		deploymentGroupId,
 	});
 	if (deployment) await ctx.alienClient.deleteDeployment({ deployment });
-	await ctx.alienClient.revokeSetupLinks({ deploymentGroupId });
 };
 
 /** alien deploys the Atom image into the org's own cloud. */
@@ -171,8 +267,12 @@ export const createAlienAtomDeployer = ({
 	const ctx = { alienClient };
 	return {
 		start: (params) => startAlienAtom({ ctx, ...params }),
+		hasGroup: async (params) =>
+			(await ctx.alienClient.findDeploymentGroup(params)) !== null,
 		find: (params) => findAlienAtom({ ctx, ...params }),
 		resize: (params) => resizeAlienAtom({ ctx, ...params }),
+		retry: (params) => retryAlienAtom({ ctx, ...params }),
 		delete: (params) => deleteAlienAtom({ ctx, ...params }),
+		closeSetup: (params) => ctx.alienClient.revokeSetupLinksOnceDeleted(params),
 	};
 };

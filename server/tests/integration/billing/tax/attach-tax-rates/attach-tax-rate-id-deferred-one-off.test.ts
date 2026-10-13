@@ -7,6 +7,7 @@
 
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { getCustomerProduct } from "@tests/integration/billing/attach/params/start-date/utils";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -20,10 +21,7 @@ const ONBOARDING_FEE = 20;
 
 const addInvoiceItemTaxRateIds = (
 	item: Stripe.SubscriptionSchedule.Phase.AddInvoiceItem,
-): string[] =>
-	(item.tax_rates ?? []).map((rate) =>
-		typeof rate === "string" ? rate : rate.id,
-	);
+): string[] => (item.tax_rates ?? []).map((rate) => stripeRefToId(rate));
 
 test.concurrent(
 	`${chalk.yellowBright("attach-tax-rate-id (deferred one-off): explicit tax_rate_id rides the activating phase add_invoice_item")}`,

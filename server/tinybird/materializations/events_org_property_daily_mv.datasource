@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Org-level UTC daily property states, collapsed from events_org_property_hourly_mv. Serves
+    whole-window ranking and UTC day-or-coarser series for org-wide property group-bys.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `property_key` String,
+    `property_value` String,
+    `day` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(day)"
+ENGINE_SORTING_KEY "org_id, env, property_key, event_name, day, property_value"

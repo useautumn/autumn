@@ -18,6 +18,7 @@ import {
 	notNullish,
 	orgToReturnUrl,
 	RecaseError,
+	type RemoveDiscount,
 	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
@@ -51,6 +52,7 @@ export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
 		license_quantities?: LicenseQuantityParams[];
 	})[];
 	no_billing_changes?: boolean;
+	remove_discounts?: RemoveDiscount[];
 	/** Pins billing to this subscription instead of resolving one from the plans. */
 	processor_subscription_id?: string;
 };

@@ -72,7 +72,10 @@ export const customerRowsToSubjectState = ({
 		| "overage_allowed"
 		| "usage_limits"
 	>;
-	customerProducts: CusProduct[];
+	/** `api_semver` as stored: a row a newer API version stamped still loads. */
+	customerProducts: (Omit<CusProduct, "api_semver"> & {
+		api_semver: string | null;
+	})[];
 	customerPrices: CustomerPrice[];
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];

@@ -25,7 +25,6 @@ function rejectsMalformedEnvelopes(): void {
 		"record",
 		{},
 		{ schemaVersion: 1, type: "claimed" },
-		{ schemaVersion: 1, type: "claimed", payload: {}, extra: true },
 		{ schemaVersion: "1", type: "claimed", payload: {} },
 		{ schemaVersion: 1, type: 3, payload: {} },
 	]) {
@@ -56,6 +55,11 @@ function preservesEnvelopeVersions(): void {
 	};
 	expect(
 		readTopicEnvelope({ value: Buffer.from(JSON.stringify(envelope)) }),
+	).toEqual(envelope);
+	expect(
+		readTopicEnvelope({
+			value: Buffer.from(JSON.stringify({ ...envelope, futureField: true })),
+		}),
 	).toEqual(envelope);
 	let error: unknown;
 	try {
@@ -91,7 +95,7 @@ function topicEnvelopeTests(): void {
 		rejectsMalformedEnvelopes,
 	);
 	test(
-		"preserves strict version validation and payloads",
+		"preserves version validation and payloads, and reads past a newer writer's envelope field",
 		preservesEnvelopeVersions,
 	);
 	test(

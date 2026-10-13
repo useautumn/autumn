@@ -44,6 +44,7 @@ export const phaseToImmediateParams = ({
 	free_trial: params.free_trial,
 	currency: params.currency,
 	discounts: params.discounts,
+	remove_discounts: params.remove_discounts,
 	success_url: params.success_url,
 	checkout_session_params: params.checkout_session_params,
 	redirect_mode: params.redirect_mode ?? "if_required",

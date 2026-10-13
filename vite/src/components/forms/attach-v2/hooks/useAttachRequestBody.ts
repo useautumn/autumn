@@ -13,6 +13,10 @@ import type {
 import { useMemo } from "react";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { carryOverParam } from "@/components/forms/shared/utils/carryOverParam";
+import {
+	buildDiscountParams,
+	type FormDiscount,
+} from "@/components/forms/shared/utils/discountUtils";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import {
 	type BillingCycleAnchorMode,
@@ -23,10 +27,6 @@ import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantit
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
-import {
-	type FormDiscount,
-	filterValidDiscounts,
-} from "../utils/discountUtils";
 import { stripPricesFromItems } from "../utils/grantFreeUtils";
 import {
 	type InvoiceBillingDetailsForm,
@@ -221,16 +221,7 @@ export function buildAttachRequestBody({
 		body.billing_cycle_anchor = billingCycleAnchor;
 	}
 
-	const validDiscounts = filterValidDiscounts(discounts);
-	if (validDiscounts.length > 0) {
-		body.discounts = validDiscounts;
-	}
-
-	if (removedRewardIds.length > 0) {
-		body.remove_discounts = removedRewardIds.map((rewardId) => ({
-			reward_id: rewardId,
-		}));
-	}
+	Object.assign(body, buildDiscountParams({ discounts, removedRewardIds }));
 
 	if (noBillingChanges) {
 		body.no_billing_changes = true;
@@ -411,6 +402,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				finalizeInvoice,
 				invoiceTemplateId,
 				netTermsDays,
+				paymentMethodTypes,
 				longLivedCheckout,
 			}: BillingStageParams = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
@@ -422,6 +414,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 					body.finalize_invoice = finalizeInvoice ?? false;
 					body.invoice_template_id = invoiceTemplateId;
 					body.net_terms_days = netTermsDays;
+					body.payment_method_types = paymentMethodTypes;
 				}
 
 				// Checkout activation is independent of invoice mode.

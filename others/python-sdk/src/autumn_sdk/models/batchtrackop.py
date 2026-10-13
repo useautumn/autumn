@@ -19,7 +19,7 @@ class BatchTrackGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.4.0"
+    ] = "2.5.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -64,8 +64,6 @@ class RequestBodyTypedDict(TypedDict):
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
     overage_behavior: NotRequired[BatchTrackOverageBehavior]
     r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
-    async_: NotRequired[bool]
-    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
 
 class RequestBody(BaseModel):
@@ -96,9 +94,6 @@ class RequestBody(BaseModel):
     overage_behavior: Optional[BatchTrackOverageBehavior] = None
     r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
 
-    async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
-    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -111,7 +106,6 @@ class RequestBody(BaseModel):
                 "idempotency_key",
                 "timestamp",
                 "overage_behavior",
-                "async",
             ]
         )
         serialized = handler(self)
@@ -169,10 +163,6 @@ BatchTrackResponse = TypeAliasType(
 )
 
 
-try:
-    RequestBody.model_rebuild()
-except NameError:
-    pass
 try:
     BatchTrackResponseBody2.model_rebuild()
 except NameError:

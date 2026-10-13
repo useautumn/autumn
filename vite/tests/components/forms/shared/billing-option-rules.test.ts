@@ -131,7 +131,7 @@ const scheduleCarryOverUsagesRule = ({
 	getBillingOptionRules({
 		flow: "schedule",
 		state: {
-			replacesPlanNow: firstPhaseReplacesPlanNow({
+			carriesUsageNow: firstPhaseReplacesPlanNow({
 				phases,
 				customerProducts,
 				entities: [],

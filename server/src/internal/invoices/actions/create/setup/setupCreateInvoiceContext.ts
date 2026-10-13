@@ -1,5 +1,6 @@
 import type {
 	CreateInvoiceParams,
+	Entity,
 	FullCustomer,
 	FullProduct,
 	InvoiceTemplate,
@@ -23,6 +24,12 @@ import {
 	fetchNamedStripePrices,
 	type NamedStripePrices,
 } from "./fetchNamedStripePrices";
+import { resolveInvoiceEnvelope } from "./resolveInvoiceEnvelope";
+import {
+	loadInvoiceEntities,
+	resolveInvoicePlanEntity,
+} from "./resolveInvoicePlanEntity";
+import { validateInvoiceCustomizeItems } from "./validateInvoiceCustomizeItems";
 
 export type InvoicePlanContext = {
 	/** Distinguishes two entries for the same plan id. */
@@ -30,6 +37,8 @@ export type InvoicePlanContext = {
 	params: NonNullable<CreateInvoiceParams["plans"]>[number];
 	fullProduct: FullProduct;
 	discounts: StripeDiscountWithCoupon[];
+	/** Undefined for customer-level plans. */
+	entity?: Entity;
 };
 
 export type CreateInvoiceContext = {
@@ -110,6 +119,7 @@ export const setupCreateInvoiceContext = async ({
 		});
 	}
 	rejectInvalidInvoiceDates({ params, nowMs: Date.now() });
+	validateInvoiceCustomizeItems({ ctx, params });
 
 	// A preview must not write: no customer is created or updated for one.
 	const fullCustomer = await getOrCreateCustomer({
@@ -117,6 +127,11 @@ export const setupCreateInvoiceContext = async ({
 		customerId: params.customer_id,
 		skipCreate: preview,
 		skipUpdate: preview,
+	});
+	const entitiesById = await loadInvoiceEntities({
+		ctx,
+		fullCustomer,
+		params,
 	});
 
 	// A preview reads the existing Stripe customer (for its credit balance) but
@@ -166,6 +181,11 @@ export const setupCreateInvoiceContext = async ({
 				planKey: `${planParams.plan_id}#${index}`,
 				params: planParams,
 				fullProduct,
+				entity: resolveInvoicePlanEntity({
+					entitiesById,
+					params,
+					planParams,
+				}),
 				discounts: await resolveParamDiscounts({
 					stripeCli,
 					discounts: planParams.discounts ?? [],
@@ -201,10 +221,7 @@ export const setupCreateInvoiceContext = async ({
 			template?.net_terms_days ??
 			ctx.org.config.default_invoice_net_terms_days ??
 			DEFAULT_NET_TERMS_DAYS,
-		period:
-			params.period_start !== undefined && params.period_end !== undefined
-				? { start: params.period_start, end: params.period_end }
-				: undefined,
+		period: resolveInvoiceEnvelope({ params }),
 		taxRate,
 		invoiceDiscounts,
 		namedStripePrices,

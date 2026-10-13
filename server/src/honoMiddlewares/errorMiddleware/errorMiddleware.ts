@@ -9,7 +9,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { callerErrorToRecaseError } from "./callerErrorToRecaseError.js";
 
 /** The API's error contract; bodies are unchanged from before @autumn/errors. */
-const errorToResponse = ({
+export const errorToResponse = ({
 	c,
 	error,
 	env,

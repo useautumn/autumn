@@ -1,57 +1,22 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { Check } from "lucide-react";
+import {
+	overlayLabelClassName,
+	overlaySeparatorClassName,
+} from "@autumn/ui/lib/overlay-classes";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../../AnalyticsContext";
 import { groupByLabel } from "../../utils/displayLabels";
+import { FilterTriggerButton } from "../FilterTriggerButton";
+import { OverlaySearchInput } from "../OverlaySearchInput";
 import { GroupValueChecklist } from "./GroupValueChecklist";
 import { MaxGroupsInput } from "./MaxGroupsInput";
-import { StripCell } from "./StripCell";
+import { OptionRow } from "./OptionRow";
 import { useBreakdown } from "./useBreakdown";
 import { useGroupVisibility } from "./useGroupVisibility";
 
 const PROPERTY_SEARCH_THRESHOLD = 5;
 
-const PanelLabel = ({ children }: { children: string }) => (
-	<span className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-subtle">
-		{children}
-	</span>
-);
-
-const Divider = () => <span className="h-px my-1 bg-border" />;
-
-const GroupOption = ({
-	label,
-	isSelected,
-	disabledReason,
-	isMonospace = false,
-	onSelect,
-}: {
-	label: string;
-	isSelected: boolean;
-	disabledReason?: string;
-	isMonospace?: boolean;
-	onSelect: () => void;
-}) => (
-	<button
-		type="button"
-		disabled={Boolean(disabledReason)}
-		onClick={onSelect}
-		className={cn(
-			"flex items-center justify-between gap-2 h-[30px] px-2 rounded-[5px] text-left text-[13px] text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent",
-			isSelected && "bg-muted text-foreground",
-		)}
-	>
-		<span className={cn("truncate", isMonospace && "font-mono text-xs")}>
-			{label}
-		</span>
-		{disabledReason && (
-			<span className="shrink-0 text-[11px] text-subtle">{disabledReason}</span>
-		)}
-		{isSelected && <Check className="h-3 w-3 shrink-0 text-primary" />}
-	</button>
-);
+const Separator = () => <span className={overlaySeparatorClassName} />;
 
 /** Summarises the grouping as "Plan · 3 of 4" when some groups are hidden. */
 const GroupByValue = ({ groupBy }: { groupBy: string }) => {
@@ -70,13 +35,7 @@ const GroupByValue = ({ groupBy }: { groupBy: string }) => {
 	);
 };
 
-export const GroupByCell = ({
-	propertyKeys,
-	className,
-}: {
-	propertyKeys: string[];
-	className?: string;
-}) => {
+export const GroupByCell = ({ propertyKeys }: { propertyKeys: string[] }) => {
 	const { availableGroupValues } = useAnalyticsContext();
 	const {
 		groupBy,
@@ -95,10 +54,8 @@ export const GroupByCell = ({
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<StripCell
+				<FilterTriggerButton
 					label="Group by"
-					className={className}
-					isPlaceholder={!effectiveGroupBy}
 					value={
 						effectiveGroupBy ? (
 							<GroupByValue groupBy={effectiveGroupBy} />
@@ -109,50 +66,42 @@ export const GroupByCell = ({
 				/>
 			</PopoverTrigger>
 			<PopoverContent align="start" className="flex flex-col w-[280px] p-1">
-				<PanelLabel>Group by</PanelLabel>
-				<GroupOption
-					label="Nothing"
-					isSelected={!groupBy}
-					onSelect={() => updateGroupBy(null)}
-				/>
+				<OptionRow isSelected={!groupBy} onSelect={() => updateGroupBy(null)}>
+					None
+				</OptionRow>
 				{fieldOptions.map((option) => (
-					<GroupOption
+					<OptionRow
 						key={option.groupBy}
-						label={groupByLabel({ groupBy: option.groupBy })}
 						isSelected={groupBy === option.groupBy}
-						disabledReason={option.disabledReason}
+						hint={option.disabledReason}
+						disabled={Boolean(option.disabledReason)}
 						onSelect={() => updateGroupBy(option.groupBy)}
-					/>
+					>
+						{groupByLabel({ groupBy: option.groupBy })}
+					</OptionRow>
 				))}
 
 				{propertyKeys.length > 0 && (
 					<>
-						<Divider />
-						<PanelLabel>Event properties</PanelLabel>
+						<Separator />
+						<span className={overlayLabelClassName}>Event properties</span>
 						{propertyKeys.length > PROPERTY_SEARCH_THRESHOLD && (
-							<div className="flex items-center gap-2 h-7 mx-1.5 mb-1 px-2 rounded-md border bg-background">
-								<MagnifyingGlassIcon
-									size={12}
-									className="text-subtle shrink-0"
-								/>
-								<input
-									type="text"
-									placeholder="Search properties..."
-									value={searchValue}
-									onChange={(e) => setSearchValue(e.target.value)}
-									className="flex-1 min-w-0 bg-transparent text-xs outline-none placeholder:text-subtle"
-								/>
-							</div>
+							<OverlaySearchInput
+								placeholder="Search properties..."
+								value={searchValue}
+								onChange={(e) => setSearchValue(e.target.value)}
+								className="-mx-1 mb-1"
+							/>
 						)}
-						<div className="flex flex-col max-h-36 overflow-y-auto">
+						<div className="flex max-h-36 flex-col overflow-y-auto">
 							{matchingKeys.map((key) => (
-								<GroupOption
+								<OptionRow
 									key={key}
-									label={key}
-									isMonospace
 									isSelected={groupBy === key}
 									onSelect={() => updateGroupBy(key)}
-								/>
+								>
+									<span className="truncate font-mono text-xs">{key}</span>
+								</OptionRow>
 							))}
 						</div>
 					</>
@@ -160,8 +109,8 @@ export const GroupByCell = ({
 
 				{groupBy && (
 					<>
-						<Divider />
-						<div className="flex items-center justify-between h-[34px] px-2 text-[13px] text-muted-foreground">
+						<Separator />
+						<div className="flex h-[34px] items-center justify-between px-2 text-sm text-muted-foreground">
 							Max groups
 							<MaxGroupsInput value={maxGroups} onChange={setMaxGroups} />
 						</div>
@@ -170,7 +119,7 @@ export const GroupByCell = ({
 
 				{effectiveGroupBy && availableGroupValues.length > 0 && (
 					<>
-						<Divider />
+						<Separator />
 						<GroupValueChecklist groupBy={effectiveGroupBy} />
 					</>
 				)}

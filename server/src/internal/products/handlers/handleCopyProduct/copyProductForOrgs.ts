@@ -14,6 +14,7 @@ import {
 	copyProduct,
 	initProductInStripe,
 } from "@/internal/products/productUtils.js";
+import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
@@ -90,13 +91,14 @@ export const copyProductForOrgs = async ({
 		FeatureService.list({ db, orgId: toOrg.id, env: toEnv }),
 	]);
 
-	// A variant's base_internal_product_id points at a product in the source
-	// org; there's no safe cross-org remap, so refuse rather than land a dangling
-	// reference.
-	if (fromFullProduct.base_internal_product_id) {
+	// A variant's base link only resolves in its own (org, env), so it can only
+	// be copied there, as a sibling variant of the same base.
+	const fromBaseInternalId = fromFullProduct.base_internal_product_id ?? null;
+	const copiesWithinCatalog = fromOrg.id === toOrg.id && fromEnv === toEnv;
+	if (fromBaseInternalId && !copiesWithinCatalog) {
 		throw new RecaseError({
 			message:
-				"Variant plans can't be copied on their own. Copy the base plan instead.",
+				"Variant plans can only be copied within the same environment. Copy the base plan instead.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -136,13 +138,14 @@ export const copyProductForOrgs = async ({
 		});
 	}
 
-	// 4. Copy the base and init its Stripe resources
+	// 4. Copy the plan and init its Stripe resources
 	const toBaseInternalId = await copyProduct({
 		source,
 		ctx: toContext,
 		product: fromFullProduct,
 		toId,
 		toName,
+		baseInternalProductId: fromBaseInternalId,
 	});
 	const copiedBase = await ProductService.getFull({
 		db,
@@ -150,7 +153,11 @@ export const copyProductForOrgs = async ({
 		orgId: toOrg.id,
 		env: toEnv,
 	});
-	await initProductInStripe({ ctx: toContext, product: copiedBase });
+	if (fromBaseInternalId) {
+		await initVariantsInStripe({ ctx: toContext, products: [copiedBase] });
+	} else {
+		await initProductInStripe({ ctx: toContext, product: copiedBase });
+	}
 
 	// 5. Copy the base's variants, relinked to the copied base
 	const copiedVariantIds = await copyBaseVariants({

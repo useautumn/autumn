@@ -7,6 +7,7 @@ export const ADMIN_TABS = [
 	{ id: "users", label: "Users" },
 	{ id: "slack-bot", label: "Slack Bot" },
 	{ id: "edge-config", label: "Edge Config" },
+	{ id: "rate-limits", label: "Rate limits" },
 	{ id: "queue-cron-configs", label: "Queue / Cron configs" },
 	{ id: "caches", label: "Caches" },
 ] as const;

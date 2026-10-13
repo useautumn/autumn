@@ -36,7 +36,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import chalk from "chalk";
+import { stripeRefToId } from "@autumn/shared";
 import {
 	createPercentCoupon,
 	getStripeSubscription,
@@ -46,6 +46,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -73,9 +74,8 @@ test.concurrent(
 		}
 
 		// Starting state: 1 paid invoice for pro ($20) and no discount on Stripe sub.
-		const initialCustomer = await autumnV1.customers.get<ApiCustomerV3>(
-			customerId,
-		);
+		const initialCustomer =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: initialCustomer,
 			count: 1,
@@ -113,7 +113,7 @@ test.concurrent(
 				if (typeof d === "string") return null;
 				const c = d.source?.coupon;
 				if (!c) return null;
-				return typeof c === "string" ? c : c.id;
+				return stripeRefToId(c);
 			})
 			.filter((id): id is string => id !== null);
 		expect(couponIdsOnSub).toContain(coupon.id);

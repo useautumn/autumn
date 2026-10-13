@@ -314,7 +314,9 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 		await expectSelectedPath({
 			response,
 			status: 202,
-			path: async ? ["balanceWorker"] : ["async-config", "balanceWorker"],
+			path: async
+				? ["feature-deductions", "balanceWorker"]
+				: ["async-config", "feature-deductions", "balanceWorker"],
 		});
 		expect(await response.json()).toEqual(balanceWorkerResponse);
 	}
@@ -322,7 +324,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	await expectSelectedPath({
 		response: await postTrack({ async: true }),
 		status: 500,
-		path: ["balanceWorker"],
+		path: ["feature-deductions", "balanceWorker"],
 	});
 	expect(receivedFailure).toBe(balanceWorkerFailure);
 
@@ -334,12 +336,12 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 		path: ["feature-deductions", "async"],
 	});
 	await expectSelectedPath({
-		response: await postTrack(),
+		response: await postTrack({ async: false }),
 		status: 202,
 		path: ["async-config", "feature-deductions", "async"],
 	});
 	asyncEnabled = false;
-	const response = await postTrack();
+	const response = await postTrack({ async: false });
 	await expectSelectedPath({
 		response,
 		status: 200,
@@ -348,7 +350,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	expect(await response.json()).toEqual(legacyResponse);
 	queuedForReplay = true;
 	await expectSelectedPath({
-		response: await postTrack(),
+		response: await postTrack({ async: false }),
 		status: 202,
 		path: ["async-config", "feature-deductions", "legacy"],
 	});

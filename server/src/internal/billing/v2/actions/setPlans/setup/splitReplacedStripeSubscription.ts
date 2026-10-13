@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 
@@ -5,7 +6,7 @@ export const scheduleSubscriptionId = (
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule,
 ) => {
 	const subscription = stripeSubscriptionSchedule?.subscription;
-	return typeof subscription === "string" ? subscription : subscription?.id;
+	return stripeRefToId(subscription);
 };
 
 const replacesSubscription = (subscription: Stripe.Subscription) =>

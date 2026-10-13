@@ -4,7 +4,12 @@ import {
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 } from "@autumn/edge-config";
-import { AppEnv, ByocCacheStatus, type Organization } from "@autumn/shared";
+import {
+	AppEnv,
+	type AtomRoute,
+	ByocCacheStatus,
+	type Organization,
+} from "@autumn/shared";
 import type { AtomConnection } from "../../../../src/atom/types/atomClient.js";
 import { pushCatalogToCache } from "../../../../src/consumers/cachePush/pushCatalogToCache/pushCatalogToCache.js";
 import { pushSubjectToCache } from "../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js";
@@ -13,27 +18,30 @@ import type { CachePushContext } from "../../../../src/consumers/cachePush/types
 const ORG_ATOM = "https://org-atom.example.com";
 const SHADOW_ATOM = "https://shadow-atom.example.com";
 
-const orgWith = ({ hasAtom }: { hasAtom: boolean }) =>
-	({
-		id: "org_1",
-		slug: "org-1",
-		config: {},
-		default_currency: "usd",
-		sandbox_byoc_config: hasAtom
-			? {
-					cache: {
-						deployment_group_id: "dg_1",
-						deployment_id: "dep_1",
-						status: ByocCacheStatus.Ready,
-						endpoint_url: ORG_ATOM,
-						cpu: 1,
-						memory: 2,
-						encrypted_token: "encrypted",
-						created_at: 1,
-					},
-				}
-			: null,
-	}) as unknown as Organization;
+const org = {
+	id: "org_1",
+	slug: "org-1",
+	config: {},
+	default_currency: "usd",
+} as unknown as Organization;
+
+/** The org's own sandbox Atom as its cached org holds it, in `status`; none when null. */
+const atomDeploymentsIn = ({
+	status,
+}: {
+	status: ByocCacheStatus | null;
+}): AtomRoute[] =>
+	status
+		? [
+				{
+					id: "atom_1",
+					status,
+					deployment_id: "dep_1",
+					endpoint_url: ORG_ATOM,
+					encrypted_token: "encrypted",
+				},
+			]
+		: [];
 
 /** The sandbox shadow Atom at `endpointUrl` (null is none), holding every customer or none, with org_1 registered unless told otherwise. */
 const shadowWith = ({
@@ -66,17 +74,19 @@ const shadowWith = ({
 			: {},
 	});
 
-/** A herald reading `org`, whose Atoms record what reached them; `failing` Atoms reject every push. */
+/** A herald reading org_1 with its own Atom in `atomStatus` (none when null); Atoms record what reached them and `failing` ones reject every push. */
 const createPushContext = ({
-	org,
+	atomStatus,
 	shadowAtom,
 	failing = [],
 }: {
-	org: Organization;
+	atomStatus: ByocCacheStatus | null;
 	shadowAtom: ShadowAtomConfig;
 	failing?: string[];
 }) => {
+	const atomDeployments = atomDeploymentsIn({ status: atomStatus });
 	const reached: string[] = [];
+	const bodies: unknown[] = [];
 	const tokens: Record<string, string> = {};
 	const queues: Record<string, AtomConnection["queue"]> = {};
 	const logged: { level: "warn" | "error"; target: unknown }[] = [];
@@ -85,12 +95,15 @@ const createPushContext = ({
 			logged.push({ level, target: meta?.data?.target });
 	const redis = {
 		status: "ready",
-		get: async () => JSON.stringify({ org, features: [] }),
+		get: async () =>
+			JSON.stringify({ org: { ...org, atomDeployments }, features: [] }),
 	};
-	const atomAt = (endpointUrl: string) => async () => {
-		if (failing.includes(endpointUrl)) throw new Error("Atom down");
-		reached.push(endpointUrl);
-	};
+	const atomAt =
+		(endpointUrl: string) => async (params?: { body?: unknown }) => {
+			if (failing.includes(endpointUrl)) throw new Error("Atom down");
+			reached.push(endpointUrl);
+			if (params?.body) bodies.push(params.body);
+		};
 	const ctx = {
 		miscCache: { resolve: () => redis, forEachTarget: async () => [] },
 		logger: {
@@ -104,6 +117,7 @@ const createPushContext = ({
 				organizations: {
 					findFirst: async () => ({
 						...org,
+						atom_deployments: atomDeployments,
 						features: [],
 						product_aliases: [],
 					}),
@@ -128,6 +142,7 @@ const createPushContext = ({
 			readSubjectState: async () => ({ state: {}, catalog: {} }),
 		},
 		shadowAtomConfig: { get: () => shadowAtom },
+		atomPushQueueOnly: false,
 		getAtomClient: ({ connection }: { connection: AtomConnection }) => {
 			tokens[connection.endpointUrl] = connection.encryptedToken;
 			queues[connection.endpointUrl] = connection.queue;
@@ -137,10 +152,16 @@ const createPushContext = ({
 			};
 		},
 	} as unknown as CachePushContext;
-	return { ctx, reached, logged, tokens, queues };
+	return { ctx, reached, bodies, logged, tokens, queues };
 };
 
-const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
+const pushSubject = ({
+	ctx,
+	customerVersion = null,
+}: {
+	ctx: CachePushContext;
+	customerVersion?: bigint | null;
+}) =>
 	pushSubjectToCache({
 		ctx,
 		cacheSubject: {
@@ -152,6 +173,7 @@ const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
 			},
 			logOffset: 1n,
 			oldestOccurredAt: 1,
+			customerVersion,
 		},
 	});
 
@@ -159,16 +181,26 @@ beforeEach(() => _resetOrgWithFeaturesL1ForTesting());
 
 test("an org with its own Atom and no shadow configured: only the org's Atom", async () => {
 	const { ctx, reached } = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: null }),
 	});
 	await pushSubject({ ctx });
 	expect(reached).toEqual([ORG_ATOM]);
 });
 
+test("an org whose own Atom is not ready yet feeds only the shadow Atom", async () => {
+	const { ctx, reached } = createPushContext({
+		atomStatus: ByocCacheStatus.Provisioning,
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
+	});
+	await pushSubject({ ctx });
+	await pushCatalogToCache({ ctx, orgId: "org_1", env: AppEnv.Sandbox });
+	expect(reached).toEqual([SHADOW_ATOM, SHADOW_ATOM]);
+});
+
 test("an org with no Atom of its own still feeds the shadow Atom", async () => {
 	const { ctx, reached } = createPushContext({
-		org: orgWith({ hasAtom: false }),
+		atomStatus: null,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 	});
 	await pushSubject({ ctx });
@@ -177,7 +209,7 @@ test("an org with no Atom of its own still feeds the shadow Atom", async () => {
 
 test("the shadow Atom is reached with the org's own token, and only once the org is registered on it", async () => {
 	const registered = createPushContext({
-		org: orgWith({ hasAtom: false }),
+		atomStatus: null,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 	});
 	await pushSubject({ ctx: registered.ctx });
@@ -191,7 +223,7 @@ test("the shadow Atom is reached with the org's own token, and only once the org
 
 	_resetOrgWithFeaturesL1ForTesting();
 	const unregistered = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM, registered: false }),
 	});
 	await pushSubject({ ctx: unregistered.ctx });
@@ -205,7 +237,7 @@ test("the shadow Atom is reached with the org's own token, and only once the org
 
 test("a customer in the rollout reaches both; one outside it only the org's Atom", async () => {
 	const both = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 	});
 	await pushSubject({ ctx: both.ctx });
@@ -213,7 +245,7 @@ test("a customer in the rollout reaches both; one outside it only the org's Atom
 
 	_resetOrgWithFeaturesL1ForTesting();
 	const outside = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM, percent: 0 }),
 	});
 	await pushSubject({ ctx: outside.ctx });
@@ -222,7 +254,7 @@ test("a customer in the rollout reaches both; one outside it only the org's Atom
 
 test("a shadow Atom that fails never keeps the subject or the catalog from the org's Atom", async () => {
 	const { ctx, reached } = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 		failing: [SHADOW_ATOM],
 	});
@@ -233,7 +265,7 @@ test("a shadow Atom that fails never keeps the subject or the catalog from the o
 
 test("the catalog goes to every Atom the org's customers can reach", async () => {
 	const { ctx, reached } = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 	});
 	await pushCatalogToCache({ ctx, orgId: "org_1", env: AppEnv.Sandbox });
@@ -247,7 +279,7 @@ test("a failed push to an org's own Atom is an error; to our shadow Atom only a 
 	] as const) {
 		_resetOrgWithFeaturesL1ForTesting();
 		const { ctx, logged } = createPushContext({
-			org: orgWith({ hasAtom: true }),
+			atomStatus: ByocCacheStatus.Ready,
 			shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
 			failing: [failing],
 		});
@@ -262,7 +294,7 @@ test("a failed push to an org's own Atom is an error; to our shadow Atom only a 
 
 test("a shadow Atom set to the queue transport is pushed through its queue into the org's folder; the org's own Atom stays on HTTP", async () => {
 	const { ctx, queues } = createPushContext({
-		org: orgWith({ hasAtom: true }),
+		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({
 			endpointUrl: SHADOW_ATOM,
 			pushTransport: "queue",
@@ -276,4 +308,23 @@ test("a shadow Atom set to the queue transport is pushed through its queue into 
 			atomId: "org_1.sandbox",
 		},
 	});
+});
+
+test("a customer push after an evict carries its version to every Atom; one without an evict carries none", async () => {
+	const evicted = createPushContext({
+		atomStatus: ByocCacheStatus.Ready,
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
+	});
+	const tracked = createPushContext({
+		atomStatus: ByocCacheStatus.Ready,
+		shadowAtom: shadowWith({ endpointUrl: null }),
+	});
+
+	await pushSubject({ ctx: evicted.ctx, customerVersion: 140n });
+	await pushSubject({ ctx: tracked.ctx });
+
+	expect(evicted.bodies).toHaveLength(2);
+	for (const body of evicted.bodies)
+		expect(body).toMatchObject({ customer_version: "140" });
+	expect(tracked.bodies[0]).not.toHaveProperty("customer_version");
 });

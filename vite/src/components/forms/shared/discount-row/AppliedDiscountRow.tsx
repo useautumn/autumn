@@ -1,4 +1,3 @@
-import type { ApiDiscount } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
@@ -6,14 +5,17 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { formatDiscountLabel } from "@/views/customers2/components/sheets/subscriptionDetailUtils";
+import {
+	type AppliedDiscount,
+	appliedDiscountLabel,
+} from "../utils/appliedDiscountLabel";
 
 export function AppliedDiscountRow({
 	discount,
 	removed,
 	onToggleRemoved,
 }: {
-	discount: ApiDiscount;
+	discount: AppliedDiscount;
 	removed: boolean;
 	onToggleRemoved: () => void;
 }) {
@@ -30,7 +32,7 @@ export function AppliedDiscountRow({
 					removed && "line-through text-tertiary-foreground",
 				)}
 			>
-				{formatDiscountLabel({ discount })}
+				{appliedDiscountLabel({ discount })}
 			</span>
 			{removed && (
 				<span className="text-tertiary-foreground text-xs shrink-0">

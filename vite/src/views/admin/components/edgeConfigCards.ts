@@ -7,7 +7,6 @@ import {
 	Gauge,
 	HardDrive,
 	Layers,
-	ListChecks,
 	type LucideIcon,
 	RefreshCw,
 	Settings2,
@@ -34,8 +33,6 @@ export type EdgeConfigCardId =
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
-	| "rate-limit-overrides"
-	| "rate-limit-redis-allowlist"
 	| "agent-provision-rate-limit"
 	| "stripe-sync"
 	| "redis-v2-cache"
@@ -161,38 +158,6 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 						count: countKeys(asRecord(data).orgs),
 						noun: "org override",
 					}),
-			},
-			{
-				id: "rate-limit-overrides",
-				title: "Rate Limit Overrides",
-				description:
-					"Per-org overrides for any rate-limit bucket (track, check, attach).",
-				icon: Gauge,
-				endpoint: "/admin/rate-limit-overrides-config",
-				deriveStatus: (data) =>
-					overrideStatus({
-						count: countKeys(asRecord(data).orgs),
-						noun: "org override",
-					}),
-			},
-			{
-				id: "rate-limit-redis-allowlist",
-				title: "Rate Limit Redis Allowlist",
-				description:
-					"Force Track and Check rate limits through the shared Redis counter.",
-				icon: ListChecks,
-				endpoint: "/admin/rate-limit-redis-allowlist-config",
-				deriveStatus: (data) => {
-					const ids = asRecord(data).customerIds;
-					const count = Array.isArray(ids) ? ids.length : 0;
-
-					return count === 0
-						? { label: "Empty", tone: "neutral" }
-						: {
-								label: pluralize({ count, noun: "customer" }),
-								tone: "active",
-							};
-				},
 			},
 			{
 				id: "agent-provision-rate-limit",
@@ -451,14 +416,22 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 				id: "db-control",
 				title: "DB Control",
 				description:
-					"Balance committer concurrency per worker; more clients as they move to Postgres.",
+					"Balance committer concurrency, apply linger and batches per flush per worker; more clients as they move to Postgres.",
 				icon: Database,
 				endpoint: "/admin/db-control-config",
 				deriveStatus: (data) => {
 					const committer = asRecord(asRecord(data).balanceCommitter);
-					return typeof committer.concurrency === "number"
-						? { label: `${committer.concurrency} lanes`, tone: "active" }
-						: { label: "Pool size", tone: "neutral" };
+					const overrides = [
+						typeof committer.concurrency === "number" &&
+							`${committer.concurrency} lanes`,
+						typeof committer.applyLingerMs === "number" &&
+							`${committer.applyLingerMs}ms linger`,
+						typeof committer.maxBatchesPerFlush === "number" &&
+							`${committer.maxBatchesPerFlush} batches/flush`,
+					].filter(Boolean);
+					return overrides.length === 0
+						? { label: "Boot values", tone: "neutral" }
+						: { label: overrides.join(" · "), tone: "active" };
 				},
 			},
 			{

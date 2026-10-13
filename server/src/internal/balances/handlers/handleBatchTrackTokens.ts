@@ -1,6 +1,8 @@
 import {
 	AffectedResource,
+	ApiVersion,
 	BatchTrackTokensParamsSchema,
+	BatchTrackTokensParamsV2_4Schema,
 	RouteGroup,
 	Scopes,
 } from "@autumn/shared";
@@ -10,8 +12,11 @@ import { runBatchTrackTokens } from "@/internal/balances/track/runBatchTrackToke
 export const handleBatchTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
 	routeGroup: RouteGroup.Balances,
-	body: BatchTrackTokensParamsSchema,
-	resource: AffectedResource.Track,
+	versionedBody: {
+		latest: BatchTrackTokensParamsSchema,
+		[ApiVersion.V2_4]: BatchTrackTokensParamsV2_4Schema,
+	},
+	resource: AffectedResource.BatchTrackTokens,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");

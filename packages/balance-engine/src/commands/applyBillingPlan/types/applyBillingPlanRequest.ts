@@ -9,7 +9,7 @@ export const applyBillingPlanRequestSchema = z
 		// The worker caches these; the log never carries them.
 		catalogRows: z.array(catalogRowSchema),
 	})
-	.strict();
+	.loose();
 
 export type ApplyBillingPlanRequest = z.infer<
 	typeof applyBillingPlanRequestSchema

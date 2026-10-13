@@ -1,4 +1,4 @@
-import { msToSeconds } from "@autumn/shared";
+import { msToSeconds, stripeRefToId } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
@@ -33,7 +33,7 @@ const toPriceData = ({
 	unitAmount?: number;
 }) => ({
 	currency: price.currency,
-	product: typeof price.product === "string" ? price.product : price.product.id,
+	product: stripeRefToId(price.product),
 	unit_amount: unitAmount,
 	recurring: {
 		interval: price.recurring!.interval,

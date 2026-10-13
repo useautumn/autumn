@@ -1,4 +1,5 @@
 import type { StripeSubscriptionScheduleAction } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 /** An unchanged schedule gets no action, so its future items are read off the live schedule instead. */
@@ -13,7 +14,7 @@ export const liveScheduleAsUpdateAction = (
 			start_date: phase.start_date,
 			end_date: phase.end_date,
 			items: phase.items.map((item) => ({
-				price: typeof item.price === "string" ? item.price : item.price.id,
+				price: stripeRefToId(item.price),
 				quantity: item.quantity,
 			})),
 		})),

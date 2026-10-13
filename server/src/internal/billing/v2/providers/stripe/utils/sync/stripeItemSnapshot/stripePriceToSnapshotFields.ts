@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeItemSnapshot, StripeItemTier } from "./types";
 
@@ -8,7 +8,7 @@ type SnapshotPriceFields = Omit<
 >;
 
 const stripeProductId = ({ price }: { price: Stripe.Price }) =>
-	typeof price.product === "string" ? price.product : price.product.id;
+	stripeRefToId(price.product);
 
 const stripeTiers = ({
 	tiers,

@@ -1,4 +1,5 @@
 import type { StripeCouponWithPromoCodes } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import {
 	SmallSpinner,
 	Tooltip,
@@ -24,7 +25,7 @@ const getAppliedCouponId = (
 ): string | null => {
 	const coupon = discount?.source?.coupon;
 	if (!coupon) return null;
-	return typeof coupon === "string" ? coupon : coupon.id;
+	return stripeRefToId(coupon);
 };
 
 const formatCouponDuration = (coupon: Stripe.Coupon): string => {

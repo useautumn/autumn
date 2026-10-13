@@ -14,6 +14,7 @@ type SubjectStateRow = {
 	sliceHash: string;
 	catalogJson: string;
 	orgJson: string;
+	customerVersion: bigint;
 };
 
 /** A subject's catalog slice and org as stored beside its state, and the hash that tells a push whether they changed. */
@@ -59,10 +60,32 @@ const storedSubjectFromRow = ({
 		org: JSON.parse(row.orgJson),
 		logOffset: row.logOffset,
 		readAt: Number(row.readAt),
+		customerVersion: row.customerVersion,
 	},
 	bytes: textBytes([row.stateJson, row.catalogJson, row.orgJson]),
 	sliceHash: row.sliceHash,
 });
+
+/** The version a row holds, read without parsing it; null when the file has no such row. */
+export const readSubjectVersion = ({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+	entityId: string | null;
+}): { readAt: number; logOffset: bigint } | null => {
+	const row = ctx.sqliteDb
+		.query<
+			{ readAt: bigint; logOffset: bigint },
+			{ customerId: string; entityId: string }
+		>(
+			"SELECT read_at AS readAt, log_offset AS logOffset FROM subject_states WHERE customer_id = $customerId AND entity_id = $entityId",
+		)
+		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
+	return row ? { readAt: Number(row.readAt), logOffset: row.logOffset } : null;
+};
 
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
@@ -91,7 +114,8 @@ export const readSubject = ({
 				states.state_json AS stateJson,
 				states.slice_hash AS sliceHash,
 				slices.catalog_json AS catalogJson,
-				slices.org_json AS orgJson
+				slices.org_json AS orgJson,
+				states.customer_version AS customerVersion
 			FROM subject_states AS states
 			JOIN subject_slices AS slices USING (customer_id, entity_id)
 			WHERE states.customer_id = $customerId AND states.entity_id = $entityId
@@ -100,55 +124,253 @@ export const readSubject = ({
 	return row ? storedSubjectFromRow({ row }) : null;
 };
 
-/** Subjects that came from one read are written together. One answer each, as `upsertSubject` gives. */
+/** Where a page of applied subjects ends, so the next page starts right after it whatever ties on `applied_at`. */
+export type SubjectCursor = {
+	appliedAt: number;
+	customerId: string;
+	entityId: string;
+};
+
+/** A stored subject with when this file wrote it, by this replica's clock: what a copy to a peer is ordered by. */
+export type AppliedSubject = { subject: StoredSubject; appliedAt: number };
+
+/**
+ * Subjects this file wrote at or after `after` (null: all of them), oldest write first, ties broken by key, after
+ * `cursor`; so a replica that fell behind copies what it missed, page by page, missing nothing that ties on a page's edge.
+ */
+export const listSubjectsAppliedAfter = ({
+	ctx,
+	after,
+	cursor,
+	limit,
+}: {
+	ctx: SlotContext;
+	after: number | null;
+	cursor: SubjectCursor | null;
+	limit: number;
+}): AppliedSubject[] =>
+	ctx.sqliteDb
+		.query<
+			SubjectStateRow & { appliedAt: bigint },
+			{
+				after: number;
+				cursorAppliedAt: number | null;
+				cursorCustomerId: string;
+				cursorEntityId: string;
+				limit: number;
+			}
+		>(`
+			SELECT
+				states.log_offset AS logOffset,
+				states.read_at AS readAt,
+				states.applied_at AS appliedAt,
+				states.state_json AS stateJson,
+				states.slice_hash AS sliceHash,
+				states.customer_version AS customerVersion,
+				slices.catalog_json AS catalogJson,
+				slices.org_json AS orgJson
+			FROM subject_states AS states
+			JOIN subject_slices AS slices USING (customer_id, entity_id)
+			WHERE states.applied_at >= $after
+				AND ($cursorAppliedAt IS NULL
+					OR (states.applied_at, states.customer_id, states.entity_id)
+						> ($cursorAppliedAt, $cursorCustomerId, $cursorEntityId))
+			ORDER BY states.applied_at ASC, states.customer_id ASC, states.entity_id ASC
+			LIMIT $limit
+		`)
+		.all({
+			after: after ?? 0,
+			cursorAppliedAt: cursor?.appliedAt ?? null,
+			cursorCustomerId: cursor?.customerId ?? "",
+			cursorEntityId: cursor?.entityId ?? "",
+			limit,
+		})
+		.map((row) => ({
+			subject: storedSubjectFromRow({ row }).subject,
+			appliedAt: Number(row.appliedAt),
+		}));
+
+/** A row's identity and version alone: what a replica compares before asking for the row itself. */
+export type SubjectDigest = SubjectCursor & {
+	readAt: number;
+	logOffset: bigint;
+};
+
+/** The digests of the subjects written at or after `after`, in the same order and pages as `listSubjectsAppliedAfter`. */
+export const listDigestsAppliedAfter = ({
+	ctx,
+	after,
+	cursor,
+	limit,
+}: {
+	ctx: SlotContext;
+	after: number | null;
+	cursor: SubjectCursor | null;
+	limit: number;
+}): SubjectDigest[] =>
+	ctx.sqliteDb
+		.query<
+			{
+				customerId: string;
+				entityId: string;
+				readAt: bigint;
+				logOffset: bigint;
+				appliedAt: bigint;
+			},
+			{
+				after: number;
+				cursorAppliedAt: number | null;
+				cursorCustomerId: string;
+				cursorEntityId: string;
+				limit: number;
+			}
+		>(`
+			SELECT customer_id AS customerId, entity_id AS entityId, read_at AS readAt, log_offset AS logOffset, applied_at AS appliedAt
+			FROM subject_states
+			WHERE applied_at >= $after
+				AND ($cursorAppliedAt IS NULL
+					OR (applied_at, customer_id, entity_id) > ($cursorAppliedAt, $cursorCustomerId, $cursorEntityId))
+			ORDER BY applied_at ASC, customer_id ASC, entity_id ASC
+			LIMIT $limit
+		`)
+		.all({
+			after: after ?? 0,
+			cursorAppliedAt: cursor?.appliedAt ?? null,
+			cursorCustomerId: cursor?.customerId ?? "",
+			cursorEntityId: cursor?.entityId ?? "",
+			limit,
+		})
+		.map((row) => ({
+			customerId: row.customerId,
+			entityId: row.entityId,
+			readAt: Number(row.readAt),
+			logOffset: row.logOffset,
+			appliedAt: Number(row.appliedAt),
+		}));
+
+/** The rows named, with when they were written; a key the file does not hold is left out. */
+export const readSubjectsByKey = ({
+	ctx,
+	keys,
+}: {
+	ctx: SlotContext;
+	keys: { customerId: string; entityId: string }[];
+}): AppliedSubject[] => {
+	const query = ctx.sqliteDb.query<
+		SubjectStateRow & { appliedAt: bigint },
+		{ customerId: string; entityId: string }
+	>(`
+		SELECT
+			states.log_offset AS logOffset,
+			states.read_at AS readAt,
+			states.applied_at AS appliedAt,
+			states.state_json AS stateJson,
+			states.slice_hash AS sliceHash,
+			states.customer_version AS customerVersion,
+			slices.catalog_json AS catalogJson,
+			slices.org_json AS orgJson
+		FROM subject_states AS states
+		JOIN subject_slices AS slices USING (customer_id, entity_id)
+		WHERE states.customer_id = $customerId AND states.entity_id = $entityId
+	`);
+	return keys.flatMap((key) => {
+		const row = query.get(key);
+		return row
+			? [
+					{
+						subject: storedSubjectFromRow({ row }).subject,
+						appliedAt: Number(row.appliedAt),
+					},
+				]
+			: [];
+	});
+};
+
+/** The newest write the file holds by this replica's clock, or 0 when it is empty: how far back a copy from a peer reaches. */
+export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
+	const row = ctx.sqliteDb
+		.query<{ appliedAt: bigint | null }, []>(
+			"SELECT max(applied_at) AS appliedAt FROM subject_states",
+		)
+		.get();
+	return Number(row?.appliedAt ?? 0);
+};
+
+/** What one write left: the bytes of row text it stored (null when its rows were older), and the customer's version
+ * when the write moved it (null when it stayed). */
+export type SubjectWriteResult = {
+	bytes: number | null;
+	customerVersion: bigint | null;
+};
+
+/** Subjects that came from one read are written together. */
 export const upsertSubjects = ({
 	ctx,
 	writes,
+	appliedAt,
 }: {
 	ctx: SlotContext;
 	writes: SubjectWrite[];
-}): (number | null)[] =>
+	appliedAt: number;
+}): SubjectWriteResult[] =>
 	ctx.sqliteDb.transaction(() =>
-		writes.map((write) => upsertSubject({ ctx, write })),
+		writes.map((write) => upsertSubject({ ctx, write, appliedAt })),
 	)();
 
+/** The push is read later than the row held, or at the same instant for a later change. */
+const IS_NEWER = `(excluded.read_at > subject_states.read_at
+	OR (excluded.read_at = subject_states.read_at AND excluded.log_offset >= subject_states.log_offset))`;
+
 /**
- * The bytes of row text the subject now holds; null when it was read before the one stored, or at the same instant
- * for an earlier change: a late push never undoes a newer one. The slice row is rewritten only when it changed.
+ * One statement per subject. Its rows replace the held ones only when newer, so a late push never undoes a newer one;
+ * its customer version is kept as the higher of the two either way, since evicts arrive out of order too.
  */
 const upsertSubject = ({
 	ctx,
 	write: { subject, slice, sliceStored },
+	appliedAt,
 }: {
 	ctx: SlotContext;
 	write: SubjectWrite;
-}): number | null => {
+	appliedAt: number;
+}): SubjectWriteResult => {
 	const { customerId, entityId } = subject.state.identity;
 	const key = { customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID };
 	const stateJson = JSON.stringify(subject.state);
-	const { changes } = ctx.sqliteDb
-		.query(`
+	const written = ctx.sqliteDb
+		.query<
+			{ readAt: bigint; logOffset: bigint; customerVersion: bigint },
+			Record<string, string | bigint | number>
+		>(`
 			INSERT INTO subject_states
-				(customer_id, entity_id, log_offset, read_at, state_json, slice_hash)
+				(customer_id, entity_id, log_offset, read_at, applied_at, state_json, slice_hash, customer_version)
 			VALUES
-				($customerId, $entityId, $logOffset, $readAt, $stateJson, $sliceHash)
+				($customerId, $entityId, $logOffset, $readAt, $appliedAt, $stateJson, $sliceHash, $customerVersion)
 			ON CONFLICT (customer_id, entity_id) DO UPDATE SET
-				log_offset = excluded.log_offset,
-				read_at = excluded.read_at,
-				state_json = excluded.state_json,
-				slice_hash = excluded.slice_hash
-			WHERE excluded.read_at > subject_states.read_at
-				OR (excluded.read_at = subject_states.read_at
-					AND excluded.log_offset >= subject_states.log_offset)
+				log_offset = CASE WHEN ${IS_NEWER} THEN excluded.log_offset ELSE subject_states.log_offset END,
+				read_at = CASE WHEN ${IS_NEWER} THEN excluded.read_at ELSE subject_states.read_at END,
+				applied_at = CASE WHEN ${IS_NEWER} THEN excluded.applied_at ELSE subject_states.applied_at END,
+				state_json = CASE WHEN ${IS_NEWER} THEN excluded.state_json ELSE subject_states.state_json END,
+				slice_hash = CASE WHEN ${IS_NEWER} THEN excluded.slice_hash ELSE subject_states.slice_hash END,
+				customer_version = max(subject_states.customer_version, excluded.customer_version)
+			WHERE ${IS_NEWER} OR excluded.customer_version > subject_states.customer_version
+			RETURNING read_at AS readAt, log_offset AS logOffset, customer_version AS customerVersion
 		`)
-		.run({
+		.get({
 			...key,
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
+			appliedAt,
 			stateJson,
 			sliceHash: slice.hash,
+			customerVersion: subject.customerVersion,
 		});
-	if (changes === 0) return null;
+	if (!written) return { bytes: null, customerVersion: null };
+	const isStored =
+		written.readAt === BigInt(subject.readAt) &&
+		written.logOffset === subject.logOffset;
+	if (!isStored)
+		return { bytes: null, customerVersion: written.customerVersion };
 	if (!sliceStored)
 		ctx.sqliteDb
 			.query(`
@@ -166,5 +388,62 @@ const upsertSubject = ({
 				catalogJson: slice.catalogJson,
 				orgJson: slice.orgJson,
 			});
-	return textBytes([stateJson, slice.catalogJson, slice.orgJson]);
+	return {
+		bytes: textBytes([stateJson, slice.catalogJson, slice.orgJson]),
+		customerVersion: written.customerVersion,
+	};
 };
+
+/** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
+export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
+	const pages = ctx.sqliteDb
+		.query<{ page_count: bigint }, []>("PRAGMA page_count")
+		.get();
+	const size = ctx.sqliteDb
+		.query<{ page_size: bigint }, []>("PRAGMA page_size")
+		.get();
+	return Number(pages?.page_count ?? 0n) * Number(size?.page_size ?? 0n);
+};
+
+/** The keys of the rows one drop removed, so the copies held of them go too. */
+export type DroppedRows = { customerId: string; entityId: string }[];
+
+/**
+ * Deletes every row of up to `limit` customers whose own row, rewritten by every push of the customer or an entity, was
+ * written before `before`, oldest first. A customer goes whole, its entities with it, so no entity outlives the rows it is
+ * read beside; one with any row copied since (a peer's catch-up writes a part alone) stays.
+ */
+export const deleteCustomersWrittenBefore = ({
+	ctx,
+	before,
+	limit,
+}: {
+	ctx: SlotContext;
+	before: number;
+	limit: number;
+}): DroppedRows =>
+	ctx.sqliteDb.transaction((): DroppedRows => {
+		const customers = ctx.sqliteDb
+			.query<{ customerId: string }, { before: number; limit: number }>(`
+				SELECT own.customer_id AS customerId FROM subject_states AS own
+				WHERE own.entity_id = '' AND own.applied_at < $before
+					AND NOT EXISTS (SELECT 1 FROM subject_states AS fresh
+						WHERE fresh.customer_id = own.customer_id AND fresh.applied_at >= $before)
+				ORDER BY own.applied_at ASC LIMIT $limit
+			`)
+			.all({ before, limit });
+		if (customers.length === 0) return [];
+		const ids = JSON.stringify(customers.map(({ customerId }) => customerId));
+		const inCustomers = "customer_id IN (SELECT value FROM json_each($ids))";
+		const dropped = ctx.sqliteDb
+			.query<{ customerId: string; entityId: string }, { ids: string }>(
+				`DELETE FROM subject_states WHERE ${inCustomers} RETURNING customer_id AS customerId, entity_id AS entityId`,
+			)
+			.all({ ids });
+		ctx.sqliteDb
+			.query(`DELETE FROM subject_slices WHERE ${inCustomers}`)
+			.run({ ids });
+		// Freed pages go back to the volume once the main thread checkpoints the file.
+		ctx.sqliteDb.run("PRAGMA incremental_vacuum");
+		return dropped;
+	})();

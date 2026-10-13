@@ -16,7 +16,10 @@ import { z } from "zod/v4";
 export const subjectRowsEnvelopeSchema = z.object({
 	/** The whole row: the worker serves `customers.get` from it, not only check and track. */
 	customer: CustomerSchema,
-	customer_products: z.array(CusProductSchema),
+	// Stored as written, so a worker older than the server still loads a row a newer API version stamped.
+	customer_products: z.array(
+		CusProductSchema.extend({ api_semver: z.string().nullable() }),
+	),
 	customer_prices: z.array(CustomerPriceSchema),
 	customer_entitlements: z.array(CustomerEntitlementSchema),
 	rollovers: z.array(RolloverSchema),

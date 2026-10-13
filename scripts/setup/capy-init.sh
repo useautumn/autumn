@@ -21,6 +21,7 @@ TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
 . "$SCRIPT_DIR/install-stripe-cli.sh"
 . "$SCRIPT_DIR/capy-kafka.sh"
+. "$SCRIPT_DIR/capy-bubble.sh"
 
 command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
@@ -37,6 +38,9 @@ if [ "$(sysctl -n fs.inotify.max_user_watches)" -lt 524288 ]; then
   echo fs.inotify.max_user_watches=524288 | "${SUDO[@]}" tee /etc/sysctl.d/99-autumn-capy.conf >/dev/null
   "${SUDO[@]}" sysctl --system >/dev/null
 fi
+
+log "installing the memory bubble (earlyoom, system.slice cap, OOMPolicy=continue)"
+install_capy_bubble "[capy-init]"
 
 if ! command -v psql >/dev/null 2>&1; then
   log "installing PostgreSQL client"

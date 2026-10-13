@@ -1,4 +1,5 @@
 import {
+	type AttachDiscount,
 	type BillingBehavior,
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
@@ -19,6 +20,8 @@ import {
 	readArray,
 	readNumber,
 	readQuantities,
+	readRewardIds,
+	readStampedArray,
 	readString,
 	requestRecord,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
@@ -181,5 +184,12 @@ export const scheduleFormFromRequestBody = (
 			featureIds: "carryOverUsageFeatureIds",
 		}),
 		...freeTrialFrom(request.free_trial),
+		...overridesFromRequest<CustomerStateForm>(request, {
+			discounts: readStampedArray<AttachDiscount>(
+				"discounts",
+				"seeded-discount",
+			),
+			removedRewardIds: readRewardIds("remove_discounts"),
+		}),
 	};
 };

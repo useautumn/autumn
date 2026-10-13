@@ -17,8 +17,10 @@ import {
 	eq,
 	inArray,
 	isNotNull,
+	ne,
 	not,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
@@ -525,6 +527,9 @@ export class CusProductService {
 				ended_at: Date.now(),
 				metadata_id: null,
 				updated_at: Date.now(),
+				// A pending plan never started, so its trial was never used.
+				free_trial_id: null,
+				trial_ends_at: null,
 			})
 			.where(
 				and(
@@ -704,7 +709,13 @@ export class CusProductService {
 			.where(
 				and(
 					eq(products.id, productId),
+					sql`(${customers.org_id}, ${customers.env}) = (SELECT org_id, env FROM customers WHERE internal_id = ${internalCustomerId})`,
 					isNotNull(customerProducts.free_trial_id),
+					// Another customer's open checkout still reserves the fingerprint's trial.
+					or(
+						ne(customerProducts.status, CusProductStatus.Pending),
+						ne(customers.internal_id, internalCustomerId),
+					),
 					or(
 						// Cross-customer fingerprint dedup (unique_fingerprint abuse
 						// prevention) must match other customers regardless of entity,

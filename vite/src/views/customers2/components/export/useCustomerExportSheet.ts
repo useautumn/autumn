@@ -1,8 +1,10 @@
 import {
+	type CreateCustomerExportParams,
 	CUSTOMER_EXPORT_FIELD_ORDER,
 	CustomerExportFieldsSchema,
 	CustomerExportKind,
 	type CustomerExportResponse,
+	type CustomerListFilters,
 	isCustomerExportActive,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
@@ -31,7 +33,33 @@ const CustomerExportFormSchema = z.object({
 	fields: CustomerExportFieldsSchema,
 	restrictToCurrentFilters: z.boolean(),
 	includeUnlinkedStripeCustomers: z.boolean(),
+	dryRun: z.boolean(),
 });
+
+type CustomerExportFormValues = z.infer<typeof CustomerExportFormSchema>;
+
+const toCreateCustomerExportParams = ({
+	kind,
+	value,
+	scope,
+}: {
+	kind: CustomerExportKind;
+	value: CustomerExportFormValues;
+	scope: { search: string; filters: CustomerListFilters };
+}): CreateCustomerExportParams => {
+	switch (kind) {
+		case CustomerExportKind.Customers:
+			return { kind, fields: value.fields, ...scope };
+		case CustomerExportKind.BillingVerify:
+			return {
+				kind,
+				...scope,
+				include_unlinked_stripe_customers: value.includeUnlinkedStripeCustomers,
+			};
+		case CustomerExportKind.CustomPlans:
+			return { kind, ...scope, apply: !value.dryRun };
+	}
+};
 
 export type CustomerExportSheetProps = {
 	kind: CustomerExportKind;
@@ -84,6 +112,7 @@ export function useCustomerExportSheet({
 			fields: [...CUSTOMER_EXPORT_FIELD_ORDER],
 			restrictToCurrentFilters: true,
 			includeUnlinkedStripeCustomers: false,
+			dryRun: false,
 		},
 		validators: {
 			onChange: CustomerExportFormSchema,
@@ -98,14 +127,7 @@ export function useCustomerExportSheet({
 					filters: restrictToFilters ? filters : {},
 				};
 				await createExport.mutateAsync(
-					kind === CustomerExportKind.Customers
-						? { kind, fields: value.fields, ...scope }
-						: {
-								kind,
-								...scope,
-								include_unlinked_stripe_customers:
-									value.includeUnlinkedStripeCustomers,
-							},
+					toCreateCustomerExportParams({ kind, value, scope }),
 				);
 				toast.success("Export started");
 			} catch (error) {

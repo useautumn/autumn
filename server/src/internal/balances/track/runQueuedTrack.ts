@@ -9,25 +9,37 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import type { TokenDeduction } from "../utils/types/featureDeduction.js";
 import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
-import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
+import { getValidatedTrackFeatureDeductions } from "./utils/getValidatedTrackFeatureDeductions.js";
+import { toTokenFeatureDeduction } from "./utils/tokenFeatureDeduction.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 export const runQueuedTrack = async ({
 	ctx,
 	body,
 	apiVersion,
+	tokens,
 	validateTrackBodyIdempotencyKey = true,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
+	/** Set for a queued track_tokens, so replay prices it like the sync path. */
+	tokens?: TokenDeduction;
 	/** Sync and async replays already claimed the body key at accept time
 	 *  (queueTrack marks them false); batch messages have no accept-time
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
-	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+	const featureDeductions = getValidatedTrackFeatureDeductions({
+		ctx,
+		body,
+	}).map((deduction) =>
+		tokens
+			? toTokenFeatureDeduction({ feature: deduction.feature, tokens })
+			: deduction,
+	);
 
 	try {
 		await withIdempotencyKey({
@@ -43,6 +55,7 @@ export const runQueuedTrack = async ({
 							ctx,
 							body,
 							validateTrackBodyIdempotencyKey: false,
+							recordsCreditCost: tokens !== undefined,
 						})
 					: runTrackV3({ ctx, body, featureDeductions, apiVersion }),
 		});

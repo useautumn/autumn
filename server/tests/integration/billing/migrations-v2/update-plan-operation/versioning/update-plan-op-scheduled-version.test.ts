@@ -15,7 +15,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import { CusProductStatus, ms } from "@autumn/shared";
+import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectProductCanceling,
@@ -48,7 +48,7 @@ const stripeScheduleSignature = (schedule: Stripe.SubscriptionSchedule) => ({
 		startDate: phase.start_date,
 		endDate: phase.end_date,
 		items: phase.items.map((item) => ({
-			price: typeof item.price === "string" ? item.price : item.price.id,
+			price: stripeRefToId(item.price),
 			quantity: item.quantity,
 		})),
 	})),
@@ -77,8 +77,12 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: scheduled 
 		],
 	});
 
-	const beforeCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceling({ customer: beforeCustomer, productId: premium.id });
+	const beforeCustomer =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: beforeCustomer,
+		productId: premium.id,
+	});
 	await expectProductScheduled({ customer: beforeCustomer, productId: pro.id });
 	const invoiceCountBefore = beforeCustomer.invoices?.length ?? 0;
 	const scheduledBefore = await getScheduledCustomerProductRow({
@@ -132,9 +136,15 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: scheduled 
 	await expectScheduledReplacement();
 
 	const afterCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceling({ customer: afterCustomer, productId: premium.id });
+	await expectProductCanceling({
+		customer: afterCustomer,
+		productId: premium.id,
+	});
 	await expectProductScheduled({ customer: afterCustomer, productId: pro.id });
-	await expectCustomerInvoiceCorrect({ customer: afterCustomer, count: invoiceCountBefore });
+	await expectCustomerInvoiceCorrect({
+		customer: afterCustomer,
+		count: invoiceCountBefore,
+	});
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
@@ -209,9 +219,12 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: entity-sco
 		});
 		expect(scheduledAfter.id).not.toBe(row.id);
 		expect(scheduledAfter.version).toBe(2);
-		expect(await getCustomerProductFeatureIds({ ctx, customerProductId: scheduledAfter.id })).toEqual([
-			TestFeature.Messages,
-		]);
+		expect(
+			await getCustomerProductFeatureIds({
+				ctx,
+				customerProductId: scheduledAfter.id,
+			}),
+		).toEqual([TestFeature.Messages]);
 	}
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
@@ -271,9 +284,12 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: custom sch
 		productId: customFuture.id,
 	});
 	expect(scheduledBefore.isCustom).toBe(true);
-	expect(await getCustomerProductFeatureIds({ ctx, customerProductId: scheduledBefore.id })).toEqual([
-		TestFeature.Words,
-	]);
+	expect(
+		await getCustomerProductFeatureIds({
+			ctx,
+			customerProductId: scheduledBefore.id,
+		}),
+	).toEqual([TestFeature.Words]);
 
 	await autumnV1.products.update(customFuture.id, {
 		items: [
@@ -300,7 +316,10 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: custom sch
 		runOnServer: false,
 	});
 
-	await expectNoCustomerProductRow({ ctx, customerProductId: scheduledBefore.id });
+	await expectNoCustomerProductRow({
+		ctx,
+		customerProductId: scheduledBefore.id,
+	});
 	const scheduledAfter = await getScheduledCustomerProductRow({
 		ctx,
 		customerId,
@@ -308,10 +327,17 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: custom sch
 	});
 	expect(scheduledAfter.id).not.toBe(scheduledBefore.id);
 	expect(scheduledAfter.version).toBe(2);
-	expect(await getCustomerProductFeatureIds({ ctx, customerProductId: scheduledAfter.id })).toEqual([
-		TestFeature.Messages,
-	]);
-	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: customFuture.id });
+	expect(
+		await getCustomerProductFeatureIds({
+			ctx,
+			customerProductId: scheduledAfter.id,
+		}),
+	).toEqual([TestFeature.Messages]);
+	await expectNoExpiredCustomerProducts({
+		ctx,
+		customerId,
+		productId: customFuture.id,
+	});
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
@@ -368,9 +394,12 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: custom sch
 		productId: customFuture.id,
 	});
 	expect(scheduledBefore.isCustom).toBe(true);
-	expect(await getCustomerProductFeatureIds({ ctx, customerProductId: scheduledBefore.id })).toEqual([
-		TestFeature.Words,
-	]);
+	expect(
+		await getCustomerProductFeatureIds({
+			ctx,
+			customerProductId: scheduledBefore.id,
+		}),
+	).toEqual([TestFeature.Words]);
 
 	await autumnV1.products.update(customFuture.id, {
 		items: [items.monthlyMessages({ includedUsage: 500 })],
@@ -402,9 +431,12 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: custom sch
 	expect(scheduledAfter.id).toBe(scheduledBefore.id);
 	expect(scheduledAfter.version).toBe(1);
 	expect(scheduledAfter.isCustom).toBe(true);
-	expect(await getCustomerProductFeatureIds({ ctx, customerProductId: scheduledAfter.id })).toEqual([
-		TestFeature.Words,
-	]);
+	expect(
+		await getCustomerProductFeatureIds({
+			ctx,
+			customerProductId: scheduledAfter.id,
+		}),
+	).toEqual([TestFeature.Words]);
 	await expectNoExpiredCustomerProducts({
 		ctx,
 		customerId,
@@ -425,7 +457,10 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 
 	const { autumnV1, autumnV2_2, ctx } = await initScenario({
 		customerId,
-		setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [plan] })],
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [plan] }),
+		],
 		actions: [],
 	});
 
@@ -506,7 +541,10 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 		runOnServer: false,
 	});
 
-	await expectNoCustomerProductRow({ ctx, customerProductId: scheduledBefore.id });
+	await expectNoCustomerProductRow({
+		ctx,
+		customerProductId: scheduledBefore.id,
+	});
 	const activeAfter = await getCustomerProductRows({
 		ctx,
 		customerId,
@@ -529,7 +567,7 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 	).toEqual([scheduledAfter.id]);
 	const stripeScheduleAfter =
 		await ctx.stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
-	expect(stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule)).toEqual(
-		stripeSignatureBefore,
-	);
+	expect(
+		stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule),
+	).toEqual(stripeSignatureBefore);
 });

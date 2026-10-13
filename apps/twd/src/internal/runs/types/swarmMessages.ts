@@ -76,7 +76,7 @@ export type SwarmChildMessage =
 export type SwarmPhase = "provisioning" | "running" | "tearing_down";
 
 /** Parent → warm child. */
-export type WarmInit = { type: "init"; sha: string };
+export type WarmInit = { type: "init"; sha: string; branch: string };
 
 /** Warm child → parent. */
 export type WarmChildMessage =

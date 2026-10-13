@@ -1,5 +1,5 @@
-import { Input } from "@autumn/ui";
-import { ListMagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { FilterChip, Input } from "@autumn/ui";
+import { ListMagnifyingGlassIcon } from "@phosphor-icons/react";
 import { debounce } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -7,10 +7,7 @@ import {
 	hasActiveCustomerFilters,
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
-import {
-	type CustomerListFilterChip,
-	useCustomerListFilterChips,
-} from "./useCustomerListFilterChips";
+import { useCustomerListFilterChips } from "./useCustomerListFilterChips";
 
 export function CustomerListSearchBar() {
 	const { queryStates, setFilters } = useCustomerFilters();
@@ -51,7 +48,12 @@ export function CustomerListSearchBar() {
 			{filterChips.length > 0 && (
 				<div className="flex min-w-0 shrink items-center gap-1 overflow-hidden">
 					{filterChips.map((chip) => (
-						<CustomerListFilterChipTag key={chip.key} chip={chip} />
+						<FilterChip
+							key={chip.key}
+							label={chip.label}
+							value={chip.value}
+							onRemove={chip.onRemove}
+						/>
 					))}
 				</div>
 			)}
@@ -76,22 +78,5 @@ export function CustomerListSearchBar() {
 				</button>
 			)}
 		</div>
-	);
-}
-
-function CustomerListFilterChipTag({ chip }: { chip: CustomerListFilterChip }) {
-	return (
-		<span className="flex h-5 max-w-56 shrink-0 items-center gap-1 rounded bg-active-primary pr-0.5 pl-1.5 text-xs">
-			<span className="shrink-0 text-subtle">{chip.label}</span>
-			<span className="truncate text-foreground">{chip.value}</span>
-			<button
-				type="button"
-				aria-label={`Remove ${chip.label} filter`}
-				onClick={chip.onRemove}
-				className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-sm text-tertiary-foreground hover:bg-primary/10 hover:text-foreground"
-			>
-				<XIcon size={10} weight="bold" />
-			</button>
-		</span>
 	);
 }

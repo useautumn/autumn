@@ -80,6 +80,20 @@ export const getStripeSubLink = ({
 	return `${baseUrl}${accountPath}${withTest}/subscriptions/${subscriptionId}`;
 };
 
+export const getStripePaymentMethodConfigLink = ({
+	configurationId,
+	env,
+	accountId,
+}: {
+	configurationId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const accountPath = accountId ? `/${accountId}` : "";
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `https://dashboard.stripe.com${accountPath}${withTest}/settings/payment_methods?config_id=${configurationId}`;
+};
+
 export const getStripeSubScheduleLink = ({
 	scheduledId,
 	env,

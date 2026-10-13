@@ -1,6 +1,7 @@
 import {
 	type DbInvoiceLineItem,
 	ErrCode,
+	type LineItem,
 	type PreviewInvoiceCredits,
 	RecaseError,
 	type ReissueCustomerOverrides,
@@ -21,6 +22,7 @@ export const previewReissue = async ({
 	customerOverrides,
 	lines,
 	storedLines,
+	addedLineItems,
 	credits,
 	dueDateMs,
 }: {
@@ -31,6 +33,7 @@ export const previewReissue = async ({
 	customerOverrides?: ReissueCustomerOverrides;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
 	storedLines: DbInvoiceLineItem[];
+	addedLineItems?: LineItem[];
 	credits?: PreviewInvoiceCredits;
 	dueDateMs: number | null;
 }) => {
@@ -49,7 +52,8 @@ export const previewReissue = async ({
 			}
 			return {
 				amount: line.amount,
-				currency: stripeInvoice.currency,
+				// price_data carries its own currency; Stripe refuses both.
+				currency: line.price_data ? undefined : stripeInvoice.currency,
 				description: line.description,
 				discountable: line.discountable,
 				discounts: line.discounts,
@@ -97,6 +101,7 @@ export const previewReissue = async ({
 				})
 			: preview.lines.data,
 		storedLines,
+		addedLineItems,
 		credits,
 		dueDateMs,
 	});

@@ -12,6 +12,7 @@ import type {
 	LiveEvent,
 	LiveServerMessage,
 	Me,
+	QaEnv,
 	RunDetail,
 	RunEvent,
 	RunFile,
@@ -549,7 +550,15 @@ const summary = (run: RunDetail): RunSummary => {
 	if (!isLive(run)) return { ...rest, live: null };
 	const workers: RunLive["workers"] = {};
 	for (const w of run.workers) workers[w.status] = (workers[w.status] ?? 0) + 1;
-	return { ...rest, live: { workers, etaMs: run.etaMs } };
+	const unspawned = Math.max(0, (run.workersWanted ?? 0) - run.workers.length);
+	return {
+		...rest,
+		live: {
+			workers,
+			etaMs: run.etaMs,
+			accountsPending: run.status === "warming" ? 0 : unspawned,
+		},
+	};
 };
 
 // ---- costs ----------------------------------------------------------------
@@ -1190,7 +1199,7 @@ startLiveRun({
 	workerCap: 24,
 	pinnedSha: true,
 });
-// A long branch stuck building its image, sized only once the swarm starts (as twd does).
+// A long branch stuck building its image: sized at warm start, but no accounts asked for until the build lands.
 startLiveRun({
 	branch: "capy/revenuecat-customer-products-are-not-synced-after-transfer",
 	sha: hex(40),
@@ -1199,7 +1208,7 @@ startLiveRun({
 	workerCap: 3,
 	startWorkers: 0,
 	warmForMs: Number.POSITIVE_INFINITY,
-}).workersWanted = null;
+});
 startLiveRun({
 	branch: "fix/cross-group-license-carry",
 	sha: branches[3].sha,
@@ -1300,6 +1309,110 @@ const apiKeys: ApiKey[] = [
 	},
 ];
 
+// ---- qa envs --------------------------------------------------------------
+
+const QA_BUILD_MS = 4 * MIN;
+const QA_PHASES = [
+	"cloning",
+	"installing deps",
+	"building image",
+	"pushing image",
+	"starting container",
+];
+
+const qaEnv = ({
+	createdMs,
+	...env
+}: Pick<QaEnv, "name" | "ref" | "state" | "awake" | "createdBy"> &
+	Partial<QaEnv> & { createdMs: number }): QaEnv => ({
+	url: `https://${env.name}.atmn.lol`,
+	sha: hex(40),
+	building: null,
+	error: null,
+	tinybirdUrl: null,
+	createdAt: iso(createdMs),
+	expiresAt: iso(createdMs + 3 * 24 * HOUR),
+	lastActiveAt: null,
+	jobId: id("job"),
+	...env,
+});
+
+const qaEnvs: QaEnv[] = [
+	qaEnv({
+		name: "feat-usage-alerts",
+		ref: "feat/usage-alerts",
+		state: "building",
+		awake: null,
+		createdBy: ME.email,
+		createdMs: START - 70_000,
+	}),
+	qaEnv({
+		name: "fix-proration-rounding",
+		ref: "fix/proration-rounding",
+		state: "ready",
+		awake: true,
+		createdBy: "john@useautumn.com",
+		createdMs: START - 5 * HOUR,
+		lastActiveAt: iso(START - 2 * MIN),
+	}),
+	qaEnv({
+		name: "charlie-plans-anchor",
+		ref: "charlie/set-plans-anchor-qa",
+		state: "ready",
+		awake: false,
+		createdBy: "ayush@useautumn.com",
+		createdMs: START - 52 * HOUR,
+		lastActiveAt: iso(START - 3 * HOUR),
+	}),
+	qaEnv({
+		name: "feat-credit-grants",
+		ref: "feat/feature-grant-rewards",
+		state: "failed",
+		awake: null,
+		createdBy: ME.email,
+		createdMs: START - 40 * MIN,
+		error:
+			"image build failed: bun install exited 1 (lockfile out of date: @autumn/shared@workspace:* not found)",
+	}),
+	// Enough rows to show the table scrolling inside the page.
+	...Array.from({ length: 30 }, (_, i) =>
+		qaEnv({
+			name: `capy-branch-${i + 1}`,
+			ref: `capy/branch-${i + 1}`,
+			state: "ready",
+			awake: i % 4 === 0,
+			createdBy: i % 2 ? "john@useautumn.com" : ME.email,
+			createdMs: START - (i + 1) * 2 * HOUR,
+			lastActiveAt: iso(START - (i + 1) * 20 * MIN),
+		}),
+	),
+];
+
+/** Building envs advance through the phases, then land ready and awake. */
+const tickQaEnvs = () => {
+	for (const env of qaEnvs) {
+		if (env.state !== "building") continue;
+		const elapsedMs = Date.now() - Date.parse(env.createdAt);
+		if (elapsedMs >= QA_BUILD_MS) {
+			Object.assign(env, {
+				state: "ready",
+				awake: true,
+				building: null,
+				lastActiveAt: iso(Date.now()),
+			});
+			continue;
+		}
+		const percent = (elapsedMs / QA_BUILD_MS) * 100;
+		env.building = {
+			phase: QA_PHASES[Math.floor((percent / 100) * QA_PHASES.length)] ?? null,
+			elapsedMs,
+			remainingMs: QA_BUILD_MS - elapsedMs,
+			percent,
+		};
+	}
+	return qaEnvs;
+};
+
 // ---- routing --------------------------------------------------------------
 
 const err = (
@@ -1328,11 +1441,16 @@ const capacity = (): Capacity => {
 		accounts: counts,
 		liveRuns: live.length,
 		queuedRuns: live.filter((r) => r.queuePosition !== null).length,
-		accountsWanted: live.reduce(
-			(sum, r) =>
-				sum + Math.max(0, (r.workersWanted ?? 0) - (r.workerCount ?? 0)),
-			0,
-		),
+		accountsWanted: live
+			.filter((r) => r.status !== "warming")
+			.reduce(
+				(sum, r) =>
+					sum + Math.max(0, (r.workersWanted ?? 0) - (r.workerCount ?? 0)),
+				0,
+			),
+		slotsAwaitingWarm: live
+			.filter((r) => r.status === "warming")
+			.reduce((sum, r) => sum + (r.workersWanted ?? 0), 0),
 		poolCap: usableKeys * 3,
 		maxFilesNow: gate.state === "draining" ? 0 : counts.clean,
 		warmBuilds: branches.filter((b) => b.warm === "building").length,
@@ -1375,6 +1493,20 @@ export const handle = ({
 	if (route === "GET /keys") return ok(keysOverview());
 	if (route === "GET /accounts") return ok(accounts);
 	if (route === "GET /api-keys") return ok(apiKeys);
+	if (route === "GET /qa") return ok({ envs: tickQaEnvs() });
+	if (method === "DELETE" && seg[0] === "qa" && seg[1]) {
+		const name = decodeURIComponent(seg[1]);
+		const i = qaEnvs.findIndex((e) => e.name === name);
+		if (i === -1)
+			return err(
+				404,
+				"qa_env_not_found",
+				`No QA env named "${name}".`,
+				"GET /qa for valid names.",
+			);
+		qaEnvs.splice(i, 1);
+		return ok({ name, deleted: true });
+	}
 
 	if (method === "POST" && seg[0] === "branches" && seg[2] === "warm") {
 		const b = branches.find((x) => x.name === decodeURIComponent(seg[1]));
@@ -1417,6 +1549,7 @@ export const handle = ({
 				failedTests: failed ? 1 : 0,
 				worker: null,
 				failureSummary: null,
+				source: "swarm" as const,
 				createdAt: iso(Date.now() - (40 - i) * 3 * 3_600_000),
 			};
 		}).reverse();
@@ -1443,6 +1576,7 @@ export const handle = ({
 				p90Ms: base * 1.2,
 				passRate: 0.97,
 				samples: 20,
+				source: "swarm" as const,
 				updatedAt: iso(Date.now()),
 			},
 			results,

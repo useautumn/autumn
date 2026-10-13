@@ -3,7 +3,6 @@ import {
 	type CreateScheduleBillingContext,
 	CusProductStatus,
 	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -15,8 +14,11 @@ import type {
 	TimelineDiff,
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
+import { endsLiveTrial } from "../../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { isOnReplacedStripeSubscription } from "../../utils/isOnReplacedStripeSubscription";
 import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
+import { isBackdateReplacement } from "../../utils/replacementReason";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -113,23 +115,6 @@ const emptyPatch = (customerProduct: FullCusProduct): CustomerProductPatch => ({
 	deleteCustomerPrices: [],
 });
 
-const isOnReplacedSubscription = ({
-	billingContext,
-	customerProduct,
-}: {
-	billingContext: CreateScheduleBillingContext;
-	customerProduct: FullCusProduct;
-}) => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	return (
-		replacedSubscriptionId !== undefined &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedSubscriptionId,
-		}) === true
-	);
-};
-
 const isOnReplacedSchedule = ({
 	billingContext,
 	customerProduct,
@@ -191,7 +176,7 @@ const replacedLinkResets = ({
 	billingContext: CreateScheduleBillingContext;
 	customerProduct: FullCusProduct;
 }): CustomerProductUpdate["updates"] | undefined => {
-	const onReplacedSubscription = isOnReplacedSubscription({
+	const onReplacedSubscription = isOnReplacedStripeSubscription({
 		billingContext,
 		customerProduct,
 	});
@@ -254,6 +239,16 @@ const keptRowUpdate = ({
 	const linkResets = replacedLinkResets({ billingContext, customerProduct });
 	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
 	if (linkResets) Object.assign(update.updates, linkResets);
+	// A row leaving a trialing subscription the request ends lands on a new one without a trial.
+	if (linkResets && endsLiveTrial({ billingContext })) {
+		Object.assign(
+			update.updates,
+			applyTrialContextToPatchedCustomerProduct({
+				customerProduct: { ...customerProduct },
+				trialContext: billingContext.trialContext,
+			}),
+		);
+	}
 	if (
 		linkResets &&
 		isLiveRow(customerProduct) &&
@@ -312,8 +307,9 @@ export const diffToCustomerProducts = ({
 	const keptCustomerProducts: FullCusProduct[] = [];
 	const trialStartedCustomerProducts: TrialStartedCustomerProduct[] = [];
 
+	const recreatesFromBackdate = isBackdateReplacement({ billingContext });
 	const backdatedStartsAtFor = (segmentId: string) => {
-		if (!isBackdateRecreate({ billingContext })) return undefined;
+		if (!recreatesFromBackdate) return undefined;
 		const declared = segmentsById.get(segmentId)?.origin === "declared";
 		return declared ? billingContext.subscriptionBackdateStartMs : undefined;
 	};

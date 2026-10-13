@@ -15,9 +15,12 @@ const namedPriceIds = ({
 		...(plan.customize?.items ?? []).map(
 			(item) => item.price?.processors?.stripe?.price_id,
 		),
-		...(plan.license_quantities ?? []).map(
-			(license) => license.customize?.price?.processors?.stripe?.price_id,
-		),
+		...(plan.license_quantities ?? []).flatMap((license) => [
+			license.customize?.price?.processors?.stripe?.price_id,
+			...(license.customize?.items ?? []).map(
+				(item) => item.price?.processors?.stripe?.price_id,
+			),
+		]),
 	]);
 	return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 };

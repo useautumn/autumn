@@ -22,6 +22,12 @@ export type AnyRowIncrement<Row> = RowIncrement<
 	Record<string, Record<string, Record<string, number | undefined>> | undefined>
 >;
 
+// A counter or map column this build does not know still adds: the applier is generic over both.
+const anyCounters = finiteNumberSchema.optional();
+const anyEntries = z
+	.record(z.string(), z.record(z.string(), anyCounters))
+	.optional();
+
 const balanceCounters = z
 	.object({
 		balance: finiteNumberSchema,
@@ -29,17 +35,17 @@ const balanceCounters = z
 		additional_balance: finiteNumberSchema,
 	})
 	.partial()
-	.strict();
+	.catchall(anyCounters);
 
 const attributionCounters = z
 	.object({ units: finiteNumberSchema, credits: finiteNumberSchema })
 	.partial()
-	.strict();
+	.catchall(anyCounters);
 
 const rolloverCounters = z
 	.object({ balance: finiteNumberSchema, usage: finiteNumberSchema })
 	.partial()
-	.strict();
+	.catchall(anyCounters);
 
 /** Which columns each balance table adds to, and which map columns hold counter entries. */
 export const customerEntitlementIncrementParts = {
@@ -50,7 +56,7 @@ export const customerEntitlementIncrementParts = {
 			usage_attribution: z.record(z.string(), attributionCounters),
 		})
 		.partial()
-		.strict(),
+		.catchall(anyEntries),
 };
 
 export const rolloverIncrementParts = {
@@ -58,17 +64,20 @@ export const rolloverIncrementParts = {
 	entries: z
 		.object({ entities: z.record(z.string(), rolloverCounters) })
 		.partial()
-		.strict(),
+		.catchall(anyEntries),
 };
 
 export const pooledBalanceIncrementParts = {
-	add: z.object({ granted: finiteNumberSchema }).partial().strict(),
-	entries: z.object({}).strict(),
+	add: z
+		.object({ granted: finiteNumberSchema })
+		.partial()
+		.catchall(anyCounters),
+	entries: z.object({}).catchall(anyEntries),
 };
 
 export const usageWindowIncrementParts = {
-	add: z.object({ usage: finiteNumberSchema }).partial().strict(),
-	entries: z.object({}).strict(),
+	add: z.object({ usage: finiteNumberSchema }).partial().catchall(anyCounters),
+	entries: z.object({}).catchall(anyEntries),
 };
 
 export const rowIncrementSchema = <
@@ -94,7 +103,7 @@ export const rowIncrementSchema = <
 			addEntries: parts.entries.optional(),
 			guard: rowSchema.partial().optional(),
 		})
-		.strict();
+		.loose();
 
 /** What a map entry looks like before anything was added to it: its counters at zero, and for an entity its key as `id`. */
 export const entrySeedOf = ({

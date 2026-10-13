@@ -1,8 +1,9 @@
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { overlayLabelClassName } from "@autumn/ui/lib/overlay-classes";
 import { useState } from "react";
 import { useAnalyticsContext } from "../../AnalyticsContext";
 import { groupByLabel } from "../../utils/displayLabels";
 import { isBuiltInGroupBy } from "../../utils/groupByColumn";
+import { OverlaySearchInput } from "../OverlaySearchInput";
 import { CheckRow } from "./CheckRow";
 import { useGroupVisibility } from "./useGroupVisibility";
 
@@ -26,36 +27,32 @@ export const GroupValueChecklist = ({ groupBy }: { groupBy: string }) => {
 	);
 
 	return (
-		<div className="flex flex-col gap-1">
-			<div className="flex items-center justify-between px-2 pt-1.5 pb-1">
-				<span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-subtle">
+		<div className="flex flex-col">
+			<div className="flex items-center justify-between">
+				<span className={overlayLabelClassName}>
 					Show {groupByLabel({ groupBy }).toLowerCase()} values
 				</span>
 				{isFiltered && (
 					<button
 						type="button"
 						onClick={showAll}
-						className="text-xs text-primary hover:text-primary/80"
+						className="px-2 text-xs text-tertiary-foreground hover:text-foreground"
 					>
 						Show all
 					</button>
 				)}
 			</div>
 			{groupValues.length > SEARCH_THRESHOLD && (
-				<div className="flex items-center gap-2 h-7 mx-1.5 px-2 rounded-md border bg-background">
-					<MagnifyingGlassIcon size={12} className="text-subtle shrink-0" />
-					<input
-						type="text"
-						placeholder="Search groups..."
-						value={searchValue}
-						onChange={(e) => setSearchValue(e.target.value)}
-						className="flex-1 min-w-0 bg-transparent text-xs outline-none placeholder:text-subtle"
-					/>
-				</div>
+				<OverlaySearchInput
+					placeholder="Search groups..."
+					value={searchValue}
+					onChange={(e) => setSearchValue(e.target.value)}
+					className="-mx-1 mb-1"
+				/>
 			)}
-			<div className="flex flex-col max-h-48 overflow-y-auto">
+			<div className="flex max-h-48 flex-col overflow-y-auto">
 				{matchingValues.length === 0 && (
-					<p className="py-3 text-center text-xs text-subtle">
+					<p className="py-3 text-center text-xs text-tertiary-foreground">
 						No groups found.
 					</p>
 				)}

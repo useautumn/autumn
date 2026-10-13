@@ -1,12 +1,12 @@
 import type { CustomerWithProducts } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import { CheckIcon } from "lucide-react";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
-import { cn } from "@/lib/utils";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
+import { SelectOptionLabel } from "./SelectOptionLabel";
 
 const ALL_CUSTOMERS = "__all_customers__";
 const SEARCH_PAGE_SIZE = 25;
@@ -36,6 +36,26 @@ const ALL_CUSTOMERS_OPTION: CustomerOption = {
 	secondary: null,
 };
 
+/** The picked customer as the search list showed them, so the trigger names them before their record loads. */
+const findSearchedOption = ({
+	queryClient,
+	customerId,
+}: {
+	queryClient: QueryClient;
+	customerId: string;
+}): CustomerOption | null => {
+	const searches = queryClient.getQueriesData<{
+		customers: CustomerWithProducts[];
+	}>({ queryKey: ["customers"] });
+	for (const [, search] of searches) {
+		const hit = search?.customers.find(
+			(customer) => (customer.id || customer.internal_id) === customerId,
+		);
+		if (hit) return toCustomerOption({ customer: hit });
+	}
+	return { id: customerId, name: customerId, secondary: null };
+};
+
 export function CustomerComboBox({
 	renderTrigger,
 }: {
@@ -43,7 +63,8 @@ export function CustomerComboBox({
 	renderTrigger: (label: string) => ReactNode;
 }) {
 	const { customer } = useAnalyticsContext();
-	const { setFilterStates } = useAnalyticsFilterState();
+	const { filterStates, setFilterStates } = useAnalyticsFilterState();
+	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
 
@@ -52,7 +73,11 @@ export function CustomerComboBox({
 		page_size: SEARCH_PAGE_SIZE,
 	});
 
-	const selectedOption = customer ? toCustomerOption({ customer }) : null;
+	const customerId = filterStates.customer_id;
+	let selectedOption: CustomerOption | null = null;
+	if (customer) selectedOption = toCustomerOption({ customer });
+	else if (customerId)
+		selectedOption = findSearchedOption({ queryClient, customerId });
 	const searchedOptions = ((customers ?? []) as CustomerWithProducts[])
 		.map((result) => toCustomerOption({ customer: result }))
 		.filter((option) => option.id !== selectedOption?.id);
@@ -81,24 +106,13 @@ export function CustomerComboBox({
 			isLoading={isFetchingUncached}
 			emptyText="No customers found"
 			trigger={renderTrigger(selectedOption?.name ?? "All customers")}
-			contentClassName="min-w-[280px]"
+			contentClassName="min-w-[280px] rounded-xl"
 			renderOption={(option, isSelected) => (
-				<>
-					<div className="flex min-w-0 flex-1 flex-col">
-						<span className="truncate">{option.name}</span>
-						{option.secondary && (
-							<span className="truncate font-mono text-tertiary-foreground text-xs">
-								{option.secondary}
-							</span>
-						)}
-					</div>
-					<CheckIcon
-						className={cn(
-							"size-4 shrink-0 transition-opacity",
-							isSelected ? "opacity-100" : "opacity-0",
-						)}
-					/>
-				</>
+				<SelectOptionLabel
+					name={option.name}
+					secondary={option.secondary}
+					isSelected={isSelected}
+				/>
 			)}
 		/>
 	);

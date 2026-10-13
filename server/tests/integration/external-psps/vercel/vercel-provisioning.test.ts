@@ -2,7 +2,12 @@
  * Uses the explicit test OIDC allow header from the Vercel test helper. */
 
 import { expect, test } from "bun:test";
-import { ApiVersion, AppEnv, CusProductStatus } from "@autumn/shared";
+import {
+	ApiVersion,
+	AppEnv,
+	CusProductStatus,
+	stripeRefToId,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -132,10 +137,7 @@ test.concurrent(
 
 		// First invoice should be finalized (not draft) because we set
 		// invoice_mode.finalize = true. send_invoice keeps it `open` (not paid).
-		const latestInvoiceId =
-			typeof subscription.latest_invoice === "string"
-				? subscription.latest_invoice
-				: subscription.latest_invoice?.id;
+		const latestInvoiceId = stripeRefToId(subscription.latest_invoice);
 		expect(latestInvoiceId).toBeDefined();
 		const invoice = await ctx.stripeCli.invoices.retrieve(latestInvoiceId!);
 		expect(["open", "paid"]).toContain(invoice.status ?? "");

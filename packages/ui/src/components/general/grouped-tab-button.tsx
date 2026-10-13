@@ -9,6 +9,7 @@ interface GroupedTabButtonProps {
 		label?: React.ReactNode;
 		icon?: React.ReactNode;
 		ariaLabel?: string;
+		disabled?: boolean;
 	}>;
 	className?: string;
 	buttonClassName?: string;
@@ -39,7 +40,7 @@ export const GroupedTabButton = ({
 						type="button"
 						aria-label={option.ariaLabel}
 						aria-pressed={isActive}
-						disabled={disabled}
+						disabled={disabled || option.disabled}
 						onClick={() => onValueChange(option.value)}
 						className={cn(
 							"flex h-6 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2 text-tertiary-foreground outline-none transition-colors duration-150",

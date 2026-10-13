@@ -7,7 +7,8 @@ import {
 /**
  * Only-provided detail columns as a row patch.
  * Owns the `is_default` ?? `auto_enable` precedence (same rule as the shared
- * planParamsV1ToProductV2 mapper) and the partial-config merge.
+ * planParamsV1ToProductV2 mapper). A stated `config` is the full flag set:
+ * any flag it omits is off.
  */
 export const planParamsToProductRowPatch = ({
 	planParams,
@@ -46,14 +47,8 @@ export const planParamsToProductRowPatch = ({
 	}
 	if (planParams.config !== undefined) {
 		patch.config = {
-			ignore_past_due:
-				planParams.config.ignore_past_due ??
-				current?.config?.ignore_past_due ??
-				false,
-			anchor_to_month_start:
-				planParams.config.anchor_to_month_start ??
-				current?.config?.anchor_to_month_start ??
-				false,
+			ignore_past_due: planParams.config.ignore_past_due ?? false,
+			anchor_to_month_start: planParams.config.anchor_to_month_start ?? false,
 		};
 	}
 	if (planParams.metadata !== undefined) patch.metadata = planParams.metadata;

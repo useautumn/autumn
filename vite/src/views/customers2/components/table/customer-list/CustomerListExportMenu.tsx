@@ -6,7 +6,7 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
-import { EllipsisVertical } from "lucide-react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomerExportSheet } from "../../export/CustomerExportSheet";
 import { CUSTOMER_EXPORT_SHEET_COPY } from "../../export/customerExportSheetCopy";
@@ -23,16 +23,18 @@ export function CustomerListExportMenu() {
 	return (
 		<>
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<IconButton
-						icon={<EllipsisVertical />}
-						variant="skeleton"
-						size="default"
-						iconOrientation="center"
-						className="!h-7"
-						type="button"
-						aria-label="More customer actions"
-					/>
+				<DropdownMenuTrigger
+					render={
+						<IconButton
+							variant="secondary"
+							className="btn-secondary-popup"
+							rightIcon={
+								<CaretDownIcon className="size-3 text-tertiary-foreground" />
+							}
+						/>
+					}
+				>
+					Export
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					{EXPORT_KINDS.map((kind) => {

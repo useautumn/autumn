@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 type PhaseItem =
@@ -7,7 +8,7 @@ type PhaseItem =
 const itemPriceId = (item: PhaseItem) => {
 	const { price } = item;
 	if (!price) return "";
-	return typeof price === "string" ? price : price.id;
+	return stripeRefToId(price);
 };
 
 /** A phase's items as a comparable string: price ids and quantities, order-independent. */

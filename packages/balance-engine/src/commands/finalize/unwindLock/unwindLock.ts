@@ -1,6 +1,6 @@
+import { deltasToFreedAllocation } from "../../../allocations/allocationDraw.js";
 import type { DeductionContext } from "../../../deduction/types/deductionContext.js";
 import type { DeductionDelta } from "../../../deduction/types/deductionDelta.js";
-import { deltasToFreedAllocation } from "../../../allocations/allocationDraw.js";
 import { deltasToFreedUsageWindows } from "../../../deduction/utils/limits/usageWindows.js";
 import type { WorkerFullSubject } from "../../../models/subject/workerFullSubject.js";
 import { allotUnwindValue } from "./allotUnwindValue.js";

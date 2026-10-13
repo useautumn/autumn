@@ -72,7 +72,13 @@ type GeneratedLicenseAssignment = {
 
 type OtherCustomerConfig = {
 	id: string;
-	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethod?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	data?: CustomerData;
 	/** Create a separate Stripe test clock for this customer instead of sharing the primary customer's clock */
 	distinctTestClock?: boolean;
@@ -135,7 +141,13 @@ type AdvanceClockAction = {
 
 type AttachPaymentMethodAction = {
 	type: "attachPaymentMethod";
-	paymentMethodType: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethodType:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 };
 
 type RemovePaymentMethodAction = {
@@ -282,7 +294,13 @@ type PlatformCreateConfig = {
 
 type ScenarioConfig = {
 	testClock: boolean;
-	attachPm?: "success" | "fail" | "authenticate" | "alipay";
+	attachPm?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	customerData?: CustomerData;
 	withDefault: boolean;
 	defaultGroup?: string;
@@ -343,7 +361,13 @@ const customer = ({
 	stripeCustomerOverrides,
 }: {
 	testClock?: boolean;
-	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethod?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	data?: CustomerData;
 	withDefault?: boolean;
 	defaultGroup?: string;
@@ -563,7 +587,13 @@ const advanceTestClock = ({
 const attachPaymentMethod = ({
 	type,
 }: {
-	type: "success" | "fail" | "authenticate" | "alipay";
+	type:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -1108,6 +1138,7 @@ type InitScenarioImplementationResult = {
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
 	autumnV2_4: AutumnInt;
+	autumnV2_5: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
@@ -1138,6 +1169,7 @@ export async function initScenario(params: {
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
 	autumnV2_4: AutumnInt;
+	autumnV2_5: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
@@ -1168,6 +1200,7 @@ export async function initScenario(params: {
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
 	autumnV2_4: AutumnInt;
+	autumnV2_5: AutumnInt;
 	testClockId: undefined;
 	testClockIds: Record<string, string>;
 	customer: null;
@@ -1466,6 +1499,10 @@ export async function initScenario({
 	});
 	const autumnV2_4 = new AutumnInt({
 		version: ApiVersion.V2_4,
+		secretKey: ctx.orgSecretKey,
+	});
+	const autumnV2_5 = new AutumnInt({
+		version: ApiVersion.V2_5,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -1942,6 +1979,7 @@ export async function initScenario({
 		autumnV2_2,
 		autumnV2_3,
 		autumnV2_4,
+		autumnV2_5,
 		testClockId,
 		testClockIds,
 		customer,

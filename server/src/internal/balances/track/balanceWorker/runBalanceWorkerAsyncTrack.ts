@@ -13,13 +13,15 @@ type QueueClient = Pick<BalanceWorkerClient, "queue">;
 export async function runBalanceWorkerAsyncTrack({
 	ctx,
 	body,
+	recordsCreditCost,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	recordsCreditCost?: boolean;
 	client?: QueueClient;
 }): Promise<void> {
-	const commands = trackParamsToTrackCommands({ ctx, body });
+	const commands = trackParamsToTrackCommands({ ctx, body, recordsCreditCost });
 	// A failed append is a 503, which releases the claim so the client can retry.
 	await withIdempotencyKey({
 		ctx,

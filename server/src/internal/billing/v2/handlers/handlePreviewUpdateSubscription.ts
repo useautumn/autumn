@@ -2,12 +2,17 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	isCollectionMethodSwitch,
+	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
+import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
+import { previewPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingPlanIfAny";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
+import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewUpdateSubscription = createRoute({
@@ -21,10 +26,33 @@ export const handlePreviewUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
+		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
+		const isSwitch = isCollectionMethodSwitch(body);
+		if (isSwitch) {
+			const switchContext = await setupSwitchCollectionMethodContext({
+				ctx,
+				params: body,
+			});
+			handleSwitchCollectionMethodErrors({ ctx, switchContext });
+		}
+		const {
+			invoice_mode: _invoiceMode,
+			redirect_mode: _redirectMode,
+			...unchangedPlanParams
+		} = body;
+
+		if (!isSwitch) {
+			const pendingPreview = await previewPendingPlanIfAny({
+				ctx,
+				params: body,
+			});
+			if (pendingPreview) return c.json(pendingPreview, 200);
+		}
+
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({
 				ctx,
-				params: body,
+				params: isSwitch ? unchangedPlanParams : body,
 				preview: true,
 			});
 
@@ -39,6 +67,7 @@ export const handlePreviewUpdateSubscription = createRoute({
 			ctx,
 			billingContext,
 			billingPlan,
+			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
 
 		return c.json(previewResponse, 200);

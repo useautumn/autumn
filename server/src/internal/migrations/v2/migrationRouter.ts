@@ -5,6 +5,7 @@ import { handleCreateMigration } from "./handlers/handleCreateMigration.js";
 import { handleDeleteMigration } from "./handlers/handleDeleteMigration.js";
 import { handleGetMigration } from "./handlers/handleGetMigration.js";
 import { handleLazyRunMigration } from "./handlers/handleLazyRunMigration.js";
+import { handleListMigrationCustomerCounts } from "./handlers/handleListMigrationCustomerCounts.js";
 import { handleListMigrationItemEvents } from "./handlers/handleListMigrationItemEvents.js";
 import { handleListMigrationRuns } from "./handlers/handleListMigrationRuns.js";
 import { handleListMigrations } from "./handlers/handleListMigrations.js";
@@ -22,6 +23,10 @@ export const migrationRpcRouter = new Hono<HonoEnv>();
 
 migrationRpcRouter.post("/migrations.create", ...handleCreateMigration);
 migrationRpcRouter.post("/migrations.list", ...handleListMigrations);
+migrationRpcRouter.post(
+	"/migrations.customer_counts",
+	...handleListMigrationCustomerCounts,
+);
 migrationRpcRouter.post("/migrations.get", ...handleGetMigration);
 migrationRpcRouter.post("/migrations.update", ...handlePatchMigration);
 migrationRpcRouter.post("/migrations.delete", ...handleDeleteMigration);

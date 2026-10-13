@@ -15,6 +15,7 @@ import {
 	type AttachParamsV1Input,
 	CusProductStatus,
 	ms,
+	stripeRefToId,
 } from "@autumn/shared";
 import { expectProductScheduled } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
@@ -96,7 +97,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
 		phases: schedule.phases.map((phase) => ({
 			items: phase.items.map((item) => ({
-				price: typeof item.price === "string" ? item.price : item.price?.id,
+				price: stripeRefToId(item.price),
 				quantity: item.quantity,
 			})),
 			start_date: editedStartSec,
@@ -189,7 +190,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 		scheduleId,
 	)) as Stripe.SubscriptionSchedule;
 	const phaseItems = schedule.phases[0]!.items.map((item) => ({
-		price: typeof item.price === "string" ? item.price : item.price?.id,
+		price: stripeRefToId(item.price),
 		quantity: item.quantity,
 	}));
 	const phase1StartSec = schedule.phases[0]!.start_date;

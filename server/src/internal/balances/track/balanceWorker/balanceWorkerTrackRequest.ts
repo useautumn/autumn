@@ -31,17 +31,20 @@ const usageEventOf = ({
 	body,
 	isFanOut,
 	recordsUsageEvent,
+	recordsCreditCost,
 }: {
 	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
 	isFanOut: boolean;
 	recordsUsageEvent: boolean;
+	recordsCreditCost: boolean;
 }): TrackUsageEvent | null => {
 	if (body.skip_event || !recordsUsageEvent) return null;
 	return {
 		name: (isFanOut ? body.event_name : body.feature_id) ?? "",
 		idempotencyKey: body.idempotency_key || null,
 		id: ctx.testOptions?.eventId || null,
+		...(recordsCreditCost && { recordsCreditCost }),
 	};
 };
 
@@ -51,6 +54,7 @@ export function trackParamsToTrackCommand({
 	isFanOut = false,
 	recordsUsageEvent = true,
 	enforceOverdueBlock = false,
+	recordsCreditCost = false,
 	lock,
 }: {
 	ctx: BalanceWorkerRequestContext;
@@ -61,6 +65,8 @@ export function trackParamsToTrackCommand({
 	recordsUsageEvent?: boolean;
 	/** A check that deducts honours the org's overdue block, as a plain check does. */
 	enforceOverdueBlock?: boolean;
+	/** A track_tokens command, whose event records `credit_cost`. */
+	recordsCreditCost?: boolean;
 	/** Only a check takes a lock; a plain track never does. */
 	lock?: LockParams;
 }): TrackCommand {
@@ -83,7 +89,13 @@ export function trackParamsToTrackCommand({
 		value: body.value ?? 1,
 		overageBehavior: body.overage_behavior ?? "cap",
 		properties: body.properties ?? null,
-		usageEvent: usageEventOf({ ctx, body, isFanOut, recordsUsageEvent }),
+		usageEvent: usageEventOf({
+			ctx,
+			body,
+			isFanOut,
+			recordsUsageEvent,
+			recordsCreditCost,
+		}),
 		...(enforceOverdueBlock && { enforceOverdueBlock }),
 		...(lock?.enabled && {
 			lock: lockParamsToTrackLock({ lock, occurredAt }),
@@ -115,9 +127,11 @@ export const trackedFeatureIdsOf = ({
 export const trackParamsToTrackCommands = ({
 	ctx,
 	body,
+	recordsCreditCost = false,
 }: {
 	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
+	recordsCreditCost?: boolean;
 }): TrackCommand[] => {
 	const isFanOut = !body.feature_id;
 	return trackedFeatureIdsOf({ ctx, body }).map((featureId, index) =>
@@ -126,6 +140,7 @@ export const trackParamsToTrackCommands = ({
 			body: { ...body, feature_id: featureId },
 			isFanOut,
 			recordsUsageEvent: index === 0,
+			recordsCreditCost,
 		}),
 	);
 };

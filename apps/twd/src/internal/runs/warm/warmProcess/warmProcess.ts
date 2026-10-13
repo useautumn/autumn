@@ -16,7 +16,7 @@ const finish = async ({
 	process.exit(exitCode);
 };
 
-const main = async ({ sha }: WarmInit) => {
+const main = async ({ sha, branch }: WarmInit) => {
 	// run.ts sizes a Stripe budget at import; the warm build never talks to Stripe.
 	process.env.STRIPE_TEST_KEY_POOL ||= "sk_test_twd_warm_unused";
 	setLogSubscriber((line) => {
@@ -27,7 +27,11 @@ const main = async ({ sha }: WarmInit) => {
 
 	const abort = new AbortController();
 	process.once("SIGTERM", () => abort.abort());
-	await tw.run.getOrBuildWarmParent({ ref: sha, sha, signal: abort.signal });
+	await tw.run.getOrBuildWarmParent({
+		ref: branch,
+		sha,
+		signal: abort.signal,
+	});
 
 	// scripts/tw swallows publish failures (the local run still works); twd needs the tag.
 	if (!(await warmImageExists({ sha }))) {

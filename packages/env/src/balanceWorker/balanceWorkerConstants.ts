@@ -74,6 +74,8 @@ export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
 /** An eighth of the task: 512 MiB on a 4 GiB worker, growing with the task size. */
 export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
 
+export const BALANCE_WORKER_SUBJECT_IDLE_EXPIRY_MS = 14_400_000;
+
 /** How a partition's writer commits a batch to the log. Transactional is three
  *  broker round trips per commit (register the partition, produce, end the
  *  transaction) and the broker fences a stale owner. Idempotent is one round
@@ -85,9 +87,10 @@ export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
  *  boot in transactional mode. */
 export const BALANCE_WORKER_COMMIT_MODE = "idempotent" as const;
 
-/** Written beside every snapshot; a reader serves a row only at exactly this version. A code constant on purpose:
- *  the shape is what this build serialises, so the number must ship with the build, never be toggled at runtime. */
-export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 1;
+/** Written beside every snapshot; a reader serves a row only at exactly this version. Bump it only when an existing
+ *  field of SubjectState changes type or meaning: a new field or enum value is read loosely, and a snapshot that
+ *  will not parse falls back to a full read. A code constant, because the shape ships with the build. */
+export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 2;
 
 /** Share of successful requests the worker logs a line for. Every failure is
  *  logged whatever this says; the API keeps a line per request either way.
@@ -96,7 +99,8 @@ export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 1;
 export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
 
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
- *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
+ *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop.
+ *  A reset's refill is guarded either way: a billing write that moved the row's cycle supersedes it, and it is skipped. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
 
 /** On: an evict appends an empty record so the log's readers (herald's cache) learn Postgres changed.

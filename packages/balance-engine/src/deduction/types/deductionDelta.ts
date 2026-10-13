@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { openEnum } from "../../models/common/openSchema.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
@@ -7,7 +8,10 @@ import {
 /** One balance moved once. Negative balanceDelta is a deduction, positive a refund. On the log as part of a track's result. */
 export const deductionDeltaSchema = z
 	.object({
-		table: z.enum(["customerEntitlements", "rollovers"]),
+		table: openEnum({
+			name: "deductionDelta.table",
+			values: ["customerEntitlements", "rollovers"],
+		}),
 		id: nonEmptyStringSchema,
 		/** Which balance on the row moved: the key in its `entities` map, or null for the `balance` column. */
 		entityKey: nonEmptyStringSchema.nullable(),
@@ -26,9 +30,9 @@ export const deductionDeltaSchema = z
 				units: finiteNumberSchema,
 				credits: finiteNumberSchema,
 			})
-			.strict()
+			.loose()
 			.optional(),
 	})
-	.strict();
+	.loose();
 
 export type DeductionDelta = z.infer<typeof deductionDeltaSchema>;

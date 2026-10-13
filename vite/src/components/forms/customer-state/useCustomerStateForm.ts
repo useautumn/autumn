@@ -3,6 +3,7 @@ import {
 	CustomerStateFormSchema,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
 import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useAppForm } from "@/hooks/form/form";
 
@@ -32,6 +33,7 @@ export function useCustomerStateForm({
 		carryOverUsageFeatureIds: [],
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
 		trialEdited: false,
+		...EMPTY_DISCOUNTS_FORM_VALUES,
 	};
 
 	return useAppForm({

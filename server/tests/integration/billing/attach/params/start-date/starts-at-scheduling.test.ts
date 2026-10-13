@@ -7,6 +7,7 @@ import {
 	CollectionMethod,
 	CusProductStatus,
 	ms,
+	stripeRefToId,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -31,9 +32,7 @@ import {
 } from "./utils";
 
 const getScheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
-	typeof schedule.subscription === "string"
-		? schedule.subscription
-		: schedule.subscription?.id;
+	stripeRefToId(schedule.subscription);
 
 test.concurrent(`${chalk.yellowBright("starts_at: future attach creates scheduled subscription")}`, async () => {
 	const customerId = "attach-start-date-future";

@@ -20,6 +20,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -67,10 +68,7 @@ test.concurrent(
 
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [pro] }),
-			],
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [
 				s.billing.attach({
 					productId: pro.id,
@@ -98,10 +96,7 @@ test.concurrent(
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			openInvoice.stripe_id,
 		);
-		const stripeCustomerId =
-			typeof stripeInvoice.customer === "string"
-				? stripeInvoice.customer
-				: stripeInvoice.customer?.id;
+		const stripeCustomerId = stripeRefToId(stripeInvoice.customer);
 		if (!stripeCustomerId) {
 			throw new Error("Expected a stripe customer id on the invoice");
 		}

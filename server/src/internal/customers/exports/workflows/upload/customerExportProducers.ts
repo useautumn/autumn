@@ -4,14 +4,17 @@ import {
 	CustomerExportKind,
 	type CustomerExportSpec,
 	type CustomersExportSpec,
+	type CustomPlansExportSpec,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createBillingVerifyExportStringifier } from "../../csv/createBillingVerifyExportStringifier.js";
 import { createCustomerExportStringifier } from "../../csv/createCustomerExportStringifier.js";
+import { createCustomPlansExportStringifier } from "../../csv/createCustomPlansExportStringifier.js";
 import type { CustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import type { CustomerExportProgressReporter } from "../customerExportProgressReporter.js";
 import { createBillingVerifyExportRowStream } from "./createBillingVerifyExportRowStream.js";
 import { createCustomerExportRowStream } from "./createCustomerExportRowStream.js";
+import { createCustomPlansExportRowStream } from "./createCustomPlansExportRowStream.js";
 
 export type CustomerExportRowStreamFactory<Spec extends CustomerExportSpec> =
 	(args: {
@@ -33,6 +36,7 @@ type CustomerExportProducer<Spec extends CustomerExportSpec> = {
 export const CUSTOMER_EXPORT_PRODUCERS: {
 	[CustomerExportKind.Customers]: CustomerExportProducer<CustomersExportSpec>;
 	[CustomerExportKind.BillingVerify]: CustomerExportProducer<BillingVerifyExportSpec>;
+	[CustomerExportKind.CustomPlans]: CustomerExportProducer<CustomPlansExportSpec>;
 } = {
 	[CustomerExportKind.Customers]: {
 		createRowStream: createCustomerExportRowStream,
@@ -41,6 +45,10 @@ export const CUSTOMER_EXPORT_PRODUCERS: {
 	[CustomerExportKind.BillingVerify]: {
 		createRowStream: createBillingVerifyExportRowStream,
 		createStringifier: createBillingVerifyExportStringifier,
+	},
+	[CustomerExportKind.CustomPlans]: {
+		createRowStream: createCustomPlansExportRowStream,
+		createStringifier: createCustomPlansExportStringifier,
 	},
 };
 
@@ -77,6 +85,12 @@ export const createExportStreams = ({
 				streamArgs,
 			});
 		case CustomerExportKind.BillingVerify:
+			return toExportStreams({
+				producer: CUSTOMER_EXPORT_PRODUCERS[spec.kind],
+				spec,
+				streamArgs,
+			});
+		case CustomerExportKind.CustomPlans:
 			return toExportStreams({
 				producer: CUSTOMER_EXPORT_PRODUCERS[spec.kind],
 				spec,

@@ -1,5 +1,6 @@
 import { createAxiomClient } from "@autumn/axiom";
 import { createAutumnClient, pushHourlyMeters } from "@autumn/billing";
+import { getAxiomEnv } from "@autumn/env/axiom";
 import { createFxClient } from "@autumn/fx";
 import { schedules } from "@trigger.dev/sdk/v3";
 import { dbReplicaSlow } from "@/db/initDrizzle.js";
@@ -20,11 +21,10 @@ export const pushHourlyMetersTask = schedules.task({
 	retry: { maxAttempts: 3 },
 	run: async (payload) => {
 		const logger = createDualLogger();
+		const { AXIOM_ADMIN_TOKEN, AXIOM_ORG_ID } = getAxiomEnv();
+		if (!AXIOM_ADMIN_TOKEN) throw new Error("AXIOM_ADMIN_TOKEN is not set");
 		const axiom = createAxiomClient({
-			config: {
-				token: requireEnv("AXIOM_ADMIN_TOKEN"),
-				orgId: process.env.AXIOM_ORG_ID,
-			},
+			config: { token: AXIOM_ADMIN_TOKEN, orgId: AXIOM_ORG_ID ?? undefined },
 		});
 		const autumn = createAutumnClient({
 			config: { secretKey: requireEnv("AUTUMN_METERING_SECRET_KEY") },

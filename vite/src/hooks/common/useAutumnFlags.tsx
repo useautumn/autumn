@@ -4,7 +4,9 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const { data: customer } = useCustomer();
+	const { data: customer, isPending } = useCustomer();
+	// Only the prod app gates the Atom tab on billing; staging and local have no billing key and an open server gate.
+	const isProdApp = window.location.hostname === "app.useautumn.com";
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		stripe_key: false,
@@ -12,6 +14,7 @@ export const useAutumnFlags = () => {
 		vercel: false,
 		revenuecat: false,
 		sso: false,
+		atoms: false,
 	});
 
 	useEffect(() => {
@@ -23,6 +26,8 @@ export const useAutumnFlags = () => {
 			vercel: notNullish(customer.flags.vercel),
 			revenuecat: notNullish(customer.flags.revenuecat),
 			sso: notNullish(customer.flags.sso),
+			// `atoms` is metered (a count of Atoms), so it arrives as a balance, not a flag.
+			atoms: (customer.balances?.atoms?.remaining ?? 0) > 0,
 		};
 
 		// Only update storage/state when values actually change
@@ -31,12 +36,19 @@ export const useAutumnFlags = () => {
 			flags.platform !== nextFlags.platform ||
 			flags.vercel !== nextFlags.vercel ||
 			flags.revenuecat !== nextFlags.revenuecat ||
-			flags.sso !== nextFlags.sso
+			flags.sso !== nextFlags.sso ||
+			flags.atoms !== nextFlags.atoms
 		) {
 			setFlags(nextFlags);
 		}
 	}, [customer?.flags]);
 
 	// Webhooks have been released publicly — always on.
-	return { ...flags, webhooks: true as const };
+	return {
+		...flags,
+		atoms: flags.atoms || !isProdApp,
+		webhooks: true as const,
+		/** Billing hasn't answered yet, so a false flag may still turn true. */
+		isLoading: isPending,
+	};
 };

@@ -315,7 +315,7 @@ export type Plan = {
 		/** Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan. */
 		onEnd?: "bill" | "revert";
 	} | null;
-	/** Miscellaneous plan-level configuration flags. */
+	/** Plan-level configuration flags. Omit to leave unchanged; when stated, it is the full set and any flag it omits is turned off. */
 	config?: {
 		/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 		ignorePastDue?: boolean;

@@ -15,6 +15,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noFolderPulls,
 	oldestApiVersion,
 	storedEntitySubjectWith,
 	storedSubjectWith,
@@ -30,7 +31,12 @@ const createProcessor = () => {
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	stores.push(sqliteStore, catalogStore);
 	const processor = createSlotProcessor({
-		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
+		ctx: {
+			sqliteStore,
+			catalogStore,
+			logger: getAtomLogger(),
+			subjectPulls: noFolderPulls,
+		},
 	});
 	return {
 		setSubject: processor.setSubject,
@@ -368,5 +374,55 @@ describe("each customer's own catalog slice", () => {
 		});
 
 		expect(await grantedFor({ processor })).toBe(1000);
+	});
+});
+
+describe("a push the slot could not store", () => {
+	test("leaves its customer's checks to the API, and pulls it, until a later write of it succeeds", async () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: ":memory:",
+			held: freshHeld(),
+		});
+		const catalogStore = openCatalogStore({ databasePath: ":memory:" });
+		stores.push(sqliteStore, catalogStore);
+		let failing = false;
+		const pulled: string[] = [];
+		const processor = createSlotProcessor({
+			ctx: {
+				sqliteStore: {
+					...sqliteStore,
+					setSubjects: (params) => {
+						if (failing) throw new Error("database or disk is full");
+						return sqliteStore.setSubjects(params);
+					},
+				},
+				catalogStore,
+				logger: getAtomLogger(),
+				subjectPulls: {
+					request: ({ customerId }) => void pulled.push(customerId),
+				},
+			},
+		});
+		const request = checkBalance({ requiredBalance: 5 });
+		await processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+		);
+
+		failing = true;
+		await expect(
+			processor.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 0 }) }),
+			),
+		).rejects.toThrow("database or disk is full");
+		expect(await forwardReasonOf(() => processor.check({ request }))).toBe(
+			"subject_not_written",
+		);
+		expect(pulled).toEqual(["cus_1"]);
+
+		failing = false;
+		await processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 0 }) }),
+		);
+		expect((await checkResponseOf({ processor, request })).allowed).toBe(false);
 	});
 });

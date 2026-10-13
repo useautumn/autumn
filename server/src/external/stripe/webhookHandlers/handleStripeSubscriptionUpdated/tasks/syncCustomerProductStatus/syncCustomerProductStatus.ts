@@ -6,6 +6,7 @@ import {
 	cp,
 	type FullCusProduct,
 	type InsertCustomerProduct,
+	stripeRefToId,
 } from "@autumn/shared";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
@@ -32,7 +33,7 @@ const isManualBillingUpdateInvoice = (invoice: {
 	invoice.metadata?.autumn_invoice_mode !== "true";
 
 const getInvoiceId = (invoice: string | { id?: string } | null | undefined) =>
-	typeof invoice === "string" ? invoice : invoice?.id;
+	stripeRefToId(invoice);
 
 /** Manual billing-update invoices should not make an otherwise-active subscription past_due. */
 const handleFalsePositivePastDue = async ({

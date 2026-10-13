@@ -5,25 +5,40 @@ import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
+import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
+import { notReadyCheckMiddleware } from "./middlewares/notReadyCheckMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
+/** What the public endpoint serves. Nothing here trusts another replica: peers talk on their own port (createPeerApp). */
 export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
+	// Before the request line: under load, a line per refused check would cost what refusing saves.
+	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
-	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
+	if (ctx.multiTenant)
+		mountMultiTenantRoutes({
+			app,
+			ctx: { ...ctx.multiTenant, replication: ctx.replication },
+		});
 
-	// Everything else needs the Atom token: the customer's app asks, Autumn keeps the subjects current.
+	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
+	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
-	authorized.use(atomTokenMiddleware({ ctx }));
-	authorized.post("/balances.check", receiveCheck);
-	authorized.post("/subjects.set", receiveSetSubject);
-	authorized.post("/catalog.set", receiveSetCatalog);
+	authorized.post(
+		"/balances.check",
+		notReadyCheckMiddleware({ ctx }),
+		clientAuthMiddleware({ ctx }),
+		receiveCheck,
+	);
+	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
+	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
 	app.route("/v1", authorized);
 	return app;
 }

@@ -680,6 +680,48 @@
       "when": 1791321078509,
       "tag": "0096_special_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1791557521409,
+      "tag": "0097_atom_deployments",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1791557585964,
+      "tag": "0098_drop_byoc_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1791622077781,
+      "tag": "0099_customer_licenses_internal_customer_id_c",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1791810984225,
+      "tag": "0100_revenuecat_original_transaction_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1791833706145,
+      "tag": "0101_invoices_org_env",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1791833709194,
+      "tag": "0102_invoices_org_env_index",
+      "breakpoints": true
     }
   ]
 }

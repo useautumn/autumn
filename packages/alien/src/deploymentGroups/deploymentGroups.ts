@@ -13,16 +13,46 @@ export const findDeploymentGroupByExternalId = async ({
 }: {
 	api: AlienApi;
 	externalId: string;
-}): Promise<{ id: string } | null> => {
+}): Promise<{ id: string; name: string } | null> => {
 	try {
 		return await alienRequest({
 			api,
 			method: "GET",
 			path: `/v1/deployment-groups/by-external-id${hostedQuery({ api, withProject: true, params: { externalId } })}`,
-			schema: z.object({ id: z.string() }),
+			schema: z.object({ id: z.string(), name: z.string() }),
 		});
 	} catch (error) {
 		if (isAlienRequestError(error) && error.status === NOT_FOUND) return null;
 		throw error;
 	}
 };
+
+/** The group an external id names, if alien still has it; the local manager has no external ids, so none. */
+export const findDeploymentGroup = ({
+	api,
+	externalId,
+}: {
+	api: AlienApi;
+	externalId: string;
+}) =>
+	api.config.kind === "local"
+		? Promise.resolve(null)
+		: findDeploymentGroupByExternalId({ api, externalId });
+
+/** A reused group takes the name its latest setup asks for, so it always matches the stack's. */
+export const renameDeploymentGroup = ({
+	api,
+	deploymentGroupId,
+	name,
+}: {
+	api: AlienApi;
+	deploymentGroupId: string;
+	name: string;
+}) =>
+	alienRequest({
+		api,
+		method: "PATCH",
+		path: `/v1/deployment-groups/${encodeURIComponent(deploymentGroupId)}${hostedQuery({ api })}`,
+		body: { name },
+		schema: z.object({ id: z.string() }),
+	});

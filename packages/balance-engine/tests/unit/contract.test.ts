@@ -39,7 +39,6 @@ describe("balance engine contract boundaries", () => {
 			expect(
 				parseMutationRecord({ input: JSON.parse(JSON.stringify(record)) }),
 			).toEqual(record);
-			expect(() => parseSubjectStateMutation({ input: record })).toThrow();
 		}
 		expect(
 			parseSubjectState({ input: JSON.parse(JSON.stringify(createState())) }),
@@ -85,17 +84,15 @@ describe("balance engine contract boundaries", () => {
 		}
 	});
 
-	test("state rows carry only the columns the engine reads", () => {
-		expect(() =>
-			parseSubjectState({
-				input: {
-					...createState(),
-					customerEntitlements: [
-						{ ...createCustomerEntitlement(), cache_version: 3 },
-					],
-				},
-			}),
-		).toThrow();
+	test("state rows carry a column this build does not read, so a newer build's column survives a round trip", () => {
+		const state = {
+			...createState(),
+			customerEntitlements: [
+				{ ...createCustomerEntitlement(), cache_version: 3 },
+			],
+		};
+
+		expect(parseSubjectState({ input: state })).toEqual(state);
 	});
 
 	test("keeps the writer's receipt out of commands", () => {

@@ -25,7 +25,8 @@ export const setupInvoiceModeContext = async ({
 		return undefined;
 	}
 	handleInvoiceModeEmailErrors({ fullCustomer, stripeCustomer });
-	const { invoice_template_id, net_terms_days } = params.invoice_mode;
+	const { invoice_template_id, net_terms_days, payment_method_types } =
+		params.invoice_mode;
 	const template = invoice_template_id
 		? await InvoiceTemplateService.getById({
 				db: ctx.db,
@@ -43,6 +44,9 @@ export const setupInvoiceModeContext = async ({
 			template?.net_terms_days ??
 			ctx.org.config.default_invoice_net_terms_days ??
 			undefined,
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		paymentMethodTypes:
+			payment_method_types ??
+			ctx.org.config.allowed_payment_methods ??
+			undefined,
 	};
 };

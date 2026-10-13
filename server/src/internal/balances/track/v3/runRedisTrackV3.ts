@@ -4,7 +4,7 @@ import type {
 	TrackParams,
 	TrackResponseV3,
 } from "@autumn/shared";
-import { tryCatch } from "@autumn/shared";
+import { buildAiCreditCostProperty, tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -22,7 +22,6 @@ import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/m
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
-import { buildAiCreditCostProperty } from "../utils/buildAiCreditCostProperty.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
 const queueSyncItem = ({
@@ -172,13 +171,19 @@ export const runRedisTrackV3 = async ({
 		customerEntitlements: mutationLogCustomerEntitlements,
 	});
 
-	const aiCreditCost = buildAiCreditCostProperty({
-		featureDeductions,
-		entries: deductions.map((d) => ({
-			featureId: d.feature_id,
-			amount: d.value ?? 0,
-		})),
-	});
+	const aiCreditFeatureId = featureDeductions.find(
+		(deduction) => deduction.tokens,
+	)?.feature.id;
+	const aiCreditCost =
+		aiCreditFeatureId &&
+		buildAiCreditCostProperty({
+			aiCreditFeatureId,
+			entries: deductions.map((d) => ({
+				featureId: d.feature_id,
+				amount: d.value ?? 0,
+			})),
+		});
+
 	if (aiCreditCost) {
 		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
 	}

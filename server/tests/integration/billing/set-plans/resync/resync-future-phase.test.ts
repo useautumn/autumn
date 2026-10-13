@@ -1,7 +1,11 @@
 /** Resync with a later phase keeps the old start and anchor and starts the next phase on its requested date. */
 
 import { expect, test } from "bun:test";
-import { msToSeconds, type SetPlansParamsV0Input } from "@autumn/shared";
+import {
+	msToSeconds,
+	type SetPlansParamsV0Input,
+	stripeRefToId,
+} from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
@@ -67,10 +71,7 @@ test.concurrent(
 			scheduled: [premium.id],
 		});
 
-		const scheduleId =
-			typeof subscription.schedule === "string"
-				? subscription.schedule
-				: subscription.schedule?.id;
+		const scheduleId = stripeRefToId(subscription.schedule);
 		if (!scheduleId) throw new Error("Resynced subscription has no schedule");
 		const schedule =
 			await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);

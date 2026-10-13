@@ -8,6 +8,7 @@ import {
 	msToSeconds,
 	type ProductV2,
 	secondsToMs,
+	stripeRefToId,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -356,7 +357,7 @@ export const expectScheduledOnRecreatedSchedule = async ({
 		({ start_date }) => start_date === msToSeconds(startsAt),
 	);
 	const phasePriceIds = (phase?.items ?? []).map(({ price }) =>
-		typeof price === "string" ? price : price.id,
+		stripeRefToId(price),
 	);
 	const planPriceIds = scheduled.customer_prices.flatMap(({ price }) =>
 		price.config.stripe_price_id ? [price.config.stripe_price_id] : [],

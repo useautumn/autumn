@@ -1,5 +1,4 @@
 import { isDeepStrictEqual } from "node:util";
-import { writesSubjectSnapshots } from "@autumn/edge-config";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
@@ -8,10 +7,12 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../../state/types/snapshotIntent.js";
+import type { ApplyWaits } from "../../../state/types/stateStore.js";
 import {
 	advanceStored,
 	awaitStored,
 	maxBatchBytesOf,
+	maxBatchesPerFlushOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
 	releasePins,
@@ -30,9 +31,6 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
 import { decideSnapshotIntent } from "./decideSnapshotIntent.js";
-
-/** Bounds one store flush; the committer writes a flush as a single statement. */
-const MAX_BATCHES_PER_FLUSH = 16;
 
 export function scheduleCommit({
 	scope,
@@ -155,6 +153,7 @@ async function commitOutcomes({
 				},
 			});
 			if (baseOffset === null || state.recoveryError) return;
+			state.appendedThrough = baseOffset + BigInt(batch.length - 1);
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
 		}
@@ -208,10 +207,53 @@ function queueApply({
 	baseOffset: bigint;
 }): void {
 	const { state } = scope;
-	state.unapplied.push({ batch, baseOffset });
+	state.unapplied.push({
+		batch,
+		baseOffset,
+		committedAt: writerNowOf({ scope }),
+	});
+	if (applyIsDue({ scope })) state.applyWake?.();
 	if (state.applying) return;
 	state.applying = true;
 	state.applyTail = applyQueued({ scope });
+}
+
+/** The store is awaited now: a reader is waiting on it, a store-durable caller is, or a full flush is queued. */
+function applyIsDue({ scope }: { scope: PartitionWriterScope }): boolean {
+	const { state, ctx, config } = scope;
+	return (
+		state.storeWaiters.length > 0 ||
+		state.unapplied.length >=
+			maxBatchesPerFlushOf({ ctx, limits: config.limits }) ||
+		state.unapplied.some(({ batch }) =>
+			batch.some((pending) => pending.durability === "store"),
+		)
+	);
+}
+
+/** A flush costs about the same for one batch as for a full one, and repeated changes to a row fold into one,
+ *  so batches gather until the apply is due or the linger ends; null applies now, without yielding. */
+function lingerForApply({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> | null {
+	const { state, config, ctx } = scope;
+	const lingerMs =
+		ctx.dbControl?.get().balanceCommitter.applyLingerMs ??
+		config.limits.applyLingerMs ??
+		0;
+	if (lingerMs <= 0 || applyIsDue({ scope })) return null;
+	return new Promise<void>((resolve) => {
+		function wake(): void {
+			clearTimeout(timer);
+			state.applyWake = null;
+			resolve();
+		}
+		const timer = setTimeout(wake, lingerMs);
+		timer.unref?.();
+		state.applyWake = wake;
+	});
 }
 
 async function applyQueued({
@@ -219,10 +261,18 @@ async function applyQueued({
 }: {
 	scope: PartitionWriterScope;
 }): Promise<void> {
-	const { state } = scope;
+	const { state, ctx, config } = scope;
 	try {
 		while (state.unapplied.length > 0 && !state.recoveryError) {
-			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
+			const linger = lingerForApply({ scope });
+			if (linger) await linger;
+			if (state.recoveryError) return;
+			// Read once per flush: the splice below removes exactly what was taken, whatever DB control says meanwhile.
+			const taken = state.unapplied.slice(
+				0,
+				maxBatchesPerFlushOf({ ctx, limits: config.limits }),
+			);
+			const takenAt = writerNowOf({ scope });
 			const batch = taken.flatMap((entry) => entry.batch);
 			const records = timeSync({ label: "writer.apply.build" }, () =>
 				taken.flatMap((entry) =>
@@ -236,7 +286,13 @@ async function applyQueued({
 			const snapshotIntent = timeSync({ label: "writer.apply.intent" }, () =>
 				decideSnapshotIntent({ scope, batch }),
 			);
-			const ok = await applyBatch({ scope, batch, records, snapshotIntent });
+			const ok = await applyBatch({
+				scope,
+				batch,
+				records,
+				snapshotIntent,
+				waits: { unappliedMs: takenAt - (taken[0]?.committedAt ?? takenAt) },
+			});
 			state.unapplied.splice(0, taken.length);
 			if (!ok) return;
 		}
@@ -355,7 +411,7 @@ export function failAboveSettled({
 	state.settledSeq = state.lastSeq;
 }
 
-/** Remember the command for dedup, unpin the subjects, answer the caller. */
+/** Remember the command for dedup and answer the caller. */
 function settlePending({
 	scope,
 	pending,
@@ -366,20 +422,8 @@ function settlePending({
 	const { mutation } = pending;
 	scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
-	if (!keepsPinsUntilStored({ scope }))
-		releasePins({ state: scope.state, pending });
 	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
-
-/** Snapshot intents read each subject as its batch leaves it, so while writing, pins hold until the store has the batch. */
-const keepsPinsUntilStored = ({
-	scope,
-}: {
-	scope: PartitionWriterScope;
-}): boolean => {
-	const settings = scope.ctx.subjectSnapshotsConfig?.get();
-	return settings !== undefined && writesSubjectSnapshots(settings);
-};
 
 /** A committed batch that cannot be applied leaves the writer in recovery. */
 async function applyBatch({
@@ -387,16 +431,19 @@ async function applyBatch({
 	batch,
 	records,
 	snapshotIntent,
+	waits,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	records: DurableMutationRecord[];
 	snapshotIntent: SnapshotIntent;
+	waits: ApplyWaits;
 }): Promise<boolean> {
 	try {
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
 			snapshotIntent,
+			waits,
 		});
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
@@ -465,6 +512,7 @@ function enterRecovery({
 		for (const pending of unapplied.batch) owed.add(pending);
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
 	failAboveSettled({ scope, cause: error });
+	scope.ctx.onRecoveryRequired?.({ cause: error });
 }
 
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.

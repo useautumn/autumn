@@ -2,7 +2,12 @@
 // reset timestamp so Stripe schedule phases can reset anchors.
 
 import { expect, test } from "bun:test";
-import { BillingInterval, customerProducts, ms } from "@autumn/shared";
+import {
+	BillingInterval,
+	customerProducts,
+	ms,
+	stripeRefToId,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -82,10 +87,7 @@ test.concurrent(
 		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
 			stripeSubscriptionId!,
 		);
-		const stripeScheduleId =
-			typeof stripeSubscription.schedule === "string"
-				? stripeSubscription.schedule
-				: stripeSubscription.schedule?.id;
+		const stripeScheduleId = stripeRefToId(stripeSubscription.schedule);
 		expect(stripeScheduleId).toBeDefined();
 
 		const stripeSchedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
@@ -188,10 +190,7 @@ test.concurrent(
 		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
 			stripeSubscriptionId!,
 		);
-		const stripeScheduleId =
-			typeof stripeSubscription.schedule === "string"
-				? stripeSubscription.schedule
-				: stripeSubscription.schedule?.id;
+		const stripeScheduleId = stripeRefToId(stripeSubscription.schedule);
 		expect(stripeScheduleId).toBeDefined();
 
 		const stripeSchedule = await ctx.stripeCli.subscriptionSchedules.retrieve(

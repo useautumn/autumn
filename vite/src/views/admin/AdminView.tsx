@@ -24,6 +24,7 @@ import { EdgeConfigTab } from "./components/EdgeConfigTab";
 import { QueueCronConfigsTab } from "./components/QueueCronConfigsTab";
 import { SlackAdminBotTab } from "./components/SlackAdminBotTab";
 import { useAdmin } from "./hooks/useAdmin";
+import { RateLimitsSection } from "./rate-limits/RateLimitsSection";
 
 const ADMIN_TAB_IDS = ADMIN_TABS.map((tab) => tab.id);
 
@@ -143,6 +144,10 @@ export const AdminView = () => {
 
 				<TabsContent value="edge-config" className="mt-4">
 					<EdgeConfigTab />
+				</TabsContent>
+
+				<TabsContent value="rate-limits" className="mt-4">
+					<RateLimitsSection />
 				</TabsContent>
 
 				<TabsContent value="queue-cron-configs" className="mt-4">

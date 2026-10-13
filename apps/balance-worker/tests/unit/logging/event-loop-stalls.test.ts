@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { CpuCounters } from "../../../src/logging/eventLoopStalls/cpuCounters.js";
 import { createEventLoopStallMonitor } from "../../../src/logging/eventLoopStalls/createEventLoopStallMonitor.js";
 import { createSyncSectionRecorder } from "../../../src/logging/eventLoopStalls/syncSections.js";
+import type { TcpCounters } from "../../../src/logging/eventLoopStalls/tcpCounters.js";
 
 type Log = unknown[];
 
@@ -15,10 +16,12 @@ const idleCpu: CpuCounters = {
 function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
+	tcp = () => null,
 	signals,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
+	tcp?: () => TcpCounters | null;
 	signals?: () => Record<string, unknown>;
 } = {}) {
 	let clock = 1_000;
@@ -41,6 +44,7 @@ function createFixture({
 			recorder,
 			now,
 			cpu,
+			tcp,
 			signals,
 			schedule: ({ run }) => {
 				tick = run;
@@ -275,4 +279,43 @@ test("each summary carries the window's signals, drained once per report", () =>
 		data: { inline: { track: 1 } },
 	});
 	expect(window).toBe(1);
+});
+
+test("each summary carries the window's TCP loss counters, and omits them without /proc/net", () => {
+	const quiet: TcpCounters = {
+		timeouts: 9,
+		retransSegs: 5,
+		lossProbes: 15,
+		lostRetransmit: 2,
+		synRetrans: 3,
+		outSegs: 9_388,
+	};
+	const samples: TcpCounters[] = [
+		quiet,
+		{ ...quiet, timeouts: 12, retransSegs: 8, lossProbes: 16, outSegs: 19_388 },
+	];
+	const { monitor, infos, elapse } = createFixture({
+		tcp: () => samples.shift() ?? null,
+	});
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	expect(summaryOf({ infos })).toMatchObject({
+		data: {
+			tcp: {
+				timeouts: 3,
+				retransSegs: 3,
+				lossProbes: 1,
+				lostRetransmit: 0,
+				synRetrans: 0,
+				outSegs: 10_000,
+			},
+		},
+	});
+
+	const unread = createFixture();
+	unread.monitor.start();
+	unread.elapse({ elapsedMs: 1_000 });
+	expect(
+		(summaryOf({ infos: unread.infos }) as { data: object }).data,
+	).not.toHaveProperty("tcp");
 });

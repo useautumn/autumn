@@ -1463,6 +1463,35 @@ test("drain rejects when the store refuses the apply behind a log-durability rep
 	}
 });
 
+test("a store refusal behind a log-durability reply sends an idle runtime into recovery without waiting for another command", async () => {
+	const fixture = createStoreFixture();
+	const storeApply = createDeferred<void>();
+	const producer = createFakeProducer();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+		storeApplyGate: storeApply.promise,
+	});
+	try {
+		await runtime.start();
+		await runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_idle_refused" }),
+			}),
+		);
+		storeApply.reject(new Error("postgres refused the row"));
+		await waitForTurn();
+		await waitForTurn();
+
+		expect(runtime.getStatus()).toBe("recovery_required");
+	} finally {
+		storeApply.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 test("quiescence remains pending after recovery disposal until accepted apply settles", async () => {
 	const fixture = createStoreFixture();
 	const commit = createDeferred<void>();

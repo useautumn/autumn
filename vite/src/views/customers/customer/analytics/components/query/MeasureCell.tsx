@@ -4,15 +4,25 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
-import { Check } from "lucide-react";
-import { StripCell } from "./StripCell";
-import { DEDUCTIONS_MODE, USAGE_MODE, useBreakdown } from "./useBreakdown";
+import { CheckIcon } from "@phosphor-icons/react";
+import { FilterTriggerButton } from "../FilterTriggerButton";
+import {
+	COUNT_MODE,
+	DEDUCTIONS_MODE,
+	SUM_MODE,
+	useBreakdown,
+} from "./useBreakdown";
 
 const MEASURES = [
 	{
-		value: USAGE_MODE,
-		label: "Usage",
-		description: "What the customer tracked",
+		value: SUM_MODE,
+		label: "Sum",
+		description: "Sum of tracked values",
+	},
+	{
+		value: COUNT_MODE,
+		label: "Count",
+		description: "Number of events tracked",
 	},
 	{
 		value: DEDUCTIONS_MODE,
@@ -21,34 +31,34 @@ const MEASURES = [
 	},
 ];
 
-export const MeasureCell = ({ className }: { className?: string }) => {
-	const { mode, changeMode } = useBreakdown();
-	const current = MEASURES.find((measure) => measure.value === mode);
+export const MeasureCell = () => {
+	const { mode, changeMode, customerId } = useBreakdown();
+	// Deductions are tracked per customer, so they need one picked.
+	const measures = customerId
+		? MEASURES
+		: MEASURES.filter((measure) => measure.value !== DEDUCTIONS_MODE);
+	const current = measures.find((measure) => measure.value === mode);
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<StripCell
-					label="Measure"
-					value={current?.label}
-					className={className}
-				/>
+				<FilterTriggerButton label="Measure" value={current?.label} />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-[220px]">
-				{MEASURES.map((measure) => (
+				{measures.map((measure) => (
 					<DropdownMenuItem
 						key={measure.value}
 						onClick={() => changeMode(measure.value)}
-						className="flex items-center justify-between gap-2"
+						className="justify-between"
 					>
 						<span className="flex flex-col">
-							<span className="text-xs">{measure.label}</span>
-							<span className="text-[11px] text-subtle">
+							{measure.label}
+							<span className="text-xs text-tertiary-foreground">
 								{measure.description}
 							</span>
 						</span>
 						{measure.value === mode && (
-							<Check className="h-3 w-3 shrink-0 text-tertiary-foreground" />
+							<CheckIcon className="text-foreground" />
 						)}
 					</DropdownMenuItem>
 				))}

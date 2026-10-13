@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
@@ -61,7 +62,7 @@ const stripeProductId = (
 	product: string | Stripe.Product | Stripe.DeletedProduct | null,
 ) => {
 	if (!product) return undefined;
-	return typeof product === "string" ? product : product.id;
+	return stripeRefToId(product);
 };
 
 export const stripeShapeDecimalAmount = (

@@ -11,6 +11,7 @@ import { AccountsScreen } from "./screens/accountsScreen.tsx";
 import { CostsScreen } from "./screens/costsScreen.tsx";
 import { KeysScreen } from "./screens/keysScreen.tsx";
 import { NewRunScreen } from "./screens/newRunScreen.tsx";
+import { QaEnvsScreen } from "./screens/qaEnvsScreen.tsx";
 import { RunDetailScreen } from "./screens/runDetailScreen.tsx";
 import { RunsScreen } from "./screens/runsScreen.tsx";
 import { SettingsScreen } from "./screens/settingsScreen.tsx";
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
 					{ path: "/costs", element: <CostsScreen /> },
 					{ path: "/keys", element: <KeysScreen />, handle: FILL_PAGE },
 					{ path: "/accounts", element: <AccountsScreen />, handle: FILL_PAGE },
+					{ path: "/qa", element: <QaEnvsScreen />, handle: FILL_PAGE },
 					{ path: "/settings", element: <SettingsScreen /> },
 				],
 			},

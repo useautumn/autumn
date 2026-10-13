@@ -26,6 +26,7 @@ import type {
 	FlushCall,
 	FlushOutcome,
 } from "../types/committer.js";
+import { keepKnownColumns } from "./keepKnownColumns.js";
 
 const definedNumbers = (record: Record<string, number | undefined>) =>
 	Object.fromEntries(
@@ -49,7 +50,11 @@ const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "pooledBalances" ||
 	table === "locks";
 
-/** An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins. */
+/**
+ * An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins.
+ * A reset's refill is always guarded: it was decided from the cycle it ended, so a writer outside the worker that moved
+ * the row since (a renewal, an anchor sync) superseded it, and the reset is skipped rather than landed over that write.
+ */
 const updateToSubjectRowUpdate = ({
 	table,
 	change,
@@ -66,8 +71,9 @@ const updateToSubjectRowUpdate = ({
 	addEntries: {},
 	// `before` stays on the log for its readers either way.
 	guard:
-		BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
-		commandType !== "applyBillingPlan"
+		(commandType === "reset" && table === "customerEntitlements") ||
+		(BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
+			commandType !== "applyBillingPlan")
 			? { ...change.before }
 			: {},
 });
@@ -215,12 +221,15 @@ const collectChanges = ({
 	for (const call of flush.calls) {
 		for (const record of call.records) {
 			for (const change of record.mutation.changes) {
-				changes.push(
-					rowChangeToSubjectRowChange({
+				const known = keepKnownColumns({
+					change: rowChangeToSubjectRowChange({
 						change,
 						commandType: record.mutation.command.type,
 					}),
-				);
+				});
+				// An update that only touched a newer build's columns has nothing left to land.
+				if (known === null) continue;
+				changes.push(known);
 				recordOf.push(record);
 			}
 		}
@@ -327,14 +336,38 @@ export const runFlush = async ({
 	});
 	if (landed)
 		attributeDeletedSnapshots({ flush, outcomes, deleted: landed.deleted });
-	const staleIds = changes
-		.filter((_, index) => !applied[index])
-		.map(
-			(change, index) =>
-				`${subjectRowIdOf(change)} (${recordOf[index]?.mutation.id})`,
-		);
-	if (staleIds.length > 0) throw new StaleSubjectRowsError({ ids: staleIds });
+	const staleRows = staleRowsOf({ changes, applied, recordOf });
+	if (staleRows.length > 0)
+		throw new StaleSubjectRowsError({ rows: staleRows });
 	return outcomes;
+};
+
+/** The changes that did not land, each with its record. Changes folded onto one row miss together; where one of them carried
+ *  a guard, that guard is why (the row is still there), so only the guarded changes are stale and the rest land without them. */
+const staleRowsOf = ({
+	changes,
+	applied,
+	recordOf,
+}: {
+	changes: SubjectRowChange[];
+	applied: boolean[];
+	recordOf: DurableMutationRecord[];
+}): { id: string; record: DurableMutationRecord }[] => {
+	const rowOf = (change: SubjectRowChange) =>
+		`${change.table}:${subjectRowIdOf(change)}`;
+	const isGuarded = (change: SubjectRowChange) =>
+		change.op === "update" && Object.keys(change.guard).length > 0;
+	const guardMissed = new Set(
+		changes.flatMap((change, index) =>
+			!applied[index] && isGuarded(change) ? [rowOf(change)] : [],
+		),
+	);
+	return changes.flatMap((change, index) => {
+		const record = recordOf[index];
+		if (applied[index] || !record) return [];
+		if (guardMissed.has(rowOf(change)) && !isGuarded(change)) return [];
+		return [{ id: subjectRowIdOf(change), record }];
+	});
 };
 
 /** Each deleted row goes to the call whose intent deleted its customer, so a lane tick learns what its evicts removed. */

@@ -3,6 +3,7 @@ import {
 	type BillingInterval,
 	type FullCustomerLicense,
 	productToBasePrice,
+	stripeRefToId,
 } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
@@ -83,10 +84,7 @@ export const expectLicenseDefinitionCorrect = async ({
 			const stripePrice = await ctx.stripeCli.prices.retrieve(
 				licenseBasePrice!.config.stripe_price_id!,
 			);
-			const actualStripeProductId =
-				typeof stripePrice.product === "string"
-					? stripePrice.product
-					: stripePrice.product.id;
+			const actualStripeProductId = stripeRefToId(stripePrice.product);
 			expect(actualStripeProductId).toBe(basePrice.stripeProductId);
 		}
 	}

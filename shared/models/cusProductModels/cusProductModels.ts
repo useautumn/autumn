@@ -1,4 +1,5 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { parseVersion } from "@api/versionUtils/convertVersionUtils.js";
 import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
@@ -71,6 +72,8 @@ export const CusProductSchema = z.object({
 			// Store-owned billing period (ms); only set for RevenueCat plans.
 			current_period_start: z.number().nullish(),
 			current_period_end: z.number().nullish(),
+			// Store purchase this plan came from; only set for RevenueCat plans.
+			original_transaction_id: z.string().nullish(),
 			// subscription_id: z.string().optional().nullable(),
 			// subscription_schedule_id: z.string().optional().nullable(),
 			// last_invoice_id: z.string().optional().nullable(),
@@ -78,7 +81,12 @@ export const CusProductSchema = z.object({
 		.nullish(),
 
 	quantity: z.number().default(1),
-	api_semver: z.enum(ApiVersion).nullable(),
+	// Older rows hold pre-normalisation values like "1.2"; unknown versions read as null.
+	api_semver: z.preprocess(
+		(value) =>
+			typeof value === "string" ? parseVersion({ versionStr: value }) : value,
+		z.enum(ApiVersion).nullable(),
+	),
 
 	is_custom: z.boolean().default(false),
 	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);

@@ -3,7 +3,7 @@ import type { AxiomClient } from "@autumn/axiom";
 import { pushHourlyMeters } from "../../../src/actions/pushHourlyMeters/pushHourlyMeters";
 import type { TrackItem } from "../../../src/actions/pushHourlyMeters/types/trackItem";
 import { apiCallIdempotencyKey } from "../../../src/apiRequests/actions/pushApiCalls/apiCallCountToTrackItem";
-import type { AutumnClient } from "../../../src/types/autumnClient";
+import type { MeteringContext } from "../../../src/types/meteringContext";
 import { fakeDb, fakeFx, paidRow } from "../paymentVolume/fakes";
 
 const NOW = Date.parse("2026-09-27T12:15:00Z");
@@ -41,7 +41,7 @@ const fakeAutumn = ({
 }: {
 	batches: TrackItem[][];
 	created: { id: string; name: string }[];
-}): AutumnClient => ({
+}): MeteringContext["autumn"] => ({
 	batchTrack: async ({ items }) => {
 		batches.push(items);
 		return { accepted: items.length };

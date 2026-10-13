@@ -4,6 +4,7 @@ import {
 	type ProductItem,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { DiscountsFormFieldsSchema } from "@/components/forms/shared/utils/discountUtils";
 import { FreeTrialFormFieldsSchema } from "@/components/forms/shared/utils/freeTrialFormValues";
 
 export const CustomerStatePlanSchema = z.object({
@@ -213,6 +214,7 @@ export const CustomerStateFormSchema = z
 		...FreeTrialFormFieldsSchema.shape,
 		/** Set once the user touches the trial row, so plan changes stop re-seeding it. */
 		trialEdited: z.boolean(),
+		...DiscountsFormFieldsSchema.shape,
 	})
 	.refine(
 		(data) =>

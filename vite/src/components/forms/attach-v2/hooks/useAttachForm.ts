@@ -1,4 +1,5 @@
 import type { ProductItem } from "@autumn/shared";
+import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
 import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useAppForm } from "@/hooks/form/form";
 import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
@@ -41,8 +42,7 @@ export function useAttachForm({
 			resetBillingCycle: false,
 			billingCycleAnchorMode: "now",
 			billingCycleAnchorDate: null,
-			discounts: [],
-			removedRewardIds: [],
+			...EMPTY_DISCOUNTS_FORM_VALUES,
 			grantFree: false,
 			currency: null,
 			noBillingChanges: false,

@@ -2,10 +2,11 @@ import { afterAll, expect, mock, test } from "bun:test";
 import type { AlienClient } from "@autumn/alien";
 import {
 	AppEnv,
+	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	type Organization,
 } from "@autumn/shared";
-import { cacheNames } from "@/internal/byoc/utils/byocCacheUtils.js";
+import { atomNames, cacheOwner } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 const previous = {
@@ -30,10 +31,13 @@ const alienClient: AlienClient = {
 		alienStarts.push(externalId);
 		return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 	},
+	findDeploymentGroup: async () => null,
 	findDeployment: async () => null,
+	getDeployment: async () => null,
+	retryDeployment: async () => {},
 	updateDeploymentCompute: async () => {},
 	deleteDeployment: async () => {},
-	revokeSetupLinks: async () => {},
+	revokeSetupLinksOnceDeleted: async () => {},
 };
 const ALIEN_CLIENT_MODULE = "@/external/alien/getAlienClient.js";
 // Kept so afterAll can hand the real module back: mock.module is process-wide.
@@ -72,12 +76,15 @@ test("off a dev stack the customer path resolves alien, even beside a multi-tena
 	);
 
 	await getAtomDeployer().start({
-		names: cacheNames({
-			org: { id: "org_1", slug: "acme" } as Organization,
-			env: AppEnv.Sandbox,
+		names: atomNames({
+			owner: cacheOwner({
+				org: { id: "org_1", slug: "acme" } as Organization,
+				env: AppEnv.Sandbox,
+			}),
 		}),
 		auth: { mode: "deployed", tokenHash: "a".repeat(64) },
 		machine: DEFAULT_BYOC_CACHE_MACHINE,
+		region: DEFAULT_BYOC_CACHE_AWS_REGION,
 	});
 
 	expect(alienStarts).toHaveLength(1);

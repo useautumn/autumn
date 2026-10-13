@@ -22,7 +22,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { ApiVersion, ErrCode } from "@autumn/shared";
+import { ApiVersion, ErrCode, stripeRefToId } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -159,10 +159,7 @@ const setupPaidVercelInvoice = async ({ suffix }: { suffix: string }) => {
 	});
 	if (!subscription) throw new Error("Expected Stripe subscription");
 
-	const stripeInvoiceId =
-		typeof subscription.latest_invoice === "string"
-			? subscription.latest_invoice
-			: subscription.latest_invoice?.id;
+	const stripeInvoiceId = stripeRefToId(subscription.latest_invoice);
 	if (!stripeInvoiceId) throw new Error("Expected latest_invoice id");
 
 	const stripeInvoice = await getStripeInvoice({

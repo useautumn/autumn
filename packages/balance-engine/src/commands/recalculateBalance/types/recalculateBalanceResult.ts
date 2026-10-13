@@ -16,7 +16,7 @@ export const recalculateBalanceResultSchema = z
 					beforeRemaining: finiteNumberSchema,
 					afterRemaining: finiteNumberSchema,
 				})
-				.strict(),
+				.loose(),
 		),
 	})
 	.loose();

@@ -3,6 +3,7 @@ import { formatAmount } from "@autumn/shared";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { InvoiceDiscountRow } from "../utils/invoiceDiscountRows";
+import { formatServicePeriod } from "../utils/servicePeriod";
 
 const formatDate = (timestamp: number) =>
 	format(new Date(timestamp), "MMMM d, yyyy");
@@ -84,8 +85,6 @@ export function InvoicePreviewDocument({
 	memo,
 	footer,
 	discountRows = [],
-	issueDay,
-	dueDay,
 }: {
 	preview: CreateInvoicePreview;
 	issuerName: string;
@@ -94,9 +93,6 @@ export function InvoicePreviewDocument({
 	memo?: string;
 	footer?: string;
 	discountRows?: InvoiceDiscountRow[];
-	/** The picked calendar days, shown as chosen rather than as Stripe's timestamps. */
-	issueDay?: number | null;
-	dueDay?: number | null;
 }) {
 	const { currency } = preview;
 	// Stripe lists custom charges first, highest amount first, then catalog lines.
@@ -112,8 +108,8 @@ export function InvoicePreviewDocument({
 	}
 	const upperCurrency = currency.toUpperCase();
 	const total = money({ amount: preview.total, currency });
-	const issueDate = issueDay ?? preview.issue_date;
-	const dueDate = dueDay ?? preview.due_date;
+	const issueDate = preview.issue_date;
+	const dueDate = preview.due_date;
 	const dueLabel = dueDate
 		? `${total} ${upperCurrency} due ${formatDate(dueDate)}`
 		: `${total} ${upperCurrency} due`;
@@ -220,6 +216,15 @@ export function InvoicePreviewDocument({
 										>
 											<td className="break-all pt-[0.62em] pr-4 pb-[1.83em]">
 												{cleanDescription(line.description)}
+												{line.period_start !== null &&
+												line.period_end !== null ? (
+													<div className="mt-[0.2em] text-[#808080]">
+														{formatServicePeriod({
+															start: line.period_start,
+															end: line.period_end,
+														})}
+													</div>
+												) : null}
 											</td>
 											<td className="whitespace-nowrap pt-[0.62em] pr-[3.8em] pb-[1.83em] text-right tabular-nums">
 												1

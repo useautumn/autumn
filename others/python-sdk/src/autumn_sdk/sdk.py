@@ -7,6 +7,7 @@ from .utils.logger import Logger, get_default_logger
 from .utils.retries import RetryConfig
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext, SDKHooks
+from autumn_sdk._hooks.edge_hook import edge_client_of
 from autumn_sdk.models import internal
 from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
@@ -94,6 +95,8 @@ class Autumn(BaseSDK):
         retry_config: OptionalNullable[RetryConfig] = UNSET,
         timeout_ms: Optional[int] = None,
         debug_logger: Optional[Logger] = None,
+        edge_url: Optional[str] = None,
+        use_edge: Optional[bool] = None,
     ) -> None:
         r"""Instantiates the SDK configuring it with the provided parameters.
 
@@ -107,6 +110,8 @@ class Autumn(BaseSDK):
         :param async_client: The Async HTTP client to use for all asynchronous methods
         :param retry_config: The retry configuration to use for all supported methods
         :param timeout_ms: Optional request timeout applied to each operation in milliseconds
+        :param edge_url: The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
+        :param use_edge: Send every call the edge serves (e.g. `check`) to `edge_url` first, falling back to the Autumn API when the edge is down
         """
         client_supplied = True
         if client is None:
@@ -163,6 +168,8 @@ class Autumn(BaseSDK):
                 retry_config=retry_config,
                 timeout_ms=timeout_ms,
                 debug_logger=debug_logger,
+                edge_url=edge_url,
+                use_edge=use_edge is True,
             ),
             parent_ref=self,
         )
@@ -183,6 +190,11 @@ class Autumn(BaseSDK):
             self.sdk_configuration.async_client,
             self.sdk_configuration.async_client_supplied,
         )
+
+    @property
+    def edge(self) -> "Autumn":
+        r"""This client with `use_edge` on: each call the edge serves goes to `edge_url` first, and to the Autumn API when the edge is down."""
+        return edge_client_of(self)
 
     def dynamic_import(self, modname, retries=3):
         for attempt in range(retries):
@@ -491,7 +503,7 @@ class Autumn(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.TrackResponse:
-        r"""Records usage for a customer feature and returns updated balances.
+        r"""Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.
 
         Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 
@@ -503,7 +515,7 @@ class Autumn(BaseSDK):
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
-        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
+        :param async_: Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -609,7 +621,7 @@ class Autumn(BaseSDK):
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.TrackResponse:
-        r"""Records usage for a customer feature and returns updated balances.
+        r"""Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.
 
         Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 
@@ -621,7 +633,7 @@ class Autumn(BaseSDK):
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
-        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
+        :param async_: Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -751,7 +763,7 @@ class Autumn(BaseSDK):
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
-        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
+        :param async_: Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -887,7 +899,7 @@ class Autumn(BaseSDK):
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
-        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
+        :param async_: Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds

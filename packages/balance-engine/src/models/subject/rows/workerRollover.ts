@@ -1,16 +1,18 @@
 import { RolloverSchema } from "@autumn/shared";
 import { z } from "zod/v4";
+import { openSchema } from "../../common/openSchema.js";
 
 /** The rollovers columns deduction reads; picked from the shared row schema. */
-export const workerRolloverSchema = RolloverSchema.pick({
-	id: true,
-	cus_ent_id: true,
-	balance: true,
-	usage: true,
-	expires_at: true,
-	entities: true,
-})
-	.extend({ usage: z.number() })
-	.strict();
+export const workerRolloverSchema = openSchema({
+	name: "workerRollover",
+	schema: RolloverSchema.pick({
+		id: true,
+		cus_ent_id: true,
+		balance: true,
+		usage: true,
+		expires_at: true,
+		entities: true,
+	}).extend({ usage: z.number() }),
+});
 
 export type WorkerRollover = z.infer<typeof workerRolloverSchema>;

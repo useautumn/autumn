@@ -18,9 +18,9 @@ import {
 } from "../../accounts/actions/accountLedger.ts";
 import {
 	kickAllocator,
-	type RunDemand,
 	registerRunDemand,
 } from "../../accounts/allocator/accountAllocator.ts";
+import type { RunDemand } from "../../accounts/allocator/runDemands.ts";
 import { usableKey } from "../../accounts/repos/cleanAccountsRepo.ts";
 import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";

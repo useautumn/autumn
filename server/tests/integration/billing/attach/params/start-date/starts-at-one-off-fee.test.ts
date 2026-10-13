@@ -20,6 +20,7 @@ import {
 	type ApiCustomerV5,
 	type AttachParamsV1Input,
 	CusProductStatus,
+	stripeRefToId,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductScheduled } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -35,9 +36,7 @@ import { CusService } from "@/internal/customers/CusService";
 import { getCustomerProduct, triggerSubscriptionCreated } from "./utils";
 
 const getScheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
-	typeof schedule.subscription === "string"
-		? schedule.subscription
-		: schedule.subscription?.id;
+	stripeRefToId(schedule.subscription);
 
 const ONBOARDING_FEE = 20;
 const BASE_PRICE = 20; // products.pro() has a $20/mo base price built in.

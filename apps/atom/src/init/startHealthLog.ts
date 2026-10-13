@@ -1,4 +1,9 @@
 import { type AtomHealthSource, readAtomHealth } from "./atomHealth.js";
+import {
+	bootTotals,
+	healthIntervalBetween,
+	healthTotalsOf,
+} from "./healthInterval.js";
 
 type HealthLogger = {
 	info(fields: object, message: string): void;
@@ -6,8 +11,8 @@ type HealthLogger = {
 };
 
 /**
- * Logs what /health reports, from the main thread, every `everyMs`. Nothing here may take the Atom down:
- * a tick that fails is a warning, and a warning that fails is dropped.
+ * Logs what /health reports, and what changed since the line before, from the main thread, every `everyMs`.
+ * Nothing here may take the Atom down: a tick that fails is a warning, and a warning that fails is dropped.
  */
 export const startHealthLog = ({
 	source,
@@ -18,12 +23,18 @@ export const startHealthLog = ({
 	everyMs: number;
 	logger: HealthLogger;
 }): { log(): void; stop(): void } => {
+	let previous = bootTotals({ bootedAt: source.bootedAt });
+
 	function log(): void {
 		try {
+			const health = readAtomHealth(source);
+			const current = healthTotalsOf({ health, at: Date.now() });
+			const interval = healthIntervalBetween({ previous, current });
 			logger.info(
-				{ type: "atom_health", data: readAtomHealth(source) },
+				{ type: "atom_health", data: { ...health, interval } },
 				"atom health",
 			);
+			previous = current;
 		} catch (error) {
 			try {
 				logger.warn(

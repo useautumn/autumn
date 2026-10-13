@@ -1,6 +1,7 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
+import { countRequest } from "./countRequest.js";
 import {
 	forwardedReason,
 	isAtomsOwnFault,
@@ -11,21 +12,16 @@ import {
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
 const UNLOGGED_PATHS = new Set(["/health"]);
-/** What the thread counts for /health, by route. */
-const COUNTED_PATHS = {
-	"/v1/balances.check": "checks",
-	"/v1/subjects.set": "pushes",
-	"/v1/catalog.set": "pushes",
-} as const;
-
 /** A line per allowed check costs a saturated Atom about an eighth of its capacity, so 1 in 100 is kept; denies all are. */
 const ALLOWED_CHECK_SAMPLE_RATE = 0.01;
+/** A thread's first allowed checks are all logged, so the dashboard can show an org its first checks arriving. */
+export const FIRST_ALLOWED_CHECKS_LOGGED = 10;
 
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
 /** The outermost layer: one line per request, `[status] METHOD path Nms`, with who it was about, what came back and how it
- * failed. Allowed checks, most of the traffic, are only sampled, and say at what rate; denies and failures are all kept. */
+ * failed. Allowed checks past a thread's first few, most of the traffic, are only sampled and say at what rate; denies and failures are all kept. */
 export function requestLogMiddleware({
 	ctx,
 	handleError,
@@ -33,6 +29,8 @@ export function requestLogMiddleware({
 	ctx: AtomHttpContext;
 	handleError: ErrorHandler<AtomHttpEnv>;
 }): MiddlewareHandler<AtomHttpEnv> {
+	let allowedChecks = 0;
+
 	async function logRequest(context: Context<AtomHttpEnv>, next: Next) {
 		const startedAt = Date.now();
 		try {
@@ -41,15 +39,20 @@ export function requestLogMiddleware({
 			context.res = await handleError(toError(cause), context);
 		}
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
-		const counted =
-			COUNTED_PATHS[context.req.path as keyof typeof COUNTED_PATHS];
-		if (counted) ctx.counters.add(counted);
-		const allowed = context.get("allowed") === true;
-		if (allowed && Math.random() >= ALLOWED_CHECK_SAMPLE_RATE) return;
-
 		const statusCode = context.res.status;
-		const durationMs = Date.now() - startedAt;
 		const forwarded = forwardedReason({ context });
+		countRequest({
+			counters: ctx.counters,
+			path: context.req.path,
+			statusCode,
+			forwarded: forwarded !== undefined,
+		});
+		const allowed = context.get("allowed") === true;
+		if (allowed) allowedChecks++;
+		const sampled = allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED;
+		if (sampled && Math.random() >= ALLOWED_CHECK_SAMPLE_RATE) return;
+
+		const durationMs = Date.now() - startedAt;
 		const failure = context.get("failure");
 		const line = {
 			statusCode,
@@ -63,7 +66,7 @@ export function requestLogMiddleware({
 				}),
 			},
 			res: await loggedResponseOf({ context }),
-			...(allowed && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),
+			...(sampled && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),
 			...(forwarded && { forwarded }),
 			...(failure && {
 				errorCode: failure.code,

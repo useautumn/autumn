@@ -5,7 +5,17 @@ import {
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
-import type { CheckRequestOnWire, OwnerReply } from "./types/ownerCall.js";
+import type {
+	AppliedSubject,
+	SubjectDigest,
+} from "../../state/repos/subjectStates.js";
+import { OwnerUnavailableError } from "./ownerUnavailableError.js";
+import type {
+	AppliedSubjectOnWire,
+	CheckRequestOnWire,
+	OwnerReply,
+	SubjectDigestOnWire,
+} from "./types/ownerCall.js";
 
 /** One instance per version on the owner: building one sorts the version registry. */
 const apiVersions = new Map<ApiVersion, ApiVersionClass>();
@@ -47,6 +57,7 @@ export const errorToReply = ({
 	ok: false,
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
 	invalid: error instanceof InvalidPushError,
+	unavailable: error instanceof OwnerUnavailableError,
 	message: error instanceof Error ? error.message : String(error),
 });
 
@@ -54,13 +65,52 @@ export const errorToReply = ({
 export const replyToError = ({
 	cannotAnswer,
 	invalid,
+	unavailable,
 	message,
+	thread,
 }: {
 	cannotAnswer: ForwardReason | null;
 	invalid: boolean;
+	unavailable: boolean;
 	message: string;
+	thread: number;
 }): Error => {
 	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
 	if (invalid) return new InvalidPushError(message);
+	if (unavailable) return new OwnerUnavailableError({ thread });
 	return new Error(message);
 };
+
+export const appliedSubjectToWire = ({
+	subject,
+	appliedAt,
+}: AppliedSubject): AppliedSubjectOnWire => ({
+	subject: {
+		...subject,
+		logOffset: subject.logOffset.toString(),
+		customerVersion: subject.customerVersion.toString(),
+	},
+	appliedAt,
+});
+
+export const wireToAppliedSubject = ({
+	subject,
+	appliedAt,
+}: AppliedSubjectOnWire): AppliedSubject => ({
+	subject: {
+		...subject,
+		logOffset: BigInt(subject.logOffset),
+		customerVersion: BigInt(subject.customerVersion),
+	},
+	appliedAt,
+});
+
+export const digestToWire = (digest: SubjectDigest): SubjectDigestOnWire => ({
+	...digest,
+	logOffset: digest.logOffset.toString(),
+});
+
+export const wireToDigest = (wire: SubjectDigestOnWire): SubjectDigest => ({
+	...wire,
+	logOffset: BigInt(wire.logOffset),
+});

@@ -75,29 +75,31 @@ export function findPreviousPhasePlan({
 	);
 }
 
+type ScopedPlan = Pick<CustomerStatePlan, "productId" | "entityId">;
+
 /** Plans sitting at exactly one scope — null is customer-level. */
-export function filterPlansByScope({
+export function filterPlansByScope<T extends ScopedPlan>({
 	plans,
 	entityId,
 }: {
-	plans: CustomerStatePlan[];
+	plans: T[];
 	entityId: string | null;
-}): CustomerStatePlan[] {
+}): T[] {
 	return plans.filter((plan) =>
 		isSameScope({ entityId: plan.entityId, otherEntityId: entityId }),
 	);
 }
 
 /** Scoped plans the phase doesn't already hold at that same scope. */
-function unheldPlansAtScope({
+function unheldPlansAtScope<T extends ScopedPlan>({
 	existingPlans,
 	phasePlans,
 	entityId,
 }: {
-	existingPlans: CustomerStatePlan[];
-	phasePlans: CustomerStatePlan[];
+	existingPlans: T[];
+	phasePlans: ScopedPlan[];
 	entityId: string | null;
-}): CustomerStatePlan[] {
+}): T[] {
 	const held = new Set(
 		filterPlansByScope({ plans: phasePlans, entityId }).map(
 			(plan) => plan.productId,
@@ -113,17 +115,17 @@ function unheldPlansAtScope({
  * all. Customer level falls back to the first entity holding plans, so the offer
  * stands even for a customer whose plans all sit on entities.
  */
-export function resolveCopySourceScope({
+export function resolveCopySourceScope<T extends ScopedPlan>({
 	existingPlans,
 	phasePlans,
 	entityId,
 }: {
-	existingPlans: CustomerStatePlan[];
-	phasePlans: CustomerStatePlan[];
+	existingPlans: T[];
+	phasePlans: ScopedPlan[];
 	entityId: string | null;
 }): {
 	entityId: string | null;
-	plans: CustomerStatePlan[];
+	plans: T[];
 	isFallback: boolean;
 } | null {
 	const scopedPlans = unheldPlansAtScope({

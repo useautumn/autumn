@@ -166,7 +166,6 @@
 	--chart-series-6: #008300;
 	--chart-series-7: #2a78d6;
 	--chart-series-8: #e34948;
-	--chart-series-other: #b5b5b5;
 
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -229,7 +228,6 @@
 	--chart-series-6: #008300;
 	--chart-series-7: #3987e5;
 	--chart-series-8: #e66767;
-	--chart-series-other: #525252;
 
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);

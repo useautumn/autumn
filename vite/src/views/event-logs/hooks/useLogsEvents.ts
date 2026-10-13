@@ -16,8 +16,8 @@ const LIVE_REFRESH_MS = 5_000;
 export const useLogsEvents = () => {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
-	const { filters } = useLogsFilters();
-	const filterBy = toFilterBy({ properties: filters.properties });
+	const { filters, propertyFilters } = useLogsFilters();
+	const filterBy = toFilterBy({ propertyFilters });
 
 	const query = useInfiniteQuery({
 		queryKey: buildKey([

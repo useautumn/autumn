@@ -190,10 +190,12 @@ export const RunFile = z.object({
 	finishedAt: z.string().nullable().optional(),
 });
 
-/** A live run as this process sees it: workers by status and the server ETA. */
+/** A live run as this process sees it: workers by status, the server ETA, and accounts it is still asking for. */
 export const RunLive = z.object({
 	workers: z.record(WorkerStatus, z.number()),
 	etaMs: z.number().nullable(),
+	/** Accounts the allocator still owes this run; 0 when it isn't asking (warming, or fully supplied). */
+	accountsPending: z.number(),
 });
 
 /** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
@@ -457,7 +459,7 @@ export const RetryBrokenAccountsResponse = z.object({
 
 export const Job = z.object({
 	id: z.string(),
-	kind: z.enum(["warm", "swarm", "nuke", "reinit_keys", "full_nuke_key"]),
+	kind: z.enum(["warm", "swarm", "nuke", "reinit_keys", "full_nuke_key", "qa"]),
 	singletonKey: z.string(),
 	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
 	error: z.string().nullable(),
@@ -469,6 +471,63 @@ export const Job = z.object({
 });
 /** Returned by every enqueueing route: \`deduped\` = attached to an existing live job. */
 export const EnqueueResponse = z.object({ job: Job, deduped: z.boolean() });
+
+// ---- qa envs ---------------------------------------------------------------
+
+/** No `--`: it marks an env's Tinybird hostname (`<name>--tb`). */
+export const QA_ENV_NAME = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+
+export const CreateQaEnvBody = z.object({
+	/** Branch (or 40-char sha) to deploy; it must be pushed. */
+	ref: z.string().min(1),
+	/** Hostname label: `<name>.atmn.lol`. Defaults to the ref, slugified. Re-using a name re-ships that env. */
+	name: z.string().regex(QA_ENV_NAME).optional(),
+	/** The requester's Capy Neon branch (`capy-…` name or `br-…` id); the env's database branches off it. */
+	parentBranch: z.string().min(1),
+	/** The Capy machine's server secrets, so encrypted rows and sessions on the branch stay readable. */
+	secrets: z.object({
+		BETTER_AUTH_SECRET: z.string().min(1),
+		ENCRYPTION_IV: z.string().min(1),
+		ENCRYPTION_PASSWORD: z.string().min(1),
+	}),
+	/** Delete this other env once the new one is created (an agent's previous QA box). */
+	supersedes: z.string().regex(QA_ENV_NAME).optional(),
+	/** Re-branch the database from parentBranch instead of keeping the env's QA data. */
+	freshDb: z.boolean().optional(),
+	/** Run a Tinybird Local beside the env (Usage charts, live events). Omitted on a re-ship keeps the env's setting. */
+	tinybird: z.boolean().optional(),
+});
+
+export const QaBuild = z.object({
+	phase: z.string().nullable(),
+	elapsedMs: z.number(),
+	remainingMs: z.number(),
+	percent: z.number(),
+});
+
+export const QaEnv = z.object({
+	name: z.string(),
+	url: z.string(),
+	ref: z.string(),
+	sha: z.string(),
+	state: z.enum(["building", "ready", "failed", "deleted"]),
+	awake: z.boolean().nullable(),
+	building: QaBuild.nullable(),
+	error: z.string().nullable(),
+	/** Tinybird Local API (and ClickHouse HTTP at `/`) when the env runs one. */
+	tinybirdUrl: z.string().nullable(),
+	createdBy: z.string(),
+	createdAt: z.string(),
+	expiresAt: z.string(),
+	lastActiveAt: z.string().nullable(),
+	jobId: z.string().nullable(),
+});
+
+export const CreateQaEnvResponse = z.object({
+	env: QaEnv,
+	job: Job,
+	deduped: z.boolean(),
+});
 
 // ---- capacity + errors ---------------------------------------------------
 
@@ -484,8 +543,10 @@ export const Capacity = z.object({
 	liveRuns: z.number(),
 	/** Runs waiting in the FIFO queue for their first account. */
 	queuedRuns: z.number(),
-	/** Accounts live runs still want beyond what they hold. */
+	/** Accounts live runs are asking the allocator for beyond what they hold. */
 	accountsWanted: z.number(),
+	/** Worker slots of warming runs: they ask for accounts once their image is built. */
+	slotsAwaitingWarm: z.number(),
 	/** Pool ceiling: usable keys × per-key cap. */
 	poolCap: z.number(),
 	/** Largest run (in files) that can start right now without waiting. */
@@ -691,6 +752,10 @@ export const ROUTES = {
 	baselines: "GET /baselines",
 	costs: "GET /costs",
 	fileHistory: "GET /files/history?file=",
+	/** Per file: passed | failing | flaky | no_data on dev, from swarm runs and CI uploads. */
+	devStatus: "POST /files/dev-status",
+	/** CI uploads per-file results it ran outside twd (source=ci); never priced or profiled. */
+	ingestResults: "POST /results/ingest",
 
 	// capacity + MCP (http/routes/capacity.ts, http/routes/mcp.ts)
 	capacity: "GET /capacity",
@@ -742,3 +807,6 @@ export type CostRates = z.infer<typeof CostRates>;
 export type CostsQuery = z.infer<typeof CostsQuery>;
 export type Job = z.infer<typeof Job>;
 export type EnqueueResponse = z.infer<typeof EnqueueResponse>;
+export type CreateQaEnvBody = z.infer<typeof CreateQaEnvBody>;
+export type QaEnv = z.infer<typeof QaEnv>;
+export type CreateQaEnvResponse = z.infer<typeof CreateQaEnvResponse>;

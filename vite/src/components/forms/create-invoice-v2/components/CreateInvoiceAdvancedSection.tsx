@@ -6,12 +6,12 @@ import {
 	updateCustomLineItem,
 } from "@/components/forms/shared/CustomLineItemRows";
 import { DiscountRow } from "@/components/forms/shared/discount-row/DiscountRow";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	addDiscount,
 	removeDiscount,
 	updateDiscount,
-} from "../../attach-v2/utils/discountUtils";
+} from "@/components/forms/shared/utils/discountUtils";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import { AddRowAction } from "./AddRowAction";
 import { CreateInvoiceSettingsFields } from "./CreateInvoiceSettingsFields";

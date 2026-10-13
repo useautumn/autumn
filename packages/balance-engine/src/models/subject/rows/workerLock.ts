@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { deductionDeltaSchema } from "../../../deduction/types/deductionDelta.js";
 import { propertiesSchema } from "../../common/json.js";
+import { openEnum } from "../../common/openSchema.js";
 import {
 	nonEmptyStringSchema,
 	timestampSchema,
@@ -17,21 +18,27 @@ export const workerLockSchema = z
 		customer_id: nonEmptyStringSchema,
 		entity_id: nonEmptyStringSchema.nullable(),
 		feature_id: nonEmptyStringSchema,
-		overage_behavior: z.enum(["cap", "reject", "overflow"]),
+		overage_behavior: openEnum({
+			name: "workerLock.overage_behavior",
+			values: ["cap", "reject", "overflow"],
+		}),
 		properties: propertiesSchema,
 		/** In draw order; finalize undoes them newest first. */
 		deltas: z.array(deductionDeltaSchema),
 		expires_at: timestampSchema,
-		expiry_action: z.enum(["release", "confirm"]),
+		expiry_action: openEnum({
+			name: "workerLock.expiry_action",
+			values: ["release", "confirm"],
+		}),
 		created_at: timestampSchema,
 	})
-	.strict();
+	.loose();
 
 export type WorkerLock = z.infer<typeof workerLockSchema>;
 
 /** What memory keeps of an open lock: enough to refuse a duplicate and to name the row at finalize. The rest stays in Postgres. */
 export const openLockSchema = workerLockSchema
 	.pick({ id: true, lock_id: true })
-	.strict();
+	.loose();
 
 export type OpenLock = z.infer<typeof openLockSchema>;

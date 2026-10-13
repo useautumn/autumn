@@ -15,7 +15,7 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 import type { AxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -48,15 +48,25 @@ export const CopyProductDialog = ({
 	// master org (a different org), so a same-env same-id copy isn't a collision.
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 
+	// A variant's base only exists in its own env, so it can only be copied there.
+	const isVariant = !!product.base_internal_product_id;
+	// Variants are never promoted, so their copy stays in the current org.
+	const copiesIntoCurrentOrg = isVariant || !inNamedSandbox;
+	const otherEnv = env === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live;
+
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState(product.name);
 	const [id, setId] = useState(product.id);
-	const [toEnv, setToEnv] = useState<AppEnv>(
-		env === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live,
-	);
+	const [toEnv, setToEnv] = useState<AppEnv>(otherEnv);
 
-	// Use targetEnv directly when provided, otherwise use state
-	const effectiveEnv = targetEnv ?? toEnv;
+	// The plan can load after mount, so prefill from the latest plan on open.
+	useEffect(() => {
+		if (!open) return;
+		setName(product.name);
+		setId(product.id);
+	}, [open, product.name, product.id]);
+
+	const effectiveEnv = targetEnv ?? (isVariant ? env : toEnv);
 	const envLabel = effectiveEnv === AppEnv.Sandbox ? "Sandbox" : "Production";
 
 	const handleCopy = async () => {
@@ -68,7 +78,7 @@ export const CopyProductDialog = ({
 		}
 		// 2. Same-org same-env copy with an unchanged id would collide (skip this
 		// when promoting from a named sandbox — the target is the master org).
-		if (!inNamedSandbox && env === effectiveEnv && id === product.id) {
+		if (copiesIntoCurrentOrg && env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
 		}
@@ -94,7 +104,7 @@ export const CopyProductDialog = ({
 
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
-			} else if (!inNamedSandbox && env === effectiveEnv) {
+			} else if (copiesIntoCurrentOrg && env === effectiveEnv) {
 				// Same-org duplicate lands in this view; a promote goes to another
 				// org, so don't navigate to a same-id plan in the current context.
 				navigateTo(`/products/${id}`, navigate);
@@ -133,7 +143,7 @@ export const CopyProductDialog = ({
 							/>
 						</div>
 					</div>
-					{!targetEnv && (
+					{!targetEnv && !isVariant && (
 						<div>
 							<FormLabel>Copy to environment</FormLabel>
 							<Select

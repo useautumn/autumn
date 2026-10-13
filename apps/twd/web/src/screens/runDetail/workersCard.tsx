@@ -77,6 +77,29 @@ const WorkerGrid = ({
 	);
 };
 
+/** Splits sized-but-unspawned slots by what they wait on, from this run's own allocator demand. */
+const pendingSlots = ({
+	run,
+	unspawned,
+}: {
+	run: RunDetail;
+	unspawned: number;
+}) => {
+	if (run.status === "warming")
+		return [{ label: "waiting for warm build", count: unspawned }];
+	const owed =
+		run.live?.accountsPending ?? (run.queuePosition !== null ? unspawned : 0);
+	const forAccounts = Math.min(unspawned, owed);
+	// Past provisioning, a slot nobody owes accounts for won't start: the swarm lowered its demand.
+	return [
+		{ label: "waiting for accounts", count: forAccounts },
+		{
+			label: run.status === "provisioning" ? "booting" : "not needed",
+			count: unspawned - forAccounts,
+		},
+	];
+};
+
 /** Worker squares (click one for its log), a status legend, and boot p50 · p90. */
 export const WorkersCard = ({
 	run,
@@ -133,12 +156,14 @@ export const WorkersCard = ({
 								{num(counts.get(s) ?? 0)} {s}
 							</span>
 						))}
-						{waiting > 0 && (
-							<span className="flex items-center gap-1.5">
-								<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
-								{num(waiting)} waiting for accounts
-							</span>
-						)}
+						{pendingSlots({ run, unspawned: waiting })
+							.filter((slot) => slot.count > 0)
+							.map((slot) => (
+								<span key={slot.label} className="flex items-center gap-1.5">
+									<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
+									{num(slot.count)} {slot.label}
+								</span>
+							))}
 					</div>
 					{boot && (
 						<span className="text-subtle">

@@ -2,17 +2,24 @@ import { availableParallelism, totalmem } from "node:os";
 import { positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
+/** Where the replicas of an org's Atom listen to each other; the stack lists it as a container port but never a public endpoint. */
+const LOCAL_ATOM_PEER_PORT = 8791;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** A container given no limits sees its whole host; past this many, more threads only cost memory. */
-const MAX_AUTOMATIC_THREADS = 8;
-/** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
-const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
-/** The rest is left for the OS, the files' page cache and a busy moment. */
-const MEMORY_SHARE_FOR_THREADS = 0.75;
-/** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
-const HELD_EXPANSION = 3;
+/** Measured on staging: past five, more threads at the same load cost CPU per check and p99 (Large 7→5, XL 15→5). */
+const MAX_THREADS = 5;
+const MiB = 1024 * 1024;
+/** Measured idle on Linux with 128 slot files open per thread: the main thread, then each serving thread on top. */
+const MAIN_THREAD_BYTES = 256 * MiB;
+const SERVING_THREAD_BYTES = 160 * MiB;
+/** Each SQLite connection keeps this much of its file in memory; every thread opens one per slot. */
+export const SQLITE_PAGE_CACHE_BYTES = 256 * 1024;
+const PAGE_CACHE_PER_THREAD_BYTES = SLOT_COUNT * SQLITE_PAGE_CACHE_BYTES;
+/** Of what the threads leave, this much may hold parsed subjects; the rest is headroom for pushes in flight and the collector's lag. */
+const HELD_SHARE = 0.5;
+/** Measured: a held subject's parsed, frozen objects take 4 to 6 times the bytes of its row text in RSS. */
+const HELD_EXPANSION = 5;
 const HEALTH_LOG_EVERY_MS = 10_000;
 /** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
 const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
@@ -20,24 +27,33 @@ const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
 /** What the machine allows the Atom: the container's limits where it has them, not the host's totals. */
-type AtomMachine = { availableCpus: number; memoryLimitBytes: number };
+type AtomMachine = {
+	availableCpus: number;
+	memoryLimitBytes: number;
+};
 
-const readMachine = (): AtomMachine => ({
-	availableCpus: availableParallelism(),
+const readMachine = (): AtomMachine => {
 	// Zero or absent means no limit was set, so the machine's own memory is the limit.
-	memoryLimitBytes: process.constrainedMemory?.() || totalmem(),
-});
+	const constrainedMemory = process.constrainedMemory?.() ?? 0;
+	return {
+		availableCpus: availableParallelism(),
+		memoryLimitBytes: constrainedMemory || totalmem(),
+	};
+};
 
-/** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
+/** What the main thread and its page caches take, and what each serving thread with its own takes on top. */
+const MAIN_BYTES = MAIN_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+const PER_THREAD_BYTES = SERVING_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+
+/** How many serving threads fit in memory beside the main thread, each with as much again to hold subjects in. */
 const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
 	memoryLimitBytes: number;
-}): number => {
-	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_THREADS;
-	return Math.floor(budget / MEMORY_PER_THREAD_BYTES) - 1;
-};
-/** Row text each thread may hold parsed: the threads' memory share, less each thread's own, split between them and shrunk by the expansion. */
+}): number =>
+	Math.floor((memoryLimitBytes - MAIN_BYTES) / (2 * PER_THREAD_BYTES));
+
+/** Row text each thread may hold parsed: a share of what the threads leave, split between them and shrunk by the expansion. */
 const heldBytesPerThreadOf = ({
 	threads,
 	memoryLimitBytes,
@@ -45,10 +61,11 @@ const heldBytesPerThreadOf = ({
 	threads: number;
 	memoryLimitBytes: number;
 }): number => {
-	const forHeld =
-		memoryLimitBytes * MEMORY_SHARE_FOR_THREADS -
-		(threads + 1) * MEMORY_PER_THREAD_BYTES;
-	return Math.max(0, Math.floor(forHeld / threads / HELD_EXPANSION));
+	const left = memoryLimitBytes - MAIN_BYTES - threads * PER_THREAD_BYTES;
+	return Math.max(
+		0,
+		Math.floor((left * HELD_SHARE) / threads / HELD_EXPANSION),
+	);
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
@@ -58,26 +75,65 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 	return value;
 };
 
-/** One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`. */
+/**
+ * One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`.
+ * Either way its replicas sign what they send each other with the deployment's own secret.
+ */
 type AtomModeEnv = {
 	ATOM_MODE: "deployed" | "multi_tenant";
 	ATOM_TOKEN_HASH: string;
+	ATOM_PEER_SECRET: string;
+	ATOM_PEERS_FILE: string | null;
+};
+
+const isLoopback = (hostname: string): boolean =>
+	hostname.startsWith("127.") || hostname === "localhost" || hostname === "::1";
+
+/** A replica set on one machine has no atom.svc to resolve, so its harness lists each replica's peers in a file.
+ * Only a replica listening on a loopback address reads one, so a deployed Atom (0.0.0.0) never does. */
+const peersFileOf = ({
+	runtimeEnv,
+	hostname,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+	hostname: string;
+}): string | null => {
+	const peersFile = runtimeEnv.ATOM_PEERS_FILE?.trim();
+	if (!peersFile) return null;
+	if (!isLoopback(hostname))
+		throw new Error(
+			"ATOM_PEERS_FILE is for a replica set on one machine: set it only with a loopback ATOM_HOSTNAME",
+		);
+	return peersFile;
 };
 
 /** Unset is the customer's single-tenant Atom; only our shadow Atom sets ATOM_MODE, to multi_tenant. */
 const modeEnvOf = ({
 	runtimeEnv,
+	hostname,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
+	hostname: string;
 }): AtomModeEnv => {
 	const mode = runtimeEnv.ATOM_MODE?.trim() || null;
 	if (mode !== null && mode !== "multi_tenant")
 		throw new Error("ATOM_MODE is either unset or multi_tenant");
 	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim();
 	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH");
+	const ATOM_TOKEN_HASH = sha256Hex({
+		name: "ATOM_TOKEN_HASH",
+		value: tokenHash,
+	});
+	const peerSecret = runtimeEnv.ATOM_PEER_SECRET?.trim();
+	if (!peerSecret)
+		throw new Error(
+			"Set ATOM_PEER_SECRET: an Atom's replicas sign what they send each other with it, and the stack generates one per deployment",
+		);
 	return {
 		ATOM_MODE: mode ?? "deployed",
-		ATOM_TOKEN_HASH: sha256Hex({ name: "ATOM_TOKEN_HASH", value: tokenHash }),
+		ATOM_TOKEN_HASH,
+		ATOM_PEER_SECRET: peerSecret,
+		ATOM_PEERS_FILE: peersFileOf({ runtimeEnv, hostname }),
 	};
 };
 
@@ -106,7 +162,7 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
+/** As many threads as the container's CPUs and memory allow, up to MAX_THREADS.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
@@ -120,7 +176,7 @@ const threadsOf = ({
 	const allowed = Math.min(
 		machine.availableCpus,
 		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		MAX_AUTOMATIC_THREADS,
+		MAX_THREADS,
 	);
 	return Math.max(1, allowed);
 };
@@ -149,13 +205,16 @@ export function createAtomEnv(
 	machine: AtomMachine = readMachine(),
 ) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
-	const modeEnv = modeEnvOf({ runtimeEnv });
+	const modeEnv = modeEnvOf({ runtimeEnv, hostname });
 	const threads = threadsOf({ runtimeEnv, machine });
 	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
 	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
+		ATOM_PEER_PORT: positiveInteger.parse(
+			runtimeEnv.ATOM_PEER_PORT ?? LOCAL_ATOM_PEER_PORT,
+		),
 		ATOM_DATA_DIR: runtimeEnv.ATOM_DATA_DIR?.trim() || ".data/atom",
 		/** Where a request Atom does not answer itself is sent. */
 		ATOM_AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL?.trim() || AUTUMN_API_URL,

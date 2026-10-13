@@ -1,3 +1,4 @@
+import { createDatabaseEnv } from "@autumn/env/database";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -60,15 +61,17 @@ export const initDrizzle = ({
 	/** Pool name for monitor/error logs. Omit to skip registration. */
 	name?: string;
 } = {}) => {
+	const databaseEnv = createDatabaseEnv(process.env);
 	const envDbUrl = replica
-		? process.env.DATABASE_REPLICA_URL
-		: process.env.DATABASE_URL;
+		? databaseEnv.DATABASE_REPLICA_URL
+		: databaseEnv.DATABASE_URL;
 
 	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({
 		connectionString: dbUrl,
 		keepAlive: true,
+		keepAliveInitialDelayMillis: 60_000,
 		idleTimeoutMillis: 30_000,
 		...poolConfig,
 		max: maxConnections,
@@ -215,7 +218,7 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	// connectionTimeoutMillis also bounds checkout waits on a full pool — sized
 	// to ride out PgBouncer backend build-out bursts instead of shedding.
 	connectTimeout: isProd ? 15 : 30,
-	databaseUrl: process.env.DATABASE_CRITICAL_URL,
+	databaseUrl: createDatabaseEnv(process.env).DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
 		// Budgets bouncer queue wait, not execution: the role's server-side 2s

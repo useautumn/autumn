@@ -24,6 +24,7 @@ import { type RunStatus, runs } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import { SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { getRunDemand } from "../../accounts/allocator/runDemands.ts";
 import { getLiveRun } from "../live/liveRuns.ts";
 
 export type RunRow = typeof runs.$inferSelect;
@@ -73,7 +74,11 @@ const toRunLive = ({ run }: { run: RunRow }): RunLive | null => {
 	const workers: RunLive["workers"] = {};
 	for (const { status } of live.workers.values())
 		workers[status] = (workers[status] ?? 0) + 1;
-	return { workers, etaMs: live.eta?.etaMs ?? null };
+	return {
+		workers,
+		etaMs: live.eta?.etaMs ?? null,
+		accountsPending: getRunDemand({ runId: run.id }) ?? 0,
+	};
 };
 
 export const toRunSummary = ({

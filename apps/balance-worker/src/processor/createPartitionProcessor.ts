@@ -71,9 +71,11 @@ export function createPartitionProcessor({
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
 			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+			dbControl: dependencies.dbControl,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			commitPositions: dependencies.commitPositions,
+			onRecoveryRequired: dependencies.onRecoveryRequired,
 			logger: dependencies.logger,
 			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),
 		},
@@ -169,6 +171,15 @@ function createProcessor({
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: evictPartition({ scope, command, waitsForSnapshotDelete }),
+		});
+	}
+
+	function evictResident({
+		coldStart,
+	}: Parameters<PartitionProcessor["evictResident"]>[0]) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: scope.ctx.writer.evictResident({ coldStart }),
 		});
 	}
 
@@ -324,6 +335,7 @@ function createProcessor({
 		readSubjectState,
 		initialize,
 		evict,
+		evictResident,
 		flush,
 		finalize,
 		decideFinalize,

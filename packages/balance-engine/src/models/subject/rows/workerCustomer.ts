@@ -1,5 +1,6 @@
 import { CustomerSchema } from "@autumn/shared";
 import { z } from "zod/v4";
+import { openSchema } from "../../common/openSchema.js";
 
 /** Columns only `customers.get` renders: absent on rows logged before it, and left out of the log's snapshot. */
 export const customerRenderedColumns = {
@@ -18,12 +19,13 @@ export const customerRenderedColumns = {
 } as const;
 
 /** The whole customers row: the columns commands decide on, and the rest `customers.get` renders. */
-export const workerCustomerSchema = CustomerSchema.extend({
-	// No defaults on stored columns: a default would leak into a change's `before`.
-	metadata: z.record(z.any(), z.any()).nullish(),
-	send_email_receipts: z.boolean(),
-})
-	.partial(customerRenderedColumns)
-	.strict();
+export const workerCustomerSchema = openSchema({
+	name: "workerCustomer",
+	schema: CustomerSchema.extend({
+		// No defaults on stored columns: a default would leak into a change's `before`.
+		metadata: z.record(z.any(), z.any()).nullish(),
+		send_email_receipts: z.boolean(),
+	}).partial(customerRenderedColumns),
+});
 
 export type WorkerCustomer = z.infer<typeof workerCustomerSchema>;

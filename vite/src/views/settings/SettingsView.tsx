@@ -10,11 +10,11 @@ import {
 } from "@autumn/ui";
 import {
 	ArrowRightLeftIcon,
+	AtomIcon,
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
 	CreditCardIcon,
-	DatabaseIcon,
 	KeyRoundIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
@@ -26,19 +26,20 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { LabelTag } from "@/components/general/LabelTag";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
+import { AtomSection, AtomSectionSkeleton } from "./sections/AtomSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
-import { ByocCacheSection } from "./sections/ByocCacheSection";
 import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
@@ -68,12 +69,13 @@ export type SettingsTab =
 	| "stripe"
 	| "vercel"
 	| "revenuecat"
-	| "cache";
+	| "atom";
 
 export interface SettingsNavItem {
 	readonly id: SettingsTab;
 	readonly label: string;
 	readonly icon: React.ReactNode;
+	readonly badge?: string;
 }
 
 interface SettingsNavGroup {
@@ -178,9 +180,10 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <RevenueCatIcon size={16} />,
 			},
 			{
-				id: "cache",
-				label: "Cache",
-				icon: <DatabaseIcon className="size-4" />,
+				id: "atom",
+				label: "Atom",
+				icon: <AtomIcon className="size-4" />,
+				badge: "PREVIEW",
 			},
 		],
 	},
@@ -203,17 +206,15 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	stripe: StripeSection,
 	vercel: VercelSection,
 	revenuecat: RevenueCatSection,
-	cache: ByocCacheSection,
+	atom: AtomSection,
 };
 
 /** Tabs that only render while their feature flag is on. */
-const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel">> = {
+const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel" | "atoms">> = {
 	sso: "sso",
 	vercel: "vercel",
+	atom: "atoms",
 };
-
-/** Tabs only Autumn admins see while the feature is internal. */
-const ADMIN_TABS: readonly SettingsTab[] = ["cache"];
 
 /** Integrations were previously behind the developer page's scope. */
 const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
@@ -225,23 +226,37 @@ const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
 export const useIsSettingsTabEnabled = () => {
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
-	const { isAdmin } = useAdmin();
 
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
-		if (ADMIN_TABS.includes(tab)) return isAdmin;
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
 	};
 };
 
-export const SettingsView = () => {
-	const [searchParams, setSearchParams] = useSearchParams();
+/** The tab the URL asks for, or Account when it isn't enabled; a flagged tab waits for billing instead of flashing Account first. */
+const useActiveSettingsTab = (): SettingsTab => {
+	const [searchParams] = useSearchParams();
 	const isTabEnabled = useIsSettingsTabEnabled();
+	const { isLoading: isLoadingFlags } = useAutumnFlags();
 	const requestedTab = (searchParams.get("tab") as SettingsTab) || "account";
-	const activeTab = isTabEnabled(requestedTab) ? requestedTab : "account";
-	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
+	const isAwaitingFlag = isLoadingFlags && requestedTab in FLAGGED_TABS;
+	return isTabEnabled(requestedTab) || isAwaitingFlag
+		? requestedTab
+		: "account";
+};
+
+/** The settings nav beside the active tab's content. */
+const SettingsFrame = ({
+	activeTab,
+	children,
+}: {
+	activeTab: SettingsTab;
+	children: React.ReactNode;
+}) => {
+	const [, setSearchParams] = useSearchParams();
+	const isTabEnabled = useIsSettingsTabEnabled();
 
 	const handleTabChange = (tab: SettingsTab) => {
 		setSearchParams({ tab }, { replace: true });
@@ -279,6 +294,9 @@ export const SettingsView = () => {
 									)}
 								>
 									{tab.label}
+									{tab.badge && (
+										<LabelTag label={tab.badge} className="ml-auto" />
+									)}
 								</button>
 							))}
 						</div>
@@ -313,10 +331,36 @@ export const SettingsView = () => {
 						</SelectContent>
 					</Select>
 					<SettingsGroupContext.Provider value={activeGroup?.label}>
-						<ActiveSection />
+						{children}
 					</SettingsGroupContext.Provider>
 				</div>
 			</div>
 		</div>
+	);
+};
+
+export const SettingsView = () => {
+	const activeTab = useActiveSettingsTab();
+	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
+	return (
+		<SettingsFrame activeTab={activeTab}>
+			<ActiveSection />
+		</SettingsFrame>
+	);
+};
+
+/** Tabs whose loading state is drawn as their layout, so the page settles in place. */
+const SECTION_SKELETONS: Partial<Record<SettingsTab, React.ComponentType>> = {
+	atom: AtomSectionSkeleton,
+};
+
+/** Settings as it will render, while the org it needs still loads. */
+export const SettingsViewSkeleton = () => {
+	const activeTab = useActiveSettingsTab();
+	const SectionSkeleton = SECTION_SKELETONS[activeTab] ?? LoadingScreen;
+	return (
+		<SettingsFrame activeTab={activeTab}>
+			<SectionSkeleton />
+		</SettingsFrame>
 	);
 };

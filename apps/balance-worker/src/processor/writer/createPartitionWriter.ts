@@ -16,12 +16,15 @@ import {
 	waitForHeldCommit as waitForHeldMutationCommit,
 } from "./actions/decideHeld.js";
 import { evict as evictCustomer } from "./actions/evict.js";
+import { evictResident as evictResidentSubjects } from "./actions/evictResident.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import {
 	allStored,
+	awaitStored,
 	createPartitionWriterState,
 	rejectAllPending,
+	snapshotAllStored,
 } from "./pendingMutations.js";
 import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
@@ -56,7 +59,9 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			subjectIdleExpiryMs: config.limits.subjectIdleExpiryMs,
 			onEvicted: evictDeleteOf({ ctx, config }),
+			now: ctx.now,
 		}),
 	};
 
@@ -153,8 +158,26 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
+	function readAppendedThrough(): bigint | null {
+		return scope.state.appendedThrough;
+	}
+
 	function evict({ customerKey }: Parameters<PartitionWriter["evict"]>[0]) {
 		return evictCustomer({ scope, customerKey });
+	}
+
+	function evictResident({
+		coldStart,
+	}: Parameters<PartitionWriter["evictResident"]>[0]) {
+		return evictResidentSubjects({ scope, coldStart });
+	}
+
+	function waitForEvicted({
+		customerKey,
+	}: Parameters<PartitionWriter["waitForEvicted"]>[0]) {
+		return scope.state.subjects.isEvicting({ customerKey })
+			? allStored({ state: scope.state })
+			: null;
 	}
 
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
@@ -165,15 +188,25 @@ export function createPartitionWriter({
 		return allStored({ state: scope.state });
 	}
 
+	function snapshotStore() {
+		return snapshotAllStored({ state: scope.state });
+	}
+
 	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
 	async function waitForApplies(): Promise<void> {
+		// A waiter on everything handed out keeps the apply from lingering while the partition drains.
+		awaitStored({ state: scope.state, seq: scope.state.lastSeq }).catch(
+			() => undefined,
+		);
 		await scope.state.appending;
 		await scope.state.applyTail.catch(() => undefined);
 	}
 
 	return {
 		waitForStore,
+		snapshotStore,
 		waitForApplies,
+		waitForEvicted,
 		decide,
 		decideHeld,
 		decideHeldGroup,
@@ -184,7 +217,9 @@ export function createPartitionWriter({
 		waitForPendingCommits,
 		assertCommitsHealthy,
 		readFreshestState,
+		readAppendedThrough,
 		evict,
+		evictResident,
 		adopt,
 		dispose,
 	};

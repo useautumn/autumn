@@ -20,6 +20,11 @@
 			"import": "./src/balanceWorker/balanceWorkerConstants.ts",
 			"default": "./src/balanceWorker/balanceWorkerConstants.ts"
 		},
+		"./database": {
+			"types": "./src/database.ts",
+			"import": "./src/database.ts",
+			"default": "./src/database.ts"
+		},
 		"./balanceWorkerClient": {
 			"types": "./src/balanceWorkerClient.ts",
 			"import": "./src/balanceWorkerClient.ts",
@@ -39,6 +44,11 @@
 			"types": "./src/herald.ts",
 			"import": "./src/herald.ts",
 			"default": "./src/herald.ts"
+		},
+		"./axiom": {
+			"types": "./src/axiom.ts",
+			"import": "./src/axiom.ts",
+			"default": "./src/axiom.ts"
 		},
 		"./cache": {
 			"types": "./src/cache.ts",

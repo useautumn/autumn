@@ -11,7 +11,7 @@ export const claimedOwnershipRecordSchema = z
 		endpoint: nonEmptyStringSchema,
 		claimedAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 export const unownedOwnershipRecordSchema = z
 	.object({
@@ -26,7 +26,7 @@ export const unownedOwnershipRecordSchema = z
 		 *  are still applied unconditionally, the way they always were. */
 		endpoint: nonEmptyStringSchema.optional(),
 	})
-	.strict();
+	.loose();
 
 /** A worker giving up a partition, honoured only when it names the current holder. */
 export const releasedOwnershipRecordSchema = z
@@ -37,7 +37,7 @@ export const releasedOwnershipRecordSchema = z
 		endpoint: nonEmptyStringSchema,
 		releasedAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 /** A successor has prepared the partition and can take it; the owner table ignores it. */
 export const readyOwnershipRecordSchema = z
@@ -48,7 +48,7 @@ export const readyOwnershipRecordSchema = z
 		endpoint: nonEmptyStringSchema,
 		readyAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 /** The owner has withdrawn and is draining for the successor named by `ready`;
  *  the successor holds its claim timeout while the owner is alive and working.
@@ -63,7 +63,7 @@ export const drainingOwnershipRecordSchema = z
 		successor: nonEmptyStringSchema,
 		drainingAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 /** A successor assigned the partition has started preparing it and will announce `ready`;
  *  the owner keeps serving and holds its handoff wait instead of releasing at its timeout.
@@ -76,7 +76,7 @@ export const preparingOwnershipRecordSchema = z
 		endpoint: nonEmptyStringSchema,
 		preparingAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 export const ownershipRecordSchema = z.discriminatedUnion("type", [
 	claimedOwnershipRecordSchema,

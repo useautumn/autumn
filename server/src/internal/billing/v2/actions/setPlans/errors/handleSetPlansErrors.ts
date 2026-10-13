@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	acceptsCarryOverUsages,
 	type BillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
@@ -15,12 +16,15 @@ import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/commo
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
+import { handleRemoveDiscountsErrors } from "@/internal/billing/v2/common/errors/handleRemoveDiscountsErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { endsLiveTrial } from "../utils/endsLiveTrial";
+import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import {
 	resolvePhaseProductContexts,
 	resolveUnscheduledProductContexts,
@@ -33,6 +37,7 @@ import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
+import { handleTrialBackdateAnchorErrors } from "./handleTrialBackdateAnchorErrors";
 import { handleTrialingCycleResetErrors } from "./handleTrialingCycleResetErrors";
 import { assertNoBillingIntervalMix } from "./subscriptionScope/assertNoBillingIntervalMix";
 import { handleStripeSubscriptionScopeErrors } from "./subscriptionScope/handleStripeSubscriptionScopeErrors";
@@ -49,9 +54,17 @@ export const handleSetPlansErrors = async ({
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	timeline: SetPlansTimeline;
-	params: Pick<SetPlansParamsV0, "currency" | "ends_at">;
+	params: Pick<
+		SetPlansParamsV0,
+		| "currency"
+		| "ends_at"
+		| "discounts"
+		| "remove_discounts"
+		| "no_billing_changes"
+	>;
 	preview?: boolean;
 }) => {
+	handleRemoveDiscountsErrors({ params });
 	validateSetPlansPhasePlans({
 		plans: billingContext.productContexts.map((productContext) => ({
 			fullProduct: productContext.fullProduct,
@@ -83,7 +96,12 @@ export const handleSetPlansErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
-	assertNoBillingCycleAnchorWithTrial({ billingContext });
+	// A trial controls the cycle start, except on a backdated trialing recreate, which anchors after the kept trial.
+	if (isTrialBackdateRecreate({ billingContext })) {
+		handleTrialBackdateAnchorErrors({ billingContext });
+	} else {
+		assertNoBillingCycleAnchorWithTrial({ billingContext });
+	}
 	handleTrialingCycleResetErrors({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,
@@ -131,8 +149,12 @@ export const handleSetPlansComputeErrors = async ({
 	handleCarryOverUsagesErrors({
 		ctx,
 		carryOverUsages: params.carry_over_usages,
-		replacesPlanNow:
-			immediatePhaseTransition.replacedCustomerProducts.length > 0,
+		replacesPlanNow: acceptsCarryOverUsages({
+			replacesPlanNow:
+				immediatePhaseTransition.replacedCustomerProducts.length > 0,
+			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			endsTrialNow: endsLiveTrial({ billingContext }),
+		}),
 	});
 	handleFutureStartActivationErrors({ billingContext, autumnBillingPlan });
 	handleFreePhaseStripeConnectionErrors({

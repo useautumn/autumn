@@ -26,13 +26,22 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
+	subjectIdleExpiryMs,
 	onEvicted,
+	now,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
+	subjectIdleExpiryMs?: number;
 	onEvicted?: OnSubjectEvicted;
+	now?: () => number;
 } = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes, onEvicted }),
+		subjects: createSubjectMap({
+			maxBytes: subjectMapMaxBytes,
+			idleExpiryMs: subjectIdleExpiryMs,
+			onEvicted,
+			now,
+		}),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],
@@ -44,8 +53,10 @@ export function createPartitionWriterState({
 		applying: false,
 		drainScheduled: false,
 		recoveryError: null,
+		appendedThrough: null,
 		lastBatchSize: 0,
 		lingerWake: null,
+		applyWake: null,
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
@@ -160,13 +171,31 @@ export function loggedRecordOf({
 
 /** Bounds how far the store may trail the log: each unapplied batch keeps its
  *  store-durability callers waiting and its milestones in memory. */
-export const DEFAULT_MAX_UNAPPLIED_BATCHES = 16;
+export const DEFAULT_MAX_UNAPPLIED_BATCHES = 64;
 
 export const maxUnappliedBatchesOf = ({
 	limits,
 }: {
 	limits: PartitionWriterScope["config"]["limits"];
 }): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
+
+/** Bounds one store flush; the committer writes a flush as a single statement. */
+export const DEFAULT_MAX_BATCHES_PER_FLUSH = 32;
+
+/** Read live so DB control can retune it; clamped to [1, maxUnappliedBatches] so a full queue always counts as due. */
+export const maxBatchesPerFlushOf = ({
+	ctx,
+	limits,
+}: {
+	ctx: Pick<PartitionWriterScope["ctx"], "dbControl">;
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => {
+	const configured =
+		ctx.dbControl?.get().balanceCommitter.maxBatchesPerFlush ??
+		limits.maxBatchesPerFlush ??
+		DEFAULT_MAX_BATCHES_PER_FLUSH;
+	return Math.min(Math.max(configured, 1), maxUnappliedBatchesOf({ limits }));
+};
 
 export const maxBatchBytesOf = ({
 	limits,
@@ -309,7 +338,7 @@ export function removePendingMutation({
 	}
 }
 
-/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. Once per mutation. */
+/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
 export function releasePins({
 	state,
 	pending,
@@ -317,8 +346,6 @@ export function releasePins({
 	state: PartitionWriterState;
 	pending: PendingMutation;
 }): void {
-	if (pending.pinsReleased) return;
-	pending.pinsReleased = true;
 	for (const subjectKey of pending.projectedSubjectKeys)
 		state.subjects.unpin({ subjectKey });
 }
@@ -371,6 +398,8 @@ export function awaitStored({
 	if (state.recoveryError) return Promise.reject(state.recoveryError);
 	const { promise, resolve, reject } = Promise.withResolvers<void>();
 	state.storeWaiters.push({ seq, resolve, reject });
+	// Somebody reads the store next: a lingering apply goes now.
+	state.applyWake?.();
 	return promise;
 }
 
@@ -380,11 +409,21 @@ export function allStored({
 }: {
 	state: PartitionWriterState;
 }): Promise<void> {
-	const stored = awaitStored({ state, seq: state.lastRowSeq });
-	const all = Promise.all([state.storeCompletion, stored]).then(nothing);
-	// Taken eagerly by callers that may never wait on it; those that do still see the failure.
-	all.catch(nothing);
-	return all;
+	return snapshotAllStored({ state })();
+}
+
+/** `allStored`'s snapshot taken now; its waiter registers only once called, so a caller that never waits wakes nothing. */
+export function snapshotAllStored({
+	state,
+}: {
+	state: PartitionWriterState;
+}): () => Promise<void> {
+	const { lastRowSeq, storeCompletion } = state;
+	return () =>
+		Promise.all([
+			storeCompletion,
+			awaitStored({ state, seq: lastRowSeq }),
+		]).then(nothing);
 }
 
 function nothing(): void {}

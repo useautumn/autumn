@@ -18,6 +18,17 @@ import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
 
 const ADD_LINES_BATCH_SIZE = 100;
 
+/** The entity every plan line bills to, if they all share one; mixed or customer-level invoices stay untagged. */
+const invoiceEntityTag = ({ lines }: { lines: InvoiceLine[] }) => {
+	const planLineEntityIds = new Set(
+		lines
+			.filter((line) => line.planKey)
+			.map((line) => line.lineItem.context.entity?.internal_id),
+	);
+	const [only] = planLineEntityIds;
+	return planLineEntityIds.size === 1 ? only : undefined;
+};
+
 /** Creates and populates the Stripe invoice, issues it per issue_method, then mirrors it into Autumn. */
 export const executeStripeInvoicePlan = async ({
 	ctx,
@@ -54,7 +65,10 @@ export const executeStripeInvoicePlan = async ({
 		daysUntilDue: invoiceContext.daysUntilDue,
 		dueDate: dueDate && getUnixTime(dueDate),
 		effectiveAt: issueDate && getUnixTime(issueDate),
-		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
+		paymentMethodTypes:
+			invoiceContext.params.payment_method_types ??
+			ctx.org.config.allowed_payment_methods ??
+			undefined,
 		footer: template?.footer,
 		description: template?.memo,
 		metadata: mergeStripeMetadata({
@@ -102,6 +116,7 @@ export const executeStripeInvoicePlan = async ({
 		stripeInvoice: issued,
 		fullCustomer,
 		fullProducts,
+		internalEntityId: invoiceEntityTag({ lines }),
 	});
 	if (!autumnInvoice) {
 		// Nothing here voids or deletes the Stripe invoice.

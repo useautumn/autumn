@@ -487,6 +487,17 @@ const actionPhrases = ({
 					running: `Voiding ${invoiceLabel}`,
 				};
 			}
+			case "updateInvoice": {
+				const methods = Array.isArray(request.payment_method_types)
+					? ` to ${request.payment_method_types.join(", ")}`
+					: "";
+				return {
+					done: `Updated payment methods on ${invoiceLabel}${methods}`,
+					failed: `Couldn't update payment methods on ${invoiceLabel}`,
+					pending: `Update payment methods on ${invoiceLabel}${methods}`,
+					running: `Updating payment methods on ${invoiceLabel}`,
+				};
+			}
 			default: {
 				const label = toolLabel(toolName);
 				const forCustomer = customer ? ` for ${customerLabel}` : "";

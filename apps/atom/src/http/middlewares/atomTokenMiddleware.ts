@@ -2,7 +2,7 @@ import type { Context, MiddlewareHandler, Next } from "hono";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 /** `Authorization` is left to the Autumn secret key, which Atom passes on when it forwards a request. */
-const ATOM_TOKEN_HEADER = "x-atom-token";
+export const ATOM_TOKEN_HEADER = "x-atom-token";
 
 /** A request reads and writes only the data its token opens; without one that opens anything, it gets no answer. */
 export function atomTokenMiddleware({

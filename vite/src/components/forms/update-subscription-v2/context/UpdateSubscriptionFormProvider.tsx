@@ -24,6 +24,7 @@ import {
 	licenseRowHasBillingChanges,
 	usePlanLicenseRows,
 } from "@/components/forms/shared/plan-items/PlanLicensesSummary";
+import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
@@ -34,6 +35,10 @@ import {
 	hasStagedLicenseQuantityChanges,
 } from "@/utils/billing/licenseQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	type CollectionMethodSwitch,
+	useCollectionMethodSwitch,
+} from "../hooks/useCollectionMethodSwitch";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
 import {
 	type UseTrialStateReturn,
@@ -92,6 +97,8 @@ interface UpdateSubscriptionFormContextValue {
 	// Preview
 	previewQuery: UseUpdateSubscriptionPreviewReturn;
 
+	collectionMethodSwitch: CollectionMethodSwitch;
+
 	generation: BillingGenerationState;
 
 	// Plan editor state
@@ -106,12 +113,7 @@ interface UpdateSubscriptionFormContextValue {
 	// Mutation
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceUpdate: (params: {
-		enableProductImmediately: boolean;
-		finalizeInvoice: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-	}) => Promise<{
+	handleInvoiceUpdate: (params: SendInvoiceSubmitParams) => Promise<{
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
@@ -355,20 +357,33 @@ export function UpdateSubscriptionFormProvider({
 		pendingBillingCycleAnchor,
 	});
 
-	// Build the preview body reactively — formValues triggers recomputation,
+	// Build the update body reactively — formValues triggers recomputation,
 	// buildRequestBody reads the latest snapshot from the form store.
-	const previewBody = useMemo(
+	const updateBody = useMemo(
 		() => buildRequestBody(),
 		[buildRequestBody, formValues],
 	);
 
+	const collectionMethodSwitch = useCollectionMethodSwitch({
+		formContext,
+		// Reset usage alone isn't a plan change, but a switch request would drop it.
+		hasOtherChanges: hasChanges || formValues.resetUsage,
+		onApplied,
+		onSuccess,
+	});
+
 	const previewQuery = useUpdateSubscriptionPreview({
-		requestBody: previewBody,
+		requestBody: collectionMethodSwitch.isActive
+			? collectionMethodSwitch.requestBody
+			: updateBody,
+		apiVersion: collectionMethodSwitch.isActive
+			? collectionMethodSwitch.apiVersion
+			: undefined,
 		enabled: !!(formContext.customerId && formContext.product),
 	});
 
 	const generation = useUpdateSubscriptionGeneration({
-		currentRequest: previewBody as Record<string, unknown> | null,
+		currentRequest: updateBody as Record<string, unknown> | null,
 		customerId: formContext.customerId,
 		customerProductId:
 			formContext.customerProduct.id ??
@@ -465,6 +480,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			collectionMethodSwitch,
 			generation,
 			showPlanEditor,
 			handleEditPlan,
@@ -488,6 +504,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			collectionMethodSwitch,
 			generation,
 			showPlanEditor,
 			handleEditPlan,

@@ -14,6 +14,7 @@ import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { Infinite } from "@models/productModels/productEnums";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -193,6 +194,23 @@ export const PlanItemParamsObjectSchema = z.object({
 
 type PlanItemParamsCheckValue = z.infer<typeof PlanItemParamsObjectSchema>;
 
+/** Stripe needs ascending tier bounds and a catch-all last tier; -1 is the legacy "inf", so only the last tier may use it. */
+const tiersAreAscendingToInfinity = ({
+	tiers,
+}: {
+	tiers: { to: number | typeof Infinite }[];
+}) => {
+	const last = tiers[tiers.length - 1].to;
+	if (last !== Infinite && last !== -1) return false;
+	const bounds = tiers.slice(0, -1).map((tier) => tier.to);
+	return bounds.every(
+		(to, index) =>
+			typeof to === "number" &&
+			to !== -1 &&
+			(index === 0 || to > (bounds[index - 1] as number)),
+	);
+};
+
 /**
  * Cross-field invariants for a plan item. Shared by the generic and the catalog
  * item schemas so the rules can't drift; returns issues and lets each schema
@@ -316,6 +334,14 @@ export const planItemParamsIssues = (
 				input: value.price,
 			});
 		}
+
+		const billingUnits = value.price.billing_units;
+		if (billingUnits !== undefined && !(billingUnits > 0)) {
+			issues.push({
+				message: "billing_units must be greater than 0.",
+				input: value.price,
+			});
+		}
 	}
 
 	if (value.price?.tiers) {
@@ -362,6 +388,12 @@ export const planItemParamsIssues = (
 
 		if (value.price?.tiers.length === 0) {
 			issues.push({ message: "tiers cannot be empty.", input: value.price });
+		} else if (!tiersAreAscendingToInfinity({ tiers: value.price.tiers })) {
+			issues.push({
+				message:
+					"tiers must have strictly increasing 'to' values and end with 'to': 'inf'.",
+				input: value.price,
+			});
 		} else if (
 			value.included &&
 			typeof value.price?.tiers[0].to === "number" &&

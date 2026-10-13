@@ -2,13 +2,19 @@ import type {
 	Feature,
 	FullCustomer,
 	ProductV2,
+	SetPlansPreviewDiscount,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
+	acceptsCarryOverUsages,
+	anchorFollowsKeptTrial,
+	type BillingBehavior,
 	CusProductStatus,
 	isFreeProductV2,
 	isOneOffProductV2,
+	type ProrationBehaviorOverride,
+	prorationBehaviorOverride,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
@@ -40,6 +46,8 @@ import {
 } from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
+import { defaultProrationBehavior } from "@/components/forms/shared/utils/defaultProrationBehavior";
+import { filterSubscriptionDiscounts } from "@/components/forms/shared/utils/filterSubscriptionDiscounts";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
 import { pickFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -58,6 +66,7 @@ import {
 	type CurrentScheduleTrial,
 	canScheduleFreeTrial,
 	defaultScheduleTrialFormValues,
+	endsCurrentTrialNow,
 	findCatalogScheduleTrial,
 	findCurrentScheduleTrial,
 	reseededScheduleTrialFormValues,
@@ -80,11 +89,15 @@ interface CreateScheduleFormContextValue {
 	allowFirstPhaseBackdate: boolean;
 	/** An existing schedule's started first phase may move earlier, recreating its live subscription. */
 	allowStartedPhaseBackdate: boolean;
-	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
+	/** The first phase is backdated over a live subscription, which set_plans recreates from that date. */
 	backdatesLiveSubscription: boolean;
 	hasActiveSubscription: boolean;
-	/** The first phase replaces a live plan now, so its usage can carry over. */
-	replacesPlanNow: boolean;
+	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
+	carriesUsageNow: boolean;
+	/** What the Proration row shows until the user changes it. */
+	defaultFirstPhaseProration: BillingBehavior;
+	/** Proration can't change what's billed here, so the row stays as shown and explains why. */
+	prorationOverride: ProrationBehaviorOverride | undefined;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -101,6 +114,8 @@ interface CreateScheduleFormContextValue {
 		paymentUrl: string | null | undefined;
 	}>;
 	preview: SetPlansPreviewResponse | null | undefined;
+	/** The preview's discounts on the edited subscription; customer-level coupons aren't removable here. */
+	appliedDiscounts: SetPlansPreviewDiscount[];
 	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
@@ -245,9 +260,11 @@ export function CreateScheduleFormProvider({
 		() => defaultScheduleTrialFormValues({ currentTrial, catalogFreeTrial }),
 		[currentTrial, catalogFreeTrial],
 	);
+	const liveSubscriptionTrialing = currentTrial !== null;
 	const canScheduleTrial = canScheduleFreeTrial({
 		phases: formValues.phases,
 		nowMs,
+		liveSubscriptionTrialing,
 	});
 
 	const previousDefaultTrialFormValuesRef = useRef(defaultTrialFormValues);
@@ -274,10 +291,8 @@ export function CreateScheduleFormProvider({
 	);
 
 	const getResetBillingCycle = useCallback(
-		() =>
-			!backdatesLiveSubscription &&
-			(form.store.state.values.resetBillingCycle ?? false),
-		[form.store, backdatesLiveSubscription],
+		() => form.store.state.values.resetBillingCycle ?? false,
+		[form.store],
 	);
 
 	const getBillingCycleAnchor = useCallback(() => {
@@ -291,17 +306,57 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const replacesPlanNow = useMemo(
+	const resetsCycleNow =
+		!firstPhaseStartsLater({ phases: formValues.phases, nowMs }) &&
+		formValues.resetBillingCycle &&
+		!backdatesLiveSubscription &&
+		formValues.billingCycleAnchorMode === "now";
+	const endsTrialNow = endsCurrentTrialNow({
+		phases: formValues.phases,
+		nowMs,
+		formValues,
+		currentTrial,
+	});
+	// Attach's rule, worked out once when the sheet opens: No charges on a live subscription, prorated on a new one.
+	const [defaultFirstPhaseProration] = useState(() =>
+		defaultProrationBehavior({ noChargesAllowed: hasActiveSubscription }),
+	);
+	const usesCustomAnchor =
+		formValues.resetBillingCycle &&
+		formValues.billingCycleAnchorMode === "custom";
+	const prorationOverride = prorationBehaviorOverride({
+		endsTrialNow,
+		resetsCycleNow,
+		anchorFollowsKeptTrial: anchorFollowsKeptTrial({
+			backdatesTrialingSubscription:
+				backdatesLiveSubscription && currentTrial !== null,
+			keepsTrial: formValues.trialEnabled,
+			anchorMs: usesCustomAnchor ? formValues.billingCycleAnchorDate : null,
+			trialEndsAt: currentTrial?.trialEndsAt,
+		}),
+	});
+	const getOmitFirstPhaseProration = useCallback(
+		() => prorationOverride !== undefined,
+		[prorationOverride],
+	);
+
+	const carriesUsageNow = useMemo(
 		() =>
-			firstPhaseReplacesPlanNow({
-				phases: formValues.phases,
-				customerProducts: scopedCustomerProducts,
-				entities: fullCustomer?.entities ?? [],
-				products,
-				nowMs,
+			acceptsCarryOverUsages({
+				replacesPlanNow: firstPhaseReplacesPlanNow({
+					phases: formValues.phases,
+					customerProducts: scopedCustomerProducts,
+					entities: fullCustomer?.entities ?? [],
+					products,
+					nowMs,
+				}),
+				resetsCycleNow,
+				endsTrialNow,
 			}),
 		[
 			formValues.phases,
+			resetsCycleNow,
+			endsTrialNow,
 			scopedCustomerProducts,
 			fullCustomer?.entities,
 			products,
@@ -313,10 +368,10 @@ export function CreateScheduleFormProvider({
 		const { carryOverUsages, carryOverUsageFeatureIds } =
 			form.store.state.values;
 		return {
-			carryOverUsages: replacesPlanNow && carryOverUsages,
+			carryOverUsages: carriesUsageNow && carryOverUsages,
 			carryOverUsageFeatureIds,
 		};
-	}, [form.store, replacesPlanNow]);
+	}, [form.store, carriesUsageNow]);
 
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
@@ -340,25 +395,6 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const buildRequestBody = useBuildCreateScheduleRequestBody({
-		customerId,
-		products,
-		features,
-		nowMs,
-		getPhases,
-		getUnscheduledPlans,
-		getResetBillingCycle,
-		getBillingCycleAnchor,
-		getEndDate,
-		getEnablePlanImmediately,
-		getAllowFirstPhaseBackdate,
-		getCarryOverUsages,
-		getFreeTrial,
-		currentTrial,
-		catalogFreeTrial,
-		stripeSubscriptionId,
-	});
-
 	const generationRequestBody = useCreateScheduleRequestBody({
 		customerId,
 		phases: formValues.phases,
@@ -366,19 +402,22 @@ export function CreateScheduleFormProvider({
 		products,
 		features,
 		nowMs,
-		resetBillingCycle:
-			formValues.resetBillingCycle && !backdatesLiveSubscription,
+		resetBillingCycle: formValues.resetBillingCycle,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
-		carryOverUsages: replacesPlanNow && formValues.carryOverUsages,
+		carryOverUsages: carriesUsageNow && formValues.carryOverUsages,
 		carryOverUsageFeatureIds: formValues.carryOverUsageFeatureIds,
 		stripeSubscriptionId,
 		freeTrial: trialFormValues,
 		currentTrial,
 		catalogFreeTrial,
+		defaultFirstPhaseProration,
+		omitFirstPhaseProration: prorationOverride !== undefined,
+		discounts: formValues.discounts,
+		removedRewardIds: formValues.removedRewardIds,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.
@@ -422,6 +461,48 @@ export function CreateScheduleFormProvider({
 		}
 	}, [preview?.redirect_to_checkout, startsLater, form]);
 
+	const appliedDiscounts = useMemo(
+		() =>
+			filterSubscriptionDiscounts({
+				discounts: preview?.discounts ?? [],
+				subscriptionIds: scopedCustomerProducts.flatMap(
+					(customerProduct) => customerProduct.subscription_ids ?? [],
+				),
+			}),
+		[preview?.discounts, scopedCustomerProducts],
+	);
+
+	const getDiscounts = useCallback(() => {
+		const { discounts, removedRewardIds } = form.store.state.values;
+		return {
+			discounts,
+			removedRewardIds,
+			removableRewardIds: appliedDiscounts.map((discount) => discount.id),
+		};
+	}, [form.store, appliedDiscounts]);
+
+	const buildRequestBody = useBuildCreateScheduleRequestBody({
+		customerId,
+		products,
+		features,
+		nowMs,
+		getPhases,
+		getUnscheduledPlans,
+		getResetBillingCycle,
+		getBillingCycleAnchor,
+		getEndDate,
+		getEnablePlanImmediately,
+		getAllowFirstPhaseBackdate,
+		getCarryOverUsages,
+		getFreeTrial,
+		getOmitFirstPhaseProration,
+		getDiscounts,
+		defaultFirstPhaseProration,
+		currentTrial,
+		catalogFreeTrial,
+		stripeSubscriptionId,
+	});
+
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,
 		customerId,
@@ -454,7 +535,9 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
-			replacesPlanNow,
+			carriesUsageNow,
+			defaultFirstPhaseProration,
+			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -464,6 +547,7 @@ export function CreateScheduleFormProvider({
 			handleInvoiceSubmit,
 			handleCheckoutSubmit,
 			preview,
+			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
@@ -481,7 +565,9 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
-			replacesPlanNow,
+			carriesUsageNow,
+			defaultFirstPhaseProration,
+			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -491,6 +577,7 @@ export function CreateScheduleFormProvider({
 			handleInvoiceSubmit,
 			handleCheckoutSubmit,
 			preview,
+			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
 			phaseTimingError,

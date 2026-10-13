@@ -20,14 +20,9 @@ export function readTopicEnvelope({
 	if (typeof input !== "object" || input === null || Array.isArray(input)) {
 		throw new InvalidRecordError();
 	}
+	// Required keys only: a newer writer's envelope field must not make the record unreadable.
 	const envelope = input as Record<string, unknown>;
-	const keys = Object.keys(envelope);
-	if (keys.length !== 3) throw new InvalidRecordError();
-	for (const key of keys) {
-		if (key !== "schemaVersion" && key !== "type" && key !== "payload") {
-			throw new InvalidRecordError();
-		}
-	}
+	if (!("payload" in envelope)) throw new InvalidRecordError();
 	if (envelope.schemaVersion !== 1) {
 		if (typeof envelope.schemaVersion === "number") {
 			throw new UnsupportedRecordVersionError({

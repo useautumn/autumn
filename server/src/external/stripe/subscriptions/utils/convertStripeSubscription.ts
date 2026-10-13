@@ -1,4 +1,10 @@
-import { CusProductStatus, EntInterval, ms, secondsToMs } from "@autumn/shared";
+import {
+	CusProductStatus,
+	EntInterval,
+	ms,
+	secondsToMs,
+	stripeRefToId,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeTestClockToNowMs } from "@/external/stripe/testClocks/utils/convertStripeTestClock";
@@ -193,9 +199,7 @@ export const stripeSubscriptionToScheduleId = ({
 }): string | undefined => {
 	if (!stripeSubscription) return undefined;
 
-	return typeof stripeSubscription.schedule === "string"
-		? stripeSubscription.schedule
-		: (stripeSubscription.schedule?.id ?? undefined);
+	return stripeRefToId(stripeSubscription.schedule) ?? undefined;
 };
 
 export const stripeSubscriptionToApplication = ({
@@ -205,7 +209,5 @@ export const stripeSubscriptionToApplication = ({
 }): string | null => {
 	if (!stripeSubscription?.application) return null;
 
-	return typeof stripeSubscription.application === "string"
-		? stripeSubscription.application
-		: stripeSubscription.application.id;
+	return stripeRefToId(stripeSubscription.application);
 };
