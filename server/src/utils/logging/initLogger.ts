@@ -1,7 +1,11 @@
 import { hostname } from "node:os";
 import { Writable } from "node:stream";
 import { createErrorLogHook } from "@autumn/errors";
-import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
+import {
+	createSazabiLogStream,
+	normalizeErrorValues,
+	resolveDeployment,
+} from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 import { createMapleLogStreams } from "@/external/maple/createMapleLogStreams.js";
@@ -253,6 +257,9 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	}
 
 	streams.push(...createMapleLogStreams());
+
+	const sazabi = createSazabiLogStream({ service: "server" });
+	if (sazabi) streams.push(sazabi.entry);
 
 	const logger = pino(
 		{

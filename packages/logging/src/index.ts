@@ -29,6 +29,12 @@ export {
 	resolveDeployment,
 	resolveLoggerOptions,
 } from "./logger/resolveLoggerOptions.js";
+export {
+	createSazabiLogStream,
+	pinoLineToOtlpLogRecord,
+	type SazabiLogStream,
+} from "./otlp/sazabiLogStream.js";
+export { createSazabiTriggerLogExporters } from "./otlp/sazabiTriggerLogExporters.js";
 export { asAxiomMap } from "./payload/asAxiomMap.js";
 export {
 	type GuardLogPayloadOptions,

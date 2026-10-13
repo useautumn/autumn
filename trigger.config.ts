@@ -5,6 +5,7 @@ import {
 	syncEnvVars,
 } from "@trigger.dev/build/extensions/core";
 import { defineConfig } from "@trigger.dev/sdk/v3";
+import { createSazabiTriggerLogExporters } from "./packages/logging/src/otlp/sazabiTriggerLogExporters.js";
 import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fetchInfisicalSecrets.js";
 
 // Bun requires every configured workspace to contain a package.json, even
@@ -69,6 +70,9 @@ export default defineConfig({
 	runtime: "bun",
 	logLevel: "log",
 	maxDuration: 3600,
+	telemetry: {
+		logExporters: createSazabiTriggerLogExporters(),
+	},
 	retries: {
 		enabledInDev: true,
 		default: {

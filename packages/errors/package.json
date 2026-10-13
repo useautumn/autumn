@@ -9,6 +9,11 @@
 			"types": "./src/errors.ts",
 			"import": "./src/errors.ts",
 			"default": "./src/errors.ts"
+		},
+		"./errorReportingOptions": {
+			"types": "./src/external/sentry/errorReportingOptionsOf.ts",
+			"import": "./src/external/sentry/errorReportingOptionsOf.ts",
+			"default": "./src/external/sentry/errorReportingOptionsOf.ts"
 		}
 	},
 	"scripts": {
@@ -19,6 +24,7 @@
 		"@autumn/logging": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@sentry/bun": "catalog:",
+		"@sentry/core": "catalog:",
 		"pino": "^9.6.0",
 		"zod": "^3.25.23"
 	},

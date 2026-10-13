@@ -1,4 +1,5 @@
 import pino from "pino";
+import { createSazabiLogStream } from "../otlp/sazabiLogStream.js";
 import {
 	type ConsoleJsonStream,
 	createConsoleJsonStream,
@@ -70,6 +71,9 @@ export const createLogger = (
 		}
 	}
 
+	const sazabi = createSazabiLogStream({ service: resolved.service });
+	if (sazabi) streams.push(sazabi.entry);
+
 	const logger = pino(
 		{
 			level: resolved.level,
@@ -98,6 +102,7 @@ export const createLogger = (
 		flushed ??= Promise.all([
 			...transportStreams.map(closeTransportStream),
 			...consoleJsonStreams.map((stream) => stream.flush()),
+			sazabi?.flush(),
 		]).then(() => undefined);
 		return flushed;
 	};
