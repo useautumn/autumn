@@ -14,6 +14,7 @@ import { startSecretKeys } from "../../../src/auth/secretKeys/startSecretKeys.js
 import type { SecretKeys } from "../../../src/auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
+import { MAX_FORWARDS_IN_FLIGHT } from "../../../src/http/handlers/errorHandler/createAtomErrorHandler.js";
 import { FIRST_ALLOWED_CHECKS_LOGGED } from "../../../src/http/middlewares/requestLog/requestLogMiddleware.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
@@ -42,6 +43,8 @@ const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
 	ready: new Int32Array([1]),
+	threadsReady: new Int32Array([1]),
+	thread: 0,
 	threadStats: THREAD_STATS,
 	dataDir: tmpdir(),
 };
@@ -1080,5 +1083,75 @@ describe("a customer's evict", () => {
 		);
 
 		expect(refused.map((response) => response.status)).toEqual([400, 400, 400]);
+	});
+});
+
+/** An Autumn API that never answers: each forward waits until the request carrying it is aborted. */
+const autumnHanging = () =>
+	spyOn(globalThis, "fetch").mockImplementation(
+		((_input: URL | RequestInfo, init?: RequestInit) =>
+			new Promise<Response>((_, reject) =>
+				init?.signal?.addEventListener("abort", () =>
+					reject(init.signal?.reason),
+				),
+			)) as typeof fetch,
+	);
+
+describe("forwards while the Autumn API hangs", () => {
+	test("past the cap, a check the API must answer is refused at once with a 503 the SDK takes to the API, never queued", async () => {
+		const { app } = createDeployedApp();
+		const fetchSpy = autumnHanging();
+		const callers = Array.from(
+			{ length: MAX_FORWARDS_IN_FLIGHT + 3 },
+			() => new AbortController(),
+		);
+		const responses = callers.map((caller) =>
+			app.request("/v1/balances.check", {
+				...checkMessages({ customer_id: "cus_missing" }),
+				signal: caller.signal,
+			}),
+		);
+
+		const refused = await Promise.all(responses.slice(MAX_FORWARDS_IN_FLIGHT));
+		for (const response of refused) {
+			expect(response.status).toBe(503);
+			expect(response.headers.get("x-atom-forwarded")).toBeNull();
+			expect(await response.json()).toMatchObject({ code: "atom_overloaded" });
+		}
+		expect(fetchSpy).toHaveBeenCalledTimes(MAX_FORWARDS_IN_FLIGHT);
+
+		for (const caller of callers) caller.abort();
+		await Promise.all(responses);
+	});
+
+	test("a caller that gives up ends its forward, and frees its place for the next", async () => {
+		const { app } = createDeployedApp();
+		const fetchSpy = autumnHanging();
+		const callers = Array.from(
+			{ length: MAX_FORWARDS_IN_FLIGHT },
+			() => new AbortController(),
+		);
+		const responses = callers.map((caller) =>
+			app.request("/v1/balances.check", {
+				...checkMessages({ customer_id: "cus_missing" }),
+				signal: caller.signal,
+			}),
+		);
+		await Bun.sleep(0);
+
+		for (const caller of callers) caller.abort();
+		await Promise.all(responses);
+		const forwardSignals = fetchSpy.mock.calls.map(([, init]) => init?.signal);
+		expect(forwardSignals.every((signal) => signal?.aborted)).toBe(true);
+
+		fetchSpy.mockResolvedValue(
+			Response.json({ allowed: true }, { status: 200 }),
+		);
+		const next = await app.request(
+			"/v1/balances.check",
+			checkMessages({ customer_id: "cus_missing" }),
+		);
+		expect(next.status).toBe(200);
+		expect(next.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 	});
 });
