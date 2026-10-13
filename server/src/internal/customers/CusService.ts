@@ -969,6 +969,7 @@ export class CusService {
 				.where(
 					and(
 						inArray(planLicenses.id, planLicenseIds),
+						eq(planLicenses.is_custom, true),
 						notExists(
 							db
 								.select({ id: customerLicenses.id })

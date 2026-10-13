@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test";
+import { afterAll, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { StreamRecord } from "../../../../src/stream/types/streamConsumer.js";
 
@@ -7,26 +7,31 @@ let peak = 0;
 let release: (() => void) | null = null;
 let gate: Promise<void> = Promise.resolve();
 const pushed: string[] = [];
-mock.module(
-	"../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js",
-	() => ({
-		pushSubjectToCache: async ({
-			cacheSubject,
-		}: {
-			cacheSubject: { identity: { customerId: string }; logOffset: bigint };
-		}) => {
-			inFlight++;
-			peak = Math.max(peak, inFlight);
-			await gate;
-			await Bun.sleep(1);
-			pushed.push(
-				`${cacheSubject.identity.customerId}@${cacheSubject.logOffset}`,
-			);
-			inFlight--;
-			return { targetsMs: 1, readMs: 1, sendMs: 1 };
-		},
-	}),
-);
+const pushSubjectToCachePath =
+	"../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js";
+// bun's mock.restore() keeps module mocks, so put the real module back for the files that run after this one.
+const realPushSubjectToCache = { ...(await import(pushSubjectToCachePath)) };
+afterAll(() => {
+	mock.module(pushSubjectToCachePath, () => realPushSubjectToCache);
+});
+mock.module(pushSubjectToCachePath, () => ({
+	...realPushSubjectToCache,
+	pushSubjectToCache: async ({
+		cacheSubject,
+	}: {
+		cacheSubject: { identity: { customerId: string }; logOffset: bigint };
+	}) => {
+		inFlight++;
+		peak = Math.max(peak, inFlight);
+		await gate;
+		await Bun.sleep(1);
+		pushed.push(
+			`${cacheSubject.identity.customerId}@${cacheSubject.logOffset}`,
+		);
+		inFlight--;
+		return { targetsMs: 1, readMs: 1, sendMs: 1 };
+	},
+}));
 
 const {
 	CACHE_PUSH_CONCURRENCY,

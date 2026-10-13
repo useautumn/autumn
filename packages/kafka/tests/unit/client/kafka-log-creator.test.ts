@@ -10,6 +10,9 @@ import type { KafkaTokenState } from "../../../src/client/kafkaTokens.js";
 
 const CONCURRENT_TRANSACTIONS =
 	"The producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing";
+const NOT_COORDINATOR = "This is not the correct coordinator for this group";
+const LEADERSHIP_ELECTION =
+	"There is no leader for this topic-partition as we are in the middle of a leadership election";
 const GROUP_AUTHORIZATION_FAILED =
 	"Not authorized to access group: Group authorization failed";
 const REBALANCE_IN_PROGRESS = "The group is rebalancing, so a rejoin is needed";
@@ -184,4 +187,57 @@ test("a producer that folds the refusal into its own message is lowered the same
 		},
 	});
 	expect(written).toEqual([]);
+});
+
+test("a coordinator move is written as INFO at the default level", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({ sink })(logLevel.INFO);
+	write(refusedResponse({ error: NOT_COORDINATOR }));
+	expect(written).toHaveLength(1);
+	expect(written[0]?.method).toBe("info");
+	expect(JSON.parse(written[0]?.line ?? "{}")).toMatchObject({
+		level: "INFO",
+		error: NOT_COORDINATOR,
+	});
+});
+
+test("a leadership election the producer folds into its own message is INFO", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({ sink })(logLevel.INFO);
+	write({
+		namespace: "Producer",
+		level: logLevel.ERROR,
+		label: "ERROR",
+		log: {
+			timestamp: "t",
+			message: `Failed to send messages: ${LEADERSHIP_ELECTION}`,
+		},
+	});
+	expect(written.map(({ method }) => method)).toEqual(["info"]);
+});
+
+test("a coordinator move is written at INFO once a minute per refusal; repeats inside the minute are DEBUG", () => {
+	let now = 0;
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({ sink, now: () => now })(logLevel.DEBUG);
+	write(refusedResponse({ error: NOT_COORDINATOR }));
+	write(refusedResponse({ error: LEADERSHIP_ELECTION }));
+	now = 59_999;
+	write(refusedResponse({ error: NOT_COORDINATOR }));
+	now = 60_000;
+	write(refusedResponse({ error: NOT_COORDINATOR }));
+	expect(written.map(({ method }) => method)).toEqual([
+		"info",
+		"info",
+		"debug",
+		"info",
+	]);
+});
+
+test("a rebalance in progress is written every time, as before", () => {
+	const { sink, written } = recordingSink();
+	const write = createKafkaLogCreator({ sink, now: () => 0 })(logLevel.INFO);
+	write(refusedResponse({ error: REBALANCE_IN_PROGRESS }));
+	write(refusedResponse({ error: REBALANCE_IN_PROGRESS }));
+	expect(written.map(({ method }) => method)).toEqual(["info", "info"]);
 });
