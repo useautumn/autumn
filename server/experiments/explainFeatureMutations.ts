@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv, RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle, prodTestOrgId } from "./experimentEnv";
@@ -194,7 +193,7 @@ const pickFeature = async ({ db }: { db: ReturnType<typeof initDrizzle>["db"] })
 
 const main = async () => {
 	const { db, client } = initDrizzle({
-		pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+		maxConnections: 1,
 		poolConfig: {
 			application_name: "experiment-feature-mutations-readonly",
 			query_timeout: 5_000,

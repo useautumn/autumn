@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import net from "node:net";
-import { getPostgresPools } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import {
@@ -63,9 +62,7 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 	const databaseUrl = process.env.DATABASE_URL;
 	process.env.DATABASE_URL = `postgres://user:password@127.0.0.1:${address.port}/db`;
 
-	const { client: deadClient } = initDrizzle({
-		pool: { ...getPostgresPools().adHoc, connectTimeoutMs: 1_000 },
-	});
+	const { client: deadClient } = initDrizzle({ connectTimeout: 1 });
 	const startedAt = Date.now();
 
 	try {

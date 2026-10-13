@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
 import { sql } from "drizzle-orm";
@@ -27,7 +26,7 @@ describe.skipIf(!databaseUrl)("migration db factory through PgBouncer", () => {
 	test("a pool-level statement_timeout is rejected at startup with 08P01", async () => {
 		const { db, client } = initDrizzle({
 			databaseUrl,
-			pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+			maxConnections: 1,
 			poolConfig: { statement_timeout: 1000 },
 		});
 		try {

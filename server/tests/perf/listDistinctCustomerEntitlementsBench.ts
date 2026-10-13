@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import { ACTIVE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle";
@@ -19,7 +18,7 @@ benchmarkDatabaseUrl.hostname = benchmarkDatabaseUrl.hostname.replace(
 
 const { db, client } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: { options: "-c temp_buffers=512MB" },
 });
 

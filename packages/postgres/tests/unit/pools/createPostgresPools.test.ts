@@ -67,6 +67,7 @@ describe("createPostgresPools", () => {
 			"replay",
 			"balanceWorker",
 			"herald",
+			"heraldEvents",
 		] as const) {
 			expect(development[name]).toEqual(production[name]);
 		}
@@ -111,6 +112,15 @@ describe("createPostgresPools", () => {
 			maxConnections: 2,
 			connectTimeoutMs: 10_000,
 			queryTimeoutMs: 30_000,
+		});
+		expect(production.heraldEvents).toEqual({
+			applicationName: "autumn-herald-events",
+			maxConnections: 4,
+			minConnections: 0,
+			connectTimeoutMs: 10_000,
+			idleTimeoutMs: 30_000,
+			queryTimeoutMs: 30_000,
+			statementTimeoutMs: null,
 		});
 	});
 

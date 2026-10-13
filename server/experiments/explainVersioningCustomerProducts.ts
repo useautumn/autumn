@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "../src/db/initDrizzle";
@@ -26,7 +25,7 @@ const planId = requireEnv({ key: "EXPLAIN_PLAN_ID" });
 const env = requireEnv({ key: "EXPLAIN_ENV" }) as AppEnv;
 const analyze = process.argv.includes("--analyze");
 const bounded = process.argv.includes("--bounded");
-const { db, client } = initDrizzle({ databaseUrl: dbUrl, pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, });
+const { db, client } = initDrizzle({ databaseUrl: dbUrl, maxConnections: 2 });
 
 const withStatementTimeout = async <T>({
 	run,

@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import {
 	AppEnv,
 	BillWhen,
@@ -39,7 +38,7 @@ const main = async () => {
 
 	const { db } = initDrizzle({
 		databaseUrl: dbUrl,
-		pool: { ...getPostgresPools().adHoc, maxConnections: 2 },
+		maxConnections: 2,
 		name: "explain-reusable-usage-price",
 	});
 

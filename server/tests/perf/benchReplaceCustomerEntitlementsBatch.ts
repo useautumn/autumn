@@ -5,7 +5,6 @@
  *   NODE_ENV=development infisical run --env=dev --recursive -- \
  *     bun tests/perf/benchReplaceCustomerEntitlementsBatch.ts
  */
-import { getPostgresPools } from "@autumn/postgres";
 import { type SQL, sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import { buildAddCustomerEntitlementsBatchQuery } from "@/internal/billing/v2/actions/batchTransition/execute/sql/addCustomerEntitlementsBatch.js";
@@ -65,7 +64,7 @@ if (!/^replace_entitlements_bench_\d+_\d+$/.test(BENCHMARK_SCHEMA)) {
 const { initDrizzle } = await import("@/db/initDrizzle.js");
 const { db: bootstrapDb, client: bootstrapClient } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: {
 		application_name: "replace-entitlements-bench-bootstrap",
 		query_timeout: 0,
@@ -77,7 +76,7 @@ await bootstrapDb.execute(
 
 const { db, client } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: {
 		application_name: "replace-entitlements-bench",
 		options: `-c search_path=${BENCHMARK_SCHEMA},public -c statement_timeout=0`,

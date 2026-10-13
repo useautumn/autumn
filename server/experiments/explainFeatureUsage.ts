@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 // Import initDrizzle directly — experimentEnv's loadLocalEnv() clobbers vars
@@ -42,7 +41,7 @@ const env =
 	process.env.EXPLAIN_APP_ENV === AppEnv.Sandbox ? AppEnv.Sandbox : AppEnv.Live;
 const analyze = process.argv.includes("--analyze");
 
-const { db, client } = initDrizzle({ pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, databaseUrl: dbUrl });
+const { db, client } = initDrizzle({ maxConnections: 2, databaseUrl: dbUrl });
 
 const runPlan = async ({
 	query,

@@ -1,4 +1,3 @@
-import { getPostgresPools } from "@autumn/postgres";
 import type { AppEnv } from "@autumn/shared";
 import { sql, type SQL } from "drizzle-orm";
 import { buildBoundedVersionableRowRefsQuery } from "../src/internal/customers/cusProducts/repos/getBoundedVersionableRowRefs";
@@ -27,7 +26,7 @@ const unionProbes = process.argv.includes("--union-probes");
 const orgId = requireEnv({ key: "EXPLAIN_ORG_ID" });
 const planId = requireEnv({ key: "EXPLAIN_PLAN_ID" });
 const env = requireEnv({ key: "EXPLAIN_ENV" }) as AppEnv;
-const { db, client } = initDrizzle({ databaseUrl: dbUrl, pool: { ...getPostgresPools().adHoc, maxConnections: 2 }, });
+const { db, client } = initDrizzle({ databaseUrl: dbUrl, maxConnections: 2 });
 
 const withStatementTimeout = async <T>({
 	run,

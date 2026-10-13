@@ -51,13 +51,19 @@ export const normalizeDbExecute = <
 /** Opens one pool from its row in the @autumn/postgres pool table. */
 export const initDrizzle = ({
 	pool = getPostgresPools().adHoc,
+	maxConnections = pool.maxConnections,
+	connectTimeout = pool.connectTimeoutMs / 1000,
 	replica = false,
 	databaseUrl,
 	poolConfig,
 	name,
 }: {
-	/** The pool's row; scripts, benches and tests take the ad hoc one. */
+	/** The pool's row. Long-lived pools pass theirs; scripts, benches and tests take the ad hoc one. */
 	pool?: PostgresPoolProfile;
+	/** Per-run sizing for scripts and benches, on top of the row. */
+	maxConnections?: number;
+	/** Seconds; per-run override on top of the row. */
+	connectTimeout?: number;
 	replica?: boolean;
 	databaseUrl?: string;
 	/** pg options the table has no column for, such as a read-only session. */
@@ -73,7 +79,14 @@ export const initDrizzle = ({
 	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({
-		...poolConfigOf({ config: { databaseUrl: dbUrl, ...pool } }),
+		...poolConfigOf({
+			config: {
+				databaseUrl: dbUrl,
+				...pool,
+				maxConnections,
+				connectTimeoutMs: connectTimeout * 1000,
+			},
+		}),
 		keepAlive: true,
 		keepAliveInitialDelayMillis: 60_000,
 		...poolConfig,
@@ -85,7 +98,7 @@ export const initDrizzle = ({
 			pool: client,
 			name,
 		});
-		registerPool({ pool: client, name, max: pool.maxConnections });
+		registerPool({ pool: client, name, max: maxConnections });
 	}
 	// After registerPool so a retry passes through timeAcquires as its own acquire attempt.
 	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });

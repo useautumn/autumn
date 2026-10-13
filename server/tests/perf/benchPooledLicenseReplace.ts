@@ -10,7 +10,6 @@
  * Does not use staging or prod. Drops the schema on exit.
  */
 
-import { getPostgresPools } from "@autumn/postgres";
 import { EntInterval } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
@@ -74,7 +73,7 @@ if (!/^pooled_replace_bench_\d+_\d+$/.test(BENCHMARK_SCHEMA)) {
 const { initDrizzle } = await import("@/db/initDrizzle.js");
 const { db: bootstrapDb, client: bootstrapClient } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: {
 		application_name: "pooled-replace-bench-bootstrap",
 		query_timeout: 0,
@@ -86,7 +85,7 @@ await bootstrapDb.execute(
 
 const { db, client } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: {
 		application_name: "pooled-replace-bench",
 		options: `-c search_path=${BENCHMARK_SCHEMA},public -c statement_timeout=0`,

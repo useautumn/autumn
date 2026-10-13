@@ -2,7 +2,6 @@
  * Run under `NODE_ENV=development infisical run --env=dev --recursive -- bun`. */
 
 import { mock } from "bun:test";
-import { getPostgresPools } from "@autumn/postgres";
 import {
 	AllowanceType,
 	AppEnv,
@@ -61,7 +60,7 @@ if (
 const { initDrizzle } = await import("@/db/initDrizzle");
 const { db: bootstrapDb, client: bootstrapClient } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: { ...getPostgresPools().adHoc, maxConnections: 1 },
+	maxConnections: 1,
 	poolConfig: {
 		application_name: "batch-transition-dev-benchmark-bootstrap",
 		query_timeout: 0,
@@ -73,10 +72,7 @@ await bootstrapDb.execute(
 
 const { db, client } = initDrizzle({
 	databaseUrl: benchmarkDatabaseUrl.toString(),
-	pool: {
-		...getPostgresPools().adHoc,
-		maxConnections: BENCHMARK_POOL_CONNECTIONS,
-	},
+	maxConnections: BENCHMARK_POOL_CONNECTIONS,
 	poolConfig: {
 		application_name: "batch-transition-dev-benchmark",
 		options: `-c search_path=${BENCHMARK_SCHEMA},public -c statement_timeout=0`,

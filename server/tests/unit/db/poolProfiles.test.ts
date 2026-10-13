@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { getPostgresPools, poolConfigOf } from "@autumn/postgres";
-import { clientCritical, clientGeneral } from "@/db/initDrizzle.js";
+import {
+	clientCritical,
+	clientGeneral,
+	initDrizzle,
+} from "@/db/initDrizzle.js";
 
 describe("server pools come from the @autumn/postgres pool table", () => {
 	test("critical and general pools carry their rows' clocks, plus the server's TCP keepalive", () => {
@@ -24,6 +28,20 @@ describe("server pools come from the @autumn/postgres pool table", () => {
 		});
 		expect(clientGeneral.options.application_name).toBeUndefined();
 		expect(clientGeneral.options.query_timeout).toBeUndefined();
+	});
+
+	test("a script's per-run size and connect clock apply on top of the ad hoc row", () => {
+		const { client } = initDrizzle({
+			databaseUrl: "postgres://user:secret@127.0.0.1:1/never",
+			maxConnections: 3,
+			connectTimeout: 10,
+		});
+		expect(client.options).toMatchObject({
+			max: 3,
+			connectionTimeoutMillis: 10_000,
+			idleTimeoutMillis: 30_000,
+		});
+		expect(client.options.query_timeout).toBeUndefined();
 	});
 
 	test("an unbounded row sets no pg query_timeout, so pg's own default (none) applies", () => {
