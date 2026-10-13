@@ -13,6 +13,14 @@ import type {
 /** The SDK edge's budget (packages/sdk/src/hooks/edge/edgeHTTPClient.ts EDGE_TIMEOUT_MS); past it the API deducts. */
 const ATOM_DEDUCT_TIMEOUT_MS = 1_000;
 
+/** Atom's answer to a call it would hand to the API without a secret key (apps/atom forwardToAutumn.ts). */
+const NOT_FORWARDED_CODE = "atom_not_forwarded";
+
+const isNotForwarded = ({ body }: { body: unknown }): boolean =>
+	typeof body === "object" &&
+	body !== null &&
+	(body as { code?: unknown }).code === NOT_FORWARDED_CODE;
+
 const ATOM_PATHS = {
 	check: "/v1/balances.check",
 	track: "/v1/track",
@@ -61,10 +69,14 @@ export const askAtomToDeduct = async ({
 				? { kind: "forwarded", reason: forwardReason }
 				: { kind: "down", reason: `http_${response.status}` };
 		}
+		const body: unknown = await response.json();
+		// This leg is keyless, so Atom's handback reaches us as its own refusal; a replica hop drops the header.
+		if (isNotForwarded({ body }))
+			return { kind: "forwarded", reason: NOT_FORWARDED_CODE };
 		return {
 			kind: "answered",
 			status: response.status as ContentfulStatusCode,
-			body: await response.json(),
+			body,
 		};
 	} catch (error) {
 		return {

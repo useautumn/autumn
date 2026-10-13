@@ -412,6 +412,22 @@ describe("a track", () => {
 		});
 	});
 
+	test("Atom's keyless handback without its header (a replica hop drops it) still runs on the API", async () => {
+		atom.reply = () =>
+			Response.json({ code: "atom_not_forwarded" }, { status: 401 });
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "track", body: queuedTrack });
+
+		expect(response.status).toBe(202);
+		expect(workerTrackSpy).toHaveBeenCalledTimes(1);
+		expect(deductLogs[0]).toMatchObject({
+			atom_reply: "forwarded",
+			atom_reason: "atom_not_forwarded",
+			answered_by: "api",
+		});
+	});
+
 	test("Atom unreachable falls back to the API under the minted key", async () => {
 		const down = Bun.serve({ port: 0, fetch: () => new Response() });
 		const endpointUrl = down.url.origin;
