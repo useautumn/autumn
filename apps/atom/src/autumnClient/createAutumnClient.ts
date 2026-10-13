@@ -51,17 +51,16 @@ const readSubject = async ({
 const appendTracks = async ({
 	ctx,
 	tokenHash,
-	tracks,
+	...request
 }: {
 	ctx: AutumnClientContext;
 	tokenHash: string;
-	tracks: AtomTracksAppendRequest["tracks"];
-}): Promise<void> => {
+} & AtomTracksAppendRequest): Promise<void> => {
 	await postToAutumn({
 		ctx,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash,
-		body: { tracks } satisfies AtomTracksAppendRequest,
+		body: request,
 	});
 };
 

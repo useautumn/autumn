@@ -68,6 +68,7 @@ export const createJournalForwarder = ({
 			try {
 				await ctx.autumnClient.appendTracks({
 					tokenHash: tokenHash(),
+					writer: journal.writerId,
 					tracks: batch.map(({ seq, command }) => ({ seq, command })),
 				});
 			} catch (error) {

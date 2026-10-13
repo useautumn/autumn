@@ -13,6 +13,8 @@ export type JournalEntry = {
 
 /** One slot's commands owed to Autumn, written only by the slot's owner thread. */
 export type Journal = {
+	/** Made once with the file: Autumn counts what it has seen per writer, since seqs count within one file. */
+	writerId: string;
 	/** In the customer's view from the call on; resolves once its commit is on disk, and rejects if the commit failed. */
 	append(params: {
 		customerId: string;
@@ -26,9 +28,14 @@ export type Journal = {
 	markSent(params: { entries: JournalEntry[] }): void;
 	/** Called after every commit. */
 	onCommitted(listener: () => void): void;
-	/** The customer's journal is backed up: its oldest unsent deduction is too old, or it owes too many. */
+	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */
 	isBackedUp(params: { customerId: string }): boolean;
-	/** After a push is stored: every entry at or below the seq it has seen from this Atom leaves the journal. */
-	reconcile(params: { customerId: string; atomSeq: number | null }): void;
+	/** After a push is stored: every entry at or below the seq it has seen from this journal's writer leaves the journal. */
+	reconcile(params: {
+		customerId: string;
+		atomSeqs: Record<string, number> | null;
+	}): void;
+	/** The customer is gone from Autumn: nothing it owes can ever apply. */
+	forget(params: { customerId: string }): void;
 	close(): void;
 };

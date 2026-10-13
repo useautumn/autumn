@@ -14,8 +14,7 @@ export type AutumnClient = {
 		entityId: string | null;
 	}): Promise<string>;
 	/** Resolves once Autumn durably holds every track; a track sent again is deduplicated by its command. */
-	appendTracks(params: {
-		tokenHash: string;
-		tracks: AtomTracksAppendRequest["tracks"];
-	}): Promise<void>;
+	appendTracks(
+		params: { tokenHash: string } & AtomTracksAppendRequest,
+	): Promise<void>;
 };

@@ -12,6 +12,6 @@ export type StoredSubject = {
 	readAt: number;
 	/** On the customer's own part, the log offset of its latest evict: an entity part read from before it may be stale. 0n on an entity's part. */
 	customerVersion: bigint;
-	/** On a push, the highest journal seq of this Atom's that `state` holds; never stored, since only the push settles the journal. */
-	atomSeq?: number | null;
+	/** On a push, the highest seq of each of this Atom's journals (by writer id) that `state` holds; never stored, since only the push settles the journal. */
+	atomSeqs?: Record<string, number> | null;
 };
