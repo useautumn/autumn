@@ -21,6 +21,7 @@ export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
+	| { type: "deleteSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
 	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
@@ -51,11 +52,16 @@ export type SubjectDigestOnWire = Omit<SubjectDigest, "logOffset"> & {
 };
 
 /** A written subject as it crosses threads or replicas: its bigints as decimal text. */
+/** Each kind of row as it crosses, its 64-bit versions as strings. */
+type SubjectOnWire<Row> = Row extends AppliedSubject["subject"]
+	? Omit<Row, "logOffset" | "customerVersion"> & {
+			logOffset: string;
+			customerVersion: string;
+		}
+	: never;
+
 export type AppliedSubjectOnWire = {
-	subject: Omit<AppliedSubject["subject"], "logOffset" | "customerVersion"> & {
-		logOffset: string;
-		customerVersion: string;
-	};
+	subject: SubjectOnWire<AppliedSubject["subject"]>;
 	appliedAt: number;
 };
 
@@ -82,5 +88,7 @@ export type OwnerReply =
 			cannotAnswer: ForwardReason | null;
 			/** The push can never apply: thrown again on the caller's thread as InvalidPushError. */
 			invalid: boolean;
+			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
+			unavailable: boolean;
 			message: string;
 	  };

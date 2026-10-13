@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const AtomPushType = {
 	SetSubject: "subjects.set",
 	SetCatalog: "catalog.set",
+	DeleteSubject: "subjects.delete",
 } as const;
 
 export type AtomPushType = (typeof AtomPushType)[keyof typeof AtomPushType];
@@ -29,7 +30,11 @@ export type QueuedAtomPush = Omit<AtomPushMessage, "body"> & { body: string };
 
 /** A gzip body travels as base64, since a queue message must be text. */
 const envelopeSchema = z.object({
-	type: z.enum([AtomPushType.SetSubject, AtomPushType.SetCatalog]),
+	type: z.enum([
+		AtomPushType.SetSubject,
+		AtomPushType.SetCatalog,
+		AtomPushType.DeleteSubject,
+	]),
 	atom: z.string().min(1).nullable(),
 	customer: z.string().min(1).nullable(),
 	enc: z.literal("gzip"),

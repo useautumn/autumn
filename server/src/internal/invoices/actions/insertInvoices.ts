@@ -177,6 +177,8 @@ export const insertInvoices = async ({
 				(planId) => planById.get(planId)!.internalId,
 			),
 			internal_customer_id: customer.internalId,
+			org_id: ctx.org.id,
+			env: ctx.env,
 			internal_entity_id: entity?.internalId ?? null,
 			stripe_id: invoice.stripe_id,
 			processor_type: invoice.processor_type,

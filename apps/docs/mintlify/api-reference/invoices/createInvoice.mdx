@@ -652,6 +652,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Stripe tax rate ID (txr_...) applied to every line.
 </DynamicParamField>
 
+<DynamicParamField body="payment_method_types" type="('card' | 'customer_balance' | 'us_bank_account' | 'sepa_debit' | 'bacs_debit' | 'acss_debit' | 'link')[]">
+  Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.
+</DynamicParamField>
+
 <DynamicParamField body="period_start" type="integer">
   Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
 </DynamicParamField>

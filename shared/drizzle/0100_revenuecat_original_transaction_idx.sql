@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customer_products_revenuecat_original_transaction" ON "customer_products" USING btree (("processor" ->> 'original_transaction_id')) WHERE ("customer_products"."processor" ->> 'type') = 'revenuecat' AND ("customer_products"."processor" ->> 'original_transaction_id') IS NOT NULL;

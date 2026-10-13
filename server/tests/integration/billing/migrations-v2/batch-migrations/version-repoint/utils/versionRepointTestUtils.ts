@@ -111,10 +111,13 @@ export const expectCustomerPlanRepointedInPlace = ({
 	before,
 	after,
 	targetVersion,
+	isCustom = before.isCustom,
 }: {
 	before: CustomerPlanRow;
 	after: CustomerPlanRow;
 	targetVersion: number;
+	/** A repoint whose items end up differing from the target version is re-derived as custom. */
+	isCustom?: boolean;
 }) => {
 	expect(after.id).toBe(before.id);
 	expect(after.internalProductId).not.toBe(before.internalProductId);
@@ -133,7 +136,7 @@ export const expectCustomerPlanRepointedInPlace = ({
 		internalEntityId: after.internalEntityId,
 	}).toEqual({
 		status: before.status,
-		isCustom: before.isCustom,
+		isCustom,
 		startsAt: before.startsAt,
 		canceledAt: before.canceledAt,
 		endedAt: before.endedAt,

@@ -88,6 +88,7 @@ export const insertInvoiceFromAttach = async ({
 				internalCustomerId: attachParams.customer.internal_id,
 				internalEntityId: attachParams.internalEntityId,
 				org: attachParams.org,
+				env: attachParams.customer.env,
 				productIds,
 				internalProductIds,
 				items: autumnInvoiceItems,

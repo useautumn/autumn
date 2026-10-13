@@ -65,9 +65,9 @@ export function createHeraldEnv(
 			apiKey: runtimeEnv.ALIEN_API_KEY,
 			project: runtimeEnv.ALIEN_PROJECT,
 		}),
-		/** Atoms only run on dev stacks and staging for now; production pushes will go through each org's queue. */
-		HERALD_ATOM_HTTP_PUSH:
-			runtimeEnv.NODE_ENV !== "production" || isStagingEnv({ runtimeEnv }),
+		/** Production pushes go through each Atom's SQS queue only; dev stacks and staging may still use HTTP. */
+		HERALD_ATOM_PUSH_QUEUE_ONLY:
+			runtimeEnv.NODE_ENV === "production" && !isStagingEnv({ runtimeEnv }),
 		/** Read by the blue/green identity: absent off ECS, where the gate fails open. */
 		ECS_CONTAINER_METADATA_URI_V4: trimmedOrUndefined(
 			runtimeEnv.ECS_CONTAINER_METADATA_URI_V4,

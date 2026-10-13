@@ -26,9 +26,8 @@ type PendingInvoiceCandidate = {
 	stripeInvoice?: Stripe.Invoice;
 };
 
-const isPayable = (candidate: PendingInvoiceCandidate) =>
-	candidate.stripeInvoice?.status === "open" &&
-	Boolean(candidate.stripeInvoice.hosted_invoice_url);
+export const isPayablePendingInvoice = (stripeInvoice?: Stripe.Invoice) =>
+	stripeInvoice?.status === "open" && Boolean(stripeInvoice.hosted_invoice_url);
 
 const byEarliestCreated = (
 	a: PendingInvoiceCandidate,
@@ -155,7 +154,9 @@ export const findPendingInvoiceConflict = async ({
 		});
 	}
 
-	const payable = candidates.find(isPayable);
+	const payable = candidates.find((candidate) =>
+		isPayablePendingInvoice(candidate.stripeInvoice),
+	);
 	if (!payable?.stripeInvoice) {
 		throw new RecaseError({
 			code: ErrCode.PendingPlanConflict,

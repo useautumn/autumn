@@ -122,9 +122,11 @@ export const PopoverSeparator = () => (
 export function CellHoverCard({
 	trigger,
 	children,
+	className,
 }: {
 	trigger: ReactElement;
 	children: ReactNode;
+	className?: string;
 }) {
 	return (
 		<HoverCard>
@@ -135,7 +137,11 @@ export function CellHoverCard({
 				side="bottom"
 				align="start"
 				sideOffset={10}
-				className={`${overlaySurfaceClassName} flex w-80 flex-col gap-2.5 p-3 text-xs`}
+				className={cn(
+					overlaySurfaceClassName,
+					"flex w-80 flex-col gap-2.5 p-3 text-xs",
+					className,
+				)}
 			>
 				{children}
 			</HoverCardContent>

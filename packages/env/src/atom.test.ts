@@ -11,6 +11,7 @@ const PEER_SECRET = "s".repeat(64);
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
 	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
+	ATOM_PEER_SECRET: PEER_SECRET,
 };
 
 describe("atom env", () => {
@@ -26,32 +27,31 @@ describe("atom env", () => {
 	});
 
 	test("a multi-tenant Atom's ATOM_TOKEN_HASH is the admin token that registers its orgs", () => {
-		const env = createAtomEnv({
-			ATOM_MODE: "multi_tenant",
-			ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
-			ATOM_HOSTNAME: "0.0.0.0",
-		});
+		const env = createAtomEnv({ ...MULTI_TENANT, ATOM_HOSTNAME: "0.0.0.0" });
 
 		expect(env.ATOM_MODE).toBe("multi_tenant");
 		expect(env.ATOM_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
 		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
-	test("an org's own Atom does not boot without ATOM_PEER_SECRET; a multi-tenant one has no peers to sign to", () => {
+	test("neither mode boots without ATOM_PEER_SECRET: every Atom's replicas sign to each other with it", () => {
 		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH })).toThrow(
 			"Set ATOM_PEER_SECRET",
 		);
 		expect(() =>
 			createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: " " }),
 		).toThrow("Set ATOM_PEER_SECRET");
-		expect("ATOM_PEER_SECRET" in createAtomEnv(MULTI_TENANT)).toBe(false);
-		const deployed = createAtomEnv({
-			ATOM_TOKEN_HASH: TOKEN_HASH,
-			ATOM_PEER_SECRET: ` ${PEER_SECRET} `,
-		});
-		expect(
-			deployed.ATOM_MODE === "deployed" ? deployed.ATOM_PEER_SECRET : null,
-		).toBe(PEER_SECRET);
+		expect(() =>
+			createAtomEnv({ ATOM_MODE: "multi_tenant", ATOM_TOKEN_HASH: TOKEN_HASH }),
+		).toThrow("Set ATOM_PEER_SECRET");
+		for (const env of [
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: ` ${PEER_SECRET} `,
+			}),
+			createAtomEnv({ ...MULTI_TENANT, ATOM_PEER_SECRET: ` ${PEER_SECRET} ` }),
+		])
+			expect(env.ATOM_PEER_SECRET).toBe(PEER_SECRET);
 	});
 
 	test("both modes need a SHA-256 ATOM_TOKEN_HASH", () => {
@@ -112,35 +112,27 @@ describe("atom env", () => {
 		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
-	test("runs as many threads as both its container's CPUs and memory allow", () => {
+	test("runs as many threads as its container's CPUs and memory allow, up to five", () => {
 		const GB = 1024 ** 3;
-		const threads = ({
-			cpus,
-			memory,
-			isContainerLimited = true,
-		}: {
-			cpus: number;
-			memory: number;
-			isContainerLimited?: boolean;
-		}) =>
+		const threads = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
 				{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: PEER_SECRET },
-				{ availableCpus: cpus, memoryLimitBytes: memory, isContainerLimited },
+				{ availableCpus: cpus, memoryLimitBytes: memory },
 			).ATOM_THREADS;
 
 		// Half a CPU and 512 MB, as the stack is provisioned today.
 		expect(threads({ cpus: 1, memory: 0.5 * GB })).toBe(1);
 		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
-		// Eight threads would not fit in 1 GB: memory decides.
-		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(2);
-		// Atom's sizes: Medium 3 / 6Gi, Large 7 / 12Gi, XL 15 / 24Gi use every CPU.
+		// Eight threads would not fit in 1 GB: memory decides, 288 MiB for the main thread then 384 MiB a thread with its held copies.
+		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(1);
+		expect(threads({ cpus: 8, memory: 2 * GB })).toBe(4);
+		// XXS: a 640 MiB container runs one thread.
+		expect(threads({ cpus: 1, memory: 640 * 1024 ** 2 })).toBe(1);
+		// Atom's sizes: Medium 3 / 6Gi uses every CPU; Large 7 / 12Gi and XL 15 / 24Gi stop at the cap.
 		expect(threads({ cpus: 3, memory: 6 * GB })).toBe(3);
-		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(7);
-		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(15);
-		// A container with no limits sees the whole host: the cap decides.
-		expect(
-			threads({ cpus: 64, memory: 256 * GB, isContainerLimited: false }),
-		).toBe(8);
+		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(5);
+		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(5);
+		expect(threads({ cpus: 64, memory: 256 * GB })).toBe(5);
 	});
 
 	test("is told how many threads to run when ATOM_THREADS is set", () => {
@@ -153,7 +145,6 @@ describe("atom env", () => {
 			{
 				availableCpus: 2,
 				memoryLimitBytes: 1024 ** 3,
-				isContainerLimited: true,
 			},
 		);
 
@@ -164,16 +155,14 @@ describe("atom env", () => {
 		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
-			isContainerLimited: true,
 		});
 		const small = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 2,
 			memoryLimitBytes: 4 * 1024 ** 3,
-			isContainerLimited: true,
 		});
 		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_THREADS: "3" });
 
-		expect(multiTenant.ATOM_THREADS).toBe(16);
+		expect(multiTenant.ATOM_THREADS).toBe(5);
 		expect(small.ATOM_THREADS).toBe(2);
 		expect(told.ATOM_THREADS).toBe(3);
 	});
@@ -184,11 +173,10 @@ describe("atom env", () => {
 			{
 				availableCpus: 8,
 				memoryLimitBytes: 16 * 1024 ** 3,
-				isContainerLimited: true,
 			},
 		);
 
-		expect(env.ATOM_THREADS).toBe(8);
+		expect(env.ATOM_THREADS).toBe(5);
 		expect(env.ATOM_PUSH_RECEIVERS).toBe(2);
 	});
 
@@ -302,16 +290,18 @@ describe("atom env", () => {
 				{
 					availableCpus: cpus,
 					memoryLimitBytes: memory,
-					isContainerLimited: true,
 				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
-		// 12 GiB on 7 threads: (9 GiB − 8 × 250 MiB) / 7 / 3.
+		// Large, 12 GiB on 5 threads: (12 GiB − 288 MiB − 5 × 192 MiB) × 0.5 / 5 / 5 ≈ 220 MiB, about 12k subjects of 18.6 KB.
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
-			Math.floor((9 * GiB - 8 * 250 * MiB) / 7 / 3),
+			Math.floor(((12 * GiB - 288 * MiB - 5 * 192 * MiB) * 0.5) / 5 / 5),
 		);
-		// Too small for more than the threads themselves: nothing is held, and every check reads its row.
-		expect(heldBytes({ cpus: 2, memory: 0.5 * GiB })).toBe(0);
+		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(220 * MiB);
+		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.5 / 5 = 16 MiB, about 900 subjects.
+		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(16 * MiB);
+		// Too small for the threads themselves: nothing is held, and every check reads its row.
+		expect(heldBytes({ cpus: 1, memory: 400 * MiB })).toBe(0);
 	});
 
 	test("the main thread logs its health every 10s unless told otherwise; an interval that would spin or overflow a timer is refused", () => {
@@ -335,7 +325,7 @@ describe("atom env", () => {
 				ATOM_PEER_SECRET: PEER_SECRET,
 				...env,
 			});
-			return atom.ATOM_MODE === "deployed" ? atom.ATOM_PEERS_FILE : undefined;
+			return atom.ATOM_PEERS_FILE;
 		};
 
 		expect(peersOf({ ATOM_HOSTNAME: "0.0.0.0" })).toBeNull();

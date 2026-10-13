@@ -1,5 +1,7 @@
 import {
 	BYOC_CACHE_AWS_REGIONS,
+	BYOC_CACHE_DISK_GB,
+	BYOC_CACHE_REPLICAS,
 	type ByocCacheAwsRegion,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
@@ -37,6 +39,20 @@ export const AtomCloudSection = ({
 	onContinue: () => void;
 }) => (
 	<AtomSetupSection
+		note={
+			<>
+				<p>
+					Runs {BYOC_CACHE_REPLICAS} replicas for high availability. Prices are
+					estimates at AWS list price (us-east-1), billed by AWS to your
+					account.
+				</p>
+				<p>
+					Created in your AWS account: {BYOC_CACHE_REPLICAS} × EC2 instance ·{" "}
+					{BYOC_CACHE_REPLICAS} × EBS volume ({BYOC_CACHE_DISK_GB} GB gp3) · 1 ×
+					SQS queue
+				</p>
+			</>
+		}
 		actions={
 			<Button variant="primary" onClick={onContinue}>
 				Continue

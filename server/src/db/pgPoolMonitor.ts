@@ -1,5 +1,10 @@
 import type { Pool, PoolClient } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import {
+	startSlowReadProbe,
+	stopSlowReadProbe,
+	watchSlowReads,
+} from "./slowReadProbe.js";
 
 type RegisteredPool = {
 	pool: Pool;
@@ -156,6 +161,7 @@ export const registerPool = ({
 	registry.set(name, { pool, name, max });
 	acquireStats.set(name, emptyAcquireStats());
 	timeAcquires({ pool, name });
+	watchSlowReads({ pool, name });
 };
 
 const emitSnapshot = (): void => {
@@ -201,6 +207,7 @@ export const startPgPoolMonitor = (intervalMs = 30_000): void => {
 	// Not unref'd: under Bun an unref'd interval was never observed to fire, and
 	// the server keeps the loop alive anyway — stopPgPoolMonitor clears it.
 	snapshotInterval = setInterval(emitSnapshot, intervalMs);
+	startSlowReadProbe();
 	emitSnapshot();
 	logger.info("[PgPoolMonitor] Started", {
 		type: "pg_pool_monitor_start",
@@ -214,6 +221,7 @@ export const stopPgPoolMonitor = (): void => {
 		clearInterval(snapshotInterval);
 		snapshotInterval = null;
 	}
+	stopSlowReadProbe();
 };
 
 export const getRegisteredPoolsForTesting = (): string[] =>

@@ -14,16 +14,23 @@
 			"class_name": "QaEnv",
 			"scheduling_policy": "durable_object",
 			"images": { "base": { "dockerfile": "./container/Dockerfile" } }
+		},
+		{
+			"class_name": "QaTinybird",
+			"scheduling_policy": "durable_object",
+			"images": { "tinybird": { "dockerfile": "./container-tinybird/Dockerfile" } }
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{ "name": "QA_ENV", "class_name": "QaEnv" },
-			{ "name": "QA_ROUTER", "class_name": "QaRouter" }
+			{ "name": "QA_ROUTER", "class_name": "QaRouter" },
+			{ "name": "QA_TINYBIRD", "class_name": "QaTinybird" }
 		]
 	},
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["QaEnv"] },
-		{ "tag": "v2", "new_sqlite_classes": ["QaRouter"] }
+		{ "tag": "v2", "new_sqlite_classes": ["QaRouter"] },
+		{ "tag": "v3", "new_sqlite_classes": ["QaTinybird"] }
 	]
 }

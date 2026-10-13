@@ -80,6 +80,37 @@ function tracksPositionAndHighWatermark(): void {
 	});
 }
 
+function tracksWhenTheLastConsumedRecordWasWritten(): void {
+	const tracker = createProgressTracker();
+	expect(tracker.readLastRecordTimestamp({ topic, partition })).toBeNull();
+
+	tracker.advance({
+		topic,
+		partition,
+		nextOffset: 8n,
+		lastRecordTimestampMs: 1_000,
+	});
+	tracker.advance({
+		topic,
+		partition,
+		nextOffset: 3n,
+		lastRecordTimestampMs: 5_000,
+	});
+	tracker.advance({ topic, partition, nextOffset: 9n });
+	expect(tracker.readLastRecordTimestamp({ topic, partition })).toBe(1_000);
+
+	tracker.advance({
+		topic,
+		partition,
+		nextOffset: 12n,
+		lastRecordTimestampMs: 2_000,
+	});
+	expect(tracker.readLastRecordTimestamp({ topic, partition })).toBe(2_000);
+
+	tracker.reset({ topic, partition, nextOffset: 3n });
+	expect(tracker.readLastRecordTimestamp({ topic, partition })).toBeNull();
+}
+
 function neverMovesHighWatermarkBackwards(): void {
 	const tracker = createProgressTracker();
 
@@ -126,6 +157,10 @@ function progressTrackerTests(): void {
 	test(
 		"never moves an observed high watermark backwards",
 		neverMovesHighWatermarkBackwards,
+	);
+	test(
+		"tracks when the last consumed record was written",
+		tracksWhenTheLastConsumedRecordWasWritten,
 	);
 	test("cancels a pending catch-up wait", cancelsPendingWait);
 }

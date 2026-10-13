@@ -1888,6 +1888,47 @@ describe("partition writer", () => {
 		}
 	});
 
+	test("by default keeps committing while a full store write is still landing", async () => {
+		const fixture = createFixture({ identities: [firstIdentity] });
+		const gate = Promise.withResolvers<void>();
+		const submitted: Promise<unknown>[] = [];
+		const committedWhileStoreWaits = 32;
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: { ...defaultLimits, maxBatchSize: 1 },
+				appender,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			for (let index = 0; index < committedWhileStoreWaits; index++)
+				submitted.push(
+					writer.submitTrack({
+						command: createCommand({ commandId: `cmd_${index}` }),
+					}),
+				);
+			for (
+				let tick = 0;
+				tick < 200 && appender.batches.length < committedWhileStoreWaits;
+				tick++
+			)
+				await waitForBatch();
+
+			expect(appender.batches).toHaveLength(committedWhileStoreWaits);
+		} finally {
+			gate.resolve();
+			await Promise.allSettled(submitted);
+			closeFixture(fixture);
+		}
+	});
+
 	/** Kafka refuses a batch over the topic's max.message.bytes, and on staging
 	 *  that sent a partition into recovery and took its worker down. A full batch
 	 *  of large records must split instead. */

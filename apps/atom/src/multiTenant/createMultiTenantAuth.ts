@@ -26,6 +26,8 @@ export type MultiTenantAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
 	putAtom(params: TenantAtom): void;
 	hasAtom(params: { id: string }): boolean;
+	/** Every tenant this Atom holds, as the folders record them. */
+	listAtoms(): TenantAtom[];
 	/** Deletes the Atom's folder. Removing one that is not held is a no-op. */
 	removeAtom(params: { id: string }): void;
 };
@@ -42,6 +44,7 @@ export const createMultiTenantAuth = ({
 	owners,
 	heldSubjects,
 	subjectPulls,
+	now,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
@@ -50,6 +53,8 @@ export const createMultiTenantAuth = ({
 	heldSubjects: HeldSubjects;
 	/** Each folder pulls with its own token hash, read at each pull since a put may re-token it. */
 	subjectPulls: SubjectPulls;
+	/** This replica's clock, stamped on every write. */
+	now?: () => number;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -130,6 +135,7 @@ export const createMultiTenantAuth = ({
 			atomId: held.id,
 			owners,
 			held: heldSubjects,
+			now,
 			pulls: {
 				subjectPulls,
 				tokenHash: () => held.tokenHash,
@@ -172,6 +178,14 @@ export const createMultiTenantAuth = ({
 		return hasAtomFile({ dataDir, id });
 	}
 
+	function listAtoms(): TenantAtom[] {
+		if (clock() - scannedAt >= TENANTS_REVALIDATE_MS) rescan();
+		return [...heldById.values()].map(({ id, tokenHash }) => ({
+			id,
+			tokenHash,
+		}));
+	}
+
 	function removeAtom({ id }: { id: string }): void {
 		const held = heldById.get(id);
 		if (held) forget(held);
@@ -186,5 +200,13 @@ export const createMultiTenantAuth = ({
 
 	rescan();
 
-	return { authorize, slotsFor, putAtom, hasAtom, removeAtom, close };
+	return {
+		authorize,
+		slotsFor,
+		putAtom,
+		hasAtom,
+		listAtoms,
+		removeAtom,
+		close,
+	};
 };

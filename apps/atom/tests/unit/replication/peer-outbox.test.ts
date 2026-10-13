@@ -90,6 +90,7 @@ const push = ({
 	kind: "subjects.set",
 	key,
 	body,
+	atomId: null,
 	headers: { "x-atom-customer-id": key },
 });
 

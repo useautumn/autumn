@@ -9,6 +9,7 @@ import type {
 	AppliedSubject,
 	SubjectDigest,
 } from "../../state/repos/subjectStates.js";
+import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type {
 	AppliedSubjectOnWire,
 	CheckRequestOnWire,
@@ -56,6 +57,7 @@ export const errorToReply = ({
 	ok: false,
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
 	invalid: error instanceof InvalidPushError,
+	unavailable: error instanceof OwnerUnavailableError,
 	message: error instanceof Error ? error.message : String(error),
 });
 
@@ -63,14 +65,19 @@ export const errorToReply = ({
 export const replyToError = ({
 	cannotAnswer,
 	invalid,
+	unavailable,
 	message,
+	thread,
 }: {
 	cannotAnswer: ForwardReason | null;
 	invalid: boolean;
+	unavailable: boolean;
 	message: string;
+	thread: number;
 }): Error => {
 	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
 	if (invalid) return new InvalidPushError(message);
+	if (unavailable) return new OwnerUnavailableError({ thread });
 	return new Error(message);
 };
 

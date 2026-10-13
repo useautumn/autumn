@@ -1329,6 +1329,7 @@ const qaEnv = ({
 	sha: hex(40),
 	building: null,
 	error: null,
+	tinybirdUrl: null,
 	createdAt: iso(createdMs),
 	expiresAt: iso(createdMs + 3 * 24 * HOUR),
 	lastActiveAt: null,

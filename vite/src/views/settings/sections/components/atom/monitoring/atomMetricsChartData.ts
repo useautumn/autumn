@@ -11,14 +11,30 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-const RANGE_AXES: Record<
-	AtomMetricsRange,
-	{ windowMs: number; tickStepMs: number; tickFormat: string }
-> = {
-	"1h": { windowMs: HOUR_MS, tickStepMs: 10 * MINUTE_MS, tickFormat: "HH:mm" },
-	"24h": { windowMs: DAY_MS, tickStepMs: 3 * HOUR_MS, tickFormat: "HH:mm" },
-	"7d": { windowMs: 7 * DAY_MS, tickStepMs: DAY_MS, tickFormat: "MMM d" },
+const RANGE_WINDOW_MS: Record<AtomMetricsRange, number> = {
+	"1h": HOUR_MS,
+	"24h": DAY_MS,
+	"7d": 7 * DAY_MS,
 };
+
+const TICK_STEPS_MS = [
+	MINUTE_MS,
+	2 * MINUTE_MS,
+	5 * MINUTE_MS,
+	10 * MINUTE_MS,
+	15 * MINUTE_MS,
+	30 * MINUTE_MS,
+	HOUR_MS,
+	3 * HOUR_MS,
+	6 * HOUR_MS,
+	12 * HOUR_MS,
+	DAY_MS,
+];
+const MAX_TICKS = 6;
+
+/** The finest round step that labels the span in at most six ticks. */
+const tickStepFor = (spanMs: number) =>
+	TICK_STEPS_MS.find((stepMs) => spanMs / stepMs <= MAX_TICKS) ?? DAY_MS;
 
 type AtomTrafficValues = {
 	answered: number | null;
@@ -41,7 +57,7 @@ export type AtomMetricsRow = AtomMetricsValues & {
 	statistics: Record<AtomMetricsStatistic, AtomMetricsValues>;
 };
 
-/** The latest 10s window's traffic. */
+/** The last minute's traffic. */
 export type AtomMetricsReading = AtomTrafficValues & { at: number };
 
 export type AtomMetricsSeries = {
@@ -54,13 +70,15 @@ export type AtomMetricsChartData = {
 	rows: AtomMetricsRow[];
 	/** The latest period. */
 	latest: AtomMetricsRow;
-	/** The latest 10s window, whichever statistic is chosen. */
+	/** The last minute, whichever statistic is chosen. */
 	now: AtomMetricsReading | null;
 	timeAxis: {
 		domain: [number, number];
 		ticks: number[];
 		formatTick: (x: number) => string;
 	};
+	/** When the last period with any requests ended; null when none in the plotted span. */
+	lastTrafficAt: number | null;
 };
 
 const localOffsetMs = (at: number) =>
@@ -90,7 +108,13 @@ const ratesToTraffic = (
 	pushes: rates?.pushes ?? null,
 });
 
-/** Every period in the range; one the Atom logged nothing in stays null, so lines break and bars skip it. */
+export const requestsOf = (
+	values: Pick<AtomMetricsValues, "answered" | "forwarded">,
+) => (values.answered ?? 0) + (values.forwarded ?? 0);
+
+const hasRequests = (row: AtomMetricsRow) => requestsOf(row) > 0;
+
+/** Every period from the range's start, or the Atom's first period if later; one it logged nothing in stays null, so lines break. */
 export const toAtomMetricsChartData = ({
 	points,
 	latest,
@@ -106,10 +130,10 @@ export const toAtomMetricsChartData = ({
 	statistic: AtomMetricsStatistic;
 	fetchedAt: number;
 }): AtomMetricsChartData | null => {
+	const firstPoint = points[0];
 	const latestPoint = points.at(-1);
-	if (!latestPoint) return null;
+	if (!firstPoint || !latestPoint) return null;
 
-	const { windowMs, tickStepMs, tickFormat } = RANGE_AXES[range];
 	const periodMs = periodSeconds * 1000;
 	const periodOf = (at: number) => Math.floor(at / periodMs);
 	const pointsByPeriod = new Map(
@@ -134,20 +158,27 @@ export const toAtomMetricsChartData = ({
 		};
 	};
 
-	const firstPeriod = periodOf(fetchedAt - windowMs);
+	const firstPeriod = Math.max(
+		periodOf(fetchedAt - RANGE_WINDOW_MS[range]),
+		periodOf(firstPoint.at),
+	);
 	const lastPeriod = periodOf(fetchedAt);
 	const from = firstPeriod * periodMs;
 	const to = (lastPeriod + 1) * periodMs;
+	const rows = Array.from(
+		{ length: lastPeriod - firstPeriod + 1 },
+		(_, index) => toRow(firstPeriod + index),
+	);
+	const tickStepMs = tickStepFor(to - from);
 	return {
-		rows: Array.from({ length: lastPeriod - firstPeriod + 1 }, (_, index) =>
-			toRow(firstPeriod + index),
-		),
+		rows,
 		latest: toRow(periodOf(latestPoint.at)),
 		now: latest && { at: latest.at, ...ratesToTraffic(latest) },
 		timeAxis: {
 			domain: [from, to],
 			ticks: roundLocalTicks({ from, to, stepMs: tickStepMs }),
-			formatTick: (x) => format(x, tickFormat),
+			formatTick: (x) => format(x, tickStepMs < DAY_MS ? "HH:mm" : "MMM d"),
 		},
+		lastTrafficAt: rows.filter(hasRequests).at(-1)?.endAt ?? null,
 	};
 };

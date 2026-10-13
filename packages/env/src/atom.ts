@@ -7,14 +7,19 @@ const LOCAL_ATOM_PEER_PORT = 8791;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** Only for a container given no limits, which sees its whole host; past this many, more threads only cost memory. */
-const MAX_UNLIMITED_THREADS = 8;
-/** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
-const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
-/** The rest is left for the OS, the files' page cache and a busy moment. */
-const MEMORY_SHARE_FOR_THREADS = 0.75;
-/** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
-const HELD_EXPANSION = 3;
+/** Measured on staging: past five, more threads at the same load cost CPU per check and p99 (Large 7→5, XL 15→5). */
+const MAX_THREADS = 5;
+const MiB = 1024 * 1024;
+/** Measured idle on Linux with 128 slot files open per thread: the main thread, then each serving thread on top. */
+const MAIN_THREAD_BYTES = 256 * MiB;
+const SERVING_THREAD_BYTES = 160 * MiB;
+/** Each SQLite connection keeps this much of its file in memory; every thread opens one per slot. */
+export const SQLITE_PAGE_CACHE_BYTES = 256 * 1024;
+const PAGE_CACHE_PER_THREAD_BYTES = SLOT_COUNT * SQLITE_PAGE_CACHE_BYTES;
+/** Of what the threads leave, this much may hold parsed subjects; the rest is headroom for pushes in flight and the collector's lag. */
+const HELD_SHARE = 0.5;
+/** Measured: a held subject's parsed, frozen objects take 4 to 6 times the bytes of its row text in RSS. */
+const HELD_EXPANSION = 5;
 const HEALTH_LOG_EVERY_MS = 10_000;
 /** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
 const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
@@ -25,7 +30,6 @@ const RECEIVER_SHARE_OF_THREADS = 0.3;
 type AtomMachine = {
 	availableCpus: number;
 	memoryLimitBytes: number;
-	isContainerLimited: boolean;
 };
 
 const readMachine = (): AtomMachine => {
@@ -34,20 +38,22 @@ const readMachine = (): AtomMachine => {
 	return {
 		availableCpus: availableParallelism(),
 		memoryLimitBytes: constrainedMemory || totalmem(),
-		isContainerLimited: constrainedMemory > 0,
 	};
 };
 
-/** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
+/** What the main thread and its page caches take, and what each serving thread with its own takes on top. */
+const MAIN_BYTES = MAIN_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+const PER_THREAD_BYTES = SERVING_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+
+/** How many serving threads fit in memory beside the main thread, each with as much again to hold subjects in. */
 const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
 	memoryLimitBytes: number;
-}): number => {
-	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_THREADS;
-	return Math.floor(budget / MEMORY_PER_THREAD_BYTES) - 1;
-};
-/** Row text each thread may hold parsed: the threads' memory share, less each thread's own, split between them and shrunk by the expansion. */
+}): number =>
+	Math.floor((memoryLimitBytes - MAIN_BYTES) / (2 * PER_THREAD_BYTES));
+
+/** Row text each thread may hold parsed: a share of what the threads leave, split between them and shrunk by the expansion. */
 const heldBytesPerThreadOf = ({
 	threads,
 	memoryLimitBytes,
@@ -55,10 +61,11 @@ const heldBytesPerThreadOf = ({
 	threads: number;
 	memoryLimitBytes: number;
 }): number => {
-	const forHeld =
-		memoryLimitBytes * MEMORY_SHARE_FOR_THREADS -
-		(threads + 1) * MEMORY_PER_THREAD_BYTES;
-	return Math.max(0, Math.floor(forHeld / threads / HELD_EXPANSION));
+	const left = memoryLimitBytes - MAIN_BYTES - threads * PER_THREAD_BYTES;
+	return Math.max(
+		0,
+		Math.floor((left * HELD_SHARE) / threads / HELD_EXPANSION),
+	);
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
@@ -70,16 +77,14 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 
 /**
  * One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`.
- * Only an org's own Atom has other replicas, signed to with the deployment's own secret; a multi-tenant one holds every folder itself.
+ * Either way its replicas sign what they send each other with the deployment's own secret.
  */
-type AtomModeEnv =
-	| {
-			ATOM_MODE: "deployed";
-			ATOM_TOKEN_HASH: string;
-			ATOM_PEER_SECRET: string;
-			ATOM_PEERS_FILE: string | null;
-	  }
-	| { ATOM_MODE: "multi_tenant"; ATOM_TOKEN_HASH: string };
+type AtomModeEnv = {
+	ATOM_MODE: "deployed" | "multi_tenant";
+	ATOM_TOKEN_HASH: string;
+	ATOM_PEER_SECRET: string;
+	ATOM_PEERS_FILE: string | null;
+};
 
 const isLoopback = (hostname: string): boolean =>
 	hostname.startsWith("127.") || hostname === "localhost" || hostname === "::1";
@@ -119,14 +124,13 @@ const modeEnvOf = ({
 		name: "ATOM_TOKEN_HASH",
 		value: tokenHash,
 	});
-	if (mode === "multi_tenant") return { ATOM_MODE: mode, ATOM_TOKEN_HASH };
 	const peerSecret = runtimeEnv.ATOM_PEER_SECRET?.trim();
 	if (!peerSecret)
 		throw new Error(
-			"Set ATOM_PEER_SECRET: an org's own Atom signs what it sends its other replicas with it, and the stack generates one per deployment",
+			"Set ATOM_PEER_SECRET: an Atom's replicas sign what they send each other with it, and the stack generates one per deployment",
 		);
 	return {
-		ATOM_MODE: "deployed",
+		ATOM_MODE: mode ?? "deployed",
 		ATOM_TOKEN_HASH,
 		ATOM_PEER_SECRET: peerSecret,
 		ATOM_PEERS_FILE: peersFileOf({ runtimeEnv, hostname }),
@@ -158,7 +162,7 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as both the container's CPUs and its memory allow, so a bigger size is used without a setting to keep in step.
+/** As many threads as the container's CPUs and memory allow, up to MAX_THREADS.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
@@ -172,9 +176,7 @@ const threadsOf = ({
 	const allowed = Math.min(
 		machine.availableCpus,
 		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		machine.isContainerLimited
-			? Number.POSITIVE_INFINITY
-			: MAX_UNLIMITED_THREADS,
+		MAX_THREADS,
 	);
 	return Math.max(1, allowed);
 };

@@ -42,7 +42,7 @@ const warnRateLimitBypass = () => {
 const CAP_EXCEEDED_WARNING_INTERVAL_MS = 10_000;
 const lastCapWarnAtByType = new Map<string, number>();
 
-const warnOrgCapExceeded = ({
+export const warnOrgCapExceeded = ({
 	limitType,
 	orgSlug,
 }: {
@@ -68,7 +68,7 @@ export const orgRateLimitExceededError = () =>
 	});
 
 /** The limiter options for one bucket; every limiter for it, single or paired, is built from these. */
-export const createRateLimitOptions = ({
+const createRateLimitOptions = ({
 	type,
 	config,
 	overLimit,

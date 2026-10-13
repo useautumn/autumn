@@ -26,12 +26,14 @@ const expectRepointedOnce = async ({
 	planId,
 	before,
 	result,
+	isCustom,
 }: {
 	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
 	customerId: string;
 	planId: string;
 	before: Awaited<ReturnType<typeof readRepointableCustomerPlanRow>>;
 	result: Parameters<typeof expectBatchLane>[0]["result"];
+	isCustom?: boolean;
 }) => {
 	expectBatchLane({ result });
 	const after = await readRepointableCustomerPlanRow({
@@ -39,7 +41,12 @@ const expectRepointedOnce = async ({
 		customerId,
 		planId,
 	});
-	expectCustomerPlanRepointedInPlace({ before, after, targetVersion: 2 });
+	expectCustomerPlanRepointedInPlace({
+		before,
+		after,
+		targetVersion: 2,
+		isCustom,
+	});
 	expect(await readCustomerPlanRows({ ctx, customerId, planId })).toHaveLength(
 		1,
 	);
@@ -112,6 +119,8 @@ test.concurrent(
 			planId: plan.id,
 			before,
 			result,
+			// Words keeps v1's 25 and Dashboard stays absent, so the row no longer matches v2.
+			isCustom: true,
 		});
 		expect(
 			(
@@ -266,6 +275,8 @@ test.concurrent(
 			planId: plan.id,
 			before,
 			result,
+			// The customer lacks v2's Dashboard, so the row no longer matches v2.
+			isCustom: true,
 		});
 		await expect(
 			readScopedFeatureRow({

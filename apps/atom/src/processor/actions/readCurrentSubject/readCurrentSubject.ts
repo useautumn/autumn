@@ -9,7 +9,10 @@ import {
 } from "../../../lib/forward/cannotAnswerError.js";
 import { deepFreeze } from "../../../state/deepFreeze.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
-import type { StoredSubject } from "../../../state/types/storedSubject.js";
+import {
+	isDeletedSubject,
+	type StoredSubject,
+} from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "./freshestCatalog.js";
@@ -26,11 +29,40 @@ const subjectNotStored = ({
 	entityId: string | null;
 	reason: Extract<
 		ForwardReason,
-		"customer_not_stored" | "entity_not_stored" | "entity_stale"
+		| "customer_not_stored"
+		| "customer_deleted"
+		| "entity_not_stored"
+		| "entity_deleted"
+		| "entity_stale"
 	>;
 }): CannotAnswerError => {
 	ctx.subjectPulls.request({ customerId, entityId });
 	return new CannotAnswerError({ reason });
+};
+
+/** A deleted part is a miss no copy read before the delete can fill: the API answers, and a pull finds it if it is back. */
+const readLivePart = ({
+	ctx,
+	customerId,
+	entityId,
+	part,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	entityId: string | null;
+	part: "customer" | "entity";
+}): StoredSubject => {
+	const row = ctx.sqliteStore.readSubject({
+		customerId,
+		entityId: part === "customer" ? null : entityId,
+	});
+	if (row && !isDeletedSubject(row)) return row;
+	throw subjectNotStored({
+		ctx,
+		customerId,
+		entityId,
+		reason: row ? `${part}_deleted` : `${part}_not_stored`,
+	});
 };
 
 /** The customer's own rows, and the entity's own beside them when the request is for an entity. */
@@ -43,24 +75,15 @@ const readStoredParts = ({
 	customerId: string;
 	entityId: string | null;
 }): { customer: StoredSubject; entity: StoredSubject | null } => {
-	const customer = ctx.sqliteStore.readSubject({ customerId, entityId: null });
-	if (!customer)
-		throw subjectNotStored({
-			ctx,
-			customerId,
-			entityId,
-			reason: "customer_not_stored",
-		});
+	const customer = readLivePart({
+		ctx,
+		customerId,
+		entityId,
+		part: "customer",
+	});
 	if (entityId === null) return { customer, entity: null };
 
-	const entity = ctx.sqliteStore.readSubject({ customerId, entityId });
-	if (!entity)
-		throw subjectNotStored({
-			ctx,
-			customerId,
-			entityId,
-			reason: "entity_not_stored",
-		});
+	const entity = readLivePart({ ctx, customerId, entityId, part: "entity" });
 	// Read from before the customer's latest evict, the entity may still hold rows that evict replaced.
 	const isEntityCurrent = entity.logOffset >= customer.customerVersion;
 	if (!isEntityCurrent)

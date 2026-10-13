@@ -1,0 +1,131 @@
+/**
+ * Volume with entities: an entity-feature item bills the customer's actual total past its total included
+ * on one net band; per-entity plans each bill their own overage. Preview must equal the renewal invoice.
+ */
+
+import { expect, test } from "bun:test";
+import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
+import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+
+// Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of included.
+test.concurrent(
+	`${chalk.yellowBright("volume-entity 1: entity feature, 3 entities × 100 included, one under → 550 over in net band 2 on customer total")}`,
+	async () => {
+		const customerId = "vol-entity-feature";
+		const volumeItem = items.volumeConsumableMessages({
+			includedUsage: 100,
+			entityFeatureId: TestFeature.Users,
+		});
+		const pro = products.pro({ id: "pro-vol-entity", items: [volumeItem] });
+
+		const scenario = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+				s.entities({ count: 3, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.warmEntityCaches(),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 500,
+					entityIndex: 0,
+				}),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 300,
+					entityIndex: 1,
+				}),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 50,
+					entityIndex: 2,
+					timeout: 3000,
+				}),
+			],
+		});
+
+		// 850 used − 300 included = 550 over (net band 2): 550 × $0.05 = $27.50; unused allowance doesn't offset
+		const { preview } = await expectNextInvoiceMatchesPreview({
+			ctx: scenario.ctx,
+			autumnV1: scenario.autumnV1,
+			autumnV2_2: scenario.autumnV2_2,
+			customerId,
+			testClockId: scenario.testClockId!,
+			advancedTo: scenario.advancedTo,
+			featureId: TestFeature.Messages,
+			expectedFeatureAmount: 27.5,
+		});
+		// $20 base + $27.50 usage
+		expect(preview.total).toBeCloseTo(47.5, 2);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("volume-entity 2: per-entity plans each bill their own overage on their own net band")}`,
+	async () => {
+		const customerId = "vol-entity-plans";
+		const volumeItem = items.volumeConsumableMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro-vol-ent-plans", items: [volumeItem] });
+
+		const scenario = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 150,
+					entityIndex: 0,
+				}),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 700,
+					entityIndex: 1,
+					timeout: 3000,
+				}),
+			],
+		});
+
+		// Entity 0: 50 over (net band 1): 50 × $0.10 = $5. Entity 1: 600 over (net band 2): 600 × $0.05 = $30
+		const { preview, renewalInvoice } = await expectNextInvoiceMatchesPreview({
+			ctx: scenario.ctx,
+			autumnV1: scenario.autumnV1,
+			autumnV2_2: scenario.autumnV2_2,
+			customerId,
+			testClockId: scenario.testClockId!,
+			advancedTo: scenario.advancedTo,
+		});
+
+		const previewUsageSubtotals = preview.line_items
+			.filter((lineItem) => lineItem.feature_id === TestFeature.Messages)
+			.map((lineItem) => lineItem.subtotal)
+			.sort((a, b) => a - b);
+		expect(previewUsageSubtotals).toEqual([5, 30]);
+		// 2 × $20 base + $5 + $30
+		expect(preview.total).toBeCloseTo(75, 2);
+
+		const [entity0, entity1] = scenario.entities;
+		const invoiceLineItems = await waitForInvoiceLineItems({
+			stripeInvoiceId: renewalInvoice.stripe_id,
+		});
+		const usageAmountByEntity = Object.fromEntries(
+			invoiceLineItems
+				.filter((lineItem) => lineItem.feature_id === TestFeature.Messages)
+				.map((lineItem) => [lineItem.entities[0]?.entity_id, lineItem.amount]),
+		);
+		expect(usageAmountByEntity).toEqual({ [entity0.id]: 5, [entity1.id]: 30 });
+	},
+);

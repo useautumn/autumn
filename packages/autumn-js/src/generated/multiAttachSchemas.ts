@@ -127,14 +127,6 @@ export const multiAttachFeatureQuantitySchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const multiAttachInvoiceModeSchema = z.object({
-	enabled: z.boolean(),
-	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize: z.union([z.boolean(), z.undefined()]).optional(),
-	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
-	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const multiAttachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
@@ -547,6 +539,9 @@ export const multiAttachInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
+	payment_method_types: z
+		.union([z.array(z.string()), z.undefined()])
+		.optional(),
 });
 
 export const multiAttachAttachDiscountOutboundSchema = z.object({
@@ -882,6 +877,19 @@ export const multiAttachFreeTrialParamsSchema = z.object({
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
 	onEnd: z.union([multiAttachOnEndSchema, z.undefined()]).optional(),
+});
+
+export const multiAttachPaymentMethodTypeSchema = closedEnumSchema;
+
+export const multiAttachInvoiceModeSchema = z.object({
+	enabled: z.boolean(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
+	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
+	paymentMethodTypes: z
+		.union([z.array(multiAttachPaymentMethodTypeSchema), z.undefined()])
+		.optional(),
 });
 
 export const multiAttachBillingBehaviorSchema = closedEnumSchema;

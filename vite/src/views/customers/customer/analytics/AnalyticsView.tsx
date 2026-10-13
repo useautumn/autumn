@@ -99,6 +99,7 @@ export const AnalyticsView = () => {
 		customer,
 		deductions,
 		aggregateOn,
+		measure,
 		features,
 		events,
 		queryLoading,
@@ -354,6 +355,7 @@ export const AnalyticsView = () => {
 						chartData,
 						chartConfig,
 						chartTicks,
+						unit: measure === "count" ? "events" : undefined,
 						geometry: chartGeometryOf({
 							interval,
 							binSize: bin_size,
@@ -367,6 +369,7 @@ export const AnalyticsView = () => {
 			chartData,
 			chartConfig,
 			chartTicks,
+			measure,
 			interval,
 			bin_size,
 			start,
@@ -477,6 +480,7 @@ export const AnalyticsView = () => {
 													}
 													chartConfig={displayedChart.chartConfig}
 													ticks={displayedChart.chartTicks}
+													unit={displayedChart.unit}
 												/>
 											</div>
 										</motion.div>
@@ -513,6 +517,13 @@ export const AnalyticsView = () => {
 									nameHeader={chartGroupBy ? "Series" : "Event"}
 									isLoading={isShowingStubs}
 									placeholder={tablePlaceholder}
+									unit={
+										displayedChart
+											? displayedChart.unit
+											: measure === "count"
+												? "events"
+												: undefined
+									}
 								/>
 							</motion.div>
 						</div>

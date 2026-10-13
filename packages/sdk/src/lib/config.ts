@@ -40,6 +40,14 @@ export type SDKOptions = {
    */
   serverURL?: string | undefined;
   /**
+   * The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
+   */
+  edgeURL?: string | undefined;
+  /**
+   * Send every call the edge serves (e.g. `check`) to `edgeURL` first, falling back to the Autumn API when the edge is down
+   */
+  useEdge?: boolean | undefined;
+  /**
    * Allows overriding the default user agent used by the SDK
    */
   userAgent?: string | undefined;

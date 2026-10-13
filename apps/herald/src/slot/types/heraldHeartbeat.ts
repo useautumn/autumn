@@ -15,6 +15,7 @@ export const JobHealthSchema = z.object({
 	membership: JobMembershipSchema,
 	partitions: z.number(),
 	maxLagRecords: z.number().nullable(),
+	maxLagMs: z.number().nullable(),
 });
 export type JobHealth = z.infer<typeof JobHealthSchema>;
 

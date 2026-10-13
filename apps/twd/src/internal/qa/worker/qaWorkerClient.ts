@@ -33,6 +33,7 @@ type BeginInput = {
 	ref: string;
 	runtimeEnv: Record<string, string>;
 	neonBranchId: string;
+	tinybird: boolean;
 };
 
 const workerConfig = ({ ctx }: { ctx: TwdContext }) => {

@@ -72,6 +72,8 @@ export const CusProductSchema = z.object({
 			// Store-owned billing period (ms); only set for RevenueCat plans.
 			current_period_start: z.number().nullish(),
 			current_period_end: z.number().nullish(),
+			// Store purchase this plan came from; only set for RevenueCat plans.
+			original_transaction_id: z.string().nullish(),
 			// subscription_id: z.string().optional().nullable(),
 			// subscription_schedule_id: z.string().optional().nullable(),
 			// last_invoice_id: z.string().optional().nullable(),

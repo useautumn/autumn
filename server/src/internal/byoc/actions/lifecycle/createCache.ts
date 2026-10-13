@@ -27,10 +27,10 @@ import {
 	cacheDeploymentToMachine,
 	cacheLockKey,
 	cacheOwner,
-	nextAtomId,
 	resourcesToMachine,
 } from "../../utils/byocCacheUtils.js";
 import { toCacheStages } from "../../utils/cacheStageUtils.js";
+import { nextFreeAtomId } from "../../utils/nextFreeAtomId.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
@@ -184,15 +184,16 @@ const startCacheSetup = async ({
 			org,
 			setupUrl: null,
 		});
-	// Atoms still being removed keep their own groups and stacks; a new one is named apart from them.
+	// Atoms still being removed, and groups that outlived theirs, keep their stacks; a new one is named apart.
 	const atomId =
 		existing?.id ??
-		nextAtomId({
+		(await nextFreeAtomId({
 			owner: cacheOwner({ org, env }),
-			existingAtomIds: (await cacheDeploymentRepo.findRemoving({ ctx })).map(
-				({ id }) => id,
-			),
-		});
+			existingAtomIds: (
+				await cacheDeploymentRepo.findRemoving({ ctx })
+			).map(({ id }) => id),
+			deployer: getAtomDeployer(),
+		}));
 
 	// A setup that is still waiting keeps its token, so a fresh link starts the same Atom.
 	const token = existing

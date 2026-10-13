@@ -378,6 +378,7 @@ export const setupAttachBillingContext = async ({
 		skipCustomPaymentMethodGuard: contextOverride.skipCustomPaymentMethodGuard,
 		skipExternalPSPGuard: contextOverride.skipExternalPSPGuard,
 		processorTypeOverride: contextOverride.processorTypeOverride,
+		processorOverride: contextOverride.processorOverride,
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		accessStartsAt,
 

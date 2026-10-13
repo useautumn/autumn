@@ -34,4 +34,5 @@ minimumReleaseAgeExcludes = [
 	"@alienplatform/bindings-linux-arm64-gnu",
 	"@alienplatform/bindings-linux-x64-gnu",
 	"@alienplatform/core",
+	"autumn-js",
 ]

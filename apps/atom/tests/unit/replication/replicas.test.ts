@@ -11,6 +11,7 @@ import {
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { catchUpBeforeServing } from "../../../src/replication/catchUp/catchUpFromPeers.js";
+import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	createThreadStatsBuffer,
@@ -20,6 +21,9 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
+	noPeer,
+	noReplication,
 	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -242,8 +246,8 @@ describe("a replica that starts", () => {
 				logger,
 				sleep: async () => {},
 			},
-			slots: b.slots,
-			window: null,
+			folders: createDeployedFolders({ slots: b.slots }),
+			windowOf: () => null,
 		});
 
 		expect(warnings.at(-1)).toBe("atom_catch_up_skipped");
@@ -410,9 +414,15 @@ describe("the public app", () => {
 					bootedAt: "2026-10-06T00:00:00.000Z",
 					restarts: new Int32Array(1),
 					ready: new Int32Array([1]),
+					threadsReady: new Int32Array([1]),
+					thread: 0,
 					threadStats,
+					dataDir: tmpdir(),
 				},
 				counters: openThreadCounters({ buffer: threadStats, index: 0 }),
+				loop: loopOnTime,
+				replication: noReplication,
+				peer: noPeer,
 			},
 		});
 		try {

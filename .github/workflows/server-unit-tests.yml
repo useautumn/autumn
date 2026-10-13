@@ -2,6 +2,9 @@ name: Server Unit Tests
 
 on:
   pull_request:
+  # Dev pushes seed twd's dev_status with per-file unit results (see seed-twd).
+  push:
+    branches: [dev]
 
 permissions:
   contents: read
@@ -14,6 +17,11 @@ jobs:
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
+      # paths-filter diffs via the API on pull_request but needs a local repo on push.
+      - name: Checkout code
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
       - name: Check changed files
         id: filter
         uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
@@ -49,3 +57,55 @@ jobs:
       - name: Run unit tests
         run: bun run test:unit
         working-directory: server
+        env:
+          UNIT_RESULTS_FILE: ${{ runner.temp }}/unit-results.json
+
+      - name: Keep per-file results for twd
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-results
+          path: ${{ runner.temp }}/unit-results.json
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # Best effort: a twd outage or a missing key never fails this workflow.
+  seed-twd:
+    name: Seed twd with dev unit results
+    needs: unit-tests
+    if: always() && github.event_name == 'push' && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    continue-on-error: true
+
+    steps:
+      - name: Download per-file results
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-results
+          path: ${{ runner.temp }}
+
+      - name: Upload to twd
+        env:
+          TWD_URL: ${{ vars.TWD_URL || 'https://twd.useautumn.com' }}
+          TWD_CI_API_KEY: ${{ secrets.TWD_CI_API_KEY }}
+          RESULTS_FILE: ${{ runner.temp }}/unit-results.json
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          CI_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TWD_CI_API_KEY" ]; then
+            echo "::warning::TWD_CI_API_KEY is not set; skipping the twd upload"
+            exit 0
+          fi
+          jq -n --arg branch "$BRANCH" --arg sha "$SHA" --arg ciRunId "$CI_RUN_ID" \
+            --slurpfile results "$RESULTS_FILE" \
+            '{source: "ci", branch: $branch, sha: $sha, ciRunId: $ciRunId, results: $results[0]}' \
+            > "$RUNNER_TEMP/twd-payload.json"
+          curl --fail-with-body --silent --show-error --retry 3 --max-time 30 \
+            -X POST "$TWD_URL/api/results/ingest" \
+            -H "Authorization: Bearer $TWD_CI_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/twd-payload.json"

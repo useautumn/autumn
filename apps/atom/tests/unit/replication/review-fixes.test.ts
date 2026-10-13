@@ -281,7 +281,12 @@ describe("F10: a refusal that is not the body's fault is tried again", () => {
 		const send = createPeerSender({
 			ctx: { secret: PEER_SECRET, port: PEER_PORT },
 		});
-		const operation = { kind: "subjects.set", key: "cus_1", body: "{}" };
+		const operation = {
+			kind: "subjects.set",
+			key: "cus_1",
+			body: "{}",
+			atomId: null,
+		};
 		const outcomes: string[] = [];
 		for (const status of [401, 429, 503, 400, 422, 200]) {
 			spyOn(globalThis, "fetch").mockResolvedValue(
@@ -321,7 +326,12 @@ describe("F11: what waits for a peer is bounded in bytes", () => {
 		const body = "x".repeat(10 * 1024 * 1024);
 		for (let i = 0; i < 12; i++)
 			await outbox.enqueue({
-				operation: { kind: "subjects.set", key: `cus_${i}`, body },
+				operation: {
+					kind: "subjects.set",
+					key: `cus_${i}`,
+					body,
+					atomId: null,
+				},
 				path: "/v1/subjects.set",
 			});
 

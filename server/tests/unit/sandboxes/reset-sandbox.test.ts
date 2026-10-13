@@ -13,6 +13,14 @@ await mockModuleWithRestore(
 	}),
 );
 await mockModuleWithRestore(
+	"@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js",
+	() => ({
+		queueBalanceWorkerEvicts: async () => {
+			calls.push("evicts");
+		},
+	}),
+);
+await mockModuleWithRestore(
 	"@/internal/orgs/orgUtils/clearOrgCache.js",
 	() => ({
 		clearOrgCache: async () => {
@@ -73,6 +81,7 @@ const stubDeletes = ({
 		}),
 		spyOn(CusService, "safeDeleteByOrgId").mockImplementation(async () => {
 			calls.push("customers");
+			return [{ id: "cus_1" }];
 		}),
 		spyOn(ProductService, "safeDeleteByOrgId").mockImplementation(async () => {
 			calls.push("products");
@@ -118,6 +127,7 @@ describe("resetSandbox (sandbox-only, drafts before the catalog)", () => {
 			"products",
 			"features",
 			"tx:commit",
+			"evicts",
 			"cache:products",
 			"cache:org",
 		]);
@@ -144,6 +154,7 @@ describe("resetSandbox (sandbox-only, drafts before the catalog)", () => {
 			"products",
 			"features",
 			"tx:commit",
+			"evicts",
 			"cache:products",
 			"cache:org",
 		]);

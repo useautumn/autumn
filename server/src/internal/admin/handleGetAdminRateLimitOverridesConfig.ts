@@ -13,6 +13,7 @@ import {
 	getRateLimitOverridesFromSource,
 	getRuntimeRateLimitOverridesStatus,
 } from "@/internal/misc/rateLimiter/rateLimitOverridesStore.js";
+import { listApiEndpoints } from "@/routers/listApiEndpoints.js";
 import { findRateLimitOverrideOrgs } from "./rateLimitOverrides/findRateLimitOverrideOrgs.js";
 
 export const handleGetAdminRateLimitOverridesConfig = createRoute({
@@ -45,6 +46,7 @@ export const handleGetAdminRateLimitOverridesConfig = createRoute({
 			...config,
 			defaults,
 			policies: listRateLimitPolicies({ overrides: config }),
+			knownEndpoints: listApiEndpoints(),
 			orgsByKey: await findRateLimitOverrideOrgs({
 				ctx,
 				orgKeys: Object.keys(config.orgs),

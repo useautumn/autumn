@@ -28,6 +28,7 @@ const recordingAlienClient = () => {
 			started.push(params);
 			return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 		},
+		findDeploymentGroup: async () => null,
 		findDeployment: async () => null,
 		getDeployment: async () => null,
 		retryDeployment: async () => {},
@@ -79,7 +80,7 @@ describe("starting an Atom on alien", () => {
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "c8g.xlarge", machines: 1 },
+			stateful: { machine: "c8g.xlarge", machines: 2 },
 		});
 	});
 
@@ -100,12 +101,14 @@ describe("starting an Atom on alien", () => {
 	});
 
 	test.each([
+		["t4g.micro", { cpu: 1, memory: "0.625Gi" }],
+		["t4g.small", { cpu: 1, memory: "1.375Gi" }],
 		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
 		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
 		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
 		["c8g.4xlarge", { cpu: 15, memory: "24Gi" }],
 	])(
-		"a %s size pins its machine and sizes the Atom container to fit it",
+		"a %s size pins one machine per replica and sizes the Atom container to fit it",
 		async (instanceType, container) => {
 			const { alienClient, started } = recordingAlienClient();
 			const deployer = createAlienAtomDeployer({ alienClient });
@@ -120,7 +123,7 @@ describe("starting an Atom on alien", () => {
 			});
 
 			expect(started[0]?.pools).toEqual({
-				stateful: { machine: instanceType, machines: 1 },
+				stateful: { machine: instanceType, machines: 2 },
 			});
 			expect(started[0]?.containers).toEqual({ atom: container });
 		},

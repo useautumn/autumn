@@ -58,6 +58,11 @@ export const useAtomActions = () => {
 		onSuccess: setCache,
 	});
 
+	const finish = useMutation({
+		mutationFn: () => postAtom<ApiByocCache>("finish_atom_setup"),
+		onSuccess: setCache,
+	});
+
 	// A delete keeps the record while the stack is torn down, so read where it landed.
 	const remove = useMutation({
 		mutationFn: ({ atomId }: { atomId?: string } = {}) =>
@@ -78,7 +83,7 @@ export const useAtomActions = () => {
 		}
 	};
 
-	return { create, resize, retry, remove, startSetup };
+	return { create, resize, retry, finish, remove, startSetup };
 };
 
 export type AtomActions = ReturnType<typeof useAtomActions>;

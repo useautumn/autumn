@@ -70,7 +70,7 @@ export const AllowedPaymentMethodsSubsection = () => {
 						className="font-medium shrink-0"
 					>
 						{allowedMethods === null
-							? "Stripe defaults"
+							? "Default methods"
 							: `${selected.length} selected`}
 					</IconButton>
 				</DropdownMenuTrigger>

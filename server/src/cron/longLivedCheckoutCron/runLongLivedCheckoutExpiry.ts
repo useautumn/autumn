@@ -5,10 +5,13 @@ import {
 	metadata,
 } from "@autumn/shared";
 import { addDays } from "date-fns";
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { expireCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
+import {
+	expireCustomerProducts,
+	expirePendingCustomerProducts,
+} from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -18,7 +21,7 @@ import type { CronContext } from "../utils/CronContext";
 
 const PAGE_SIZE = 100;
 
-// Served by idx_metadata_on_type_expires_at.
+// Served by idx_metadata_on_type_expires_at; deferred links are CheckoutSessionV2 rows tagged with the link.
 const getExpiredLongLivedCheckoutMetadata = ({
 	db,
 	now,
@@ -32,7 +35,15 @@ const getExpiredLongLivedCheckoutMetadata = ({
 			.from(metadata)
 			.where(
 				and(
-					eq(metadata.type, MetadataType.LongLivedCheckoutEnabledImmediately),
+					or(
+						eq(metadata.type, MetadataType.LongLivedCheckoutEnabledImmediately),
+						and(
+							eq(metadata.type, MetadataType.CheckoutSessionV2),
+							isNotNull(
+								sql`${metadata.data}->'billingContext'->'longLivedCheckout'`,
+							),
+						),
+					),
 					lt(metadata.expires_at, now),
 				),
 			)
@@ -109,6 +120,7 @@ const expireLongLivedCheckout = async ({
 		}
 	}
 
+	await expirePendingCustomerProducts({ ctx, metadataId: pendingMetadata.id });
 	await MetadataService.delete({ db: ctx.db, id: pendingMetadata.id });
 };
 

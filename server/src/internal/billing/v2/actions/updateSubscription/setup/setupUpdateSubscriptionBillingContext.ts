@@ -1,7 +1,6 @@
 import {
 	BillingVersion,
 	hasCustomItems,
-	isCollectionMethodSwitch,
 	orgDisableStripeWrites,
 	stripeRefToId,
 	type UpdateSubscriptionBillingContext,
@@ -208,7 +207,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		params,
 		stripeCustomer,
-		allowApplyToAutoTopups: isCollectionMethodSwitch(params),
 	});
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined

@@ -5,16 +5,15 @@ import {
 	isAllocatedPrice,
 	isConsumablePrice,
 	isPrepaidPrice,
+	isVolumePrice,
 	type Organization,
 	type Price,
 	priceAmountsForCurrency,
 	priceToStripeTiersMode,
-	TierBehavior,
-	type UsagePriceConfig,
+	priceToStripeUnitTiers,
 } from "@autumn/shared";
 import { priceToStripePrepaidV2Tiers } from "@utils/productUtils/priceUtils/convertPrice/priceToStripePrepaidV2Tiers";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
-import { priceToInArrearTiers } from "@/external/stripe/createStripePrice/createStripeInArrear";
 import {
 	inlinePriceToShape,
 	type StripePriceShape,
@@ -58,7 +57,7 @@ const stripeTierUpTo = (upTo?: number | "inf" | null) => upTo ?? "inf";
 const autumnTiersToShape = ({
 	tiers,
 }: {
-	tiers: ReturnType<typeof priceToInArrearTiers>;
+	tiers: ReturnType<typeof priceToStripeUnitTiers>;
 }): StripePriceShapeTier[] =>
 	tiers.map((tier) => ({
 		upTo: stripeTierUpTo(tier.up_to as number | "inf" | null | undefined),
@@ -88,17 +87,25 @@ export const autumnConsumablePriceToStripePriceShape = ({
 	org: Organization;
 }): StripePriceShape | null => {
 	if (!isConsumablePrice(price)) return null;
-	// Stripe sync-back only supports graduated tiers for now; volume tiers price usage differently.
-	if (price.tier_behavior === TierBehavior.VolumeBased) return null;
 
-	const config = price.config as UsagePriceConfig;
-	// Autumn's Stripe price creation path doesn't encode flat tier charges for consumable sync-back yet.
-	if (config.usage_tiers.some((tier) => tier.flat_amount != null)) return null;
+	// Sync-back doesn't encode flat tier charges on graduated consumables, even a 0 one.
+	const isVolume = isVolumePrice(price);
+	const hasFlatAmountKey = price.config.usage_tiers.some(
+		(tier) => tier.flat_amount != null,
+	);
+	if (!isVolume && hasFlatAmountKey) return null;
 
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
 
-	const tiers = priceToInArrearTiers({ price, entitlement, org, currency });
+	// Mirrors createStripeInArrearPrice: metered volume prices are created without flat fees.
+	const tiers = priceToStripeUnitTiers({
+		price,
+		entitlement,
+		org,
+		currency,
+		skipFlatFees: isVolume,
+	});
 	const recurringMetered = { ...recurring, usage_type: "metered" };
 
 	if (tiers.length === 1) {
@@ -124,7 +131,7 @@ export const autumnConsumablePriceToStripePriceShape = ({
 			currency,
 			billing_scheme: "tiered",
 			recurring: recurringMetered,
-			tiers_mode: "graduated",
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: autumnTiersToShape({ tiers }),
 		},
 	});
@@ -145,12 +152,11 @@ export const autumnAllocatedPriceToStripePriceShape = ({
 	org: Organization;
 }): StripePriceShape | null => {
 	if (!isAllocatedPrice(price)) return null;
-	if (price.tier_behavior === TierBehavior.VolumeBased) return null;
 
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
 
-	const tiers = priceToInArrearTiers({ price, entitlement, org, currency });
+	const tiers = priceToStripeUnitTiers({ price, entitlement, org, currency });
 	if (tiers.length === 1) {
 		const tier = tiers[0]!;
 		return inlinePriceToShape({
@@ -174,7 +180,7 @@ export const autumnAllocatedPriceToStripePriceShape = ({
 			currency,
 			billing_scheme: "tiered",
 			recurring,
-			tiers_mode: "graduated",
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: autumnTiersToShape({ tiers }),
 		},
 	});

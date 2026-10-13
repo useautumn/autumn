@@ -12,6 +12,7 @@ import {
 	getBillingCycleAnchors,
 	getCatalogRows,
 	getEntitySubjectRows,
+	getPostgresPools,
 	getSubjectRows,
 	insertPartitionProgress,
 	listPooledBalancesWithoutOtherContributions,
@@ -35,18 +36,10 @@ import type { SubjectLoadGate } from "./createSubjectLoadGate.js";
 export const workerPostgresClientConfig = ({
 	env,
 }: {
-	env: Pick<
-		BalanceWorkerEnv,
-		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
-	>;
+	env: Pick<BalanceWorkerEnv, "DATABASE_URL">;
 }): PostgresClientConfig => ({
 	databaseUrl: env.DATABASE_URL,
-	applicationName: "autumn-balance-worker",
-	maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
-	connectTimeout: 10,
-	idleTimeout: 30,
-	// Past the role's 2s statement_timeout plus bouncer queueing: only a connection that went silent waits this long.
-	queryTimeout: 5,
+	...getPostgresPools().balanceWorker,
 });
 
 /** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
@@ -55,10 +48,7 @@ export const createWorkerPostgresClient = ({
 	env,
 }: {
 	ctx: { logger?: PostgresLogger };
-	env: Pick<
-		BalanceWorkerEnv,
-		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
-	>;
+	env: Pick<BalanceWorkerEnv, "DATABASE_URL">;
 }): PostgresClient =>
 	createPostgresClient({ ctx, config: workerPostgresClientConfig({ env }) });
 
@@ -238,9 +228,6 @@ export const createWorkerDb = ({
 		}),
 });
 
-/** A flush must be quick or fail: the server cancels it past this, and the committer retries. */
-const FLUSH_STATEMENT_TIMEOUT_MS = 2_000;
-
 export const createCommitterDb = ({
 	ctx,
 }: {
@@ -287,7 +274,8 @@ export const createCommitterDb = ({
 						recordFold: ctx.timings.recordFlushRows,
 					},
 					request,
-					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+					statementTimeoutMs:
+						getPostgresPools().balanceWorker.statementTimeoutMs,
 					roundTrips: "single",
 				}),
 		});

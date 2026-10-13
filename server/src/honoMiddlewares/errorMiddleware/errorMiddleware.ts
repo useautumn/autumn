@@ -62,6 +62,13 @@ export const errorToResponse = ({
 /** Hono's error boundary: report through @autumn/errors, then answer with the API's error contract. */
 export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	const ctx = c.get("ctx");
+	// A handler that lost a deadline race still fails later; its response already went out.
+	if (c.finalized) {
+		ctx?.logger?.warn(
+			`${c.req.method} ${c.req.routePath} failed after its response was sent: ${err.message}`,
+		);
+		return c.res;
+	}
 	const error = callerErrorToRecaseError({ err, c });
 
 	reportError({

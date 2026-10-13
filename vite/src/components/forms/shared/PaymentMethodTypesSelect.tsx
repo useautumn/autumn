@@ -5,10 +5,21 @@ import {
 	DropdownMenuContent,
 	DropdownMenuTrigger,
 	FormLabel,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
+import { useRef } from "react";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
-import { INVOICE_PAYMENT_METHOD_OPTIONS } from "@/utils/invoicePaymentMethodOptions";
+import { useEnv } from "@/utils/envUtils";
+import {
+	INVOICE_PAYMENT_METHOD_OPTIONS,
+	paymentMethodLabel,
+} from "@/utils/invoicePaymentMethodOptions";
+import { getStripePaymentMethodConfigLink } from "@/utils/linkUtils";
+import { nextPaymentMethodTypes } from "./utils/nextPaymentMethodTypes";
 
 export const ORG_PAYMENT_METHODS_HELPER =
 	"Prefilled from your org's allowed payment methods";
@@ -20,11 +31,12 @@ export function PaymentMethodTypesSelect({
 	disabled,
 }: {
 	value: InvoicePaymentMethod[] | null;
-	onValueChange: (types: InvoicePaymentMethod[]) => void;
+	onValueChange: (types: InvoicePaymentMethod[] | null) => void;
 	description?: string;
 	disabled?: boolean;
 }) {
-	const { availableTypes, isLoading } = useStripePaymentMethodTypesQuery();
+	const { availableTypes, defaultConfiguration, isLoading } =
+		useStripePaymentMethodTypesQuery();
 	const selected = value ?? [];
 	const options = INVOICE_PAYMENT_METHOD_OPTIONS.filter(
 		(option) =>
@@ -38,7 +50,13 @@ export function PaymentMethodTypesSelect({
 			)
 				.map((option) => option.label)
 				.join(", ")
-		: "Stripe defaults";
+		: "Default methods";
+
+	// The prefilled value, captured once it loads (or at the first edit when nothing was prefilled).
+	const original = useRef<{ value: InvoicePaymentMethod[] | null } | null>(
+		null,
+	);
+	if (!original.current && value?.length) original.current = { value };
 
 	const toggle = ({
 		type,
@@ -47,30 +65,38 @@ export function PaymentMethodTypesSelect({
 		type: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = INVOICE_PAYMENT_METHOD_OPTIONS.map(
-			(option) => option.value,
-		).filter((option) =>
-			option === type ? checked : selected.includes(option),
+		original.current ??= { value };
+		onValueChange(
+			nextPaymentMethodTypes({
+				selected,
+				type,
+				checked,
+				original: original.current.value,
+			}),
 		);
-		// Stripe rejects an empty list, so the last type cannot be removed.
-		if (next.length > 0) onValueChange(next);
 	};
 
 	return (
-		<div className="min-w-0 space-y-1.5">
+		<div className="flex min-w-0 flex-col">
 			<FormLabel>Payment methods</FormLabel>
 			<DropdownMenu>
 				<DropdownMenuTrigger
 					disabled={isLoading || disabled}
 					className="input-base input-shadow-default input-state-open flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg text-sm whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					<span className="truncate">{summary}</span>
+					<span className="flex min-w-0 items-center gap-1.5">
+						<span className="truncate">{summary}</span>
+						{!selected.length && defaultConfiguration && (
+							<DefaultMethodsCount configuration={defaultConfiguration} />
+						)}
+					</span>
 					<ChevronDownIcon className="size-4 shrink-0 text-muted-foreground opacity-50" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-(--anchor-width)">
 					{options.map((option) => (
 						<DropdownMenuCheckboxItem
 							key={option.value}
+							className="cursor-pointer"
 							checked={selected.includes(option.value)}
 							onCheckedChange={(checked) =>
 								toggle({ type: option.value, checked })
@@ -82,8 +108,54 @@ export function PaymentMethodTypesSelect({
 				</DropdownMenuContent>
 			</DropdownMenu>
 			{description && (
-				<p className="text-xs text-tertiary-foreground">{description}</p>
+				<p className="mt-1.5 text-xs text-tertiary-foreground">{description}</p>
 			)}
 		</div>
+	);
+}
+
+/** Shows which methods Stripe offers when none are set, with a link to change them in Stripe. */
+export function DefaultMethodsCount({
+	configuration,
+}: {
+	configuration: { id: string; payment_method_types: string[] };
+}) {
+	const env = useEnv();
+	const { stripeAccount } = useOrgStripeQuery();
+	const types = configuration.payment_method_types;
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span
+					className="shrink-0 cursor-help rounded border px-1 text-xs tabular-nums text-tertiary-foreground"
+					onPointerDown={(event) => event.stopPropagation()}
+					onClick={(event) => event.stopPropagation()}
+				>
+					{types.length}
+				</span>
+			</TooltipTrigger>
+			<TooltipContent className="max-w-64">
+				<div className="space-y-1 py-1">
+					<p>{types.map(paymentMethodLabel).join(", ") || "None"}</p>
+					<p className="text-xs text-tertiary-foreground">
+						From your Stripe default payment method settings. Stripe only offers
+						the ones that support the invoice's currency.
+					</p>
+					<a
+						href={getStripePaymentMethodConfigLink({
+							configurationId: configuration.id,
+							env,
+							accountId: stripeAccount?.id,
+						})}
+						target="_blank"
+						rel="noreferrer"
+						className="text-xs text-primary underline"
+					>
+						Edit in Stripe
+					</a>
+				</div>
+			</TooltipContent>
+		</Tooltip>
 	);
 }

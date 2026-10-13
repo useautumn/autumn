@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	assertPinnedBun,
 	assertProject,
 	atomInputMatcher,
 	decideRelease,
@@ -40,6 +41,22 @@ describe("assertProject", () => {
 				channels: [{ projectId: "prj_s" }, { projectId: "prj_a" }],
 			}),
 		).toThrow();
+	});
+});
+
+describe("assertPinnedBun", () => {
+	test("passes when the bun on PATH is the one package.json pins", () => {
+		expect(() =>
+			assertPinnedBun({ packageManager: "bun@1.4.2", found: "1.4.2" }),
+		).not.toThrow();
+	});
+	test("refuses any other bun, or a packageManager that pins none", () => {
+		expect(() =>
+			assertPinnedBun({ packageManager: "bun@1.4.2", found: "1.3.14" }),
+		).toThrow("Expected bun 1.4.2");
+		expect(() =>
+			assertPinnedBun({ packageManager: "pnpm@9.0.0", found: "1.4.2" }),
+		).toThrow("pins no Bun version");
 	});
 });
 

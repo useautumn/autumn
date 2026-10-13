@@ -1,4 +1,7 @@
-import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
+import {
+	BALANCE_WORKER_SUBJECT_IDLE_EXPIRY_MS,
+	BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
+} from "@autumn/env/balanceWorkerConstants";
 import {
 	assertConsumerGroupTimings,
 	coPartitionedAssigner,
@@ -188,9 +191,10 @@ export function balanceWorkerEnvToRuntimeConfig({
 					memoryFraction: BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION,
 				}),
 			}),
+			subjectIdleExpiryMs: BALANCE_WORKER_SUBJECT_IDLE_EXPIRY_MS,
 			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
 			commitLingerMs: 5,
-			// Up to 16 commits land as one Postgres flush; a reader of the store cuts it short. DB control's applyLingerMs overrides it live.
+			// Up to a full flush of commits lands as one Postgres flush; a reader of the store cuts it short. DB control's applyLingerMs overrides it live.
 			applyLingerMs: 500,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,

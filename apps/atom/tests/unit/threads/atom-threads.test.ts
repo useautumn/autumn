@@ -12,6 +12,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { createAtomThreads } from "../../../src/threads/createAtomThreads.js";
 import { subjectBody } from "../utils/atomFixtures.js";
+import { FAILING_THREAD } from "./utils/failingThread.js";
 
 const ATOM_TOKEN = "atom_token_threads";
 const THREADS = 3;
@@ -38,8 +39,13 @@ const freePort = () => {
 /** The Atom as main.ts runs it, on its own port and folder: the workers are main.ts started again. */
 const startAtom = async ({
 	autumnApiUrl = "http://127.0.0.1:9",
+	failingSpawns = new Set<number>(),
+	sleep,
 }: {
 	autumnApiUrl?: string;
+	/** Which spawns, counted from 1, start a thread that fails before it is ready. */
+	failingSpawns?: Set<number>;
+	sleep?: (ms: number) => Promise<unknown>;
 } = {}) => {
 	const dataDir = mkdtempSync(join(tmpdir(), "atom-threads-"));
 	const port = freePort();
@@ -54,14 +60,19 @@ const startAtom = async ({
 		AUTUMN_API_URL: autumnApiUrl,
 	});
 	const workers: Worker[] = [];
+	let spawns = 0;
 	const atom = createAtomThreads({
 		ctx: {
 			spawnThread: () => {
-				const worker = new Worker(MAIN);
+				spawns += 1;
+				const worker = new Worker(
+					failingSpawns.has(spawns) ? FAILING_THREAD : MAIN,
+				);
 				workers.push(worker);
 				return worker;
 			},
 			logger: quietLogger,
+			sleep,
 		},
 		config: { env },
 	});
@@ -70,7 +81,7 @@ const startAtom = async ({
 		await atom.stop();
 		rmSync(dataDir, { recursive: true, force: true });
 	});
-	return { url: `http://127.0.0.1:${port}`, workers };
+	return { url: `http://127.0.0.1:${port}`, workers, stop: atom.stop };
 };
 
 const customerIds = Array.from({ length: 24 }, (_, i) => `cus_thread_${i}`);
@@ -349,5 +360,107 @@ describe("pulls across threads", () => {
 		expect(autumn.pulls).toEqual([
 			{ customer_id: "cus_missing", entity_id: null },
 		]);
+	}, 20_000);
+});
+
+const readHealth = async ({ url }: { url: string }) => {
+	try {
+		const response = await fetch(`${url}/health`, {
+			headers: { connection: "close" },
+		});
+		const body = (await response.json()) as {
+			status: string;
+			restarts: number;
+		};
+		return { code: response.status, ...body };
+	} catch {
+		return { code: 0, status: "unreachable", restarts: -1 };
+	}
+};
+
+describe("a thread that fails never takes the replica down", () => {
+	test("while one thread is replaced, /health stays 200 and every other thread's customers are answered", async () => {
+		const { url, workers } = await startAtom();
+		for (const customerId of customerIds)
+			await pushCustomer({ url, customerId, balance: 5 });
+		const others = customerIds.filter((id) => ownerOf(id) !== 1);
+
+		// From its close on: a connection already queued on the dying thread's socket is reset by the kernel, as in any crash.
+		const closed = new Promise((resolve) =>
+			workers[1]?.addEventListener("close", resolve, { once: true }),
+		);
+		workers[1]?.terminate();
+		await closed;
+		const healthCodes = new Set<number>();
+		const statuses = new Set<string>();
+		const otherCodes = new Set<number>();
+		const replacedBy = Date.now() + 10_000;
+		for (;;) {
+			const health = await readHealth({ url });
+			healthCodes.add(health.code);
+			statuses.add(health.status);
+			const answers = await Promise.all(
+				others.map((customerId) =>
+					checkCustomer({ url, customerId, requiredBalance: 1 }).then(
+						(response) => response.status,
+						() => 0,
+					),
+				),
+			);
+			for (const code of answers) otherCodes.add(code);
+			if (health.restarts === 1 && health.status === "alive") break;
+			expect(Date.now()).toBeLessThan(replacedBy);
+		}
+
+		expect([...healthCodes]).toEqual([200]);
+		expect(statuses.has("degraded")).toBe(true);
+		expect([...otherCodes]).toEqual([200]);
+	}, 20_000);
+
+	test("two threads dying together are both replaced, and the process lives", async () => {
+		const { url, workers } = await startAtom();
+		for (const customerId of customerIds)
+			await pushCustomer({ url, customerId, balance: 5 });
+
+		workers[0]?.terminate();
+		workers[2]?.terminate();
+		const replacedBy = Date.now() + 15_000;
+		let health = await readHealth({ url });
+		while (!(health.restarts === 2 && health.status === "alive")) {
+			expect(Date.now()).toBeLessThan(replacedBy);
+			await Bun.sleep(100);
+			health = await readHealth({ url });
+		}
+
+		for (const customerId of customerIds)
+			expect(
+				(await checkCustomer({ url, customerId, requiredBalance: 5 })).status,
+			).toBe(200);
+	}, 25_000);
+
+	test("a thread that fails to start is retried, each wait longer, and the Atom starts instead of exiting", async () => {
+		const waits: number[] = [];
+		const { url } = await startAtom({
+			failingSpawns: new Set([2, 4, 5]),
+			sleep: (ms) => {
+				waits.push(ms);
+				return Bun.sleep(1);
+			},
+		});
+
+		expect(waits).toEqual([1_000, 2_000, 4_000]);
+		expect(await readHealth({ url })).toMatchObject({
+			code: 200,
+			status: "alive",
+			restarts: 0,
+		});
+		const ownedByOne = customerIds.find((id) => ownerOf(id) === 1) ?? "";
+		await pushCustomer({ url, customerId: ownedByOne, balance: 3 });
+		const check = await checkCustomer({
+			url,
+			customerId: ownedByOne,
+			requiredBalance: 3,
+		});
+		expect(await check.json()).toMatchObject({ allowed: true });
 	}, 20_000);
 });

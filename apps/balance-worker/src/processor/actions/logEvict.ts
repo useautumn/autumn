@@ -6,7 +6,7 @@ import {
 } from "@autumn/balance-engine";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** After the drop: an empty record telling the log's readers another writer changed the customer. */
+/** After the drop: an empty record telling the log's readers another writer changed the customer, and which entity when the evict named one. */
 export const logEvict = async ({
 	scope,
 	command,
@@ -18,7 +18,6 @@ export const logEvict = async ({
 }): Promise<void> => {
 	const loggedCommand: LoggedEvictCommand = {
 		...command,
-		identity: { ...command.identity, entityId: null },
 		commandId: `evict_${crypto.randomUUID()}`,
 	};
 	await scope.ctx.writer.log({

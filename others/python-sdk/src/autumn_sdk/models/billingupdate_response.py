@@ -1119,6 +1119,17 @@ class BillingUpdateCustomize(BaseModel):
         return m
 
 
+BillingUpdatePaymentMethodType = Literal[
+    "card",
+    "customer_balance",
+    "us_bank_account",
+    "sepa_debit",
+    "bacs_debit",
+    "acss_debit",
+    "link",
+]
+
+
 class BillingUpdateInvoiceModeTypedDict(TypedDict):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
@@ -1132,6 +1143,8 @@ class BillingUpdateInvoiceModeTypedDict(TypedDict):
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
     net_terms_days: NotRequired[int]
     r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
+    payment_method_types: NotRequired[List[BillingUpdatePaymentMethodType]]
+    r"""Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Overrides the org's allowed payment methods."""
 
 
 class BillingUpdateInvoiceMode(BaseModel):
@@ -1152,6 +1165,9 @@ class BillingUpdateInvoiceMode(BaseModel):
     net_terms_days: Optional[int] = None
     r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
 
+    payment_method_types: Optional[List[BillingUpdatePaymentMethodType]] = None
+    r"""Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Overrides the org's allowed payment methods."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1160,6 +1176,7 @@ class BillingUpdateInvoiceMode(BaseModel):
                 "finalize",
                 "invoice_template_id",
                 "net_terms_days",
+                "payment_method_types",
             ]
         )
         serialized = handler(self)

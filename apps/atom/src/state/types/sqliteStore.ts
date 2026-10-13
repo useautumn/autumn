@@ -3,7 +3,7 @@ import type {
 	SubjectCursor,
 	SubjectDigest,
 } from "../repos/subjectStates.js";
-import type { StoredSubject } from "./storedSubject.js";
+import type { SubjectRow } from "./storedSubject.js";
 
 /** One slot's file behind named methods: everything above the state layer talks to this, never to SQLite. */
 export type SqliteStore = {
@@ -11,16 +11,18 @@ export type SqliteStore = {
 	readSubject(params: {
 		customerId: string;
 		entityId: string | null;
-	}): StoredSubject | null;
+	}): SubjectRow | null;
 	/** The version held for a subject, from the copy held or the row alone, parsing and holding nothing; null when absent. */
 	readVersion(params: {
 		customerId: string;
 		entityId: string | null;
 	}): { readAt: number; logOffset: bigint } | null;
+	/** The entities of the customer the file holds rows for. */
+	entityIdsOf(params: { customerId: string }): string[];
 	/** False when the subject was read before the one held, and so ignored. */
-	setSubject(params: { subject: StoredSubject }): boolean;
+	setSubject(params: { subject: SubjectRow }): boolean;
 	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
-	setSubjects(params: { subjects: StoredSubject[] }): boolean[];
+	setSubjects(params: { subjects: SubjectRow[] }): boolean[];
 	countSubjects(): number;
 	/** Subjects this file wrote at or after `after` (null: all), oldest write first, from `cursor` on, at most `limit`. */
 	listAppliedAfter(params: {
@@ -40,5 +42,12 @@ export type SqliteStore = {
 	}): AppliedSubject[];
 	/** The newest write held by this replica's clock, 0 when empty. */
 	maxAppliedAt(): number;
+	/** Drops up to `limit` customers none of whose rows was written since `before`, oldest first, whole, held copies included. */
+	dropCustomersWrittenBefore(params: { before: number; limit: number }): {
+		customers: number;
+		rows: number;
+	};
+	/** The pages the file holds: what it takes on the volume once the main thread has checkpointed its log. */
+	dataBytes(): number;
 	close(): void;
 };

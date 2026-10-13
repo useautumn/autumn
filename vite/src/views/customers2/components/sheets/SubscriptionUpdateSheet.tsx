@@ -4,8 +4,9 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, LONG_LIVED_CHECKOUT_PATH } from "@autumn/shared";
 import { useMemo } from "react";
+import { toast } from "sonner";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
@@ -43,6 +44,10 @@ import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheet
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { usePendingPaymentLink } from "./usePendingPaymentLink";
+
+const isLongLivedCheckoutUrl = (url: string) =>
+	new URL(url).pathname.split("/")[1] === LONG_LIVED_CHECKOUT_PATH;
 
 function SendInvoiceContent() {
 	const { formContext, isPending, handleInvoiceUpdate, previewQuery } =
@@ -83,6 +88,12 @@ function EditContent() {
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct } = formContext;
+	const isPendingPlan = customerProduct.status === CusProductStatus.Pending;
+	const { data: pendingPaymentLink } = usePendingPaymentLink({
+		customerId: formContext.customerId,
+		customerProductId: customerProduct.id,
+		enabled: isPendingPlan,
+	});
 
 	return (
 		<LayoutGroup>
@@ -127,16 +138,20 @@ function EditContent() {
 					</div>
 				</div>
 
-				{customerProduct.status === CusProductStatus.Pending &&
-					hasChanges &&
-					!hasNoBillingChanges && (
-						<div className="px-4 pt-4">
+				{isPendingPlan && hasChanges && !hasNoBillingChanges && (
+					<div className="px-4 pt-4">
+						{pendingPaymentLink?.longLived ? (
+							<InfoBox variant="note" classNames={{ infoBox: "w-full" }}>
+								Reuses the existing checkout link.
+							</InfoBox>
+						) : (
 							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
 								Updating creates a new payment link. The existing one will stop
 								working.
 							</InfoBox>
-						</div>
-					)}
+						)}
+					</div>
+				)}
 
 				<EditPlanSection />
 				<UpdateSubscriptionAdvancedSection />
@@ -298,6 +313,11 @@ export function SubscriptionUpdateSheet() {
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onCheckoutRedirect={(checkoutUrl) => {
+				// A long-lived link means the edit kept the customer's link; read it off the response so a slow lookup can't misroute.
+				if (isLongLivedCheckoutUrl(checkoutUrl)) {
+					toast.success("Checkout link updated");
+					return;
+				}
 				window.location.href = checkoutUrl;
 			}}
 			onApplied={onApplied}

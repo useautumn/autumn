@@ -25,6 +25,7 @@ describe("gated-write registry derivations", () => {
 			"setPlans",
 			"updateAgentRules",
 			"updateCustomer",
+			"updateInvoice",
 			"updateSubscription",
 			"voidInvoice",
 		]);
@@ -61,6 +62,7 @@ describe("gated-write registry derivations", () => {
 			setPlans: ["billing:write"],
 			updateCatalog: { ALL: ["plans:write", "features:write"] },
 			updateCustomer: ["customers:write"],
+			updateInvoice: ["billing:write"],
 			updatePlan: ["plans:write"],
 			updateSubscription: ["billing:write"],
 			voidInvoice: ["billing:write"],
@@ -90,6 +92,7 @@ describe("gated-write registry derivations", () => {
 			updateAgentRules: undefined,
 			updateCatalog: "previewUpdateCatalog",
 			updateCustomer: undefined,
+			updateInvoice: "getInvoice",
 			updatePlan: "previewUpdateCatalog",
 			updateSubscription: "previewUpdateSubscription",
 			voidInvoice: "getInvoice",

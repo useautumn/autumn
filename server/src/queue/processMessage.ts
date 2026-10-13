@@ -37,6 +37,7 @@ import { runClearCreditSystemCacheTask } from "@/internal/features/featureAction
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
+import { isCustomerCreateRateLimitError } from "@/internal/misc/rateLimiter/assertCustomerCreateWithinOrgLimit.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -85,7 +86,8 @@ export const shouldRetrySqsJobError = ({
 			return (
 				isTransientDbError({ error }) ||
 				isTransientRedisError({ error }) ||
-				balanceWorkerFailOpenReasonOf(error) !== null
+				balanceWorkerFailOpenReasonOf(error) !== null ||
+				isCustomerCreateRateLimitError(error)
 			);
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:

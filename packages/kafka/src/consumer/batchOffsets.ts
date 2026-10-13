@@ -1,5 +1,8 @@
 import type { EachBatchPayload } from "kafkajs";
-import { parseKafkaOffset } from "../client/kafkaOffsetUtils.js";
+import {
+	parseKafkaOffset,
+	parseKafkaTimestamp,
+} from "../client/kafkaOffsetUtils.js";
 import type {
 	TopicBatchParams,
 	TopicConsumerContext,
@@ -81,6 +84,9 @@ export async function commitBatchOffsets({
 			fetchedNextOffset > committedNextOffset
 				? fetchedNextOffset
 				: committedNextOffset,
+		lastRecordTimestampMs: parseKafkaTimestamp({
+			timestamp: payload.batch.messages.at(-1)?.timestamp,
+		}),
 	});
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
 }
