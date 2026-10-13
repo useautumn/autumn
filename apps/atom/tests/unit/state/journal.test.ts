@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	createState,
 	createTrackCommand,
@@ -154,7 +155,7 @@ describe("journal", () => {
 		const unwritable = {
 			...commandOf({ commandId: "b" }),
 			properties: { amount: 1n },
-		};
+		} as unknown as TrackCommand;
 
 		const settled = await Promise.allSettled([
 			journal.append({

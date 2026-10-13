@@ -30,6 +30,7 @@ const createProcessor = () => {
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
+			journal: null,
 		},
 	});
 };

@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import type { Journal } from "../../state/journal/types/journal.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { FolderSubjectPulls } from "../../subjectPulls/types/subjectPulls.js";
@@ -9,6 +10,8 @@ export type SlotProcessorContext = {
 	catalogStore: Pick<CatalogStore, "read">;
 	logger: AutumnLogger;
 	subjectPulls: FolderSubjectPulls;
+	/** The slot's commands owed to Autumn; null where the deployment's writes flag is off, so every send_event is the API's. */
+	journal: Journal | null;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */

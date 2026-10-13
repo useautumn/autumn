@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import * as replay from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
 import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
+import * as replay from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
 import { commandsSeenBy } from "../../../src/state/journal/commandsSeenBy.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
@@ -30,7 +30,10 @@ const openSlot = ({
 	const folder = createSlotFolder();
 	const open = () => {
 		const journal = openJournal({ databasePath: folder.journalPath, seenBy });
-		const slot = openSlotProcessor({ subjectsPath: folder.subjectsPath, journal });
+		const slot = openSlotProcessor({
+			subjectsPath: folder.subjectsPath,
+			journal,
+		});
 		return { ...slot, journal };
 	};
 	const slot = open();
@@ -72,7 +75,10 @@ const remainingOf = async ({
 const owe = ({ journal, value }: { journal: Journal; value: number }) =>
 	journal.append({
 		customerId: "cus_1",
-		command: owedCommand({ commandId: `owed_${value}_${Math.random()}`, value }),
+		command: owedCommand({
+			commandId: `owed_${value}_${Math.random()}`,
+			value,
+		}),
 	});
 
 describe("the derived view: Autumn's snapshot with what the Atom owes replayed on top", () => {
@@ -173,7 +179,11 @@ describe("the view is memoised", () => {
 		const replayed = spyOn(replay, "replayOwed");
 		cleanups.push(() => replayed.mockRestore());
 
-		const first = readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
+		const first = readCurrentSubject({
+			ctx,
+			customerId: "cus_1",
+			entityId: null,
+		});
 		for (let read = 0; read < 1000; read++)
 			expect(
 				readCurrentSubject({ ctx, customerId: "cus_1", entityId: null }),
@@ -200,7 +210,11 @@ describe("the view is memoised", () => {
 		);
 		await owe({ journal, value: 10 });
 
-		const view = readCurrentSubject({ ctx, customerId: "cus_1", entityId: "ent_42" });
+		const view = readCurrentSubject({
+			ctx,
+			customerId: "cus_1",
+			entityId: "ent_42",
+		});
 
 		expect(
 			view.fullSubject.customer_products

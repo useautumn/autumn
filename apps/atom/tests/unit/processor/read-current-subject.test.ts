@@ -66,6 +66,7 @@ const createContext = ({
 		catalogStore,
 		logger: getAtomLogger(),
 		subjectPulls: noFolderPulls,
+		journal: null,
 	};
 };
 afterEach(() => {

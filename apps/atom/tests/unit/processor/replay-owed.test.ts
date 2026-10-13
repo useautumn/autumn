@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { getUsageWindowBounds, EntInterval, ResetInterval } from "@autumn/shared";
 import {
 	applyMutation,
 	type Catalog,
@@ -10,6 +9,11 @@ import {
 	type TrackCommand,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
+import {
+	EntInterval,
+	getUsageWindowBounds,
+	ResetInterval,
+} from "@autumn/shared";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
@@ -32,7 +36,10 @@ const seededRandom = (seed: number) => {
 	};
 };
 
-const today = getUsageWindowBounds({ interval: EntInterval.Day, now: occurredAt });
+const today = getUsageWindowBounds({
+	interval: EntInterval.Day,
+	now: occurredAt,
+});
 
 /** A customer with one to three message grants, some in overage, some with rollovers, some under a daily cap. */
 const generateSubject = ({
@@ -41,13 +48,16 @@ const generateSubject = ({
 	random: () => number;
 }): { state: SubjectState; catalog: Catalog } => {
 	const pick = (max: number) => Math.floor(random() * max);
-	const customerEntitlements = Array.from({ length: 1 + pick(3) }, (_, index) => ({
-		...createCustomerEntitlement({
-			id: `messages_${index}`,
-			balance: pick(200) - 20,
+	const customerEntitlements = Array.from(
+		{ length: 1 + pick(3) },
+		(_, index) => ({
+			...createCustomerEntitlement({
+				id: `messages_${index}`,
+				balance: pick(200) - 20,
+			}),
+			usage_allowed: random() < 0.5,
 		}),
-		usage_allowed: random() < 0.5,
-	}));
+	);
 	const rollovers =
 		random() < 0.5
 			? [
@@ -106,11 +116,7 @@ const generateSubject = ({
 };
 
 /** What the Atom journals: granted already, so overflow; a few are for a feature nothing funds, which the worker refuses. */
-const generateOwed = ({
-	random,
-}: {
-	random: () => number;
-}): JournalEntry[] =>
+const generateOwed = ({ random }: { random: () => number }): JournalEntry[] =>
 	Array.from({ length: 1 + Math.floor(random() * 8) }, (_, index) => {
 		const unfunded = random() < 0.15;
 		const command: TrackCommand = {
@@ -183,7 +189,11 @@ describe("replaying what the Atom owes", () => {
 		for (let seed = 1; seed <= 200; seed++) {
 			const random = seededRandom(seed);
 			const { state, catalog } = generateSubject({ random });
-			const replayed = replayOwed({ owed: generateOwed({ random }), state, catalog });
+			const replayed = replayOwed({
+				owed: generateOwed({ random }),
+				state,
+				catalog,
+			});
 			for (const table of Object.keys(moved) as (keyof typeof moved)[])
 				if (JSON.stringify(replayed[table]) !== JSON.stringify(state[table]))
 					moved[table]++;
