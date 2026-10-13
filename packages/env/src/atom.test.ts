@@ -336,4 +336,18 @@ describe("atom env", () => {
 			peersOf({ ATOM_HOSTNAME: "0.0.0.0", ATOM_PEERS_FILE: "/tmp/peers" }),
 		).toThrow("loopback ATOM_HOSTNAME");
 	});
+
+	test("ATOM_LOCAL_WRITES is off unless set to true: only then does the Atom deduct send_event checks itself", () => {
+		const writesOf = (env: Record<string, string>) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
+				...env,
+			}).ATOM_LOCAL_WRITES;
+
+		expect(writesOf({})).toBe(false);
+		expect(writesOf({ ATOM_LOCAL_WRITES: "false" })).toBe(false);
+		expect(writesOf({ ATOM_LOCAL_WRITES: "true" })).toBe(true);
+		expect(() => writesOf({ ATOM_LOCAL_WRITES: "yes" })).toThrow();
+	});
 });
