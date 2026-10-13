@@ -17,9 +17,12 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
+import { checkParamsToTrackBody } from "../checkParamsToTrackBody.js";
 
 /** What a check learned from the worker; `state` is null when nothing is attached, since there was nothing to read. */
 /** What a check answers from: the decision, and the rows and catalog it was decided against (absent when nothing is attached). */
@@ -122,6 +125,24 @@ const isNothingAttached = ({ cause }: { cause: unknown }): boolean =>
 	cause.workerCode === "UNSUPPORTED_COMMAND" &&
 	cause.workerReason === "feature_not_found";
 
+/** The one track a deducting check sends; its command id is the request's, so a resend is a duplicate. */
+const deductingCheckCommand = ({
+	ctx,
+	body,
+}: {
+	ctx: AutumnContext;
+	body: ParsedCheckParams;
+}) =>
+	trackParamsToTrackCommand({
+		ctx,
+		enforceOverdueBlock: true,
+		lock: body.lock,
+		body: checkParamsToTrackBody({
+			body,
+			requiredBalance: requiredBalanceOf({ body }),
+		}),
+	});
+
 /**
  * A check with `send_event` or a lock is one track: reject mode, or the lock's own overage behaviour.
  * Whether it applied is the answer, so deciding and deducting cannot be split by another request.
@@ -136,21 +157,7 @@ export async function runDeductingCheck({
 	client: Pick<BalanceWorkerClient, "track">;
 }): Promise<WorkerCheckAnswer> {
 	assertCheckCanDeduct({ ctx, body });
-	const command = trackParamsToTrackCommand({
-		ctx,
-		enforceOverdueBlock: true,
-		lock: body.lock,
-		body: {
-			customer_id: body.customer_id,
-			entity_id: body.entity_id,
-			feature_id: body.feature_id,
-			value: requiredBalanceOf({ body }),
-			properties: body.properties,
-			skip_event: body.skip_event,
-			// A lock keeps its overage behaviour for a later confirm above the lock.
-			overage_behavior: body.lock?.overage_behavior ?? "reject",
-		},
-	});
+	const command = deductingCheckCommand({ ctx, body });
 	try {
 		const reply = await client.track({ command });
 		// A rejected track took nothing, so there is no lock to expire.
@@ -164,5 +171,29 @@ export async function runDeductingCheck({
 	} catch (cause) {
 		if (isNothingAttached({ cause })) return nothingAttachedAnswer({ body });
 		throw cause;
+	}
+}
+
+/**
+ * A `send_event` check that failed open: its track is queued on the command log, as a failed-open track's is.
+ * The command id is the one the check sent, so a command the worker took before going quiet is refused as a
+ * duplicate on replay, never deducted twice. A failed append is a 503.
+ */
+export async function queueDeductingCheck({
+	ctx,
+	body,
+	client = getBalanceWorkerClient(),
+}: {
+	ctx: AutumnContext;
+	body: ParsedCheckParams;
+	client?: Pick<BalanceWorkerClient, "queue">;
+}): Promise<void> {
+	assertCheckCanDeduct({ ctx, body });
+	try {
+		await client.queue.track({
+			commands: [deductingCheckCommand({ ctx, body })],
+		});
+	} catch (cause) {
+		rethrowBalanceWorkerError({ cause });
 	}
 }

@@ -17,12 +17,15 @@ export const getCheckFailOpenFallback = ({
 	requiredBalance,
 	error,
 	reason,
+	deductionQueued = false,
 }: {
 	ctx: AutumnContext;
 	body: ParsedCheckParams | (CheckParams & { feature_id: string });
 	requiredBalance: number;
 	error: unknown;
 	reason: CheckFailOpenReason;
+	/** A `send_event` check's deduction was queued for replay rather than dropped. */
+	deductionQueued?: boolean;
 }) => {
 	ctx.logger.warn("[check] Returning fail-open fallback response", {
 		type: "check_fail_open_fallback",
@@ -31,6 +34,7 @@ export const getCheckFailOpenFallback = ({
 		error,
 		feature_id: body.feature_id,
 		required_balance: requiredBalance,
+		deduction_queued: deductionQueued,
 	});
 
 	return buildCheckFallbackResponse({

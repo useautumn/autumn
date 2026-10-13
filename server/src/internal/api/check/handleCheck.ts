@@ -15,9 +15,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queueAtomShadowCheck.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
+import { queueDeductingCheck } from "@/internal/balances/check/balanceWorker/runDeductingCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import {
+	failOpenCheckDeducts,
+	queueFailOpenCheckDeduction,
+} from "./checkUtils/failOpenCheckDeduction.js";
 import {
 	type CheckFailOpenReason,
 	getCheckFailOpenFallback,
@@ -38,22 +43,57 @@ const checkFailOpenResponse = ({
 	params,
 	error,
 	reason,
+	deductionQueued,
 }: {
 	ctx: AutumnContext;
 	params: CheckParams;
 	error: unknown;
 	reason: CheckFailOpenReason;
+	deductionQueued?: boolean;
 }) => {
 	const body = parseCheckParamsForLock({ params });
 	return getCheckFailOpenFallback({
 		ctx,
 		body,
-		requiredBalance:
-			body.required_balance ??
-			body.required_quantity ??
-			DEFAULT_REQUIRED_BALANCE,
+		requiredBalance: requiredBalanceOfParams({ body }),
 		error,
 		reason,
+		deductionQueued,
+	});
+};
+
+const requiredBalanceOfParams = ({ body }: { body: ParsedCheckParams }) =>
+	body.required_balance ?? body.required_quantity ?? DEFAULT_REQUIRED_BALANCE;
+
+/**
+ * The legacy route timeout: a `send_event` check queues its deduction before answering allowed. The handler
+ * that lost the race keeps running, and the replay dedupes against it on the request id. A refused queue
+ * still answers allowed: the running handler will likely deduct, and a 503 would invite a retry that
+ * deducts again under a new request id.
+ */
+const legacyTimeoutResponse = async ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: CheckParams;
+}) => {
+	const body = parseCheckParamsForLock({ params });
+	const deductionQueued =
+		failOpenCheckDeducts({ ctx, body }) &&
+		(await queueFailOpenCheckDeduction({
+			ctx,
+			body,
+			requiredBalance: requiredBalanceOfParams({ body }),
+		}));
+	return checkFailOpenResponse({
+		ctx,
+		params,
+		error: new Error(
+			`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
+		),
+		reason: "route_timeout",
+		deductionQueued,
 	});
 };
 
@@ -72,15 +112,11 @@ export const handleCheck = createRoute({
 					body.product_id,
 			);
 		},
-		respond: (c) =>
+		respond: async (c) =>
 			c.json(
-				checkFailOpenResponse({
+				await legacyTimeoutResponse({
 					ctx: c.get("ctx"),
 					params: c.req.valid("json"),
-					error: new Error(
-						`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
-					),
-					reason: "route_timeout",
 				}),
 				202,
 			),
@@ -118,8 +154,22 @@ export const handleCheck = createRoute({
 					ctx,
 					source: "check",
 					run: runOnWorker,
-					fallback: async ({ error, reason }) =>
-						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
+					fallback: async ({ error, reason }) => {
+						// The check's own track, queued: the usage it allows is still recorded.
+						const deducts = failOpenCheckDeducts({ ctx, body: rawBody });
+						if (deducts)
+							await queueDeductingCheck({
+								ctx,
+								body: parseCheckParamsForLock({ params: rawBody }),
+							});
+						return checkFailOpenResponse({
+							ctx,
+							params: rawBody,
+							error,
+							reason,
+							deductionQueued: deducts,
+						});
+					},
 				});
 			if (!failedOpen)
 				queueAtomShadowCheck({
