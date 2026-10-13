@@ -59,6 +59,30 @@ test.each([
 	["a new grant keeps the pair", { included: 200 }, {}, [false, changed]],
 	["a priced item keeps the pair", priced, {}, [false, changed]],
 	[
+		"a formerly priced item keeps the pair",
+		{},
+		{ billing_method: "prepaid" },
+		[false, changed],
+	],
+	[
+		"a removed rate is summarised",
+		{ feature_override: { credit_schema: [] } },
+		{},
+		[true, "Rate card changed undefined → undefined"],
+	],
+	[
+		"a per-units rate is summarised",
+		{
+			feature_override: {
+				credit_schema: [
+					{ metered_feature_id: "gateway", credit_cost: 2, billing_units: 100 },
+				],
+			},
+		},
+		{ previous_feature_override: rates(2) },
+		[true, "Rate card changed undefined → undefined"],
+	],
+	[
 		"an empty stamp diffs against the default rates",
 		{},
 		{ previous_feature_override: {} },

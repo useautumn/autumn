@@ -31,8 +31,11 @@ export type ItemRateRow = ReturnType<
 const rateCard = (override: FeatureConfigOverride, inherited?: Feature) => {
 	const schema: CreditSchemaItem[] =
 		override.schema ?? inherited?.config?.schema ?? [];
+	// A per-units rate (feature_amount) isn't flat, so a change to it shows as "Rate card changed".
 	const isFlat = (item: CreditSchemaItem) =>
-		!item.tiers && !hasCreditDimensionRules(item);
+		!item.tiers &&
+		!hasCreditDimensionRules(item) &&
+		(item.feature_amount ?? 1) === 1;
 	const flat = schema.filter(isFlat);
 	return {
 		flat: new Map(
@@ -94,13 +97,17 @@ export const migrationOpRateRows = ({
 				];
 			},
 		);
-		if (after.rest !== (before?.rest ?? rateCard({}).rest))
+		const removedFlat = [...(before?.flat.keys() ?? [])].some(
+			(featureId) => !after.flat.has(featureId),
+		);
+		if (removedFlat || after.rest !== (before?.rest ?? rateCard({}).rest))
 			changes.push({ key: "rate-card", label: "Rate card changed" });
 		const updated =
 			remove !== undefined &&
 			!!stamp &&
 			changes.length > 0 &&
 			!add.price &&
+			remove.billing_method === undefined &&
 			remove.included === add.included &&
 			sameCadence(add, remove);
 		return { addIndex, removeIndex, changes, updated };
