@@ -164,6 +164,20 @@ const listCatalogByLicenseInternalProductIds = async ({
 		),
 	});
 
+const listByLicenseInternalProductIds = async ({
+	db,
+	licenseInternalProductIds,
+}: {
+	db: DrizzleCli;
+	licenseInternalProductIds: string[];
+}) =>
+	await db.query.planLicenses.findMany({
+		where: inArray(
+			planLicenses.license_internal_product_id,
+			licenseInternalProductIds,
+		),
+	});
+
 const listCustomerReferencedByLicenseInternalProductIds = async ({
 	db,
 	licenseInternalProductIds,
@@ -309,6 +323,7 @@ export const planLicenseRepo = {
 	retireCatalogById,
 	listCatalogByParentInternalProductIds,
 	listCatalogByLicenseInternalProductIds,
+	listByLicenseInternalProductIds,
 	listCustomerReferencedByLicenseInternalProductIds,
 	listWithLicensePlanIdByParents,
 	listCatalogByOrgEnv,

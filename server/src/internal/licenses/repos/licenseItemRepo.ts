@@ -330,6 +330,7 @@ export const licenseItemRepo = {
 	setItems,
 	replaceItems,
 	cloneItems,
+	sweepUnreferencedCustomRows,
 	listReferencedEntitlementIds,
 	listReferencedPriceIds,
 } as const;
