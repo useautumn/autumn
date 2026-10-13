@@ -3,6 +3,7 @@ import { ArrowCounterClockwiseIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useCreditSchemaList } from "../hooks/useCreditSchemaList";
 import { useFeatureOverride } from "../hooks/useFeatureOverride";
+import { restoreCatalogRate } from "../utils/creditOverrideSchema";
 import { createSchemaItem } from "../utils/creditSchemaUtils";
 import {
 	addableFeatures,
@@ -18,8 +19,11 @@ export function CreditOverrideRateCard() {
 	const { creditSystem, override, schema, setSchema, clear } =
 		useFeatureOverride();
 	const list = useCreditSchemaList({ schema, onChange: setSchema });
-	// The picker row stays out of the override until a feature is chosen.
-	const [picking, setPicking] = useState(false);
+	// Keyed by feature so restores that reorder rows keep the same one open; "" is the unsaved picker row.
+	const [openFeatureId, setOpenFeatureId] = useState<string | null>(null);
+	const picking = openFeatureId === "";
+	const toggle = (featureId: string) =>
+		setOpenFeatureId((current) => (current === featureId ? null : featureId));
 	const rows = rateCardRows({
 		override: override?.schema ?? [],
 		catalog: creditSystem?.config?.schema ?? [],
@@ -46,7 +50,7 @@ export function CreditOverrideRateCard() {
 					size="sm"
 					className="w-full text-tertiary-foreground"
 					disabled={picking || addable.length === 0}
-					onClick={() => setPicking(true)}
+					onClick={() => setOpenFeatureId("")}
 				>
 					<PlusIcon size={12} />
 					Add a feature {creditSystemName} does not cover
@@ -57,18 +61,20 @@ export function CreditOverrideRateCard() {
 				const index = schema.findIndex(
 					(item) => item.metered_feature_id === row.featureId,
 				);
-				const key = list.schemaKeys[index] ?? row.featureId;
-				if (index >= 0 && list.expandedKey === key)
+				if (index >= 0 && openFeatureId === row.featureId)
 					return (
-						<li key={key} className="p-1">
+						<li key={row.featureId} className="p-1">
 							<CreditRateCardRow
 								item={schema[index]}
 								availableFeatures={list.availableFeaturesFor(schema[index])}
 								allFeatures={list.allSchemaCandidateFeatures}
 								onChange={(item) => list.setSchemaItem({ index, item })}
-								onRemove={() => list.removeSchemaItem(index)}
+								onRemove={() => {
+									setOpenFeatureId(null);
+									list.removeSchemaItem(index);
+								}}
 								isExpanded
-								onToggle={() => list.toggleExpandedKey(key)}
+								onToggle={() => toggle(row.featureId)}
 								showRateCardControls
 							/>
 						</li>
@@ -76,10 +82,10 @@ export function CreditOverrideRateCard() {
 				const restorable = row.state === "changed" || row.state === "excluded";
 				return (
 					<RateCardRow
-						key={key}
+						key={row.featureId}
 						row={row}
 						features={list.allSchemaCandidateFeatures}
-						onClick={index >= 0 ? () => list.toggleExpandedKey(key) : undefined}
+						onClick={index >= 0 ? () => toggle(row.featureId) : undefined}
 						action={
 							restorable && (
 								<InlineAction
@@ -90,12 +96,12 @@ export function CreditOverrideRateCard() {
 										)
 									}
 									onClick={() =>
-										setSchema([
-											...schema.filter(
-												(item) => item.metered_feature_id !== row.featureId,
-											),
-											row.catalogRate,
-										])
+										setSchema(
+											restoreCatalogRate({
+												schema,
+												catalogRate: row.catalogRate,
+											}),
+										)
 									}
 								>
 									{row.state === "excluded" ? "Restore" : "Reset"}
@@ -112,12 +118,12 @@ export function CreditOverrideRateCard() {
 						availableFeatures={addable}
 						allFeatures={list.allSchemaCandidateFeatures}
 						onChange={(item) => {
-							setPicking(false);
-							list.addSchemaItem(item);
+							setOpenFeatureId(item.metered_feature_id);
+							setSchema([...schema, item]);
 						}}
-						onRemove={() => setPicking(false)}
+						onRemove={() => setOpenFeatureId(null)}
 						isExpanded
-						onToggle={() => setPicking(false)}
+						onToggle={() => setOpenFeatureId(null)}
 						showRateCardControls
 					/>
 				</li>

@@ -3,6 +3,7 @@ import {
 	type Feature,
 	findFeatureById,
 	getFeatureName,
+	hasCreditDimensionRules,
 	isAiCreditSystem,
 } from "@autumn/shared";
 import { isGraduated } from "./creditSchemaUtils";
@@ -10,10 +11,18 @@ import { isGraduated } from "./creditSchemaUtils";
 const formatCredits = (amount: number) =>
 	`${amount} ${amount === 1 ? "credit" : "credits"}`;
 
-const dimensionCountSuffix = (item: CreditSchemaItem): string => {
-	const count = Object.keys(item.dimensions ?? {}).length;
-	if (count === 0) return "";
-	return ` · ${count} ${count === 1 ? "dimension" : "dimensions"}`;
+const countLabel = (count: number, noun: string) =>
+	`${count} ${noun}${count === 1 ? "" : "s"}`;
+
+/** " · varies by event · 2 dimensions, 1 multiplier", so a rule-based rate never reads as fixed. */
+const variesSuffix = (item: CreditSchemaItem): string => {
+	if (!hasCreditDimensionRules(item)) return "";
+	const counts = [
+		[Object.keys(item.dimensions ?? {}).length, "dimension"],
+		[Object.keys(item.multipliers ?? {}).length, "multiplier"],
+	] as const;
+	const parts = counts.flatMap(([n, noun]) => (n ? [countLabel(n, noun)] : []));
+	return ` · varies by event · ${parts.join(", ")}`;
 };
 
 export const creditRateSummary = ({
@@ -38,7 +47,7 @@ export const creditRateSummary = ({
 			? `${formatCredits(item.tiers[0].credit_amount)}${per}`
 			: `${item.tiers.length} tiers · from ${formatCredits(item.tiers[0].credit_amount)}`;
 
-	return `${rate}${dimensionCountSuffix(item)}`;
+	return `${rate}${variesSuffix(item)}`;
 };
 
 /** The unit a feature's rate is counted in: "web searches", or "of AI usage" for AI children. */

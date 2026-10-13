@@ -52,3 +52,17 @@ export const effectiveSchemaToOverride = ({
 
 	return [...differingRows, ...excludedRows];
 };
+
+/** Puts a catalog row back in place of the plan's edited or removed one. */
+export const restoreCatalogRate = ({
+	schema,
+	catalogRate,
+}: {
+	schema: CreditSchemaItem[];
+	catalogRate: CreditSchemaItem;
+}): CreditSchemaItem[] => [
+	...schema.filter(
+		(item) => item.metered_feature_id !== catalogRate.metered_feature_id,
+	),
+	catalogRate,
+];

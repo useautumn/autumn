@@ -18,6 +18,7 @@ import {
 import {
 	effectiveSchemaToOverride,
 	overrideToEffectiveSchema,
+	restoreCatalogRate,
 } from "./creditOverrideSchema";
 
 const row = (metered_feature_id: string, credit_amount: number) =>
@@ -70,4 +71,24 @@ test("an unedited card stores nothing", () => {
 			catalog: creditSystem.config.schema,
 		}),
 	).toEqual([]);
+});
+
+test("restoring a row above the open one moves the open row down, so rows are keyed by feature", () => {
+	const catalog = creditSystem.config.schema;
+	const before = overrideToEffectiveSchema({
+		override: [{ metered_feature_id: "image_gen", excluded: true }],
+		creditSystem,
+	});
+	const after = overrideToEffectiveSchema({
+		override: effectiveSchemaToOverride({
+			schema: restoreCatalogRate({ schema: before, catalogRate: catalog[1] }),
+			catalog,
+		}),
+		creditSystem,
+	});
+	const position = (schema: CreditSchemaItem[]) =>
+		schema.findIndex((item) => item.metered_feature_id === "search");
+
+	expect(after).toEqual(catalog);
+	expect([position(before), position(after)]).toEqual([1, 2]);
 });
