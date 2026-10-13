@@ -255,12 +255,11 @@ const allocatedVolumeConfig = ({
 		],
 	});
 
-test("an allocated volume item can't have a first-tier flatAmount without included usage", () => {
+test("an allocated volume item can't have a first-tier flatAmount", () => {
 	expect(issuesOf(() => allocatedVolumeConfig({}))).toEqual([
 		{
 			path: 'plan "pro" › item "seats"',
-			message:
-				'features "seats" has consumable false, so this is refused. A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.',
+			message: `features "seats" has consumable false, so this is refused. A volume-tiered allocated item can't have a first-tier flatAmount: Stripe would charge it even with no seats over included. Move the fee to a later tier.`,
 		},
 	]);
 });
@@ -271,7 +270,7 @@ test("an allocated volume item with included: 0 still can't have a first-tier fl
 	);
 });
 
-test("an allocated volume item can't have a first-tier flatAmount in another currency without included usage", () => {
+test("an allocated volume item can't have a first-tier flatAmount in another currency", () => {
 	expect(
 		issuesOf(() =>
 			allocatedVolumeConfig({ flatAmount: 0, currencyFlatAmount: 5 }),
@@ -279,12 +278,14 @@ test("an allocated volume item can't have a first-tier flatAmount in another cur
 	).toHaveLength(1);
 });
 
-test("an allocated volume item can have a first-tier flatAmount of 0 without included usage", () => {
+test("an allocated volume item can have a first-tier flatAmount of 0", () => {
 	expect(issuesOf(() => allocatedVolumeConfig({ flatAmount: 0 }))).toEqual([]);
 });
 
-test("an allocated volume item with included usage can have a first-tier flatAmount", () => {
-	expect(issuesOf(() => allocatedVolumeConfig({ included: 3 }))).toEqual([]);
+test("an allocated volume item with included usage still can't have a first-tier flatAmount", () => {
+	expect(issuesOf(() => allocatedVolumeConfig({ included: 3 }))).toHaveLength(
+		1,
+	);
 });
 
 test("featureOverride is only honoured on classic credit-system features", () => {
