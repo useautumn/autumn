@@ -10,10 +10,6 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	isAllowedAnswer,
-	trackToAtomCheckParams,
-} from "@/internal/balances/atomShadowDeduct/atomShadowDeductGuards.js";
 import { withAtomShadowDeduction } from "@/internal/balances/atomShadowDeduct/withAtomShadowDeduction.js";
 import { trackOnBalanceWorker } from "@/internal/balances/track/balanceWorker/trackOnBalanceWorker.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
@@ -48,14 +44,8 @@ async function track(
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
 		const response = await withAtomShadowDeduction({
 			ctx,
-			route: "track",
-			atomParams: isAsync ? trackToAtomCheckParams({ body }) : null,
+			call: { route: "track", params: body },
 			idempotencyKey: body.idempotency_key,
-			// A denied check deducted nothing, so the track's own overage rules apply on the API.
-			answerOf: ({ status, body: answer }) =>
-				status === 200 && isAllowedAnswer({ body: answer })
-					? { body: getQueuedTrackResponse({ ctx, body }), status: 202 }
-					: null,
 			runOnApi: async ({ idempotencyKey }) => {
 				const { result, status } = await trackOnBalanceWorker({
 					ctx,

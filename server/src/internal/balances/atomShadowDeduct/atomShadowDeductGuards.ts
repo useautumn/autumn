@@ -1,5 +1,4 @@
 import { isStagingEnv } from "@autumn/env";
-import type { CheckParams, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { shadowAtomTarget } from "../check/atomShadow/atomShadowGuards.js";
 import type { AtomShadowTarget } from "../check/atomShadow/types/atomShadowOutcome.js";
@@ -31,31 +30,9 @@ export const atomShadowDeductTarget = ({
 	return shadowAtomTarget({ ctx, customerId });
 };
 
-/** A queued track as the deducting check Atom journals it by; null for what a check can't carry. */
-export const trackToAtomCheckParams = ({
-	body,
-}: {
-	body: TrackParams;
-}): CheckParams | null => {
-	const value = body.value ?? 1;
-	if (!body.feature_id || value <= 0) return null;
-	if (body.timestamp !== undefined || body.overage_behavior !== undefined)
-		return null;
-	return {
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
-		feature_id: body.feature_id,
-		required_balance: value,
-		properties: body.properties,
-		send_event: true,
-		skip_event: body.skip_event,
-		customer_data: body.customer_data,
-		entity_data: body.entity_data,
-	};
+/** A check body's verdict; null for a body without one, a track's included. */
+export const allowedOf = ({ body }: { body: unknown }): boolean | null => {
+	if (typeof body !== "object" || body === null) return null;
+	const { allowed } = body as { allowed?: unknown };
+	return typeof allowed === "boolean" ? allowed : null;
 };
-
-/** Atom granted it, so the deduction is on its journal; a denied one deducted nothing. */
-export const isAllowedAnswer = ({ body }: { body: unknown }): boolean =>
-	typeof body === "object" &&
-	body !== null &&
-	(body as { allowed?: unknown }).allowed === true;

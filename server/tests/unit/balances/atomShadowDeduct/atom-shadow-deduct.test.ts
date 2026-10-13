@@ -56,6 +56,7 @@ const workerAnswer = {
 	from: "worker",
 } as unknown as CheckResponseWithPreview;
 const atomAnswer = { allowed: true, customer_id: "cus_1", from: "atom" };
+const atomTrackAnswer = { customer_id: "cus_1", value: 2, balance: null };
 
 const workerCheckSpy = spyOn(
 	balanceWorkerCheck,
@@ -70,18 +71,28 @@ const workerTrackSpy = spyOn(
 }));
 
 /** A fake shadow Atom: answers with `reply`, and records what it was sent. */
+const answerAsAtom = (path: string): Response =>
+	path === "/v1/track"
+		? Response.json(atomTrackAnswer, { status: 202 })
+		: Response.json(atomAnswer);
 const atom = {
-	reply: (): Response => Response.json(atomAnswer),
-	calls: [] as { headers: Headers; body: Record<string, unknown> }[],
+	reply: answerAsAtom,
+	calls: [] as {
+		path: string;
+		headers: Headers;
+		body: Record<string, unknown>;
+	}[],
 };
 const server = Bun.serve({
 	port: 0,
 	fetch: async (request) => {
+		const { pathname } = new URL(request.url);
 		atom.calls.push({
+			path: pathname,
 			headers: request.headers,
 			body: (await request.json()) as Record<string, unknown>,
 		});
-		return atom.reply();
+		return atom.reply(pathname);
 	},
 });
 
@@ -109,7 +120,7 @@ const useShadowAtom = ({
 	});
 
 afterEach(() => {
-	atom.reply = () => Response.json(atomAnswer);
+	atom.reply = answerAsAtom;
 	atom.calls = [];
 	workerCheckSpy.mockClear();
 	workerTrackSpy.mockClear();
@@ -225,7 +236,8 @@ describe("a deducting check", () => {
 		expect(await response.json()).toEqual(atomAnswer);
 		expect(workerCheckSpy).not.toHaveBeenCalled();
 		expect(atom.calls).toHaveLength(1);
-		const [{ headers, body }] = atom.calls;
+		const [{ path, headers, body }] = atom.calls;
+		expect(path).toBe("/v1/balances.check");
 		expect(headers.get("x-atom-token")).toBe("shadow_token_sandbox");
 		expect(headers.get("authorization")).toBeNull();
 		expect(headers.get("idempotency-key")).toBe("atom_shadow_req_1");
@@ -236,6 +248,7 @@ describe("a deducting check", () => {
 				atom_reply: "answered",
 				answered_by: "atom",
 				status: 200,
+				allowed: true,
 				key_minted: true,
 			}),
 		]);
@@ -300,48 +313,59 @@ describe("a deducting check", () => {
 		expect(workerCheckSpy.mock.calls[0][0].idempotencyKey).toBe("client_key");
 	});
 
-	test("a plain check never goes to Atom first", async () => {
+	test("a plain check is the API's, mirrored to Atom only afterwards", async () => {
 		useShadowAtom();
 		const { ctx, deductLogs } = createCtx();
-		await post({
+		const response = await post({
 			ctx,
 			route: "check",
 			body: { customer_id: "cus_1", feature_id: "emails" },
 		});
+		expect(await response.json()).toEqual(workerAnswer);
+		for (
+			let waited = 0;
+			atom.calls.length === 0 && waited < 1_000;
+			waited += 10
+		)
+			await Bun.sleep(10);
 
 		expect(workerCheckSpy).toHaveBeenCalledTimes(1);
 		expect(deductLogs).toHaveLength(0);
+		// The atom_shadow_check mirror: keyless, after the API answered.
+		expect(atom.calls).toHaveLength(1);
+		expect(atom.calls[0].headers.get("idempotency-key")).toBeNull();
 	});
 });
 
-describe("a queued track", () => {
-	test("from an allowlisted org is journaled by Atom, with no deduction on the API", async () => {
+describe("a track", () => {
+	test("from an allowlisted org is Atom's to answer, with no deduction on the API", async () => {
 		useShadowAtom();
 		const { ctx, deductLogs } = createCtx();
 		const response = await post({ ctx, route: "track", body: queuedTrack });
 
 		expect(response.status).toBe(202);
-		expect(await response.json()).toMatchObject({
-			customer_id: "cus_1",
-			value: 2,
-			balance: null,
-		});
+		expect(await response.json()).toEqual(atomTrackAnswer);
 		expect(workerTrackSpy).not.toHaveBeenCalled();
-		expect(atom.calls[0].body).toEqual({
-			customer_id: "cus_1",
-			feature_id: "emails",
-			required_balance: 2,
-			send_event: true,
+		const [{ path, body }] = atom.calls;
+		expect(path).toBe("/v1/track");
+		expect(body).toMatchObject({
+			...queuedTrack,
+			idempotency_key: "atom_shadow_req_1",
 		});
 		expect(deductLogs[0]).toMatchObject({
 			route: "track",
 			answered_by: "atom",
 			status: 202,
+			allowed: true,
 		});
 	});
 
-	test("Atom denied deducted nothing, so the API tracks it under the same key", async () => {
-		atom.reply = () => Response.json({ ...atomAnswer, allowed: false });
+	test("Atom hands back runs on the API under the same key", async () => {
+		atom.reply = () =>
+			Response.json(
+				{ code: "atom_not_forwarded" },
+				{ status: 401, headers: { "x-atom-forwarded": "track_denied" } },
+			);
 		useShadowAtom();
 		const { ctx, deductLogs } = createCtx();
 		const response = await post({
@@ -351,13 +375,15 @@ describe("a queued track", () => {
 		});
 
 		expect(response.status).toBe(202);
-		expect(atom.calls[0].headers.get("idempotency-key")).toBe("body_key");
+		expect(atom.calls[0].body.idempotency_key).toBe("body_key");
 		expect(workerTrackSpy.mock.calls[0][0].body.idempotency_key).toBe(
 			"body_key",
 		);
 		expect(deductLogs[0]).toMatchObject({
-			atom_reply: "answered",
+			atom_reply: "forwarded",
+			atom_reason: "track_denied",
 			answered_by: "api",
+			allowed: null,
 		});
 	});
 
@@ -375,21 +401,14 @@ describe("a queued track", () => {
 		expect(deductLogs[0]).toMatchObject({ atom_reply: "down" });
 	});
 
-	test("from an org not allowlisted, or a sync track, is unchanged", async () => {
+	test("from an org not allowlisted is unchanged", async () => {
 		useShadowAtom();
-		const unlisted = createCtx({ orgId: "org_unlisted" });
-		await post({ ctx: unlisted.ctx, route: "track", body: queuedTrack });
-		const listed = createCtx();
-		await post({
-			ctx: listed.ctx,
-			route: "track",
-			body: { ...queuedTrack, async: false },
-		});
+		const { ctx, deductLogs } = createCtx({ orgId: "org_unlisted" });
+		await post({ ctx, route: "track", body: queuedTrack });
 
 		expect(atom.calls).toHaveLength(0);
-		expect(unlisted.deductLogs).toHaveLength(0);
-		expect(listed.deductLogs).toHaveLength(0);
-		expect(workerTrackSpy).toHaveBeenCalledTimes(2);
+		expect(deductLogs).toHaveLength(0);
+		expect(workerTrackSpy).toHaveBeenCalledTimes(1);
 		expect(
 			workerTrackSpy.mock.calls[0][0].body.idempotency_key,
 		).toBeUndefined();

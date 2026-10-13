@@ -123,11 +123,12 @@ export const handleCheck = createRoute({
 				return c.json(await runOnWorker({ idempotencyKey }));
 			const { body, status } = await withAtomShadowDeduction({
 				ctx,
-				route: "check",
-				atomParams: rawBody.send_event === true ? rawBody : null,
+				call:
+					rawBody.send_event === true
+						? { route: "check", params: rawBody }
+						: null,
 				search,
 				idempotencyKey,
-				answerOf: ({ body, status }) => ({ body, status }),
 				runOnApi: async ({ idempotencyKey }) => {
 					const { result, failedOpen } =
 						await withBalanceWorkerFailOpen<CheckResponseWithPreview>({

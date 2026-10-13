@@ -1,35 +1,56 @@
-import type { ApiVersionClass, CheckParams } from "@autumn/shared";
+import type { ApiVersionClass } from "@autumn/shared";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
 	ATOM_FORWARDED_HEADER,
-	postCheckToAtom,
-} from "../check/atomShadow/postCheckToAtom.js";
+	postToAtom,
+} from "../check/atomShadow/postToAtom.js";
 import type { AtomShadowTarget } from "../check/atomShadow/types/atomShadowOutcome.js";
-import type { AtomDeductReply } from "./types/atomDeductReply.js";
+import type {
+	AtomDeductCall,
+	AtomDeductReply,
+} from "./types/atomDeductReply.js";
 
 /** The SDK edge's budget (packages/sdk/src/hooks/edge/edgeHTTPClient.ts EDGE_TIMEOUT_MS); past it the API deducts. */
 const ATOM_DEDUCT_TIMEOUT_MS = 1_000;
 
+const ATOM_PATHS = {
+	check: "/v1/balances.check",
+	track: "/v1/track",
+} as const;
+
+/** A check names its key in the Idempotency-Key header, a track in its body, as the API reads each. */
+const callToBody = ({
+	call,
+	idempotencyKey,
+}: {
+	call: AtomDeductCall;
+	idempotencyKey: string;
+}): unknown =>
+	call.route === "track"
+		? { ...call.params, idempotency_key: idempotencyKey }
+		: call.params;
+
 /** Asks the shadow Atom to deduct; a 5xx Atom sent itself, or no reply, is `down`, as the SDK's isEdgeDown reads it. */
 export const askAtomToDeduct = async ({
 	target,
-	params,
+	call,
 	search,
 	apiVersion,
 	idempotencyKey,
 }: {
 	target: AtomShadowTarget;
-	params: CheckParams;
+	call: AtomDeductCall;
 	search: string;
 	apiVersion: ApiVersionClass;
 	idempotencyKey: string;
 }): Promise<AtomDeductReply> => {
 	try {
-		const response = await postCheckToAtom({
+		const response = await postToAtom({
 			target,
-			params,
+			path: ATOM_PATHS[call.route],
 			search,
 			apiVersion,
+			body: callToBody({ call, idempotencyKey }),
 			idempotencyKey,
 			signal: AbortSignal.timeout(ATOM_DEDUCT_TIMEOUT_MS),
 		});

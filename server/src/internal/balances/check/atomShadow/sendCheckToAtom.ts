@@ -1,5 +1,5 @@
 import type { ApiVersionClass, CheckParams } from "@autumn/shared";
-import { ATOM_FORWARDED_HEADER, postCheckToAtom } from "./postCheckToAtom.js";
+import { ATOM_FORWARDED_HEADER, postToAtom } from "./postToAtom.js";
 import type {
 	AtomCheckReply,
 	AtomShadowTarget,
@@ -56,9 +56,10 @@ const requestCheck = async ({
 }: Parameters<typeof sendCheckToAtom>[0]): Promise<AtomCheckReply> => {
 	requestsInFlight++;
 	try {
-		const response = await postCheckToAtom({
+		const response = await postToAtom({
 			target,
-			params,
+			path: "/v1/balances.check",
+			body: params,
 			search,
 			apiVersion,
 			signal: AbortSignal.timeout(ATOM_SHADOW_ABANDON_MS),
