@@ -17,6 +17,7 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+import { roundToMinorUnits } from "../../lineItems/roundToMinorUnits";
 import { sumLineAmounts } from "../../lineItems/sumLineAmounts";
 
 export type NextCycleLineItemOptions = {
@@ -197,12 +198,16 @@ export const billingPlanToNextCycleLineItems = ({
 		});
 	}
 
-	const previewLineItems = [
-		...nextCycleAutumnLineItems,
-		...deferredLineItems,
-	].map(lineItemToPreviewLineItem);
-
+	// Stripe bills each line in whole minor units, so lines and totals stay consistent with the invoice.
 	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
+	const previewLineItems = [...nextCycleAutumnLineItems, ...deferredLineItems]
+		.map(lineItemToPreviewLineItem)
+		.map((line) => ({
+			...line,
+			subtotal: roundToMinorUnits({ amount: line.subtotal, currency }),
+			total: roundToMinorUnits({ amount: line.total, currency }),
+		}));
+
 	const subtotal = sumLineAmounts({
 		amounts: previewLineItems.map((line) => line.subtotal),
 		currency,
