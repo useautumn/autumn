@@ -167,9 +167,11 @@ export type CreditSchemaOverrideItem = z.infer<
 	typeof CreditSchemaOverrideItemSchema
 >;
 
-export const isExcludedCreditSchemaItem = (
-	item: CreditSchemaOverrideItem,
-): item is ExcludedCreditSchemaItem => "excluded" in item && item.excluded;
+/** Works on API and DB override rows: an excluded row has the same shape in both. */
+export const isExcludedCreditSchemaItem = <Row extends object>(
+	item: Row | ExcludedCreditSchemaItem,
+): item is ExcludedCreditSchemaItem =>
+	"excluded" in item && item.excluded === true;
 export type CreditDimension = z.infer<typeof CreditDimensionSchema>;
 export type CreditMultiplier = z.infer<typeof CreditMultiplierSchema>;
 export type CreditTier = z.infer<typeof CreditTierSchema>;
