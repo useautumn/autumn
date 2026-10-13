@@ -1,28 +1,21 @@
 import type { InvoicePaymentMethod } from "@autumn/shared";
 import { INVOICE_PAYMENT_METHOD_OPTIONS } from "@/utils/invoicePaymentMethodOptions";
 
-export const DEFAULT_PAYMENT_METHODS = "default";
-
-export type PaymentMethodChoice =
-	| InvoicePaymentMethod
-	| typeof DEFAULT_PAYMENT_METHODS;
-
-/** The selection after a menu choice; undefined means leave it unchanged. */
+/** Unticking the last method cycles back to the prefilled methods, since Stripe rejects an empty list. */
 export const nextPaymentMethodTypes = ({
 	selected,
-	choice,
+	type,
 	checked,
+	original,
 }: {
 	selected: InvoicePaymentMethod[];
-	choice: PaymentMethodChoice;
+	type: InvoicePaymentMethod;
 	checked: boolean;
-}): InvoicePaymentMethod[] | null | undefined => {
-	if (choice === DEFAULT_PAYMENT_METHODS) return null;
+	original: InvoicePaymentMethod[] | null;
+}): InvoicePaymentMethod[] | null => {
 	const next = INVOICE_PAYMENT_METHOD_OPTIONS.map(
 		(option) => option.value,
-	).filter((option) =>
-		option === choice ? checked : selected.includes(option),
-	);
-	// Stripe rejects an empty list, so the last type cannot be removed.
-	return next.length > 0 ? next : undefined;
+	).filter((option) => (option === type ? checked : selected.includes(option)));
+	if (next.length > 0) return next;
+	return original?.length ? original : null;
 };

@@ -3,7 +3,6 @@ import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormLabel,
 	Tooltip,
@@ -11,6 +10,7 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ChevronDownIcon } from "lucide-react";
+import { useRef } from "react";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
 import { useEnv } from "@/utils/envUtils";
@@ -19,11 +19,7 @@ import {
 	paymentMethodLabel,
 } from "@/utils/invoicePaymentMethodOptions";
 import { getStripePaymentMethodConfigLink } from "@/utils/linkUtils";
-import {
-	DEFAULT_PAYMENT_METHODS,
-	nextPaymentMethodTypes,
-	type PaymentMethodChoice,
-} from "./utils/nextPaymentMethodTypes";
+import { nextPaymentMethodTypes } from "./utils/nextPaymentMethodTypes";
 
 export const ORG_PAYMENT_METHODS_HELPER =
 	"Prefilled from your org's allowed payment methods";
@@ -35,7 +31,6 @@ export function PaymentMethodTypesSelect({
 	disabled,
 }: {
 	value: InvoicePaymentMethod[] | null;
-	/** null means no override, so the form falls back to its default methods. */
 	onValueChange: (types: InvoicePaymentMethod[] | null) => void;
 	description?: string;
 	disabled?: boolean;
@@ -57,15 +52,28 @@ export function PaymentMethodTypesSelect({
 				.join(", ")
 		: "Default methods";
 
-	const choose = ({
-		choice,
+	// The prefilled value, captured once it loads (or at the first edit when nothing was prefilled).
+	const original = useRef<{ value: InvoicePaymentMethod[] | null } | null>(
+		null,
+	);
+	if (!original.current && value?.length) original.current = { value };
+
+	const toggle = ({
+		type,
 		checked,
 	}: {
-		choice: PaymentMethodChoice;
+		type: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = nextPaymentMethodTypes({ selected, choice, checked });
-		if (next !== undefined) onValueChange(next);
+		original.current ??= { value };
+		onValueChange(
+			nextPaymentMethodTypes({
+				selected,
+				type,
+				checked,
+				original: original.current.value,
+			}),
+		);
 	};
 
 	return (
@@ -85,23 +93,13 @@ export function PaymentMethodTypesSelect({
 					<ChevronDownIcon className="size-4 shrink-0 text-muted-foreground opacity-50" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-(--anchor-width)">
-					<DropdownMenuCheckboxItem
-						className="cursor-pointer"
-						checked={!selected.length}
-						onCheckedChange={() =>
-							choose({ choice: DEFAULT_PAYMENT_METHODS, checked: true })
-						}
-					>
-						Default methods
-					</DropdownMenuCheckboxItem>
-					<DropdownMenuSeparator />
 					{options.map((option) => (
 						<DropdownMenuCheckboxItem
 							key={option.value}
 							className="cursor-pointer"
 							checked={selected.includes(option.value)}
 							onCheckedChange={(checked) =>
-								choose({ choice: option.value, checked })
+								toggle({ type: option.value, checked })
 							}
 						>
 							{option.label}

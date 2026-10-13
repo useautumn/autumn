@@ -1,44 +1,48 @@
 import { describe, expect, it } from "bun:test";
-import {
-	DEFAULT_PAYMENT_METHODS,
-	nextPaymentMethodTypes,
-} from "./nextPaymentMethodTypes";
+import { nextPaymentMethodTypes } from "./nextPaymentMethodTypes";
+
+const original = ["card", "us_bank_account"] as const;
 
 describe("nextPaymentMethodTypes", () => {
-	it("choosing Default methods resets the selection to null", () => {
+	it("unticking the last method cycles back to the prefilled methods", () => {
+		const onlyCard = nextPaymentMethodTypes({
+			selected: [...original],
+			type: "us_bank_account",
+			checked: false,
+			original: [...original],
+		});
+		expect(onlyCard).toEqual(["card"]);
 		expect(
 			nextPaymentMethodTypes({
-				selected: ["card"],
-				choice: DEFAULT_PAYMENT_METHODS,
-				checked: true,
-			}),
-		).toBeNull();
-	});
-
-	it("never returns an empty list when the last type is unticked", () => {
-		expect(
-			nextPaymentMethodTypes({
-				selected: ["card"],
-				choice: "card",
+				selected: onlyCard ?? [],
+				type: "card",
 				checked: false,
+				original: [...original],
 			}),
-		).toBeUndefined();
+		).toEqual(["card", "us_bank_account"]);
 	});
 
-	it("adds and removes types in menu order", () => {
+	it("returns null, never an empty list, when nothing was prefilled", () => {
+		for (const prefilled of [null, []]) {
+			expect(
+				nextPaymentMethodTypes({
+					selected: ["card"],
+					type: "card",
+					checked: false,
+					original: prefilled,
+				}),
+			).toBeNull();
+		}
+	});
+
+	it("adds types in menu order", () => {
 		expect(
 			nextPaymentMethodTypes({
 				selected: ["us_bank_account"],
-				choice: "card",
+				type: "card",
 				checked: true,
+				original: null,
 			}),
 		).toEqual(["card", "us_bank_account"]);
-		expect(
-			nextPaymentMethodTypes({
-				selected: ["card", "us_bank_account"],
-				choice: "card",
-				checked: false,
-			}),
-		).toEqual(["us_bank_account"]);
 	});
 });
