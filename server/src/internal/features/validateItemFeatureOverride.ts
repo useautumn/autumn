@@ -1,6 +1,5 @@
 import {
 	type CreditSchemaOverrideItem,
-	creditSystemContainsFeature,
 	ErrCode,
 	entitlementToCreditSystem,
 	type Feature,
@@ -8,7 +7,6 @@ import {
 	FeatureUsageType,
 	isAiCreditSystem,
 	isAnyCreditSystem,
-	isExcludedCreditSchemaItem,
 	type ProductItem,
 	RecaseError,
 } from "@autumn/shared";
@@ -80,20 +78,6 @@ export const validateItemFeatureOverride = ({
 	if (duplicateFeatureId) {
 		invalid(
 			`feature_override.credit_schema lists ${duplicateFeatureId} more than once`,
-		);
-	}
-
-	const excludedOutsideCreditSystem = featureOverride.schema.find(
-		(row) =>
-			isExcludedCreditSchemaItem(row) &&
-			!creditSystemContainsFeature({
-				creditSystem: feature,
-				meteredFeatureId: row.metered_feature_id,
-			}),
-	);
-	if (excludedOutsideCreditSystem) {
-		invalid(
-			`feature_override on ${feature.id} excludes ${excludedOutsideCreditSystem.metered_feature_id}, which is not in its credit_schema`,
 		);
 	}
 

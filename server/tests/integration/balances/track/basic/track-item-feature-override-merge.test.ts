@@ -229,3 +229,111 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("track-item-feature-override-merge: a stale exclusion still saves and is ignored at runtime")}`,
+	async () => {
+		const keptFeatureId = uniqueTestId("ifo_stale_kept");
+		const staleFeatureId = uniqueTestId("ifo_stale_removed");
+		const creditSystemId = uniqueTestId("ifo_stale_credits");
+		const planId = uniqueTestId("ifo_stale_plan");
+		const featureIds = [keptFeatureId, staleFeatureId, creditSystemId];
+
+		const { autumnV1, autumnV2_3, ctx, customerId } = await initScenario({
+			customerId: uniqueTestId("ifo_stale_cus"),
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		const meteredFeature = (featureId: string) => ({
+			feature_id: featureId,
+			name: featureId,
+			type: FeatureType.Metered,
+			consumable: true,
+		});
+		const creditSystem = (credit_schema: object[]) => ({
+			feature_id: creditSystemId,
+			name: creditSystemId,
+			type: FeatureType.CreditSystem,
+			credit_schema,
+		});
+		const pushPlan = () =>
+			autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								reset: { interval: ResetInterval.Month },
+								feature_override: {
+									credit_schema: [
+										{ metered_feature_id: staleFeatureId, excluded: true },
+									],
+								},
+							},
+						],
+					},
+				],
+			});
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					meteredFeature(keptFeatureId),
+					meteredFeature(staleFeatureId),
+					creditSystem([
+						{ metered_feature_id: keptFeatureId, credit_cost: 1 },
+						{ metered_feature_id: staleFeatureId, credit_cost: 2 },
+					]),
+				],
+			});
+			await pushPlan();
+			await autumnV2_3.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: planId,
+			});
+
+			// 1. Feature leaves the credit system: re-pushing the plan still saves.
+			await autumnV2_3.catalogV2.update({
+				features: [
+					creditSystem([{ metered_feature_id: keptFeatureId, credit_cost: 1 }]),
+				],
+			});
+			await pushPlan();
+
+			// 2. Feature is archived: re-pushing the plan still saves.
+			await autumnV2_3.catalogV2.update({
+				features: [{ ...meteredFeature(staleFeatureId), archived: true }],
+			});
+			await pushPlan();
+
+			await autumnV1.track({
+				customer_id: customerId,
+				feature_id: keptFeatureId,
+				value: 10,
+			});
+			await autumnV1.track({
+				customer_id: customerId,
+				feature_id: staleFeatureId,
+				value: 10,
+			});
+
+			// Kept feature draws at the catalog rate; the stale row changes nothing.
+			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			expect(customer.features[creditSystemId]).toMatchObject({
+				balance: 90,
+				usage: 10,
+			});
+		} finally {
+			await autumnV2_3.customers.delete(customerId).catch(() => {});
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);

@@ -330,7 +330,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 item feature_override: excluded rows round-trip and are validated")}`,
+	`${chalk.yellowBright("catalogV2 item feature_override: excluded rows round-trip, stale exclusions are allowed, invalid rows are rejected")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const keptFeatureId = uniqueTestId("ifo_ex_kept");
@@ -435,15 +435,27 @@ test.concurrent(
 					]),
 			});
 
-			// 3. Excluding a feature the credit system doesn't have is rejected.
-			await expectAutumnError({
-				errCode: ErrCode.InvalidProductItem,
-				errMessage: `excludes ${outsideFeatureId}`,
-				func: () =>
-					updatePlan([
-						{ metered_feature_id: keptFeatureId, credit_cost: 5 },
-						{ metered_feature_id: outsideFeatureId, excluded: true },
-					]),
+			// 3. Excluding a real feature the credit system doesn't have is a no-op, not an error.
+			const outsideOverride = {
+				credit_schema: [
+					{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+					{ metered_feature_id: outsideFeatureId, excluded: true as const },
+				],
+			};
+			await updatePlan(outsideOverride.credit_schema);
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [
+					{
+						id: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								feature_override: outsideOverride,
+							},
+						],
+					},
+				],
 			});
 
 			// 4. Excluding a feature that doesn't exist is rejected.
