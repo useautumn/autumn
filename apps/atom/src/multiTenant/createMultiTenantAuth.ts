@@ -46,6 +46,7 @@ export const createMultiTenantAuth = ({
 	subjectPulls,
 	now,
 	clock = () => performance.now(),
+	writes,
 }: {
 	dataDir: string;
 	slotCount: number;
@@ -56,6 +57,8 @@ export const createMultiTenantAuth = ({
 	/** This replica's clock, stamped on every write. */
 	now?: () => number;
 	clock?: () => number;
+	/** The deployment's writes flag, for every org it holds. */
+	writes?: boolean;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
@@ -140,6 +143,7 @@ export const createMultiTenantAuth = ({
 				subjectPulls,
 				tokenHash: () => held.tokenHash,
 			},
+			writes,
 		});
 		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;

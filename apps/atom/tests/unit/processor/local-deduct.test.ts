@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseTrackCommand } from "@autumn/balance-engine";
 import { FeatureType } from "@autumn/shared";
+import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
@@ -47,7 +48,7 @@ const sendEvent = ({
 }: {
 	requiredBalance?: number;
 	requestId?: string;
-	params?: Parameters<typeof checkRequestFor>[0]["params"];
+	params?: Partial<CheckRequest["params"]>;
 } = {}) => ({
 	...checkRequestFor({
 		params: { send_event: true, required_balance: requiredBalance, ...params },

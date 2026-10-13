@@ -17,6 +17,18 @@ export const slotFilePath = ({
 }): string =>
 	join(folder, `slot-${padded(slot)}-of-${padded(slotCount)}.sqlite`);
 
+/** A slot's journal sits beside its file, named the same way, so a split only ever reads the journals it wrote. */
+export const journalFilePath = ({
+	folder,
+	slot,
+	slotCount,
+}: {
+	folder: string;
+	slot: number;
+	slotCount: number;
+}): string =>
+	join(folder, `journal-${padded(slot)}-of-${padded(slotCount)}.sqlite`);
+
 /** Files from another slot count hold customers this split would look for elsewhere: they are dropped, and Autumn sends the customers again. */
 export const removeSlotFilesOfOtherCounts = ({
 	folder,

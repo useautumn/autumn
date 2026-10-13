@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
+import { openJournal } from "../state/journal/openJournal.js";
+import type { Journal } from "../state/journal/types/journal.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
@@ -12,7 +14,11 @@ import { customerIdToSlot } from "./customerIdToSlot.js";
 import { catchUp } from "./replica/catchUp.js";
 import { serveReplicaReads } from "./replica/serveReplicaReads.js";
 import type { ReplicaSlotsContext } from "./replica/types/replicaSlotsContext.js";
-import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
+import {
+	journalFilePath,
+	removeSlotFilesOfOtherCounts,
+	slotFilePath,
+} from "./slotFiles.js";
 import type { OpenedSlot } from "./types/openedSlot.js";
 import type { Slots } from "./types/slots.js";
 
@@ -43,9 +49,12 @@ export const openSlots = ({
 	held,
 	now = Date.now,
 	pulls,
+	writes = false,
 }: {
 	folder: string;
 	slotCount: number;
+	/** The deployment's writes flag: each slot this thread owns opens a journal, and send_event checks are deducted here. */
+	writes?: boolean;
 	/** The folder's name on a multi-tenant Atom, so a call to another thread names it too. */
 	atomId?: string | null;
 	owners: SlotOwners;
@@ -71,6 +80,7 @@ export const openSlots = ({
 		applyPulled: ({ customerId, body }) =>
 			processorFor({ customerId }).setSubject({ customerId, body }),
 	});
+	const journals: Journal[] = [];
 	const slots = Array.from({ length: slotCount }, (_, slot): OpenedSlot => {
 		const owner = owners.ownerOf({ slot });
 		if (owner !== owners.index)
@@ -83,10 +93,16 @@ export const openSlots = ({
 			held,
 			now,
 		});
+		const journal = writes
+			? openJournal({
+					databasePath: journalFilePath({ folder, slot, slotCount }),
+				})
+			: null;
+		if (journal) journals.push(journal);
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
-				ctx: { sqliteStore, catalogStore, logger, subjectPulls, journal: null },
+				ctx: { sqliteStore, catalogStore, logger, subjectPulls, journal },
 			}),
 		};
 	});
@@ -113,6 +129,7 @@ export const openSlots = ({
 
 	function close(): void {
 		for (const { sqliteStore } of slots) sqliteStore?.close();
+		for (const journal of journals) journal.close();
 		catalogStore.close();
 	}
 

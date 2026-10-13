@@ -25,7 +25,7 @@ export const createSlotProcessor = ({
 				ctx.subjectPulls.request({ customerId, entityId: entityId ?? null });
 				throw new CannotAnswerError({ reason: "subject_not_written" });
 			}
-			const response = check({ ctx, request });
+			const response = await check({ ctx, request });
 			return {
 				json: checkResponseToJson({ response }),
 				allowed: response.allowed,
