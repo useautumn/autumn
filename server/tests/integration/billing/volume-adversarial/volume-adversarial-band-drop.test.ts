@@ -1,7 +1,7 @@
 /**
  * A band drop: crossing into a cheaper band lowers the bill as usage rises. With 5 included
- * and net tiers 0-5 @ $1 / 6+ @ $0.90, 10 used is $10.00 and 11 used is $9.90. The shown
- * balance and every preview total stay non-negative, mid-cycle and at a switch.
+ * and net tiers 0-5 @ $1 / 6+ @ $0.80, 10 used bills 5 overage = $5.00 and 11 used bills
+ * 6 overage = $4.80. The shown balance and every preview total stay non-negative.
  */
 
 import { expect, test } from "bun:test";
@@ -25,15 +25,15 @@ import {
 
 const INCLUDED = 5;
 const USAGE = 11;
-// 11 used lands in band 11+: 11 × $0.90 = $9.90 (10 used would be 10 × $1 = $10)
-const BAND_DROP_AMOUNT = 9.9;
+// 11 used = 6 overage in net tier 6+: 6 × $0.80 = $4.80 (10 used = 5 × $1 = $5)
+const BAND_DROP_AMOUNT = 4.8;
 
 const bandDropItem = () =>
 	items.volumeConsumableMessages({
 		includedUsage: INCLUDED,
 		tiers: [
 			{ to: 5, amount: 1 },
-			{ to: "inf", amount: 0.9 },
+			{ to: "inf", amount: 0.8 },
 		],
 	});
 
@@ -117,7 +117,7 @@ const previewUsageSubtotal = (preview: {
 		.reduce((sum, lineItem) => sum + lineItem.subtotal, 0);
 
 test.concurrent(
-	`${chalk.yellowBright("volume-band-drop 1: 10 → 11 used drops $10.00 → $9.90; mid-cycle previews and balance stay non-negative; renewal = preview")}`,
+	`${chalk.yellowBright("volume-band-drop 1: 10 → 11 used drops $5.00 → $4.80; mid-cycle previews and balance stay non-negative; renewal = preview")}`,
 	async () => {
 		const customerId = "vol-adv-band-drop-renewal";
 		const pro = products.pro({ id: customerId, items: [bandDropItem()] });
@@ -137,10 +137,10 @@ test.concurrent(
 			],
 		});
 
-		// 10 used lands in band 6-10: 10 × $1 = $10
+		// 10 used = 5 overage in net tier 0-5: 5 × $1 = $5
 		await expectPreviewNonNegative({
 			scenario,
-			expectedFeatureAmount: 10,
+			expectedFeatureAmount: 5,
 			usage: 10,
 		});
 
@@ -162,13 +162,13 @@ test.concurrent(
 			scenario,
 			expectedFeatureAmount: BAND_DROP_AMOUNT,
 		});
-		// $20 base + $9.90 usage
-		expect(renewalInvoice.total).toBeCloseTo(29.9, 2);
+		// $20 base + $4.80 usage
+		expect(renewalInvoice.total).toBeCloseTo(24.8, 2);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-band-drop 2: attach preview bills 11 used at $9.90 at the switch; preview = Stripe invoice")}`,
+	`${chalk.yellowBright("volume-band-drop 2: attach preview bills 11 used (6 overage) at $4.80 at the switch; preview = Stripe invoice")}`,
 	async () => {
 		const customerId = "vol-adv-band-drop-attach";
 		const pro = products.pro({
@@ -203,7 +203,7 @@ test.concurrent(
 		expect(previewUsageSubtotal(preview)).toBeCloseTo(BAND_DROP_AMOUNT, 2);
 		expect(preview.total).toBeGreaterThanOrEqual(0);
 
-		// Prorated $20 → $50 base for the rest of the cycle + $9.90 usage, not prorated
+		// Prorated $20 → $50 base for the rest of the cycle + $4.80 usage, not prorated
 		const proratedBaseDiff = await calculateProratedDiff({
 			customerId,
 			advancedTo,
@@ -232,7 +232,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-band-drop 3: update raising included to 10 mid-cycle bills $0 at the switch; renewal re-bands 11 used at $1: $11")}`,
+	`${chalk.yellowBright("volume-band-drop 3: update raising included to 10 mid-cycle bills $0 at the switch; renewal bills 1 overage unit at $1: $1")}`,
 	async () => {
 		const customerId = "vol-adv-band-drop-update";
 		const priceItem = items.monthlyPrice({ price: 20 });
@@ -265,7 +265,7 @@ test.concurrent(
 					includedUsage: 10,
 					tiers: [
 						{ to: 5, amount: 1 },
-						{ to: "inf", amount: 0.9 },
+						{ to: "inf", amount: 0.8 },
 					],
 				}),
 				priceItem,
@@ -288,7 +288,7 @@ test.concurrent(
 			usage: USAGE,
 		});
 
-		// 10 included: bands 11-15 @ $1 / 16+ @ $0.90, so 11 used: 11 × $1 = $11
-		await expectVolumeRenewalCorrect({ scenario, expectedFeatureAmount: 11 });
+		// 10 included: 11 used = 1 overage in net tier 0-5 (total 11-15): 1 × $1 = $1
+		await expectVolumeRenewalCorrect({ scenario, expectedFeatureAmount: 1 });
 	},
 );

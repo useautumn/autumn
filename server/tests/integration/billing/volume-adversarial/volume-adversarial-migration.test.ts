@@ -67,22 +67,22 @@ const runTierBehaviorMigration = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("volume-migration 1: graduated → volume via update_plan: 800 used bills $40, not $60")}`,
+	`${chalk.yellowBright("volume-migration 1: graduated → volume via update_plan: 800 used bills $35, not $60")}`,
 	async () => {
-		// Volume: 800 > 600 (band 601+): 800 × $0.05 = $40 (graduated: 500 × $0.10 + 200 × $0.05 = $60)
+		// Volume: 700 overage in band 601+: 700 × $0.05 = $35 (graduated: 500 × $0.10 + 200 × $0.05 = $60)
 		await runTierBehaviorMigration({
 			customerId: "vol-adv-mig-grad-to-vol",
 			fromItem: items.tieredConsumableMessages({ includedUsage: INCLUDED }),
 			toItem: items.volumeConsumableMessages({ includedUsage: INCLUDED }),
-			expectedFeatureAmount: 40,
+			expectedFeatureAmount: 35,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-migration 2: volume → graduated via update_plan: 800 used bills $60, not $40")}`,
+	`${chalk.yellowBright("volume-migration 2: volume → graduated via update_plan: 800 used bills $60, not $35")}`,
 	async () => {
-		// Graduated on 700 overage: 500 × $0.10 + 200 × $0.05 = $60 (volume: 800 × $0.05 = $40)
+		// Graduated on 700 overage: 500 × $0.10 + 200 × $0.05 = $60 (volume: 700 × $0.05 = $35)
 		await runTierBehaviorMigration({
 			customerId: "vol-adv-mig-vol-to-grad",
 			fromItem: items.volumeConsumableMessages({ includedUsage: INCLUDED }),

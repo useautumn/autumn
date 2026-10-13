@@ -144,14 +144,14 @@ test.concurrent(
 			entityUsages: [400, 300],
 		});
 
-		// 400 + 300 used = 700 against 200 included, band 201-700: 700 × $0.10 = $70
+		// 400 + 300 used = 700 against 200 included: 500 overage in band 201-700 × $0.10 = $50
 		const before = await getInvoicePreview({ scenario });
 		expect(
 			sumFeatureSubtotal({
 				lineItems: before.line_items,
 				featureId: TestFeature.Messages,
 			}),
-		).toBeCloseTo(70, 2);
+		).toBeCloseTo(50, 2);
 
 		await advanceMidCycle({ scenario });
 		const invoiceCountBefore =
@@ -162,7 +162,7 @@ test.concurrent(
 			).invoices?.length ?? 0;
 		await deleteEntities({ scenario, count: 1, fromIndex: 1 });
 
-		// Usage billed at deletion (if any) plus usage at renewal must still total $70
+		// Usage billed at deletion (if any) plus usage at renewal must still total $50
 		const afterDelete = await scenario.autumnV1.customers.get<ApiCustomerV3>(
 			scenario.customerId,
 		);
@@ -172,7 +172,7 @@ test.concurrent(
 
 		const { preview } = await expectVolumeRenewalCorrect({
 			scenario,
-			expectedFeatureAmount: 70 - billedAtDeletion,
+			expectedFeatureAmount: 50 - billedAtDeletion,
 		});
 		expect(preview.total).toBeGreaterThanOrEqual(0);
 	},

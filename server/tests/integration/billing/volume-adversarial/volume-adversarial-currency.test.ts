@@ -1,6 +1,6 @@
 /**
  * Volume tiers carry per-currency amounts (rates and flat fees) on each tier; boundaries are
- * shared. A EUR customer is billed every unit at the EUR rate of the band total usage lands in.
+ * shared. A EUR customer's overage is billed at the EUR rate of the band it lands in.
  */
 
 import { expect, test } from "bun:test";
@@ -105,27 +105,27 @@ const runEurRenewal = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("volume-currency 1: EUR customer, 300 used → band 101-600 at €0.08: €24")}`,
+	`${chalk.yellowBright("volume-currency 1: EUR customer, 300 used → 200 overage in band 101-600 at €0.08: €16")}`,
 	async () => {
-		// 300 in band 101-600: 300 × €0.08 = €24; total €18 base + €24
+		// 300 used = 200 overage in band 101-600: 200 × €0.08 = €16; total €18 base + €16
 		await runEurRenewal({
 			customerId: "vol-adv-eur-band1",
 			usage: 300,
-			expectedFeatureAmount: 24,
-			expectedTotal: 42,
+			expectedFeatureAmount: 16,
+			expectedTotal: 34,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-currency 2: EUR customer, 700 used → band 601+ at €0.04 + €20 flat: €48")}`,
+	`${chalk.yellowBright("volume-currency 2: EUR customer, 700 used → 600 overage in band 601+ at €0.04 + €20 flat: €44")}`,
 	async () => {
-		// 700 in band 601+: 700 × €0.04 = €28 + €20 flat = €48; total €18 base + €48
+		// 700 used = 600 overage in band 601+: 600 × €0.04 = €24 + €20 flat = €44; total €18 + €44
 		await runEurRenewal({
 			customerId: "vol-adv-eur-band2",
 			usage: 700,
-			expectedFeatureAmount: 48,
-			expectedTotal: 66,
+			expectedFeatureAmount: 44,
+			expectedTotal: 62,
 		});
 	},
 );

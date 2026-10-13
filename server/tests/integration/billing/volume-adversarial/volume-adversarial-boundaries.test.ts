@@ -1,6 +1,6 @@
 /**
  * Volume bands at their edges. 100 included with net tiers 0-500 @ $0.10 / 501+ @ $0.05
- * are total-usage bands 0-100 free, 101-600 @ $0.10, 601+ @ $0.05.
+ * are total-usage bands 0-100 free, 101-600 @ $0.10, 601+ @ $0.05; only overage is billed.
  */
 
 import { test } from "bun:test";
@@ -53,49 +53,49 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-boundaries 3: included + 1 (101 used) → every unit charged: $10.10")}`,
+	`${chalk.yellowBright("volume-boundaries 3: included + 1 (101 used) → only the 1 overage unit charged: $0.10")}`,
 	async () => {
-		// 101 > 100 lands in band 101-600: 101 × $0.10 = $10.10
+		// 101 used = 1 overage in band 101-600: 1 × $0.10 = $0.10
 		await runBoundaryRenewal({
 			customerId: "vol-adv-bound-included-plus",
 			usage: 101,
-			expectedFeatureAmount: 10.1,
+			expectedFeatureAmount: 0.1,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-boundaries 4: tier boundary - 1 (599 used) → $59.90")}`,
+	`${chalk.yellowBright("volume-boundaries 4: tier boundary - 1 (599 used) → 499 overage: $49.90")}`,
 	async () => {
-		// 599 in band 101-600: 599 × $0.10 = $59.90
+		// 599 used = 499 overage in band 101-600: 499 × $0.10 = $49.90
 		await runBoundaryRenewal({
 			customerId: "vol-adv-bound-tier-minus",
 			usage: 599,
-			expectedFeatureAmount: 59.9,
+			expectedFeatureAmount: 49.9,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-boundaries 5: exactly on tier boundary (600 used) → $60.00")}`,
+	`${chalk.yellowBright("volume-boundaries 5: exactly on tier boundary (600 used) → 500 overage: $50.00")}`,
 	async () => {
-		// 600 is the last unit of band 101-600: 600 × $0.10 = $60
+		// 600 is the last unit of band 101-600: 500 overage × $0.10 = $50
 		await runBoundaryRenewal({
 			customerId: "vol-adv-bound-tier",
 			usage: 600,
-			expectedFeatureAmount: 60,
+			expectedFeatureAmount: 50,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-boundaries 6: tier boundary + 1 (601 used) → $30.05")}`,
+	`${chalk.yellowBright("volume-boundaries 6: tier boundary + 1 (601 used) → 501 overage: $25.05")}`,
 	async () => {
-		// 601 lands in band 601+: 601 × $0.05 = $30.05
+		// 601 used = 501 overage in band 601+: 501 × $0.05 = $25.05
 		await runBoundaryRenewal({
 			customerId: "vol-adv-bound-tier-plus",
 			usage: 601,
-			expectedFeatureAmount: 30.05,
+			expectedFeatureAmount: 25.05,
 		});
 	},
 );

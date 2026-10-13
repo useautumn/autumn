@@ -163,7 +163,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-intervals 3: rollover + volume: 60 rolled over, 200 used next cycle → 140 × $0.10 = $14")}`,
+	`${chalk.yellowBright("volume-intervals 3: rollover + volume: 60 rolled over, 200 used next cycle → 40 overage × $0.10 = $4")}`,
 	async () => {
 		const customerId = "vol-adv-rollover";
 		const volumeItem = items.volumeConsumableMessages({ includedUsage: 100 });
@@ -224,10 +224,10 @@ test.concurrent(
 		});
 		await timeout(3000);
 
-		// 200 used − 60 rollover = 40 overage; total = 100 included + 40 = 140 in band 101-600: 140 × $0.10 = $14
+		// 200 used − 100 included − 60 rollover = 40 overage in band 101-600: 40 × $0.10 = $4
 		await expectVolumeRenewalCorrect({
 			scenario,
-			expectedFeatureAmount: 14,
+			expectedFeatureAmount: 4,
 			cycleStart: addMonths(new Date(scenario.advancedTo), 1).getTime(),
 		});
 	},

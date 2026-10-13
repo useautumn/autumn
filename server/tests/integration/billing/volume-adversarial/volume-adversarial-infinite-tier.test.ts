@@ -1,6 +1,6 @@
 /**
  * Usage far past the last finite boundary lands in the infinite last tier, and every
- * unit is charged at its rate plus its flat fee.
+ * overage unit is charged at its rate plus its flat fee.
  */
 
 import { expect, test } from "bun:test";
@@ -37,7 +37,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-infinite-tier 2: 100 included, 1,000,000 used → band 601+ on total: $50,000")}`,
+	`${chalk.yellowBright("volume-infinite-tier 2: 100 included, 1,000,000 used → 999,900 overage in band 601+: $49,995")}`,
 	async () => {
 		const { scenario } = await setupVolumeConsumable({
 			customerId: "vol-adv-infinite-included",
@@ -45,10 +45,10 @@ test.concurrent(
 			usage: 1_000_000,
 		});
 
-		// 1,000,000 > 600 (band 601+): 1,000,000 × $0.05 = $50,000
+		// 999,900 overage lands in band 601+: 999,900 × $0.05 = $49,995
 		await expectVolumeRenewalCorrect({
 			scenario,
-			expectedFeatureAmount: 50_000,
+			expectedFeatureAmount: 49_995,
 		});
 	},
 );

@@ -1,5 +1,5 @@
 /**
- * Volume with billing units > 1 (usage rounds up to whole packs before the band is picked)
+ * Volume with billing units > 1 (overage rounds up to whole packs before the band is picked)
  * and sub-cent rates, asserting the exact cents Stripe bills against the preview.
  */
 
@@ -82,9 +82,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-units-rounding 3: 50 included, 51 used, 100/pack → 1 pack in band 1: $5")}`,
+	`${chalk.yellowBright("volume-units-rounding 3: 50 included, 51 used, 100/pack → 1 overage pack in band 1: $5")}`,
 	async () => {
-		// 51 > 50 included, rounds up to 100 = 1 pack in band 51-550: 1 × $5 = $5
+		// 1 overage past 50 included rounds up to 100 = 1 pack in band 51-550: 1 × $5 = $5
 		await runRenewal({
 			customerId: "vol-adv-units-included",
 			item: packItem({ includedUsage: 50 }),
