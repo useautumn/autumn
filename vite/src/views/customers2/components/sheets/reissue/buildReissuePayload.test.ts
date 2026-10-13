@@ -293,6 +293,15 @@ describe("reissue payment method types", () => {
 		).toBeUndefined();
 	});
 
+	it("omits types, never an empty list, after a reset to default methods", () => {
+		expect(
+			typesSent({
+				form: { ...untouched(), paymentMethodTypes: null },
+				nextPrefill: { ...orgTypes, sendsInvoice: true },
+			}),
+		).toBeUndefined();
+	});
+
 	it("sends bank transfer on a card invoice, which turns the replacement into a sent one", () => {
 		expect(
 			typesSent({ form: withBankTransfer, nextPrefill: orgTypes }),
