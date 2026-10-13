@@ -7,6 +7,7 @@ import type { CustomerRowChange } from "../models/mutation/rowChange.js";
 import type { SubjectStateMutation } from "../models/mutation/subjectStateMutation.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { isSameCustomerIdentity } from "../utils/identityUtils/classifyIdentityUtils.js";
+import { advanceAtomSeqs } from "../commands/track/advanceAtomSeqs.js";
 import { applyChanges } from "./applyChanges.js";
 
 /** Only a mutation that inserts the customer row can start a state: an initialize, or a plan that creates the customer. */
@@ -74,5 +75,13 @@ export const applyMutation = ({
 		changes: mutation.changes,
 	});
 
-	return { ...changedState, revision: mutation.revision.after };
+	const source =
+		mutation.command.type === "track" ? mutation.command.source : undefined;
+	return {
+		...changedState,
+		...(source && {
+			atomSeqs: advanceAtomSeqs({ atomSeqs: changedState.atomSeqs, source }),
+		}),
+		revision: mutation.revision.after,
+	};
 };

@@ -33,6 +33,8 @@ export const subjectStateSchema = z
 		/** The license pools on the customer's products; states stored before licenses existed have none. */
 		customerLicenses: z.array(workerCustomerLicenseSchema).default([]),
 		entity: workerEntitySchema.nullable(),
+		/** Per Atom, the highest journal seq of its tracks applied here; absent until an Atom hands one in. */
+		atomSeqs: z.record(z.string(), z.number().int().positive()).optional(),
 	})
 	.loose();
 
