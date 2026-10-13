@@ -28,6 +28,7 @@ const recordingAlienClient = () => {
 			started.push(params);
 			return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 		},
+		findDeploymentGroup: async () => null,
 		findDeployment: async () => null,
 		getDeployment: async () => null,
 		retryDeployment: async () => {},

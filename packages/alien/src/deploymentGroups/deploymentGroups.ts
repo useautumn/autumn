@@ -27,6 +27,18 @@ export const findDeploymentGroupByExternalId = async ({
 	}
 };
 
+/** The group an external id names, if alien still has it; the local manager has no external ids, so none. */
+export const findDeploymentGroup = ({
+	api,
+	externalId,
+}: {
+	api: AlienApi;
+	externalId: string;
+}) =>
+	api.config.kind === "local"
+		? Promise.resolve(null)
+		: findDeploymentGroupByExternalId({ api, externalId });
+
 /** A reused group takes the name its latest setup asks for, so it always matches the stack's. */
 export const renameDeploymentGroup = ({
 	api,
