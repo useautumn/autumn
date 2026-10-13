@@ -47,24 +47,24 @@ const openSlot = () => {
 	};
 };
 
-/** A push of `cus_1` holding `balance`, having seen this Atom's journal up to `atomSeq`. */
+/** A push of `cus_1` holding `balance`, having seen this Atom's journals up to `atomSeqs` (by writer id). */
 const pushBalance = async ({
 	processor,
 	balance,
 	readAt = 1000,
-	atomSeq = null,
+	atomSeqs = null,
 }: {
 	processor: ReturnType<typeof openSlotProcessor>["processor"];
 	balance: number;
 	readAt?: number;
-	atomSeq?: number | null;
+	atomSeqs?: Record<string, number> | null;
 }) => {
 	const push = subjectPushOf({
 		subject: storedSubjectWith({ balance, readAt }),
 	});
 	return processor.setSubject({
 		customerId: push.customerId,
-		body: JSON.stringify({ ...JSON.parse(push.body), atom_seq: atomSeq }),
+		body: JSON.stringify({ ...JSON.parse(push.body), atom_seqs: atomSeqs }),
 	});
 };
 
@@ -100,7 +100,12 @@ describe("the derived view: Autumn's snapshot with what the Atom owes replayed o
 		await pushBalance({ processor, balance: 900 });
 		await owe({ journal, value: 10 });
 
-		await pushBalance({ processor, balance: 890, readAt: 2000, atomSeq: 1 });
+		await pushBalance({
+			processor,
+			balance: 890,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 1 },
+		});
 
 		expect(await remainingOf({ processor })).toBe(890);
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
@@ -112,7 +117,12 @@ describe("the derived view: Autumn's snapshot with what the Atom owes replayed o
 		await owe({ journal, value: 10 });
 
 		expect(
-			await pushBalance({ processor, balance: 500, readAt: 1000, atomSeq: 1 }),
+			await pushBalance({
+				processor,
+				balance: 500,
+				readAt: 1000,
+				atomSeqs: { [journal.writerId]: 1 },
+			}),
 		).toBe(false);
 
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
@@ -290,7 +300,12 @@ describe("the view is incremental between pushes", () => {
 		read({ ctx });
 
 		const steps = await countEngineSteps(async () => {
-			await pushBalance({ processor, balance: 990, readAt: 2000, atomSeq: 1 });
+			await pushBalance({
+				processor,
+				balance: 990,
+				readAt: 2000,
+				atomSeqs: { [journal.writerId]: 1 },
+			});
 			read({ ctx });
 		});
 
@@ -299,13 +314,18 @@ describe("the view is incremental between pushes", () => {
 });
 
 describe("reconciling on push: a push says how far it has seen this Atom's journal", () => {
-	test("a push with atom_seq >= seq drops the entry, and the view equals the push", async () => {
+	test("a push that has seen seq from this journal's writer drops the entry, and the view equals the push", async () => {
 		const { processor, journal } = openSlot();
 		await pushBalance({ processor, balance: 1000 });
 		await owe({ journal, value: 10 });
 		await owe({ journal, value: 20 });
 
-		await pushBalance({ processor, balance: 970, readAt: 2000, atomSeq: 2 });
+		await pushBalance({
+			processor,
+			balance: 970,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 2 },
+		});
 
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(await remainingOf({ processor })).toBe(970);
@@ -317,7 +337,12 @@ describe("reconciling on push: a push says how far it has seen this Atom's journ
 		await owe({ journal, value: 10 });
 		await owe({ journal, value: 20 });
 
-		await pushBalance({ processor, balance: 990, readAt: 2000, atomSeq: 1 });
+		await pushBalance({
+			processor,
+			balance: 990,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 1 },
+		});
 
 		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
 			[2],
@@ -334,7 +359,7 @@ describe("reconciling on push: a push says how far it has seen this Atom's journ
 			processor,
 			balance: 1000,
 			readAt: 2000,
-			atomSeq: null,
+			atomSeqs: null,
 		});
 
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);

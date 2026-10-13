@@ -60,14 +60,18 @@ test("readSubject returns Autumn's body as text, for the entity it names", async
 	).toBe('{"entity_id":"ent_1"}');
 });
 
-test("appendTracks posts the journaled tracks and resolves on Autumn's 204", async () => {
+test("appendTracks posts the journal's writer id and tracks, and resolves on Autumn's 204", async () => {
 	const tracks = [
 		{ seq: 1, command: createTrackCommand({ commandId: "atom_req_1" }) },
 	];
 
-	await client.appendTracks({ tokenHash: "hash_folder", tracks });
+	await client.appendTracks({
+		tokenHash: "hash_folder",
+		writer: "w_1",
+		tracks,
+	});
 
-	expect(appended).toEqual([{ tracks }]);
+	expect(appended).toEqual([{ writer: "w_1", tracks }]);
 });
 
 test("findInvalidKeys returns the hashes Autumn names invalid", async () => {

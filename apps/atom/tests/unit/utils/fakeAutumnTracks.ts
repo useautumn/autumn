@@ -5,7 +5,12 @@ import {
 	AtomTracksAppendRequestSchema,
 } from "@autumn/byoc";
 
-export type AppliedTrack = { customerId: string; seq: number; value: number };
+export type AppliedTrack = {
+	writer: string;
+	customerId: string;
+	seq: number;
+	value: number;
+};
 
 /**
  * Autumn's side of `tracks.append`, in process: 204 once it holds the batch, and a command applies once per idempotency
@@ -38,6 +43,7 @@ export const startFakeAutumn = () => {
 			if (appliedKeys.has(key)) continue;
 			appliedKeys.add(key);
 			applied.push({
+				writer: parsed.data.writer,
 				customerId: command.identity.customerId,
 				seq,
 				value: command.value,

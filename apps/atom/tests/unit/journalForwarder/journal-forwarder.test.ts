@@ -147,7 +147,7 @@ describe("handing the journal to Autumn", () => {
 
 		await until(() => nothingUnsent({ journal }));
 		expect(autumn.applied).toEqual([
-			{ customerId: "cus_1", seq: 1, value: 10 },
+			{ writer: journal.writerId, customerId: "cus_1", seq: 1, value: 10 },
 		]);
 		expect(reply.balance?.remaining).toBe(990);
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
@@ -163,7 +163,7 @@ describe("handing the journal to Autumn", () => {
 
 		await until(() => nothingUnsent({ journal }));
 		expect(autumn.applied).toEqual([
-			{ customerId: "cus_1", seq: 1, value: 10 },
+			{ writer: journal.writerId, customerId: "cus_1", seq: 1, value: 10 },
 		]);
 		expect(autumn.requestSizes).toEqual([1, 1]);
 	});
@@ -244,6 +244,52 @@ describe("handing the journal to Autumn", () => {
 	});
 });
 
+describe("one writer per journal file", () => {
+	test("two journals for one customer are two writers: a push that has seen w1's tracks clears only w1's", async () => {
+		const journals = [0, 1].map(() =>
+			openJournal({ databasePath: ":memory:" }),
+		);
+		const forwarder = forwarderTo({ sleep: () => Bun.sleep(1) });
+		for (const journal of journals) {
+			const forwarding = forwarder.forward({
+				journal,
+				tokenHash: () => "hash_folder",
+				pulls: { request() {} },
+			});
+			cleanups.push(() => {
+				forwarding.stop();
+				journal.close();
+			});
+			await journal.append({
+				customerId: "cus_1",
+				command: owedCommand({
+					commandId: `writer_${journal.writerId}`,
+					value: 10,
+				}),
+			});
+		}
+		const [w1, w2] = journals as [Journal, Journal];
+		await until(() => journals.every((journal) => nothingUnsent({ journal })));
+
+		for (const journal of journals)
+			journal.reconcile({
+				customerId: "cus_1",
+				atomSeqs: { [w1.writerId]: 1 },
+			});
+
+		expect(
+			autumn.applied.map(({ writer, seq }) => [writer, seq]).sort(),
+		).toEqual(
+			[
+				[w1.writerId, 1],
+				[w2.writerId, 1],
+			].sort(),
+		);
+		expect(w1.owed({ customerId: "cus_1" })).toEqual([]);
+		expect(w2.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual([1]);
+	});
+});
+
 describe("a sent deduction no push clears", () => {
 	test("sent but no push within the grace: the customer is pulled, and the read clears it", async () => {
 		const { processor, journal, sleeps, pulled } = await openForwardedSlot();
@@ -259,7 +305,10 @@ describe("a sent deduction no push clears", () => {
 		});
 		await processor.setSubject({
 			customerId: read.customerId,
-			body: JSON.stringify({ ...JSON.parse(read.body), atom_seq: 1 }),
+			body: JSON.stringify({
+				...JSON.parse(read.body),
+				atom_seqs: { [journal.writerId]: 1 },
+			}),
 		});
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(await remainingOf({ processor })).toBe(990);
@@ -275,7 +324,10 @@ describe("a sent deduction no push clears", () => {
 		});
 		await processor.setSubject({
 			customerId: push.customerId,
-			body: JSON.stringify({ ...JSON.parse(push.body), atom_seq: 1 }),
+			body: JSON.stringify({
+				...JSON.parse(push.body),
+				atom_seqs: { [journal.writerId]: 1 },
+			}),
 		});
 		(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
 		await Bun.sleep(10);
