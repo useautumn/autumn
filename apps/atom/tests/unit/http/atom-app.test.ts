@@ -19,10 +19,12 @@ import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenan
 import {
 	createThreadStatsBuffer,
 	openThreadCounters,
+	readThreadStats,
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noPeer,
 	noReplication,
 	noSubjectPulls,
@@ -79,8 +81,10 @@ const createLogger = () => {
 /** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder, and checks the org's secret keys when given them. */
 const createDeployedApp = ({
 	secretKeys,
+	loop = loopOnTime,
 }: {
 	secretKeys?: SecretKeys;
+	loop?: { lagMs(): number };
 } = {}) => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
@@ -100,6 +104,7 @@ const createDeployedApp = ({
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
+				loop,
 				secretKeys,
 				replication: noReplication,
 				peer: noPeer,
@@ -128,6 +133,7 @@ const createMultiTenantApp = () => {
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
 			counters,
+			loop: loopOnTime,
 			replication: noReplication,
 			peer: noPeer,
 		},
@@ -390,6 +396,40 @@ describe("an Atom in an org's cloud", () => {
 		);
 
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("a thread whose event loop is behind", () => {
+	test("refuses a check at once with a 503 the SDK retries at the API, logs no line and counts it as shed; a push still applies", async () => {
+		let lagMs = 1_000;
+		const { app, logged } = createDeployedApp({ loop: { lagMs: () => lagMs } });
+		const forwarded = autumnAnswering({ status: 200, body: {} });
+		const shedBefore = readThreadStats({ buffer: THREAD_STATS })[0]?.shed ?? 0;
+
+		const refused = await app.request("/v1/balances.check", checkMessages());
+		const stored = await app.request(
+			"/v1/subjects.set",
+			setSubject({ balance: 10 }),
+		);
+
+		expect(refused.status).toBe(503);
+		expect(await refused.json()).toMatchObject({ code: "atom_overloaded" });
+		expect(refused.headers.get("x-atom-forwarded")).toBeNull();
+		expect(forwarded).not.toHaveBeenCalled();
+		expect(readThreadStats({ buffer: THREAD_STATS })[0]?.shed).toBe(
+			shedBefore + 1,
+		);
+		expect(stored.status).toBe(200);
+		expect(logged.map(({ message }) => message)).toEqual([
+			expect.stringContaining("/v1/subjects.set"),
+		]);
+
+		lagMs = 0;
+		const answered = await app.request("/v1/balances.check", checkMessages());
+		expect(await answered.json()).toMatchObject({
+			allowed: true,
+			balance: { remaining: 10 },
+		});
 	});
 });
 

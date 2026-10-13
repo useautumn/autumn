@@ -6,6 +6,7 @@ import {
 	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
+import { DEFAULT_MAX_BATCHES_PER_FLUSH } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { MutationDurability } from "../../../../src/processor/writer/types/mutation.js";
 import type { PartitionWriterContext } from "../../../../src/processor/writer/types/partitionWriter.js";
@@ -35,12 +36,25 @@ const settle = async (): Promise<void> => {
 const createLingeringWriter = ({
 	applyLingerMs = HELD_LINGER_MS,
 	dbControlLingerMs = null,
+	dbControlMaxBatchesPerFlush = null,
 }: {
 	applyLingerMs?: number;
 	/** DB control's live override; null leaves `applyLingerMs` in force. */
 	dbControlLingerMs?: number | null;
+	/** DB control's live flush size; null leaves the default in force. */
+	dbControlMaxBatchesPerFlush?: number | null;
 } = {}) => {
 	const applied: string[][] = [];
+	const control = { maxBatchesPerFlush: dbControlMaxBatchesPerFlush };
+	let applyGate: Promise<void> | null = null;
+	/** Holds the next apply in flight until the returned release is called. */
+	const holdNextApply = () => {
+		let release = () => {};
+		applyGate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		return release;
+	};
 	const stateStore: PartitionWriterContext["stateStore"] = {
 		baseline: "map",
 		readState: () => null,
@@ -48,6 +62,9 @@ const createLingeringWriter = ({
 		readReceipt: () => null,
 		applyDurableMutations: async ({ records }) => {
 			applied.push(records.map((record) => record.mutation.id));
+			const gate = applyGate;
+			applyGate = null;
+			if (gate) await gate;
 			return records.map((record) => ({
 				kind: "applied" as const,
 				mutation: record.mutation,
@@ -73,6 +90,7 @@ const createLingeringWriter = ({
 					balanceCommitter: {
 						concurrency: null,
 						applyLingerMs: dbControlLingerMs,
+						maxBatchesPerFlush: control.maxBatchesPerFlush,
 					},
 				}),
 			},
@@ -124,7 +142,7 @@ const createLingeringWriter = ({
 		}
 	};
 
-	return { writer, applied, track, commitEach };
+	return { writer, applied, track, commitEach, control, holdNextApply };
 };
 
 describe("apply linger", () => {
@@ -185,11 +203,50 @@ describe("apply linger", () => {
 
 	test("a full flush's worth of batches goes without a waiter", async () => {
 		const { applied, commitEach } = createLingeringWriter();
-		const commandIds = Array.from({ length: 16 }, (_, index) => `t${index}`);
+		const commandIds = Array.from(
+			{ length: DEFAULT_MAX_BATCHES_PER_FLUSH },
+			(_, index) => `t${index}`,
+		);
 		await commitEach(commandIds);
 		await settle();
 
 		expect(applied).toEqual([commandIds]);
+	});
+
+	test("DB control's maxBatchesPerFlush makes a smaller queue due without a waiter", async () => {
+		const { applied, commitEach } = createLingeringWriter({
+			dbControlMaxBatchesPerFlush: 3,
+		});
+		await commitEach(["t1", "t2"]);
+		expect(applied).toEqual([]);
+
+		await commitEach(["t3"]);
+		await settle();
+		expect(applied).toEqual([["t1", "t2", "t3"]]);
+	});
+
+	test("each flush takes at most DB control's live maxBatchesPerFlush", async () => {
+		const { writer, applied, commitEach, control } = createLingeringWriter();
+		await commitEach(["t1", "t2", "t3", "t4", "t5"]);
+		expect(applied).toEqual([]);
+
+		control.maxBatchesPerFlush = 2;
+		await writer.waitForStore();
+		expect(applied).toEqual([["t1", "t2"], ["t3", "t4"], ["t5"]]);
+	});
+
+	test("a live change mid-flush neither drops nor repeats a batch", async () => {
+		const { writer, applied, commitEach, control, holdNextApply } =
+			createLingeringWriter({ dbControlMaxBatchesPerFlush: 2 });
+		const release = holdNextApply();
+		await commitEach(["t1", "t2"]);
+		expect(applied).toEqual([["t1", "t2"]]);
+
+		await commitEach(["t3", "t4", "t5"]);
+		control.maxBatchesPerFlush = 1;
+		release();
+		await writer.waitForStore();
+		expect(applied).toEqual([["t1", "t2"], ["t3"], ["t4"], ["t5"]]);
 	});
 
 	test("a reply decision that never waits on the store wakes nothing", async () => {

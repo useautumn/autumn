@@ -23,7 +23,7 @@ const subjectBody = ({ padding = "" }: { padding?: string } = {}) =>
 const incompressible = (bytes: number) =>
 	Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString("hex");
 
-const createClient = () => {
+const createClient = ({ queueOnly = false }: { queueOnly?: boolean } = {}) => {
 	const queued: string[] = [];
 	const overHttp: string[] = [];
 	const warnings: string[] = [];
@@ -42,7 +42,7 @@ const createClient = () => {
 					queued.push(payload);
 				},
 			},
-			http,
+			http: queueOnly ? null : http,
 			logger: {
 				warn: (fields) =>
 					warnings.push(String((fields as { type: string }).type)),
@@ -92,5 +92,18 @@ describe("queue Atom client", () => {
 		expect(queued).toEqual([]);
 		expect(overHttp).toEqual([AtomPushType.SetSubject]);
 		expect(warnings).toEqual(["herald_atom_push_oversized"]);
+	});
+
+	test("where pushes go over the queue only, a push too big for one message fails and never reaches HTTP", async () => {
+		const { client, queued, overHttp } = createClient({ queueOnly: true });
+
+		await expect(
+			client.setSubject({
+				body: subjectBody({ padding: incompressible(ATOM_PUSH_MAX_BYTES) }),
+			}),
+		).rejects.toThrow("too big for the Atom's queue");
+
+		expect(queued).toEqual([]);
+		expect(overHttp).toEqual([]);
 	});
 });

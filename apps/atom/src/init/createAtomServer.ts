@@ -8,6 +8,7 @@ import { createPeerApp } from "../http/createPeerApp.js";
 import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
 	AtomServer,
@@ -51,12 +52,14 @@ export const createAtomServer = ({
 						}),
 				})
 			: undefined;
+	const loop = startLoopWatch();
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
 		logger: ctx.logger,
 		health: ctx.health,
 		counters: ctx.counters,
+		loop,
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
@@ -116,6 +119,7 @@ export const createAtomServer = ({
 		await ctx.replication.stop();
 		diskEvictor.stop();
 		statsTick.stop();
+		loop.stop();
 		secretKeys?.stop();
 		ctx.auth.close();
 	}

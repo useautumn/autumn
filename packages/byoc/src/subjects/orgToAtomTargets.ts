@@ -51,15 +51,23 @@ export const orgToAtomTargets = ({
 	org,
 	env,
 	customerId = null,
+	orgAtomsOverQueue = false,
 }: {
 	shadowAtomConfig: ShadowAtomConfig;
 	org: Organization;
 	env: AppEnv;
 	customerId?: string | null;
+	/** Production herald pushes to org Atoms through their queues; elsewhere they take HTTP. */
+	orgAtomsOverQueue?: boolean;
 }): AtomConnection[] =>
 	[
 		...(org.atomDeployments ?? []).map((atomDeployment) =>
-			atomDeploymentToConnection({ atomDeployment }),
+			atomDeploymentToConnection({
+				atomDeployment,
+				orgId: org.id,
+				env,
+				overQueue: orgAtomsOverQueue,
+			}),
 		),
 		shadowAtomConnection({ shadowAtomConfig, org, env, customerId }),
 	].filter((connection) => connection !== null);

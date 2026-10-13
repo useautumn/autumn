@@ -84,6 +84,7 @@ const createBodyContext = ({
 					orgs: {},
 				}),
 		},
+		atomPushQueueOnly: false,
 		getAtomClient: () => ({
 			setSubject: async ({ body }: { body: unknown }) => {
 				bodies.push(body);

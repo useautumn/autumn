@@ -20,6 +20,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -96,6 +97,7 @@ export const createReplica = ({
 			dataDir: dataDir,
 		},
 		counters,
+		loop: loopOnTime,
 		replication,
 		peer: { port: PORT },
 		now,

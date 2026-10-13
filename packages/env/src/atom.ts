@@ -7,8 +7,8 @@ const LOCAL_ATOM_PEER_PORT = 8791;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** Only for a container given no limits, which sees its whole host; past this many, more threads only cost memory. */
-const MAX_UNLIMITED_THREADS = 8;
+/** Measured on staging: past five, more threads at the same load cost CPU per check and p99 (Large 7→5, XL 15→5). */
+const MAX_THREADS = 5;
 const MiB = 1024 * 1024;
 /** Measured idle on Linux with 128 slot files open per thread: the main thread, then each serving thread on top. */
 const MAIN_THREAD_BYTES = 256 * MiB;
@@ -30,7 +30,6 @@ const RECEIVER_SHARE_OF_THREADS = 0.3;
 type AtomMachine = {
 	availableCpus: number;
 	memoryLimitBytes: number;
-	isContainerLimited: boolean;
 };
 
 const readMachine = (): AtomMachine => {
@@ -39,7 +38,6 @@ const readMachine = (): AtomMachine => {
 	return {
 		availableCpus: availableParallelism(),
 		memoryLimitBytes: constrainedMemory || totalmem(),
-		isContainerLimited: constrainedMemory > 0,
 	};
 };
 
@@ -164,7 +162,7 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as both the container's CPUs and its memory allow, so a bigger size is used without a setting to keep in step.
+/** As many threads as the container's CPUs and memory allow, up to MAX_THREADS.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
@@ -178,9 +176,7 @@ const threadsOf = ({
 	const allowed = Math.min(
 		machine.availableCpus,
 		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		machine.isContainerLimited
-			? Number.POSITIVE_INFINITY
-			: MAX_UNLIMITED_THREADS,
+		MAX_THREADS,
 	);
 	return Math.max(1, allowed);
 };

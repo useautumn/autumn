@@ -59,9 +59,10 @@ export function createMeteringConsumer({
 		recentCommandsByPartition.set(partition, recentCommands);
 		if (ownerEpoch && !readOnly)
 			ownerEpochByPartition.set(partition, ownerEpoch);
+		// The read-only preparation replay is created after the writing one; it must not drop the writer's offsets.
 		if (producedOffsets)
 			producedOffsetsByPartition.set(partition, producedOffsets);
-		else producedOffsetsByPartition.delete(partition);
+		else if (!readOnly) producedOffsetsByPartition.delete(partition);
 		const replay = createPartitionReplay({
 			ctx: {
 				stateStore: ctx.stateStore,

@@ -171,13 +171,31 @@ export function loggedRecordOf({
 
 /** Bounds how far the store may trail the log: each unapplied batch keeps its
  *  store-durability callers waiting and its milestones in memory. */
-export const DEFAULT_MAX_UNAPPLIED_BATCHES = 16;
+export const DEFAULT_MAX_UNAPPLIED_BATCHES = 64;
 
 export const maxUnappliedBatchesOf = ({
 	limits,
 }: {
 	limits: PartitionWriterScope["config"]["limits"];
 }): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
+
+/** Bounds one store flush; the committer writes a flush as a single statement. */
+export const DEFAULT_MAX_BATCHES_PER_FLUSH = 32;
+
+/** Read live so DB control can retune it; clamped to [1, maxUnappliedBatches] so a full queue always counts as due. */
+export const maxBatchesPerFlushOf = ({
+	ctx,
+	limits,
+}: {
+	ctx: Pick<PartitionWriterScope["ctx"], "dbControl">;
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => {
+	const configured =
+		ctx.dbControl?.get().balanceCommitter.maxBatchesPerFlush ??
+		limits.maxBatchesPerFlush ??
+		DEFAULT_MAX_BATCHES_PER_FLUSH;
+	return Math.min(Math.max(configured, 1), maxUnappliedBatchesOf({ limits }));
+};
 
 export const maxBatchBytesOf = ({
 	limits,

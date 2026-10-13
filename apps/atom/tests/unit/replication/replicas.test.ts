@@ -21,6 +21,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	loopOnTime,
 	noPeer,
 	noReplication,
 	noSubjectPulls,
@@ -419,6 +420,7 @@ describe("the public app", () => {
 					dataDir: tmpdir(),
 				},
 				counters: openThreadCounters({ buffer: threadStats, index: 0 }),
+				loop: loopOnTime,
 				replication: noReplication,
 				peer: noPeer,
 			},

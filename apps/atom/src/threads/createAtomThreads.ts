@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
+import { getSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
@@ -135,6 +136,7 @@ export const createAtomThreads = ({
 				ready: readyFlag,
 				threadsReady,
 				stats,
+				sqliteOpenLock: getSqliteOpenLock(),
 				peers,
 			},
 		});

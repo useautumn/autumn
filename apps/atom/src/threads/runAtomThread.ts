@@ -15,6 +15,7 @@ import {
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
 import type { Slots } from "../slots/types/slots.js";
+import { shareSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
@@ -172,6 +173,7 @@ export const runAtomThread = (): void => {
 
 	async function receive(control: ThreadControl): Promise<void> {
 		if (control.type === "init") {
+			shareSqliteOpenLock({ lock: control.sqliteOpenLock });
 			thread = openThread({ init: control });
 			// Before it listens: a check it takes must reach its owner thread, not find no line to it yet.
 			for (const { index, ports } of control.peers)
