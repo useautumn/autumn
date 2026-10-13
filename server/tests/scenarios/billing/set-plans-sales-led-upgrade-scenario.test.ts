@@ -10,11 +10,14 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { CusService } from "@/internal/customers/CusService";
 
 const setupDedicatedCustomer = async ({
 	customerId,
+	withCard = true,
 }: {
 	customerId: string;
+	withCard?: boolean;
 }) => {
 	const free = products.base({ id: "free", isDefault: true, items: [] });
 	const dedicated = products.base({
@@ -40,7 +43,10 @@ const setupDedicatedCustomer = async ({
 			customerId,
 			setup: [
 				s.products({ list: [free, dedicated] }),
-				s.customer({ paymentMethod: "success", withDefault: true }),
+				s.customer({
+					...(withCard && { paymentMethod: "success" as const }),
+					withDefault: true,
+				}),
 			],
 			actions: [],
 		});
@@ -71,7 +77,7 @@ const setupDedicatedCustomer = async ({
 		waitForSeconds: 15,
 	});
 
-	return { autumnV1, dedicated };
+	return { autumnV1, autumnV2_4, ctx, dedicated };
 };
 
 test.concurrent(
@@ -93,5 +99,54 @@ test.concurrent(
 			product_id: dedicated.id,
 			cancel_action: "cancel_end_of_cycle",
 		});
+	},
+);
+
+test.concurrent(
+	"scenario C: no card on file, invoiced $1k Dedicated live six days in (the customer's real setup)",
+	async () => {
+		await setupDedicatedCustomer({
+			customerId: "sales-led-upgrade-no-card",
+			withCard: false,
+		});
+	},
+);
+
+test.concurrent(
+	"scenario D: scenario C after Update to $8k with a cycle reset and no invoice mode: the plan is left pending behind a payment URL",
+	async () => {
+		const customerId = "sales-led-upgrade-no-card-updated";
+		const { autumnV1, ctx, dedicated } = await setupDedicatedCustomer({
+			customerId,
+			withCard: false,
+		});
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const liveDedicated = fullCustomer.customer_products.find(
+			(customerProduct) => customerProduct.product.id === dedicated.id,
+		);
+		// The dashboard's Update sheet sends the edited items, not a customize block.
+		const result = await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			customer_product_id: liveDedicated?.id,
+			product_id: dedicated.id,
+			billing_cycle_anchor: "now",
+			items: dedicated.items.map((item) =>
+				item.feature_id ? item : { ...item, price: 8000 },
+			),
+		});
+		console.log(
+			JSON.stringify(
+				{
+					payment_url: result.payment_url,
+					required_action: result.required_action,
+					invoice: result.invoice,
+				},
+				null,
+				2,
+			),
+		);
 	},
 );
