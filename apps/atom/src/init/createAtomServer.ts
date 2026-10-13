@@ -5,6 +5,7 @@ import { createDiskEvictor } from "../disk/createDiskEvictor.js";
 import { readVolumeBytes } from "../disk/readVolumeBytes.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPeerApp } from "../http/createPeerApp.js";
+import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
@@ -86,18 +87,17 @@ export const createAtomServer = ({
 	let receiving: Promise<void> | undefined;
 
 	function listen(): void {
-		listener = Bun.serve({
+		listener = serveAtomApp({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
-			// Every thread listens on the one port, and Linux gives each connection to one of them.
-			reusePort: true,
 			fetch: app.fetch,
+			logger: ctx.logger,
 		});
-		peerListener = Bun.serve({
+		peerListener = serveAtomApp({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PEER_PORT,
-			reusePort: true,
 			fetch: peerApp.fetch,
+			logger: ctx.logger,
 		});
 	}
 

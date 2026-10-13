@@ -40,6 +40,8 @@ const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
 	ready: new Int32Array([1]),
+	threadsReady: new Int32Array([1]),
+	thread: 0,
 	threadStats: THREAD_STATS,
 	dataDir: tmpdir(),
 };

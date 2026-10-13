@@ -167,6 +167,8 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			bootedAt: new Date(clock.now()).toISOString(),
 			restarts: new Int32Array(1),
 			ready,
+			threadsReady: new Int32Array([1]),
+			thread: 0,
 			threadStats,
 			dataDir: ctx.volume.folder,
 		},
