@@ -11,7 +11,8 @@ import { trackToCommand } from "./trackToCommand.js";
 
 /**
  * A send_event check decided by the engine's own check and, when allowed, owed to Autumn as the worker's track. The
- * caller hears only once the deduction is on disk; one that could not be written is left to the API to deduct.
+ * caller hears only once the deduction is on disk; one that could not be written is left to the API to deduct, as is
+ * every one while the customer's journal is backed up.
  */
 export const answerDeductingCheck = async ({
 	ctx,
@@ -26,6 +27,8 @@ export const answerDeductingCheck = async ({
 	skipEvent: boolean;
 	subject: CurrentSubject;
 }): Promise<CheckResponseV3> => {
+	if (journal.isBackedUp({ customerId: check.customerId }))
+		throw new CannotAnswerError({ reason: "journal_backlog" });
 	const command = checkToCommand({ check, subject });
 	const track = trackToCommand({ command, subject, skipEvent });
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });

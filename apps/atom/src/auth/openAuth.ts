@@ -1,4 +1,5 @@
 import type { AtomEnv } from "@autumn/env/atom";
+import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
 import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
 import {
@@ -16,10 +17,12 @@ export const openAuth = ({
 	env,
 	owners,
 	subjectPulls,
+	journalForwarder,
 }: {
 	env: AtomEnv;
 	owners: SlotOwners;
 	subjectPulls: SubjectPulls;
+	journalForwarder: JournalForwarder;
 }): { auth: Auth; multiTenant?: MultiTenantContext; held: HeldSubjects } => {
 	// One budget per thread: it owns its slots' subjects, in every folder a multi-tenant Atom holds.
 	const held = createHeldSubjects({
@@ -34,6 +37,7 @@ export const openAuth = ({
 			owners,
 			held,
 			subjectPulls,
+			journalForwarder,
 		});
 		return { auth, held };
 	}
@@ -43,6 +47,7 @@ export const openAuth = ({
 		owners,
 		heldSubjects: held,
 		subjectPulls,
+		journalForwarder,
 	});
 	return {
 		auth,

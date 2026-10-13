@@ -1,11 +1,4 @@
 import type { TrackCommand } from "@autumn/balance-engine";
-import type { StoredSubject } from "../../types/storedSubject.js";
-
-/** Where a command stands with Autumn: not yet sent, sent and awaiting a push that shows it, or refused by Autumn. */
-export type JournalStatus =
-	| { kind: "pending" }
-	| { kind: "sent" }
-	| { kind: "rejected"; code: string };
 
 /** A deduction the Atom granted and owes Autumn: the worker's own track command, with the Atom's bookkeeping beside it. */
 export type JournalEntry = {
@@ -13,7 +6,8 @@ export type JournalEntry = {
 	customerId: string;
 	/** Per customer, strictly increasing; never reused, even once older entries are dropped. */
 	seq: number;
-	status: JournalStatus;
+	/** When the Atom granted it, by the journal's clock. */
+	appendedAt: number;
 	command: TrackCommand;
 };
 
@@ -24,14 +18,17 @@ export type Journal = {
 		customerId: string;
 		command: TrackCommand;
 	}): Promise<JournalEntry>;
-	/** What the customer's view replays, oldest first: every entry not refused. The same array until it changes. */
+	/** What the customer's view replays, oldest first: every entry no push has shown applied. The same array until it changes. */
 	owed(params: { customerId: string }): readonly JournalEntry[];
-	setStatus(params: {
-		customerId: string;
-		seq: number;
-		status: JournalStatus;
-	}): void;
-	/** After a push is stored: the entries it shows Autumn has applied leave the journal. */
-	reconcile(params: { customerId: string; subject: StoredSubject }): void;
+	/** Committed entries Autumn does not hold yet, oldest commit first; each customer's in seq order. */
+	unsent(params: { limit: number }): JournalEntry[];
+	/** Autumn durably holds these: they stay owed until a push shows them applied. */
+	markSent(params: { entries: JournalEntry[] }): void;
+	/** Called after every commit. */
+	onCommitted(listener: () => void): void;
+	/** The customer's journal is backed up: its oldest unsent deduction is too old, or it owes too many. */
+	isBackedUp(params: { customerId: string }): boolean;
+	/** After a push is stored: every entry at or below the seq it has seen from this Atom leaves the journal. */
+	reconcile(params: { customerId: string; atomSeq: number | null }): void;
 	close(): void;
 };

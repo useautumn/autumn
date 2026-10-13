@@ -1,5 +1,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type {
+	Forwarding,
+	JournalForwarder,
+} from "../journalForwarder/types/journalForwarder.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -16,6 +20,8 @@ import { serveReplicaReads } from "./replica/serveReplicaReads.js";
 import type { ReplicaSlotsContext } from "./replica/types/replicaSlotsContext.js";
 import {
 	journalFilePath,
+	journalFilesOfOtherCounts,
+	removeJournalFiles,
 	removeSlotFilesOfOtherCounts,
 	slotFilePath,
 } from "./slotFiles.js";
@@ -49,6 +55,7 @@ export const openSlots = ({
 	held,
 	now = Date.now,
 	pulls,
+	journalForwarder,
 }: {
 	folder: string;
 	slotCount: number;
@@ -61,6 +68,8 @@ export const openSlots = ({
 	now?: () => number;
 	/** This thread's pulls, and the token hash the folder proves itself with. */
 	pulls: { subjectPulls: SubjectPulls; tokenHash: () => string };
+	/** This thread's way to hand Autumn what its slots' journals hold. */
+	journalForwarder: JournalForwarder;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -78,6 +87,12 @@ export const openSlots = ({
 			processorFor({ customerId }).setSubject({ customerId, body }),
 	});
 	const journals: Journal[] = [];
+	const forwardings: Forwarding[] = [];
+	const forwardedOf = ({ journal }: { journal: Journal }) => ({
+		journal,
+		tokenHash: pulls.tokenHash,
+		pulls: subjectPulls,
+	});
 	const slots = Array.from({ length: slotCount }, (_, slot): OpenedSlot => {
 		const owner = owners.ownerOf({ slot });
 		if (owner !== owners.index)
@@ -94,6 +109,7 @@ export const openSlots = ({
 			databasePath: journalFilePath({ folder, slot, slotCount }),
 		});
 		journals.push(journal);
+		forwardings.push(journalForwarder.forward(forwardedOf({ journal })));
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
@@ -101,6 +117,25 @@ export const openSlots = ({
 			}),
 		};
 	});
+
+	// Another split's journal is retired by the thread that owned its slot, once Autumn holds what it owes.
+	for (const { path, slot } of journalFilesOfOtherCounts({
+		folder,
+		slotCount,
+	})) {
+		if (owners.ownerOf({ slot }) !== owners.index) continue;
+		const journal = openJournal({ databasePath: path });
+		journals.push(journal);
+		forwardings.push(
+			journalForwarder.retire({
+				...forwardedOf({ journal }),
+				retired: () => {
+					journal.close();
+					removeJournalFiles({ path });
+				},
+			}),
+		);
+	}
 
 	const subjects = slots.reduce(
 		(count, { sqliteStore }) => count + (sqliteStore?.countSubjects() ?? 0),
@@ -123,6 +158,7 @@ export const openSlots = ({
 	);
 
 	function close(): void {
+		for (const forwarding of forwardings) forwarding.stop();
 		for (const { sqliteStore } of slots) sqliteStore?.close();
 		for (const journal of journals) journal.close();
 		catalogStore.close();
