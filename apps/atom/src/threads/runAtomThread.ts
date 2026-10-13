@@ -5,7 +5,11 @@ import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
-import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
+import {
+	CATALOG_PUSH,
+	DELETE_PUSH,
+	SUBJECT_PUSH,
+} from "../pushes/applyPushes.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
 import {
@@ -136,6 +140,7 @@ const openReplicas = ({
 }) => {
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
+	registry.register(DELETE_PUSH);
 	registry.register(CATALOG_PUSH);
 	registry.register(ATOM_PUT);
 	registry.register(ATOM_DELETE);

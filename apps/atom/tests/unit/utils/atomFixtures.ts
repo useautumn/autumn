@@ -78,6 +78,24 @@ export const subjectPushOf = ({
 	}),
 });
 
+/** Autumn's `subjects.delete` once the worker no longer holds `cus_1` (or its `entityId`): its identity at a version. */
+export const deletedPushOf = ({
+	entityId = null,
+	logOffset,
+	readAt,
+}: {
+	entityId?: string | null;
+	logOffset: bigint;
+	readAt: number;
+}): { customerId: string; body: string } => ({
+	customerId: identity.customerId,
+	body: JSON.stringify({
+		identity: { ...identity, entityId },
+		log_offset: logOffset.toString(),
+		read_at: readAt,
+	}),
+});
+
 /** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
 export const storedSubjectWith = ({
 	balance,
