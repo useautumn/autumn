@@ -21,7 +21,7 @@ export const trackToCommand = ({
 	command: CheckCommand;
 	subject: CurrentSubject;
 	skipEvent: boolean;
-	/** The caller's own key, which the API's deducting check claims too; else this check's request id. */
+	/** The caller's Idempotency-Key, claimed raw as the API's middleware claims it; else this check's request id. */
 	idempotencyKey: string | null;
 	kind: CheckRequest["kind"];
 }): TrackCommand => {
@@ -49,8 +49,8 @@ export const trackToCommand = ({
 					id: null,
 				},
 		idempotency: {
-			// Never the request id: it is the claim's owner at the worker, and an owner claiming again is resumed, not refused.
-			key: `track:${idempotencyKey ?? command.requestId}`,
+			// Never the caller's key as the request id: that is the claim's owner, and an owner claiming again is resumed.
+			key: idempotencyKey ?? `track:${command.requestId}`,
 			ttlMs: TRACK_IDEMPOTENCY_TTL_MS,
 		},
 	};
