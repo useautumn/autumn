@@ -31,10 +31,10 @@ const rateValue = ({ row, features }: { row: Row; features: Feature[] }) => {
 		<>
 			{from && (
 				<>
-					<s className="text-subtle">
+					<s className="text-tertiary-foreground">
 						{from.endsWith(unit) ? from.slice(0, -unit.length) : from}
 					</s>
-					<span className="text-subtle">→</span>
+					<span className="text-tertiary-foreground">→</span>
 				</>
 			)}
 			<span
@@ -83,7 +83,7 @@ const sourceLine = ({
 	);
 };
 
-/** Icon, name and "Changed"/"Added" badge, shown only on the editable plan card. */
+/** Icon and "Added" badge, shown only on the editable plan card. */
 const editableExtras = ({
 	row,
 	features,
@@ -105,10 +105,7 @@ const editableExtras = ({
 				}
 			</span>
 		),
-		badge:
-			row.state === "changed" || row.state === "added"
-				? stateBadge(row.state === "changed" ? "Changed" : "Added")
-				: null,
+		badge: row.state === "added" && stateBadge("Added"),
 	};
 };
 
