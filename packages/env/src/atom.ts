@@ -239,6 +239,8 @@ export function createAtomEnv(
 		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
 			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
 		),
+		/** Spike A/B: held subjects also go to one native store every thread reads, so a check never waits on its owner thread. */
+		ATOM_NATIVE_STORE: runtimeEnv.ATOM_NATIVE_STORE?.trim() === "1",
 		/** The pushes queue's URL where the AWS SDK reads it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,

@@ -11,7 +11,7 @@ import { deepFreeze } from "../../../state/deepFreeze.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
-import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import type { CheckContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "./freshestCatalog.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
@@ -21,7 +21,7 @@ const subjectNotStored = ({
 	entityId,
 	reason,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	customerId: string;
 	entityId: string | null;
 	reason: Extract<
@@ -39,7 +39,7 @@ const readStoredParts = ({
 	customerId,
 	entityId,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	customerId: string;
 	entityId: string | null;
 }): { customer: StoredSubject; entity: StoredSubject | null } => {
@@ -92,7 +92,7 @@ export const readCurrentSubject = ({
 	customerId,
 	entityId,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	customerId: string;
 	entityId: string | null;
 }): CurrentSubject => {

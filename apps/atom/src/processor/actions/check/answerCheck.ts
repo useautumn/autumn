@@ -14,7 +14,7 @@ import { z } from "zod/v4";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { AnswerableCheck } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
-import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import type { CheckContext } from "../../types/slotProcessor.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
@@ -51,7 +51,7 @@ const toRenderContext = ({
 	check,
 	subject,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	check: AnswerableCheck;
 	subject: CurrentSubject;
 }): SharedContext => {
@@ -79,7 +79,7 @@ export const answerCheck = ({
 	check,
 	subject,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	check: AnswerableCheck;
 	subject: CurrentSubject;
 }): CheckResponseV3 => {

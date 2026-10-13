@@ -1,5 +1,10 @@
 import { deepFreeze } from "./deepFreeze.js";
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
+import {
+	getNativeSubjects,
+	nativeSubjectKey,
+	type SubjectTexts,
+} from "./nativeSubjects/nativeSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
@@ -52,6 +57,29 @@ export const openSqliteStore = ({
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
 	const storePrefix = `${storesOpened++}\u0000`;
+	const native = getNativeSubjects();
+
+	const nativeKeyOf = (params: {
+		customerId: string;
+		entityId: string | null;
+	}) => nativeSubjectKey({ databasePath, ...params });
+
+	/** With the shared store on, every held copy is also in it, so other threads answer checks without asking this one. */
+	function publish({
+		subject,
+		texts,
+	}: {
+		subject: StoredSubject;
+		texts: SubjectTexts;
+	}): (() => void) | undefined {
+		if (!native) return undefined;
+		const key = nativeKeyOf({
+			customerId: subject.state.identity.customerId,
+			entityId: subject.state.identity.entityId ?? null,
+		});
+		native.put({ key, subject, texts });
+		return () => native.drop({ key });
+	}
 
 	function readSubject(params: {
 		customerId: string;
@@ -64,7 +92,13 @@ export const openSqliteStore = ({
 		if (read === null) return null;
 		// Frozen, because every check of the subject shares the copy.
 		const subject = deepFreeze(read.subject);
-		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
+		held.hold({
+			key,
+			subject,
+			bytes: read.bytes,
+			sliceHash: read.sliceHash,
+			release: publish({ subject, texts: read.texts }),
+		});
 		return subject;
 	}
 
@@ -94,24 +128,42 @@ export const openSqliteStore = ({
 	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
 	function holdWritten({
 		write: { subject, slice },
-		result: { bytes, customerVersion },
+		result: { bytes, customerVersion, stateJson },
 	}: {
 		write: SubjectWrite;
 		result: SubjectWriteResult;
 	}): void {
 		const key = storePrefix + keyOf(subject);
 		if (bytes !== null) {
+			const stored = deepFreeze({
+				...subject,
+				customerVersion: customerVersion ?? subject.customerVersion,
+			});
 			held.hold({
 				key,
-				subject: deepFreeze({
-					...subject,
-					customerVersion: customerVersion ?? subject.customerVersion,
-				}),
+				subject: stored,
 				bytes,
 				sliceHash: slice.hash,
+				release: publish({
+					subject: stored,
+					texts: {
+						stateJson,
+						catalogJson: slice.catalogJson,
+						orgJson: slice.orgJson,
+					},
+				}),
 			});
 			return;
 		}
+		// Set whether or not this thread holds a copy: one a restarted thread never held may still be shared.
+		if (customerVersion !== null)
+			native?.setCustomerVersion({
+				key: nativeKeyOf({
+					customerId: subject.state.identity.customerId,
+					entityId: subject.state.identity.entityId ?? null,
+				}),
+				customerVersion,
+			});
 		const heldCopy = held.get(key);
 		if (
 			customerVersion === null ||
@@ -124,6 +176,7 @@ export const openSqliteStore = ({
 			subject: deepFreeze({ ...heldCopy.subject, customerVersion }),
 			bytes: heldCopy.bytes,
 			sliceHash: heldCopy.sliceHash,
+			release: heldCopy.release,
 		});
 	}
 
@@ -143,10 +196,11 @@ export const openSqliteStore = ({
 		limit: number;
 	}) {
 		const dropped = deleteCustomersWrittenBefore({ ctx, ...params });
-		for (const row of dropped)
-			held.drop(
-				storePrefix + subjectKey({ ...row, entityId: row.entityId || null }),
-			);
+		for (const row of dropped) {
+			const key = { ...row, entityId: row.entityId || null };
+			held.drop(storePrefix + subjectKey(key));
+			native?.drop({ key: nativeKeyOf(key) });
+		}
 		return {
 			customers: new Set(dropped.map((row) => row.customerId)).size,
 			rows: dropped.length,

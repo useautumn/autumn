@@ -1,6 +1,6 @@
 import type { CheckResponseV3 } from "@autumn/shared";
 import type { CheckRequest } from "../../types/check.js";
-import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import type { CheckContext } from "../../types/slotProcessor.js";
 import { readCurrentSubject } from "../readCurrentSubject/readCurrentSubject.js";
 import { answerCheck } from "./answerCheck.js";
 import { checkRequestToAnswerableCheck } from "./checkForwardRules.js";
@@ -10,7 +10,7 @@ export const check = ({
 	ctx,
 	request,
 }: {
-	ctx: SlotProcessorContext;
+	ctx: CheckContext;
 	request: CheckRequest;
 }): CheckResponseV3 => {
 	const answerableCheck = checkRequestToAnswerableCheck({ request });

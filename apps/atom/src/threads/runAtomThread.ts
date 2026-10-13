@@ -15,6 +15,7 @@ import {
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
 import type { Slots } from "../slots/types/slots.js";
+import { connectNativeSubjects } from "../state/nativeSubjects/nativeSubjects.js";
 import { shareSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
@@ -170,6 +171,8 @@ export const runAtomThread = (): void => {
 	async function receive(control: ThreadControl): Promise<void> {
 		if (control.type === "init") {
 			shareSqliteOpenLock({ lock: control.sqliteOpenLock });
+			if (control.nativeStore !== null)
+				connectNativeSubjects({ store: control.nativeStore });
 			thread = openThread({ init: control });
 			await thread.start();
 			report({ type: "ready" });

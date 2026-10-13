@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import type { SubjectTexts } from "../nativeSubjects/nativeSubjects.js";
 import type { HeldSubject } from "../types/heldSubject.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
@@ -105,7 +106,7 @@ export const readSubject = ({
 	ctx: SlotContext;
 	customerId: string;
 	entityId: string | null;
-}): HeldSubject | null => {
+}): (HeldSubject & { texts: SubjectTexts }) | null => {
 	const row = ctx.sqliteDb
 		.query<SubjectStateRow, { customerId: string; entityId: string }>(`
 			SELECT
@@ -121,7 +122,7 @@ export const readSubject = ({
 			WHERE states.customer_id = $customerId AND states.entity_id = $entityId
 		`)
 		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
-	return row ? storedSubjectFromRow({ row }) : null;
+	return row ? { ...storedSubjectFromRow({ row }), texts: row } : null;
 };
 
 /** Where a page of applied subjects ends, so the next page starts right after it whatever ties on `applied_at`. */
@@ -301,6 +302,7 @@ export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 export type SubjectWriteResult = {
 	bytes: number | null;
 	customerVersion: bigint | null;
+	stateJson: string;
 };
 
 /** Subjects that came from one read are written together. */
@@ -365,12 +367,16 @@ const upsertSubject = ({
 			sliceHash: slice.hash,
 			customerVersion: subject.customerVersion,
 		});
-	if (!written) return { bytes: null, customerVersion: null };
+	if (!written) return { bytes: null, customerVersion: null, stateJson };
 	const isStored =
 		written.readAt === BigInt(subject.readAt) &&
 		written.logOffset === subject.logOffset;
 	if (!isStored)
-		return { bytes: null, customerVersion: written.customerVersion };
+		return {
+			bytes: null,
+			customerVersion: written.customerVersion,
+			stateJson,
+		};
 	if (!sliceStored)
 		ctx.sqliteDb
 			.query(`
@@ -391,6 +397,7 @@ const upsertSubject = ({
 	return {
 		bytes: textBytes([stateJson, slice.catalogJson, slice.orgJson]),
 		customerVersion: written.customerVersion,
+		stateJson,
 	};
 };
 

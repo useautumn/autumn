@@ -17,6 +17,8 @@ export type ThreadInit = {
 	stats: SharedArrayBuffer;
 	/** The lock every SQLite connection in the process is opened under (newSqliteConnection). */
 	sqliteOpenLock: SharedArrayBuffer;
+	/** ATOM_NATIVE_STORE: the address of the one shared subject store (nativeSubjects); null when off. */
+	nativeStore: number | null;
 };
 
 /** What the main thread tells a running thread. */
