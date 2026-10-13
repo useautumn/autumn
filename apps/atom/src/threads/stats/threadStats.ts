@@ -18,6 +18,13 @@ export const THREAD_STAT_FIELDS = [
 	"checksProxied",
 	"ownerUnavailable",
 	/** Checks the stored rows could not answer: no customer, no entity, or an entity read before its customer's evict. */
+	/** What this thread's journals hold that Autumn does not, and how long the oldest of it has waited. */
+	"journalUnsent",
+	"journalOldestUnsentMs",
+	/** Deductions journaled; commits that failed, left to the API; batches Autumn did not take, sent again. */
+	"tracksAppended",
+	"appendFailed",
+	"journalForwardFailed",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",

@@ -18,6 +18,7 @@ afterEach(() => {
 /** A forwarder whose retries never come round, so only what it sends at once reaches Autumn; its log lines kept. */
 const forwarderLogging = () => {
 	const lines: { type: string; [field: string]: unknown }[] = [];
+	const counted: string[] = [];
 	const record = (fields: unknown) =>
 		void lines.push(fields as { type: string });
 	const forwarder = createJournalForwarder({
@@ -25,9 +26,10 @@ const forwarderLogging = () => {
 			autumnClient: createAutumnClient({ autumnApiUrl: autumn.url }),
 			logger: { info: record, warn: record },
 			sleep: () => new Promise(() => {}),
+			counters: { add: (field) => void counted.push(field) },
 		},
 	});
-	return { forwarder, lines };
+	return { forwarder, lines, counted };
 };
 
 /** A slot's journal on disk, handed to `forwarder`, holding `count` deductions Autumn does not have yet. */
@@ -87,7 +89,7 @@ describe("draining the journals as the Atom stops", () => {
 		const folder = createSlotFolder();
 		cleanups.push(folder.remove);
 		autumn.switches.down = true;
-		const { forwarder, lines } = forwarderLogging();
+		const { forwarder, lines, counted } = forwarderLogging();
 		const slot = await journalOwing({
 			forwarder,
 			journalPath: folder.journalPath,
@@ -99,6 +101,8 @@ describe("draining the journals as the Atom stops", () => {
 		const tookMs = Date.now() - startedAt;
 		slot.close();
 
+		// One batch failed, and its retry never came round.
+		expect(counted).toEqual(["journalForwardFailed"]);
 		expect(tookMs).toBeGreaterThanOrEqual(200);
 		expect(tookMs).toBeLessThan(1_000);
 		expect(

@@ -44,7 +44,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	});
 	// Per thread too: a journal belongs to its slot's owner thread.
 	const journalForwarder = createJournalForwarder({
-		ctx: { autumnClient: getAutumnClient({ env }), logger },
+		ctx: { autumnClient: getAutumnClient({ env }), logger, counters },
 	});
 	const { auth, multiTenant, held } = openAuth({
 		env,

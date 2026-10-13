@@ -1,6 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
 import type { Journal, JournalEntry } from "../state/journal/types/journal.js";
+import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import type {
 	ForwardedJournal,
 	JournalForwarder,
@@ -19,6 +20,7 @@ const DRAIN_POLL_MS = 20;
 type JournalForwarderContext = {
 	autumnClient: Pick<AutumnClient, "appendTracks">;
 	logger: Pick<AutumnLogger, "info" | "warn">;
+	counters?: Pick<ThreadCounters, "add">;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
@@ -76,6 +78,7 @@ export const createJournalForwarder = ({
 					tracks: batch.map(({ seq, command }) => ({ seq, command })),
 				});
 			} catch (error) {
+				ctx.counters?.add("journalForwardFailed");
 				if (retryMs === FIRST_RETRY_MS) logFailure({ error });
 				await sleep(retryMs);
 				retryMs = Math.min(retryMs * 2, LAST_RETRY_MS);
