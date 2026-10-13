@@ -9,6 +9,7 @@ import {
 	shouldCreateInvoiceItem,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
@@ -177,7 +178,11 @@ export const handleProratedUpgrade = async ({
 	});
 
 	const newQuantity = roundUsage({
-		usage: newUsage,
+		usage: allocatedUsageToStripeUsage({
+			price: cusPrice.price,
+			usage: newUsage,
+			allowance: cusEnt.entitlement.allowance ?? 0,
+		}),
 		price: cusPrice.price,
 	});
 

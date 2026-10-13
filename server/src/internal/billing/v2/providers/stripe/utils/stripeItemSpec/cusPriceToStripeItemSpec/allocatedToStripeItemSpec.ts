@@ -5,12 +5,12 @@ import {
 	type FullCusEntWithFullCusProduct,
 	getPriceCurrencyStripeId,
 	InternalError,
-	isVolumePrice,
 	roundUsageToNearestBillingUnit,
 	type StripeItemSpec,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 
 /**
  * Converts an in-arrear prorated (allocated) price to a StripeItemSpec.
@@ -44,16 +44,14 @@ export const allocatedToStripeItemSpec = ({
 		});
 	}
 
-	let existingUsage = cusEntToInvoiceUsage({
-		cusEnt: cusEntWithCusProduct,
-		subtractReplaceables: true,
+	const existingUsage = allocatedUsageToStripeUsage({
+		price,
+		usage: cusEntToInvoiceUsage({
+			cusEnt: cusEntWithCusProduct,
+			subtractReplaceables: true,
+		}),
+		allowance: cusEntsToAllowance({ cusEnts: [cusEntWithCusProduct] }),
 	});
-
-	// Volume seat prices bill only the seats over included, on net tiers.
-	if (isVolumePrice(price)) {
-		const allowance = cusEntsToAllowance({ cusEnts: [cusEntWithCusProduct] });
-		existingUsage = Math.max(0, existingUsage - allowance);
-	}
 
 	// Round existing usage to the nearest billing unit
 	const roundedUsage = roundUsageToNearestBillingUnit({

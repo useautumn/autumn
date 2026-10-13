@@ -13,6 +13,7 @@ import {
 	shouldProrateDowngradeNow,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/index.js";
@@ -230,7 +231,11 @@ export const handleProratedDowngrade = async ({
 	const numDeletedReplaceables = cusEnt.replaceables.filter(
 		(r) => r.delete_next_cycle,
 	).length;
-	const newQuantity = newUsage - numDeletedReplaceables;
+	const newQuantity = allocatedUsageToStripeUsage({
+		price: cusPrice.price,
+		usage: newUsage - numDeletedReplaceables,
+		allowance: cusEnt.entitlement.allowance ?? 0,
+	});
 
 	await stripeCli.subscriptionItems.update(subItem.id, {
 		quantity: roundUsage({
