@@ -408,6 +408,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		fullCustomer,
 		params,
 		stripeCustomer,
+		stripeSubscription,
 	});
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({

@@ -207,6 +207,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		params,
 		stripeCustomer,
+		stripeSubscription,
 	});
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
