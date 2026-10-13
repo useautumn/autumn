@@ -24,34 +24,10 @@ export type AtomTracksAppendRequest = z.infer<
 	typeof AtomTracksAppendRequestSchema
 >;
 
-export const AtomTrackOutcome = {
-	Applied: "applied",
-	/** Applied by an earlier send: the command's own idempotency key was already claimed. */
-	Duplicate: "duplicate",
-	Rejected: "rejected",
-} as const;
-
-/** One result per track, in request order; only a refusal carries why. */
-export const AtomTracksAppendResponseSchema = z.object({
-	results: z.array(
-		z.discriminatedUnion("outcome", [
-			z.object({
-				seq: z.number().int().positive(),
-				outcome: z.enum([AtomTrackOutcome.Applied, AtomTrackOutcome.Duplicate]),
-			}),
-			z.object({
-				seq: z.number().int().positive(),
-				outcome: z.literal(AtomTrackOutcome.Rejected),
-				code: z.string().min(1),
-			}),
-		]),
-	),
-});
-
-export type AtomTracksAppendResponse = z.infer<
-	typeof AtomTracksAppendResponseSchema
->;
-
+/**
+ * 204 once Autumn durably holds every track; a resend is deduplicated by each command's own idempotency key. A 5xx means
+ * Autumn could not take the batch, and the Atom sends it again whole.
+ */
 export const AtomTracksAppendErrorCode = {
 	/** 401: no Atom holds the token hash. */
 	AtomUnknown: AtomSubjectReadErrorCode.AtomUnknown,

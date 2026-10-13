@@ -15,12 +15,9 @@ export {
 } from "./atomPushes/atomPushMessage.js";
 export {
 	ATOM_TRACKS_APPEND_PATH,
-	AtomTrackOutcome,
 	AtomTracksAppendErrorCode,
 	type AtomTracksAppendRequest,
 	AtomTracksAppendRequestSchema,
-	type AtomTracksAppendResponse,
-	AtomTracksAppendResponseSchema,
 } from "./atomTracks/atomTracksContract.js";
 export {
 	BYOC_CACHE_API_VERSION,
