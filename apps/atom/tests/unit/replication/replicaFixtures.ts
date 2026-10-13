@@ -7,6 +7,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -29,7 +30,6 @@ import {
 export const ATOM_TOKEN = "atom_token_1";
 export const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
 export const PEER_SECRET = "p".repeat(64);
-export const PORT = 8001;
 export const PEER_PORT = 8002;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
@@ -52,6 +52,8 @@ export const createReplica = ({
 	dataDir = mkdtempSync(join(tmpdir(), "atom-replica-")),
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
+	ringPeers = [],
+	journalForwarder = forwardingNowhere,
 }: {
 	address: string;
 	peers: string[];
@@ -59,11 +61,14 @@ export const createReplica = ({
 	dataDir?: string;
 	secret?: string;
 	now?: () => number;
+	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
+	ringPeers?: string[];
+	journalForwarder?: typeof forwardingNowhere;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const auth = createDeployedAuth({
-		journalForwarder: forwardingNowhere,
+		journalForwarder,
 		dataDir,
 		tokenHash: TOKEN_HASH,
 		slotCount: SLOT_COUNT,
@@ -101,7 +106,16 @@ export const createReplica = ({
 		counters,
 		loop: loopOnTime,
 		replication,
-		peer: { port: PORT },
+		peer: {
+			port: PEER_PORT,
+			secret,
+			ring: createReplicaRing({
+				ctx: {
+					resolver: { peers: async () => ringPeers },
+					own: () => [address],
+				},
+			}),
+		},
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });

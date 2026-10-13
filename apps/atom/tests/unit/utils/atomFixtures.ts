@@ -23,6 +23,7 @@ import {
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import type { Replication } from "../../../src/replication/types/replication.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
@@ -202,8 +203,14 @@ export const noReplication: Replication = {
 	peers: async () => [],
 	stop: async () => {},
 };
-/** The peer port a lone replica would proxy to while starting; no peer answers there. */
-export const noPeer = { port: 0 };
+/** A lone replica's way to its peers: none answers there, and it owns every customer. */
+export const noPeer = {
+	port: 0,
+	secret: "",
+	ring: createReplicaRing({
+		ctx: { resolver: noReplication, own: () => ["10.0.0.1"] },
+	}),
+};
 
 export const noSubjectPulls: SubjectPulls = {
 	forFolder: () => noFolderPulls,

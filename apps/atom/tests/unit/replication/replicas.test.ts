@@ -382,9 +382,16 @@ describe("a replica not ready yet", () => {
 			"/v1/balances.check",
 			checkMessages(),
 		);
-		const proxiedTwice = await b.app.request("/v1/balances.check", {
-			...checkMessages(),
-			headers: { ...checkMessages().headers, "x-atom-proxied": "1" },
+		const check = checkMessages();
+		const proxiedTwice = await b.peerApp.request("/v1/balances.check", {
+			...check,
+			headers: peerRequestHeaders({
+				secret: PEER_SECRET,
+				method: "POST",
+				path: "/v1/balances.check",
+				body: check.body,
+				headers: check.headers,
+			}),
 		});
 
 		for (const reply of [noPeer, unreachable, proxiedTwice]) {

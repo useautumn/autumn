@@ -21,7 +21,9 @@ export type ForwardReason =
 	/** Autumn has fallen too far behind this customer's journal: its send_event checks are the API's until it catches up. */
 	| "journal_backlog"
 	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
-	| "secret_key_not_known";
+	| "secret_key_not_known"
+	/** The replica that owns the customer could not be reached, or shed the check before it ran. */
+	| "owner_unavailable";
 
 /**
  * Thrown wherever Atom finds it cannot answer a request itself. One place catches it
