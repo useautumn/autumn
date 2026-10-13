@@ -33,7 +33,11 @@ export const forwardRequest = async ({
 		method: context.req.method,
 		headers: sent,
 		body: await context.req.text(),
-		signal: AbortSignal.timeout(timeoutMs),
+		// A caller that gave up (the SDK's edge waits 1 s) has gone to the API itself: its forward ends with it.
+		signal: AbortSignal.any([
+			context.req.raw.signal,
+			AbortSignal.timeout(timeoutMs),
+		]),
 	});
 	const replied = new Headers(replyHeaders);
 	const contentType = reply.headers.get("content-type");
