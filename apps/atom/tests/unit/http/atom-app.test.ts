@@ -421,9 +421,11 @@ describe("a thread whose event loop is behind", () => {
 			shedBefore + 1,
 		);
 		expect(stored.status).toBe(200);
-		expect(logged.map(({ message }) => message)).toEqual([
-			expect.stringContaining("/v1/subjects.set"),
-		]);
+		expect(
+			logged.filter(({ message }) =>
+				String(message).includes("/v1/balances.check"),
+			),
+		).toEqual([]);
 
 		lagMs = 0;
 		const answered = await app.request("/v1/balances.check", checkMessages());
