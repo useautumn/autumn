@@ -59,6 +59,10 @@ export type PartitionOwnershipPublication = {
 	}): Promise<{ endpoint: string }>;
 	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
 	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
+	/** As `awaitClaim`, for routing only: the epoch is never taken as the owner epoch the writer stamps and fences with. */
+	awaitRouteClaim(params: {
+		signal: AbortSignal;
+	}): Promise<{ routeEpoch: string }>;
 };
 
 export type PartitionRuntimeResources = {
