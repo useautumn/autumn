@@ -66,9 +66,19 @@ test.each([
 	],
 	[
 		"a removed rate is summarised",
-		{ feature_override: { credit_schema: [] } },
+		{
+			feature_override: {
+				credit_schema: [{ metered_feature_id: "gateway", excluded: true }],
+			},
+		},
 		{},
 		[true, "Rate card changed undefined → undefined"],
+	],
+	[
+		"an empty override inherits the credit system's rate",
+		{ feature_override: { credit_schema: [] } },
+		{},
+		[true, "Gateway spend (USD) 2.857 → 1"],
 	],
 	[
 		"a per-units rate is summarised",
@@ -118,4 +128,32 @@ test("items of one feature pair by cadence", () => {
 		[true, "Gateway spend (USD) 9 → 3.571"],
 		[true, changed],
 	]);
+});
+
+test("features the override doesn't list stay inherited, not removed", () => {
+	const twoFeatures = [
+		...features.filter((f) => f.id !== "credits"),
+		{ id: "search", name: "Searches", type: FeatureType.Metered },
+		{
+			id: "credits",
+			type: FeatureType.CreditSystem,
+			config: {
+				schema: [
+					{ metered_feature_id: "gateway", credit_amount: 1 },
+					{ metered_feature_id: "search", credit_amount: 0.5 },
+				],
+			},
+		},
+	] as Feature[];
+	const result = migrationOpRateRows({
+		op: {
+			type: "update_plan",
+			plan_filter: { plan_id: "pro" },
+			customize: { add_items: [add()], remove_items: [remove()] },
+		} as UpdatePlanOp,
+		features: twoFeatures,
+	}).rows.map((row) =>
+		row.changes.map((c) => `${c.label} ${c.from} → ${c.to}`),
+	);
+	expect(result).toEqual([[changed]]);
 });
