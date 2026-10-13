@@ -30,6 +30,7 @@ tests/
 apps/balance-worker/.data/
 /.data/
 !packages/kafka/tests
+!packages/librdkafka/tests
 !apps/balance-worker/tests
 !apps/atom/tests
 !packages/balance-engine/tests
