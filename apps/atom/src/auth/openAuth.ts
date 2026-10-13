@@ -34,6 +34,7 @@ export const openAuth = ({
 			owners,
 			held,
 			subjectPulls,
+			writes: env.ATOM_LOCAL_WRITES,
 		});
 		return { auth, held };
 	}
@@ -43,6 +44,7 @@ export const openAuth = ({
 		owners,
 		heldSubjects: held,
 		subjectPulls,
+		writes: env.ATOM_LOCAL_WRITES,
 	});
 	return {
 		auth,

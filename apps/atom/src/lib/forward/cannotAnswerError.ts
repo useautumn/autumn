@@ -16,6 +16,8 @@ export type ForwardReason =
 	| "feature_not_stored"
 	/** The customer's latest push failed to store, so its rows are older than what Autumn sent. */
 	| "subject_not_written"
+	/** A send_event the Atom granted could not be journaled, so nothing was deducted here and the API deducts instead. */
+	| "journal_not_written"
 	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
 	| "secret_key_not_known";
 

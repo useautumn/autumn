@@ -1,5 +1,5 @@
 import { availableParallelism, totalmem } from "node:os";
-import { positiveInteger } from "./balanceWorker/primitives.js";
+import { booleanFlag, positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
 /** Where the replicas of an org's Atom listen to each other; the stack lists it as a container port but never a public endpoint. */
@@ -238,6 +238,10 @@ export function createAtomEnv(
 		/** How often the main thread logs what /health reports. */
 		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
 			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
+		),
+		/** The deployment's writes flag: on, a customer's own send_event check is deducted here and journaled for Autumn. */
+		ATOM_LOCAL_WRITES: booleanFlag.parse(
+			runtimeEnv.ATOM_LOCAL_WRITES?.trim() || undefined,
 		),
 		/** The pushes queue's URL where the AWS SDK reads it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
