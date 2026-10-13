@@ -22,11 +22,11 @@ const creditSchemaFingerprint = (
 		),
 	);
 
-/** Stable identity of a plan-item rate-card override (API shape); absent is "". */
+/** Stable identity of a plan-item rate-card override (API shape); absent or empty is "". */
 export const featureOverrideToKey = (
 	override: ApiFeatureOverride | null | undefined,
 ): string => {
-	if (override == null) return "";
+	if (!override?.credit_schema?.length && override?.markups == null) return "";
 	return `credit_schema:${creditSchemaFingerprint(override.credit_schema)}|markups:${deterministicStringify(override.markups ?? {})}`;
 };
 

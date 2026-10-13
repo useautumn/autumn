@@ -171,3 +171,16 @@ test("O8 a rate changing to an exclusion for the same feature is a change", () =
 		),
 	).toBe(false);
 });
+
+test("O9 an empty override is the same as no override", () => {
+	expect(itemsEqual(creditsItem(), creditsItem({ credit_schema: [] }))).toBe(
+		true,
+	);
+	expect(itemsEqual(creditsItem(), creditsItem({}))).toBe(true);
+	expect(
+		diffPlanV1({
+			from: plan({ items: [creditsItem()] }),
+			to: plan({ items: [creditsItem({ credit_schema: [] })] }),
+		}),
+	).toEqual({});
+});
