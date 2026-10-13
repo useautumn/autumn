@@ -4,8 +4,10 @@
  * Contract: the SDK falls back to the API when its Atom is slow, so one deduction can reach Autumn twice. With
  * Idempotency-Key K both claim `track:K`, as a track with body key K does:
  *  1. the API's check, then the Atom's hand-in under K: one deduction;
- *  2. the Atom's hand-in under K, then the API's check: one deduction, and the API answers 409 duplicate;
- *  3. without a header, the API claims nothing: the two are two deductions, as today.
+ *  2. the Atom's hand-in under K, then the API's check: one deduction, and the API answers 200 as a plain check of
+ *     the balance the hand-in left;
+ *  3. without a header, the API claims nothing: the two are two deductions, as today;
+ *  4. the same API call sent again under K is the header middleware's duplicate (409), as today, and deducts nothing.
  */
 
 import { afterAll, expect, test } from "bun:test";
@@ -119,7 +121,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 );
 
 test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-check-idem2: the Atom's hand-in under K, then the API's check under K: one deduction, the check 409s")}`,
+	`${chalk.yellowBright("atom-check-idem2: the Atom's hand-in under K, then the API's check under K: one deduction, the check answers the balance left")}`,
 	async () => {
 		const customerId = "atom-check-idem2";
 		const key = `idem_${crypto.randomUUID()}`;
@@ -139,9 +141,10 @@ test.skipIf(!isBalanceWorkerRoute())(
 			idempotencyKey: key,
 		});
 
-		expect(checked.status).toBe(409);
+		expect(checked.status).toBe(200);
 		expect(await checked.json()).toMatchObject({
-			code: ErrCode.DuplicateIdempotencyKey,
+			allowed: true,
+			balance: { remaining: 89 },
 		});
 		await expectBalanceCorrect({
 			customerId,
@@ -166,6 +169,32 @@ test.skipIf(!isBalanceWorkerRoute())(
 			customerId,
 			featureId: TestFeature.Messages,
 			remaining: 79,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-check-idem4: the same API check sent again under K is the middleware's duplicate, and deducts once")}`,
+	async () => {
+		const customerId = "atom-check-idem4";
+		const key = `idem_${crypto.randomUUID()}`;
+		const { autumnV2_4 } = await initHandIn({ customerId });
+		const send = () =>
+			deductingCheck({ client: autumnV2_4, customerId, idempotencyKey: key });
+
+		const first = await send();
+		const replay = await send();
+
+		expect(first.status).toBe(200);
+		expect(replay.status).toBe(409);
+		expect(await replay.json()).toMatchObject({
+			code: ErrCode.DuplicateIdempotencyKey,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 90,
 		});
 	},
 	120_000,
