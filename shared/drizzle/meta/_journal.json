@@ -722,6 +722,13 @@
       "when": 1791833709194,
       "tag": "0102_invoices_org_env_index",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1791903579011,
+      "tag": "0103_customers_atom_seqs",
+      "breakpoints": true
     }
   ]
 }

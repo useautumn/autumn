@@ -986,6 +986,53 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
+		test("a track an Atom handed in lands its journal's seq on customers.atom_seqs; a new worker reads it back from Postgres; a plain track leaves it", async () => {
+			const first = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(first)) workers.push(first);
+			const handedIn = await seedCustomer({ postgres, balance: 100 });
+			const readAtomSeqs = async () =>
+				(
+					await postgres.db.execute(
+						sql`SELECT atom_seqs FROM customers WHERE internal_id = ${handedIn.internalCustomerId}`,
+					)
+				).rows[0]?.atom_seqs;
+			try {
+				await trackOrExplain(
+					harness,
+					parseTrackCommand({
+						input: {
+							...trackCommand({
+								customer: handedIn,
+								commandId: "atom_track_1",
+								value: 5,
+							}),
+							source: { atomId: "atom_1", writerId: "w_1", seq: 7 },
+						},
+					}),
+				);
+				expect(await waitForBalance({ customer: handedIn, balance: 95 })).toBe(
+					95,
+				);
+				expect(await readAtomSeqs()).toEqual({ atom_1: { w_1: 7 } });
+
+				await first.stop();
+				workers.splice(workers.indexOf(first), 1);
+				const second = await startWorker({ harness });
+				workers.push(second);
+				const plain = await trackOrExplain(
+					harness,
+					trackCommand({ customer: handedIn, commandId: "plain_1", value: 5 }),
+				);
+				expect(plain.state.customer.atom_seqs).toEqual({ atom_1: { w_1: 7 } });
+				expect(await waitForBalance({ customer: handedIn, balance: 90 })).toBe(
+					90,
+				);
+				expect(await readAtomSeqs()).toEqual({ atom_1: { w_1: 7 } });
+			} finally {
+				await handedIn.cleanup();
+			}
+		}, 60_000);
+
 		test("a billing plan that creates a customer lands every row in Postgres, arrays included, and a track then draws on it", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
