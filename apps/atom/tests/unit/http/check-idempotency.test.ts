@@ -67,7 +67,7 @@ describe("a deducting check's idempotency key at Autumn", () => {
 			{
 				writer: expect.any(String),
 				owner: expect.stringMatching(/^atom_req_/),
-				key: "track:key_from_client",
+				key: "key_from_client",
 				value: 1,
 			},
 		]);
@@ -108,8 +108,8 @@ describe("a deducting check's idempotency key at Autumn", () => {
 			),
 		).toEqual([9, 8]);
 		expect(appended.map(({ key }) => key)).toEqual([
-			"track:key_from_client",
-			"track:key_from_client",
+			"key_from_client",
+			"key_from_client",
 		]);
 		expect(appended[0]?.owner).not.toBe(appended[1]?.owner);
 	});
@@ -134,6 +134,6 @@ describe("a deducting check's idempotency key at Autumn", () => {
 		await until(() => journals.appended.length === 1);
 
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
-		expect(journals.appended[0]?.key).toBe("track:key_from_client");
+		expect(journals.appended[0]?.key).toBe("key_from_client");
 	});
 });
