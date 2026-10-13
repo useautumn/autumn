@@ -36,7 +36,8 @@ export const allocatedSeatsToInvoiceDescription = ({
 
 	const overage = Math.max(0, usage - allowance);
 	const billedTier = volumeUsageToTier({ price, overage, allowance, currency });
-	if (!billedTier || overage === 0) return totalSeatDescription;
+	// At 0 over included the seats sit in the included tier, which still reads as a volume line.
+	if (!billedTier) return totalSeatDescription;
 
 	return volumeUsageToLineDescription({
 		...billedTier,

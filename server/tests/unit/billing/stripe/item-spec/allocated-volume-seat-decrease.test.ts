@@ -181,4 +181,17 @@ describe("volume seat decrease that raises the bill", () => {
 			"Pro - Users: 5 @ $10.00 (volume tier 4–8)",
 		);
 	});
+
+	test("a decrease back to included keeps the volume line format", async () => {
+		const setup = decreaseSetup();
+		await handleProratedDowngrade({
+			...setup,
+			prevBalance: INCLUDED - 4,
+			newBalance: 0,
+		});
+
+		expect(setup.calls.invoiceItems[0]?.description).toStartWith(
+			"Pro - Users: 0 @ $0.00 (volume tier 1–3)",
+		);
+	});
 });
