@@ -1,7 +1,7 @@
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-const SLOT_FILE = /^slot-\d+-of-(\d+)\.sqlite/;
+const SLOT_FILE = /^(?:slot|journal)-\d+-of-(\d+)\.sqlite/;
 
 const padded = (value: number) => String(value).padStart(3, "0");
 
@@ -29,7 +29,10 @@ export const journalFilePath = ({
 }): string =>
 	join(folder, `journal-${padded(slot)}-of-${padded(slotCount)}.sqlite`);
 
-/** Files from another slot count hold customers this split would look for elsewhere: they are dropped, and Autumn sends the customers again. */
+/**
+ * Files from another slot count hold customers this split would look for elsewhere: they are dropped, and Autumn sends
+ * the customers again. Their journals go too, since no slot of this split would ever read them.
+ */
 export const removeSlotFilesOfOtherCounts = ({
 	folder,
 	slotCount,

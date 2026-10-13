@@ -14,7 +14,7 @@ import { openJournalDatabase } from "./openJournalDatabase.js";
 import type { Journal, JournalEntry, JournalStatus } from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
-export const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
+const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
 
 const PENDING: JournalStatus = { kind: "pending" };
 

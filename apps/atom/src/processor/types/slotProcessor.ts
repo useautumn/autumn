@@ -10,8 +10,8 @@ export type SlotProcessorContext = {
 	catalogStore: Pick<CatalogStore, "read">;
 	logger: AutumnLogger;
 	subjectPulls: FolderSubjectPulls;
-	/** The slot's commands owed to Autumn; null where the deployment's writes flag is off, so every send_event is the API's. */
-	journal: Journal | null;
+	/** The slot's commands owed to Autumn. */
+	journal: Journal;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */

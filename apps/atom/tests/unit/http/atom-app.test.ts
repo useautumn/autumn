@@ -605,7 +605,7 @@ describe("a check Atom does not answer itself", () => {
 
 		const deducting = await app.request(
 			"/v1/balances.check",
-			checkMessages({ send_event: true }),
+			checkMessages({ send_event: true, entity_id: "ent_42" }),
 		);
 
 		expect(deducting.headers.get("x-atom-forwarded")).toBe("send_event");

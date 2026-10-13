@@ -10,7 +10,6 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
-	forwardReasonOf,
 	freshHeld,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -24,19 +23,10 @@ const newFolder = () => {
 	directories.push(folder);
 	return folder;
 };
-const open = ({
-	folder,
-	slotCount,
-	writes,
-}: {
-	folder: string;
-	slotCount: number;
-	writes?: boolean;
-}) => {
+const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
 	const slots = openSlots({
 		folder,
 		slotCount,
-		writes,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
 		pulls: { subjectPulls: noSubjectPulls, tokenHash: () => "hash_folder" },
@@ -335,14 +325,14 @@ describe("a replica catching up from a peer", () => {
 	});
 });
 
-describe("a deployment's writes flag", () => {
+describe("a slot's journal", () => {
 	const sendEvent = checkRequestFor({
 		params: { send_event: true, required_balance: 10 },
 	});
 
-	test("on: each slot this thread owns journals beside its file, and a send_event check is deducted here", async () => {
+	test("each slot this thread owns journals beside its file, and a send_event check is deducted here", async () => {
 		const folder = newFolder();
-		const slots = open({ folder, slotCount: 2, writes: true });
+		const slots = open({ folder, slotCount: 2 });
 		await slots
 			.processorFor({ customerId: "cus_1" })
 			.setSubject(
@@ -362,26 +352,5 @@ describe("a deployment's writes flag", () => {
 				)
 				.sort(),
 		).toEqual(["journal-000-of-002.sqlite", "journal-001-of-002.sqlite"]);
-	});
-
-	test("off by default: no journal is opened, and a send_event check goes to the API", async () => {
-		const folder = newFolder();
-		const slots = open({ folder, slotCount: 2 });
-		await slots
-			.processorFor({ customerId: "cus_1" })
-			.setSubject(
-				subjectPushOf({ subject: storedSubjectWith({ balance: 1000 }) }),
-			);
-
-		expect(
-			await forwardReasonOf(() =>
-				slots
-					.processorFor({ customerId: "cus_1" })
-					.check({ request: sendEvent }),
-			),
-		).toBe("send_event");
-		expect(
-			readdirSync(folder).some((name) => name.startsWith("journal-")),
-		).toBe(false);
 	});
 });

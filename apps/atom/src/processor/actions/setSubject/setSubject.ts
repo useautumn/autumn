@@ -22,7 +22,7 @@ export const setSubject = ({
 	// The pushed subject's own part is the last: false when a newer read of it is already held.
 	const isStored = stored.at(-1) ?? false;
 	if (isStored)
-		ctx.journal?.reconcile({
+		ctx.journal.reconcile({
 			customerId: subject.state.identity.customerId,
 			subject,
 		});
