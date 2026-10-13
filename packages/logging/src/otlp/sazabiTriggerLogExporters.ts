@@ -41,7 +41,10 @@ export const createSazabiTriggerLogExporters = ({
 
 	return [
 		filterBySeverity({
-			exporter: new OTLPLogExporter({ url: `${intakeUrl}/v1/logs` }),
+			exporter: new OTLPLogExporter({
+				url: `${intakeUrl}/v1/logs`,
+				timeoutMillis: 5000,
+			}),
 			minSeverity:
 				SEVERITY_NUMBERS[sazabiLogLevelOf({ env }).toUpperCase()] ??
 				SEVERITY_NUMBERS.WARN,

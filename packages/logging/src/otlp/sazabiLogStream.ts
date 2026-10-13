@@ -12,6 +12,9 @@ import {
 	sazabiLogLevelOf,
 } from "./sazabiConfig.js";
 
+const EXPORT_TIMEOUT_MS = 5000;
+const FLUSH_TIMEOUT_MS = 2000;
+
 type PinoLogLine = {
 	msg?: string;
 	level?: string;
@@ -59,9 +62,15 @@ export const createSazabiLogStream = ({
 			"deployment.environment": resolveDeployment(env),
 		}),
 		processors: [
+			// Small batches keep each synchronous serialise short; the short timeout bounds a slow intake.
 			new BatchLogRecordProcessor({
-				exporter: new OTLPLogExporter({ url: `${intakeUrl}/v1/logs` }),
-				scheduledDelayMillis: 5000,
+				exporter: new OTLPLogExporter({
+					url: `${intakeUrl}/v1/logs`,
+					timeoutMillis: EXPORT_TIMEOUT_MS,
+				}),
+				maxExportBatchSize: 128,
+				scheduledDelayMillis: 1000,
+				exportTimeoutMillis: EXPORT_TIMEOUT_MS,
 			}),
 		],
 	});
@@ -80,6 +89,12 @@ export const createSazabiLogStream = ({
 				},
 			},
 		},
-		flush: () => provider.forceFlush(),
+		flush: () =>
+			Promise.race([
+				provider.forceFlush().catch(() => {}),
+				new Promise<void>((resolve) => {
+					setTimeout(resolve, FLUSH_TIMEOUT_MS).unref?.();
+				}),
+			]),
 	};
 };
