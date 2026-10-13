@@ -1,7 +1,7 @@
 /**
  * Pay-per-use volume items around license (seat) plans. Seat assignments never bill
  * usage (initCustomerEntitlementUsageAllowed), so a seat's volume item caps at its
- * included amount; the parent plan's volume item bills on its band as usual.
+ * included amount; the parent plan's volume item bills its overage on its net tier as usual.
  * Each case checks the upcoming-invoice preview equals the renewal invoice.
  */
 
@@ -94,7 +94,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("license-volume-consumable 2: volume item on a license parent bills on its band")}`,
+	`${chalk.yellowBright("license-volume-consumable 2: volume item on a license parent bills its overage on its net band")}`,
 	async () => {
 		const customerId = "license-vol-parent";
 		const scenario = await setupLicenseVolume({
@@ -104,7 +104,7 @@ test.concurrent(
 			usage: [{ value: 700 }],
 		});
 
-		// 700 > 600 (band 2): 700 × $0.05 = $35
+		// 700 − 100 included = 600 over (net band 2): 600 × $0.05 = $30
 		const { preview } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -113,9 +113,9 @@ test.concurrent(
 			testClockId: scenario.testClockId!,
 			advancedTo: scenario.advancedTo,
 			featureId: TestFeature.Messages,
-			expectedFeatureAmount: 35,
+			expectedFeatureAmount: 30,
 		});
-		// $20 parent base + $35 usage
-		expect(preview.total).toBeCloseTo(55, 2);
+		// $20 parent base + $30 usage
+		expect(preview.total).toBeCloseTo(50, 2);
 	},
 );

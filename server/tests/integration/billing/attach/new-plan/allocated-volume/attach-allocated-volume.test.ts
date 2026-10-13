@@ -1,18 +1,6 @@
 /**
- * Allocated Volume Seats (prorated allocated, priced by Stripe at renewal)
- *
- * Volume follows the prepaid rule: the band is picked from total seats, and
- * once total seats pass the included amount every seat (included ones too) is
- * charged at that band's rate plus its flat_amount. At or below the included
- * amount nothing is charged.
- *
- * Allocated seats are Stripe-priced: the subscription item quantity is total
- * seats against a volume price with a free first tier [0..included] @ $0.
- *
- * Seats (3 included). Stored tiers are net of included; in total seats:
- *   0–3   free
- *   4–8   @ $10/seat + $5 flat
- *   9+    @ $6/seat  + $2 flat
+ * Allocated volume seats bill only seats over the 3 included, at the net tier they land in (0-5 @ $10,
+ * 6+ @ $6 + $2 flat). Stripe prices the subscription item: quantity is seats over included, on net tiers.
  */
 
 import { expect, test } from "bun:test";
@@ -33,16 +21,17 @@ const BASE_PRICE = 20;
 const INCLUDED = 3;
 
 const seatsCost = (seats: number) => {
-	if (seats <= INCLUDED) return 0;
-	if (seats <= INCLUDED + 5) return seats * 10 + 5;
-	return seats * 6 + 2;
+	const overage = seats - INCLUDED;
+	if (overage <= 0) return 0;
+	if (overage <= 5) return overage * 10;
+	return overage * 6 + 2;
 };
 
 const allocatedSeatsItem = () =>
 	items.volumeAllocatedUsers({
 		includedUsage: INCLUDED,
 		tiers: [
-			{ to: 5, amount: 10, flat_amount: 5 },
+			{ to: 5, amount: 10 },
 			{ to: "inf", amount: 6, flat_amount: 2 },
 		],
 	});
@@ -69,8 +58,7 @@ const expectVolumeSeatStripePrice = async ({
 			flat_amount: tier.flat_amount,
 		})),
 	).toEqual([
-		{ up_to: INCLUDED, unit_amount: 0, flat_amount: null },
-		{ up_to: INCLUDED + 5, unit_amount: 1000, flat_amount: 500 },
+		{ up_to: 5, unit_amount: 1000, flat_amount: null },
 		{ up_to: null, unit_amount: 600, flat_amount: 200 },
 	]);
 };
@@ -125,7 +113,7 @@ const createSeats = async ({
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume 1: 0 seats and at included cost $0, Stripe price is volume with a free tier")}`,
+	`${chalk.yellowBright("allocated-volume 1: 0 seats and at included cost $0, Stripe price is volume on net tiers with no free tier")}`,
 	async () => {
 		const customerId = "allocated-volume-included";
 		const { autumnV1, ctx, pro, testClockId, advancedTo } =
@@ -178,7 +166,7 @@ test.concurrent(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume 2: included + 1 charges every seat plus the band fee, crossing a band re-prices all seats; preview = invoice")}`,
+	`${chalk.yellowBright("allocated-volume 2: included + 1 charges only the seat over, crossing a net band re-prices the overage plus its fee; preview = invoice")}`,
 	async () => {
 		const customerId = "allocated-volume-bands";
 		const startSeats = INCLUDED + 1;
@@ -186,7 +174,7 @@ test.concurrent(
 		const { autumnV1, ctx, pro, testClockId, advancedTo } =
 			await setupVolumeSeats({ customerId, seats: startSeats });
 
-		// 4 seats land in the $10 band: 4 × $10 + $5 = $45
+		// 1 seat over included lands in net band 1: 1 × $10 = $10
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -206,7 +194,7 @@ test.concurrent(
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// 9 seats land in the $6 band: 9 × $6 + $2 = $56, so the increase bills $56 − $45
+		// 6 seats over included land in net band 2: 6 × $6 + $2 = $38, so the increase bills $38 − $10
 		await createSeats({
 			autumn: autumnV1,
 			customerId,

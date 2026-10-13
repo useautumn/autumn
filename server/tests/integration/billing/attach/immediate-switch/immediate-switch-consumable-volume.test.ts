@@ -1,7 +1,6 @@
 /**
- * Upgrading off a plan with pay-per-use volume tiers bills its arrear usage at the
- * switch on the band total usage lands in. Each case checks billing.previewAttach
- * against the Stripe invoice the upgrade creates, line by line.
+ * Upgrading off a pay-per-use volume plan bills its overage past included at the switch, on the net
+ * tier it lands in. Each case checks billing.previewAttach against the Stripe invoice line by line.
  */
 
 import { expect, test } from "bun:test";
@@ -119,14 +118,14 @@ const runVolumeUpgrade = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("immediate-switch-consumable-volume 1: 100 included, 700 used → band 2 on total: 700 × $0.05 = $35 at the switch")}`,
+	`${chalk.yellowBright("immediate-switch-consumable-volume 1: 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 at the switch")}`,
 	async () => {
 		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeUpgrade({
 			customerId: "imm-switch-cons-volume-band2",
 			proIncludedUsage: 100,
 			usage: 700,
-			expectedUsageAmount: 35,
+			expectedUsageAmount: 30,
 		});
 	},
 );

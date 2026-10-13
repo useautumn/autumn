@@ -1,8 +1,6 @@
 /**
- * Pay-per-use volume tiers on a credit system price total credits, not the action
- * units tracked: once credits pass the included amount, every credit is charged at
- * the band total credits land in. Each case checks the upcoming-invoice preview
- * equals the renewal invoice.
+ * Pay-per-use volume on a credit system bills credits (not action units) past included, at the net
+ * tier the overage lands in. Each case checks the upcoming-invoice preview equals the renewal invoice.
  */
 
 import { test } from "bun:test";
@@ -75,14 +73,14 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("consumable-volume-credits 2: 100 included, 150 credits → band 1 on all credits: 150 × $0.10 = $15")}`,
+	`${chalk.yellowBright("consumable-volume-credits 2: 100 included, 150 credits → only the 50 over: 50 × $0.10 = $5")}`,
 	async () => {
-		// 250 × 0.6 = 150 credits, past the 100 included, so all 150 × $0.10 = $15.
+		// 250 × 0.6 = 150 credits, 50 past the 100 included: 50 × $0.10 = $5.
 		await runCreditsVolumeRenewal({
 			customerId: "cons-volume-credits-included",
 			includedUsage: 100,
 			tracks: [{ featureId: TestFeature.Action2, value: 250 }],
-			expectedUsageAmount: 15,
+			expectedUsageAmount: 5,
 		});
 	},
 );

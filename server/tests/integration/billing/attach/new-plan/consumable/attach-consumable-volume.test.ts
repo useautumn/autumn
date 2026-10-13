@@ -1,7 +1,6 @@
 /**
- * Pay-per-use volume tiers follow the prepaid (Stripe) rule: nothing is charged at or
- * below the included amount; past it, every unit is charged at the band total usage
- * lands in. Each case checks the upcoming-invoice preview equals the renewal invoice.
+ * Pay-per-use volume bills only the overage past included, at the net tier it lands in; at or below
+ * included it bills $0. Each case checks the upcoming-invoice preview equals the renewal invoice.
  */
 
 import { test } from "bun:test";
@@ -102,26 +101,26 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("consumable-volume 4: 100 included, used 150 → all 150 × $0.10 = $15")}`,
+	`${chalk.yellowBright("consumable-volume 4: 100 included, used 150 → only the 50 over: 50 × $0.10 = $5")}`,
 	async () => {
 		await runVolumeRenewal({
 			customerId: "cons-volume-above-included",
 			includedUsage: 100,
 			usage: 150,
-			expectedUsageAmount: 15,
+			expectedUsageAmount: 5,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("consumable-volume 5: 100 included, used 700 → band 2 on total: 700 × $0.05 = $35")}`,
+	`${chalk.yellowBright("consumable-volume 5: 100 included, used 700 → 600 over in net band 2: 600 × $0.05 = $30")}`,
 	async () => {
 		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeRenewal({
 			customerId: "cons-volume-included-band2",
 			includedUsage: 100,
 			usage: 700,
-			expectedUsageAmount: 35,
+			expectedUsageAmount: 30,
 		});
 	},
 );
@@ -159,7 +158,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("consumable-volume 8: flat_amount, 100 included: used 300 → tier-1 fee $10")}`,
+	`${chalk.yellowBright("consumable-volume 8: flat_amount, 100 included: used 300 → 200 over in net tier 1 → fee $10")}`,
 	async () => {
 		await runVolumeRenewal({
 			customerId: "cons-volume-flat-band1",

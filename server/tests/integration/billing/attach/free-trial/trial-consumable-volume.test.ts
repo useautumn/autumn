@@ -1,6 +1,6 @@
 /**
  * Pay-per-use volume on a trial plan: trial usage isn't billed at trial end, and since the
- * balance isn't reset there it counts toward the first paid cycle's band.
+ * balance isn't reset there it counts toward the first paid cycle's overage.
  */
 
 import { expect, test } from "bun:test";
@@ -40,7 +40,7 @@ const setupVolumeTrial = async ({ customerId }: { customerId: string }) => {
 };
 
 // Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of 100 included → total bands 0-600 / 601+.
-// DISABLED: in-trial preview bills trial usage ($35) but the trial-end invoice skips it ($20); not
+// DISABLED: in-trial preview bills trial usage ($25) but the trial-end invoice skips it ($20); not
 // volume-specific. autumn#4569 fixes it and is still open; re-enable once it is in dev.
 test.skip(`${chalk.yellowBright("trial-consumable-volume 1: in-trial preview matches the trial-end invoice (base only)")}`, async () => {
 	const customerId = "trial-cons-vol-end";
@@ -62,7 +62,7 @@ test.skip(`${chalk.yellowBright("trial-consumable-volume 1: in-trial preview mat
 });
 
 test.concurrent(
-	`${chalk.yellowBright("trial-consumable-volume 2: trial end bills base only, first paid cycle bills on its band")}`,
+	`${chalk.yellowBright("trial-consumable-volume 2: trial end bills base only, first paid cycle bills the overage on its net band")}`,
 	async () => {
 		const customerId = "trial-cons-vol-paid";
 		const { ctx, autumnV1, autumnV2_2, testClockId, advancedTo } =
@@ -93,7 +93,7 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// 150 trial + 500 paid = 650 > 600 (band 2): 650 × $0.05 = $32.50
+		// 150 trial + 500 paid = 650, 550 over included (net band 2): 550 × $0.05 = $27.50
 		const { renewalInvoice } = await expectNextInvoiceMatchesPreview({
 			ctx,
 			autumnV1,
@@ -102,9 +102,9 @@ test.concurrent(
 			testClockId: testClockId!,
 			advancedTo: trialEndMs,
 			featureId: TestFeature.Messages,
-			expectedFeatureAmount: 32.5,
+			expectedFeatureAmount: 27.5,
 		});
-		// $20 base + $32.50 usage
-		expect(renewalInvoice.total).toBeCloseTo(52.5, 2);
+		// $20 base + $27.50 usage
+		expect(renewalInvoice.total).toBeCloseTo(47.5, 2);
 	},
 );

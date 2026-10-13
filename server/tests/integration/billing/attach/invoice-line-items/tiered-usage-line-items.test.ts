@@ -1,6 +1,6 @@
 /**
- * Tiered usage is billed as one Stripe invoice line per price. A volume line names the tier
- * total usage lands in; every line goes to Stripe as 1 × total, as on dev.
+ * Tiered usage is billed as one Stripe invoice line per price. A volume line names the overage and the
+ * tier it lands in (total-usage positions); every line goes to Stripe as 1 × total, as on dev.
  * Every case advances one cycle and compares the renewal invoice to the preview.
  */
 
@@ -67,7 +67,7 @@ const runRenewal = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("tier-lines 1: volume, 100 included, used 150 → one line, 150 @ $0.50 = $75")}`,
+	`${chalk.yellowBright("tier-lines 1: volume, 100 included, used 150 → one line, 50 over @ $0.50 = $25")}`,
 	async () => {
 		// Net tiers 0–40 / 41+ are total-usage tiers 101–140 / 141+ once 100 are included.
 		await runRenewal({
@@ -82,8 +82,8 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Messages, value: 150 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} - Messages: 150 @ $0.50 (volume tier 141+)`,
-					amount: 75,
+					description: `${productName} - Messages: 50 @ $0.50 (volume tier 141+)`,
+					amount: 25,
 					quantity: 1,
 					previewQuantity: 150,
 				},

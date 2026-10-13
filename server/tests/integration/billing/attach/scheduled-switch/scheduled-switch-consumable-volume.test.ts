@@ -1,7 +1,6 @@
 /**
- * A downgrade scheduled off a plan with pay-per-use volume tiers bills the ending
- * period's usage at renewal on the band total usage lands in, beside the incoming
- * plan's base price. Each case checks the upcoming-invoice preview equals that invoice.
+ * A downgrade scheduled off a pay-per-use volume plan bills the ending period's overage at renewal on
+ * its net tier, beside the incoming base price. Each case checks the preview equals that invoice.
  */
 
 import { expect, test } from "bun:test";
@@ -82,25 +81,25 @@ const runVolumeDowngrade = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-consumable-volume 1: premium 100 included, 700 used → band 2: 700 × $0.05 = $35 + pro $20")}`,
+	`${chalk.yellowBright("scheduled-switch-consumable-volume 1: premium 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 + pro $20")}`,
 	async () => {
 		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeDowngrade({
 			customerId: "sched-switch-cons-volume-band2",
 			usage: 700,
-			expectedUsageAmount: 35,
+			expectedUsageAmount: 30,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-consumable-volume 2: premium 100 included, 150 used → band 1 on all units: 150 × $0.10 = $15 + pro $20")}`,
+	`${chalk.yellowBright("scheduled-switch-consumable-volume 2: premium 100 included, 150 used → only the 50 over: 50 × $0.10 = $5 + pro $20")}`,
 	async () => {
-		// 150 × $0.10 = $15: included units are charged too once usage passes them.
+		// Included units are never charged: 50 over × $0.10 = $5.
 		await runVolumeDowngrade({
 			customerId: "sched-switch-cons-volume-band1",
 			usage: 150,
-			expectedUsageAmount: 15,
+			expectedUsageAmount: 5,
 		});
 	},
 );

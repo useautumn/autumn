@@ -1,8 +1,6 @@
 /**
- * Pay-per-use volume tiers with entities. An entity-feature item prices the customer
- * total (the sum of every entity's actual usage) on one band; per-entity
- * plans each bill on their own band. Every case checks the upcoming-invoice preview
- * equals the renewal invoice.
+ * Volume with entities: an entity-feature item bills the customer's actual total past its total included
+ * on one net band; per-entity plans each bill their own overage. Preview must equal the renewal invoice.
  */
 
 import { expect, test } from "bun:test";
@@ -16,7 +14,7 @@ import chalk from "chalk";
 
 // Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of included.
 test.concurrent(
-	`${chalk.yellowBright("volume-entity 1: entity feature, 3 entities × 100 included, one under → band 2 on customer total")}`,
+	`${chalk.yellowBright("volume-entity 1: entity feature, 3 entities × 100 included, one under → 550 over in net band 2 on customer total")}`,
 	async () => {
 		const customerId = "vol-entity-feature";
 		const volumeItem = items.volumeConsumableMessages({
@@ -54,7 +52,7 @@ test.concurrent(
 			],
 		});
 
-		// 500 + 300 + 50 used = 850 > 600 (band 2): 850 × $0.05 = $42.50; the unused 50 isn't billed
+		// 850 used − 300 included = 550 over (net band 2): 550 × $0.05 = $27.50; unused allowance doesn't offset
 		const { preview } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -63,15 +61,15 @@ test.concurrent(
 			testClockId: scenario.testClockId!,
 			advancedTo: scenario.advancedTo,
 			featureId: TestFeature.Messages,
-			expectedFeatureAmount: 42.5,
+			expectedFeatureAmount: 27.5,
 		});
-		// $20 base + $42.50 usage
-		expect(preview.total).toBeCloseTo(62.5, 2);
+		// $20 base + $27.50 usage
+		expect(preview.total).toBeCloseTo(47.5, 2);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("volume-entity 2: per-entity plans each bill on their own band")}`,
+	`${chalk.yellowBright("volume-entity 2: per-entity plans each bill their own overage on their own net band")}`,
 	async () => {
 		const customerId = "vol-entity-plans";
 		const volumeItem = items.volumeConsumableMessages({ includedUsage: 100 });
@@ -101,7 +99,7 @@ test.concurrent(
 			],
 		});
 
-		// Entity 0: 150 ≤ 600 (band 1): 150 × $0.10 = $15. Entity 1: 700 > 600 (band 2): 700 × $0.05 = $35
+		// Entity 0: 50 over (net band 1): 50 × $0.10 = $5. Entity 1: 600 over (net band 2): 600 × $0.05 = $30
 		const { preview, renewalInvoice } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -115,9 +113,9 @@ test.concurrent(
 			.filter((lineItem) => lineItem.feature_id === TestFeature.Messages)
 			.map((lineItem) => lineItem.subtotal)
 			.sort((a, b) => a - b);
-		expect(previewUsageSubtotals).toEqual([15, 35]);
-		// 2 × $20 base + $15 + $35
-		expect(preview.total).toBeCloseTo(90, 2);
+		expect(previewUsageSubtotals).toEqual([5, 30]);
+		// 2 × $20 base + $5 + $30
+		expect(preview.total).toBeCloseTo(75, 2);
 
 		const [entity0, entity1] = scenario.entities;
 		const invoiceLineItems = await waitForInvoiceLineItems({
@@ -128,6 +126,6 @@ test.concurrent(
 				.filter((lineItem) => lineItem.feature_id === TestFeature.Messages)
 				.map((lineItem) => [lineItem.entities[0]?.entity_id, lineItem.amount]),
 		);
-		expect(usageAmountByEntity).toEqual({ [entity0.id]: 15, [entity1.id]: 35 });
+		expect(usageAmountByEntity).toEqual({ [entity0.id]: 5, [entity1.id]: 30 });
 	},
 );

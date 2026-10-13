@@ -1,6 +1,6 @@
 /**
- * Allocated v2 (arrear) volume seats: nothing bills mid-cycle; the renewal bills every seat at
- * the band total seats land in. Net tiers 0-10 / 11+ with 3 included are total-seat bands 0-13 / 14+.
+ * Allocated v2 (arrear) volume seats: nothing bills mid-cycle; the renewal bills seats over the 3
+ * included at the net tier they land in. Net tiers 0-10 / 11+ are total-seat bands 0-13 / 14+.
  */
 
 import { expect, test } from "bun:test";
@@ -21,7 +21,7 @@ type VolumeTier = { to: number | "inf"; amount: number; flat_amount?: number };
 const BASE_PRICE = 20;
 const INCLUDED = 3;
 const FLAT_FEE_TIERS: VolumeTier[] = [
-	{ to: 10, amount: 10, flat_amount: 5 },
+	{ to: 10, amount: 10 },
 	{ to: "inf", amount: 8, flat_amount: 2 },
 ];
 
@@ -103,7 +103,7 @@ const trackSeats = async ({
 	await timeout(3000);
 };
 
-/** Arrear seats never invoice mid-cycle; the renewal matches the preview and bills the band. */
+/** Arrear seats never invoice mid-cycle; the renewal matches the preview and bills the overage. */
 const expectRenewalBillsSeats = async ({
 	scenario,
 	seatsAmount,
@@ -131,7 +131,7 @@ const expectRenewalBillsSeats = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-v2 1: 5 → 15 seats mid-cycle crosses into band 2: 15 × $8 = $120 at renewal")}`,
+	`${chalk.yellowBright("allocated-volume-v2 1: 5 → 15 seats mid-cycle crosses into net band 2: 12 over × $8 = $96 at renewal")}`,
 	async () => {
 		const scenario = await setupVolumeSeats({
 			customerId: "alloc-vol-v2-up",
@@ -141,13 +141,13 @@ test.concurrent(
 		await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: 10 });
 
-		// 15 seats land in band 2 (14+): 15 × $8 = $120
-		await expectRenewalBillsSeats({ scenario, seatsAmount: 120 });
+		// 12 seats over included land in net band 2 (11+): 12 × $8 = $96
+		await expectRenewalBillsSeats({ scenario, seatsAmount: 96 });
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-v2 2: 15 → 7 seats mid-cycle drops back to band 1: 7 × $10 = $70 at renewal")}`,
+	`${chalk.yellowBright("allocated-volume-v2 2: 15 → 7 seats mid-cycle drops back to net band 1: 4 over × $10 = $40 at renewal")}`,
 	async () => {
 		const scenario = await setupVolumeSeats({
 			customerId: "alloc-vol-v2-down",
@@ -157,41 +157,41 @@ test.concurrent(
 		await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: -8 });
 
-		// 7 seats land in band 1 (0-13): 7 × $10 = $70
-		await expectRenewalBillsSeats({ scenario, seatsAmount: 70 });
+		// 4 seats over included land in net band 1 (0-10): 4 × $10 = $40
+		await expectRenewalBillsSeats({ scenario, seatsAmount: 40 });
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-v2 3: tier-1 flat fee, 3 seats = included → $0")}`,
+	`${chalk.yellowBright("allocated-volume-v2 3: tier-2 flat fee, 13 seats (10 over) stay in net band 1 → 10 × $10 = $100, no fee")}`,
 	async () => {
 		const scenario = await setupVolumeSeats({
-			customerId: "alloc-vol-v2-flat-included",
-			seats: INCLUDED,
+			customerId: "alloc-vol-v2-flat-band1",
+			seats: INCLUDED + 10,
 			tiers: FLAT_FEE_TIERS,
 		});
 
-		// 3 seats ≤ 3 included: no seat charge and no flat fee
-		await expectRenewalBillsSeats({ scenario, seatsAmount: 0 });
+		// 10 seats over included fill net band 1 (0-10): 10 × $10, band 2's fee not charged
+		await expectRenewalBillsSeats({ scenario, seatsAmount: 100 });
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-v2 4: tier-1 flat fee, 4 seats → 4 × $10 + $5 = $45")}`,
+	`${chalk.yellowBright("allocated-volume-v2 4: tier-2 flat fee, 14 seats (11 over) → 11 × $8 + $2 = $90")}`,
 	async () => {
 		const scenario = await setupVolumeSeats({
-			customerId: "alloc-vol-v2-flat-past-included",
-			seats: INCLUDED + 1,
+			customerId: "alloc-vol-v2-flat-band2",
+			seats: INCLUDED + 11,
 			tiers: FLAT_FEE_TIERS,
 		});
 
-		// 4 seats land in band 1, every seat charged: 4 × $10 + $5 flat = $45
-		await expectRenewalBillsSeats({ scenario, seatsAmount: 45 });
+		// 11 seats over included land in net band 2 (11+): 11 × $8 + $2 flat = $90
+		await expectRenewalBillsSeats({ scenario, seatsAmount: 90 });
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-v2 5: 15 entity seats, delete 8 mid-cycle → band 1: 7 × $10 = $70")}`,
+	`${chalk.yellowBright("allocated-volume-v2 5: 15 entity seats, delete 8 mid-cycle → net band 1: 4 over × $10 = $40")}`,
 	async () => {
 		const scenario = await setupVolumeSeats({
 			customerId: "alloc-vol-v2-entities-down",
@@ -204,7 +204,7 @@ test.concurrent(
 		}
 		await timeout(3000);
 
-		// 15 → 7 seats moves from band 2 back to band 1: 7 × $10 = $70
-		await expectRenewalBillsSeats({ scenario, seatsAmount: 70 });
+		// 15 → 7 seats moves from net band 2 back to net band 1: 4 over × $10 = $40
+		await expectRenewalBillsSeats({ scenario, seatsAmount: 40 });
 	},
 );

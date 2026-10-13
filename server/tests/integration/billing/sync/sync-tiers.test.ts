@@ -12,7 +12,7 @@
  * Test A: Tiered (graduated) pricing — prepaid messages with graduated tiers.
  * Test B: Volume-based pricing — prepaid messages with volume tiers.
  * Test C: Usage-based (metered) pricing — consumable messages billed per use.
- * Test D: Metered volume pricing — a pay-per-use volume item's metered price.
+ * Test D: Metered volume pricing — a pay-per-use volume item's metered price on net tiers.
  */
 
 import { expect, test } from "bun:test";
@@ -225,7 +225,7 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: metered usage-based pricing p
 // TEST D: Metered volume pricing
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing proposals show a volume metered price")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing proposals show a volume metered price on net tiers with no free tier")}`, async () => {
 	const customerId = "sync-tier-metered-volume";
 
 	const volumeMessages = items.volumeConsumableMessages({ includedUsage: 100 });
@@ -263,6 +263,11 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing propos
 
 	expect(volumeItem).toBeDefined();
 	expect(volumeItem!.matched_price_id).toBeTruthy();
+	// Stripe quantity is usage past the 100 included, so tiers stay net: 0-500 @ 10¢, 501+ @ 5¢.
+	expect(volumeItem!.tiers).toEqual([
+		{ up_to: 500, unit_amount: 10, flat_amount: null },
+		{ up_to: null, unit_amount: 5, flat_amount: null },
+	]);
 
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });

@@ -1,7 +1,6 @@
 /**
- * Cancelling a plan with pay-per-use volume tiers at end of cycle still bills the
- * period's usage in a final invoice, on the band total usage lands in. Each case
- * checks the upcoming-invoice preview equals that final invoice.
+ * Cancelling a pay-per-use volume plan at end of cycle still bills the period's overage past included
+ * in a final invoice, on its net tier. Each case checks the upcoming-invoice preview equals that invoice.
  */
 
 import { expect, test } from "bun:test";
@@ -67,14 +66,14 @@ const runVolumeCancelEndOfCycle = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("cancel-end-of-cycle-consumable-volume 1: 100 included, 700 used → band 2: 700 × $0.05 = $35 final invoice")}`,
+	`${chalk.yellowBright("cancel-end-of-cycle-consumable-volume 1: 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 final invoice")}`,
 	async () => {
 		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeCancelEndOfCycle({
 			customerId: "cancel-eoc-cons-volume-band2",
 			includedUsage: 100,
 			usage: 700,
-			expectedUsageAmount: 35,
+			expectedUsageAmount: 30,
 		});
 	},
 );

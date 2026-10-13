@@ -1,6 +1,6 @@
 /**
- * Allocated v2 (arrear) volume on Workflows: the renewal bills current holdings,
- * every workflow at the band the total lands in. Preview must equal the invoice.
+ * Allocated v2 (arrear) volume on Workflows: the renewal bills holdings over included
+ * at the net tier they land in. Preview must equal the invoice.
  */
 
 import { test } from "bun:test";
@@ -73,23 +73,23 @@ const runWorkflowsRenewal = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-workflows 1: +8 +7 −2 ends at 13 (band 2): 13 × $8 = $104; preview = invoice")}`,
+	`${chalk.yellowBright("allocated-volume-workflows 1: +8 +7 −2 ends at 13, 11 over (net band 2): 11 × $8 = $88; preview = invoice")}`,
 	async () => {
 		await runWorkflowsRenewal({
 			customerId: "alloc-volume-workflows-band2",
 			trackedValues: [8, 7, -2],
-			expectedFeatureAmount: 104,
+			expectedFeatureAmount: 88,
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocated-volume-workflows 2: +8 +7 −5 crosses band 2 then ends at 10 (band 1): 10 × $10 = $100; preview = invoice")}`,
+	`${chalk.yellowBright("allocated-volume-workflows 2: +8 +7 −5 crosses net band 2 then ends at 10, 8 over (net band 1): 8 × $10 = $80; preview = invoice")}`,
 	async () => {
 		await runWorkflowsRenewal({
 			customerId: "alloc-volume-workflows-back-band1",
 			trackedValues: [8, 7, -5],
-			expectedFeatureAmount: 100,
+			expectedFeatureAmount: 80,
 		});
 	},
 );
