@@ -64,6 +64,17 @@ export const createPostgresPools = ({
 			queryTimeoutMs: null,
 			statementTimeoutMs: null,
 		},
+		/** Paged list reads not already on the replica lane. The query clock is the whole budget: a page that can't
+		 *  arrive in it is answered 504, and pg closes the connection so a slow transfer can't pin a backend. */
+		list: {
+			applicationName: "autumn-list",
+			maxConnections: 4,
+			minConnections: 0,
+			connectTimeoutMs: production ? 5_000 : 30_000,
+			idleTimeoutMs: 30_000,
+			queryTimeoutMs: 10_000,
+			statementTimeoutMs: null,
+		},
 		/** Reads that may lag, and the outage fallback: short clocks because the primary is the fallback, and a
 		 *  warm floor that keeps traffic-built connections for the Redis-outage moment. */
 		replica: {

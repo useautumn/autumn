@@ -89,7 +89,7 @@ export const commitFlush = async ({
 	roundTrips = "transaction",
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "$client" | "execute">;
+		db: Pick<PostgresDb, "$client" | "_" | "execute">;
 		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
 		timing?: <Value>(label: string, run: () => Value) => Value;
 		/** Hears how many row changes the flush carried and how many rows they folded into. */
@@ -234,7 +234,7 @@ const runFlushStatement = async ({
 	statementTimeoutMs,
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "$client" | "execute">;
+		db: Pick<PostgresDb, "$client" | "_" | "execute">;
 		timing: <Value>(label: string, run: () => Value) => Value;
 	};
 	request: FlushRequest;
@@ -279,7 +279,7 @@ const runFlushTransaction = async ({
 	statementTimeoutMs,
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "$client">;
+		db: Pick<PostgresDb, "$client" | "_">;
 		timing: <Value>(label: string, run: () => Value) => Value;
 	};
 	request: FlushRequest;

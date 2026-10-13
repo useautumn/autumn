@@ -27,7 +27,7 @@ const QUERY_COMPLETE = Buffer.concat([
 const serve = ({ socket, silent }: { socket: Socket; silent: Set<Socket> }) => {
 	let buffered = Buffer.alloc(0);
 	let started = false;
-	socket.on("data", (chunk) => {
+	socket.on("data", (chunk: Buffer) => {
 		buffered = Buffer.concat([buffered, chunk]);
 		for (;;) {
 			const headerLength = started ? 5 : 4;
