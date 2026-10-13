@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV5,
 	CustomerExpand,
 	type LimitedItem,
+	roundToCurrencyPrecision,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
@@ -133,10 +134,16 @@ export const expectVolumeRenewalCorrect = async ({
 		stripeCli: scenario.ctx.stripeCli,
 		invoiceId: renewalInvoice.stripe_id,
 	});
+	// Previews carry the exact amount, as on dev; Stripe bills it rounded to the currency.
 	if (compareStripeLines) {
-		expect(stripeLinesToAutumnLines(stripeLines)).toEqual(
-			previewLinesForFeature({ lineItems: preview.line_items, featureId }),
-		);
+		const previewLines = previewLinesForFeature({
+			lineItems: preview.line_items,
+			featureId,
+		}).map((line) => ({
+			...line,
+			amount: roundToCurrencyPrecision(line.amount, preview.currency),
+		}));
+		expect(stripeLinesToAutumnLines(stripeLines)).toEqual(previewLines);
 	}
 
 	return { preview, renewalInvoice, stripeLines };

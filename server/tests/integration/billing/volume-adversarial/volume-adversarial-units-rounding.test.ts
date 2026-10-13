@@ -41,16 +41,19 @@ const runRenewal = async ({
 	item,
 	usage,
 	expectedCents,
+	exactAmount = expectedCents / 100,
 }: {
 	customerId: string;
 	item: LimitedItem;
 	usage: number;
 	expectedCents: number;
+	/** The preview's unrounded amount, when sub-cent rates make it differ from the cents billed. */
+	exactAmount?: number;
 }) => {
 	const { scenario } = await setupVolumeConsumable({ customerId, item, usage });
 	const { stripeLines } = await expectVolumeRenewalCorrect({
 		scenario,
-		expectedFeatureAmount: expectedCents / 100,
+		expectedFeatureAmount: exactAmount,
 	});
 	expect(autumnLineCents(stripeLines)).toBe(expectedCents);
 };
@@ -103,6 +106,7 @@ test.concurrent(
 			item: subCentItem(),
 			usage: 777,
 			expectedCents: 256,
+			exactAmount: 2.5641,
 		});
 	},
 );
@@ -116,6 +120,7 @@ test.concurrent(
 			item: subCentItem(),
 			usage: 1250,
 			expectedCents: 263,
+			exactAmount: 2.625,
 		});
 	},
 );
