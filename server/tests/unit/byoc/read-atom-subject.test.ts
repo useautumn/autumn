@@ -118,7 +118,7 @@ test("3.1 a subject herald pushes to this Atom: the subjects.set body, with the 
 			org: { config: org.config, default_currency: "usd" },
 			log_offset: "180",
 			read_at: expect.any(Number),
-			atom_seq: null,
+			atom_seqs: null,
 		},
 	} as never);
 	expect(worker.reads[0]).toMatchObject({
@@ -133,14 +133,19 @@ test("3.1 a subject herald pushes to this Atom: the subjects.set body, with the 
 	});
 });
 
-test("3.10 the pulled body carries how far the subject holds this Atom's own journal, not another's", async () => {
+test("3.10 the pulled body carries how far the subject holds this Atom's own journals, not another's", async () => {
 	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 	const worker = workerAnswering({
 		logOffset: "180",
-		state: { atomSeqs: { atom_1: 5, atom_other: 9 } } as never,
+		state: {
+			customer: { atom_seqs: { atom_1: { w_1: 5 }, atom_other: { w_1: 9 } } },
+		} as never,
 	});
 	const result = await read({ client: worker.client });
-	expect(result).toMatchObject({ kind: "body", body: { atom_seq: 5 } });
+	expect(result).toMatchObject({
+		kind: "body",
+		body: { atom_seqs: { w_1: 5 } },
+	});
 });
 
 test("3.4 + 3.5 (R13) off the worker, or not one of the subject's targets: not held, and the worker is never read", async () => {

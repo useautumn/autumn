@@ -14,7 +14,7 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 		await c.req.json().catch(() => null),
 	);
 	const commands = parsed.success
-		? atomTracksToCommands({ atom: c.get("atom"), tracks: parsed.data.tracks })
+		? atomTracksToCommands({ atom: c.get("atom"), request: parsed.data })
 		: null;
 	if (!commands)
 		return c.json(

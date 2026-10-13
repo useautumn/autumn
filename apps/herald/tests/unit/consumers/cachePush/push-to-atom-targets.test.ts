@@ -79,7 +79,7 @@ const createPushContext = ({
 	atomStatus,
 	shadowAtom,
 	failing = [],
-	state = {},
+	state = { customer: {} },
 }: {
 	atomStatus: ByocCacheStatus | null;
 	shadowAtom: ShadowAtomConfig;
@@ -335,15 +335,21 @@ test("a customer push after an evict carries its version to every Atom; one with
 	expect(tracked.bodies[0]).not.toHaveProperty("customer_version");
 });
 
-test("each Atom's subject carries its own seq: the org's Atom the one the customer holds for it, the shadow Atom none", async () => {
+test("each Atom's subject carries its own journals' seqs: the org's Atom the ones the customer holds for it, the shadow Atom none", async () => {
 	const { ctx, bodiesTo } = createPushContext({
 		atomStatus: ByocCacheStatus.Ready,
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
-		state: { atomSeqs: { atom_1: 7, atom_other: 3 } },
+		state: {
+			customer: {
+				atom_seqs: { atom_1: { w_old: 40, w_new: 7 }, atom_other: { w_x: 3 } },
+			},
+		},
 	});
 
 	await pushSubject({ ctx });
 
-	expect(bodiesTo[ORG_ATOM]).toMatchObject({ atom_seq: 7 });
-	expect(bodiesTo[SHADOW_ATOM]).toMatchObject({ atom_seq: null });
+	expect(bodiesTo[ORG_ATOM]).toMatchObject({
+		atom_seqs: { w_old: 40, w_new: 7 },
+	});
+	expect(bodiesTo[SHADOW_ATOM]).toMatchObject({ atom_seqs: null });
 });

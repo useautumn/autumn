@@ -1,7 +1,7 @@
 /**
  * POST /atom/tracks.append: an Atom hands in the deductions it granted, by its token hash.
  *
- *  each journaled command is queued as the Atom journaled it, stamped with the Atom and its seq → 204;
+ *  each journaled command is queued as the Atom journaled it, stamped with the Atom, its journal's writer id and its seq → 204;
  *  an unreadable body, or a command off the Atom's own org and env → 400 unreadable; no or unknown hash → 401.
  */
 
@@ -77,17 +77,21 @@ const append = ({
 		body: JSON.stringify(body),
 	});
 
-test("each journaled command is queued as the Atom journaled it, stamped with the Atom and its seq", async () => {
+test("each journaled command is queued as the Atom journaled it, stamped with the Atom, its journal and its seq", async () => {
 	const first = journaled("atom_req_1");
 	const second = journaled("atom_req_2");
 
 	const reply = await append({
 		body: {
+			writer: "w_1",
 			tracks: [
 				{ seq: 3, command: first },
 				{
 					seq: 4,
-					command: { ...second, source: { atomId: "spoofed", seq: 99 } },
+					command: {
+						...second,
+						source: { atomId: "spoofed", writerId: "spoofed", seq: 99 },
+					},
 				},
 			],
 		},
@@ -96,8 +100,8 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 	expect(reply.status).toBe(204);
 	expect(queued).toEqual([
 		[
-			{ ...first, source: { atomId: "atom_1", seq: 3 } },
-			{ ...second, source: { atomId: "atom_1", seq: 4 } },
+			{ ...first, source: { atomId: "atom_1", writerId: "w_1", seq: 3 } },
+			{ ...second, source: { atomId: "atom_1", writerId: "w_1", seq: 4 } },
 		],
 	]);
 });
@@ -105,9 +109,14 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 test("an unreadable body, a command that is not a track, or one off the Atom's own org and env is 400 unreadable, and nothing is queued", async () => {
 	const track = journaled("atom_req_1");
 	for (const body of [
-		{ tracks: [{ seq: 0, command: track }] },
-		{ tracks: [{ seq: 1, command: { ...track, type: "check" } }] },
+		{ writer: "w_1", tracks: [{ seq: 0, command: track }] },
+		{ tracks: [{ seq: 1, command: track }] },
 		{
+			writer: "w_1",
+			tracks: [{ seq: 1, command: { ...track, type: "check" } }],
+		},
+		{
+			writer: "w_1",
 			tracks: [
 				{
 					seq: 1,
@@ -119,6 +128,7 @@ test("an unreadable body, a command that is not a track, or one off the Atom's o
 			],
 		},
 		{
+			writer: "w_1",
 			tracks: [
 				{
 					seq: 1,
@@ -143,7 +153,10 @@ test("no hash or an unknown one is 401 atom_unknown, and nothing is queued", asy
 	for (const tokenHash of [null, "f".repeat(64)]) {
 		const reply = await append({
 			tokenHash,
-			body: { tracks: [{ seq: 1, command: journaled("atom_req_1") }] },
+			body: {
+				writer: "w_1",
+				tracks: [{ seq: 1, command: journaled("atom_req_1") }],
+			},
 		});
 		expect(reply.status).toBe(401);
 		expect(await reply.json()).toMatchObject({

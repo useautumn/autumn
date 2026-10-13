@@ -1,6 +1,6 @@
 import type { AtomSubjectBody } from "./types/atomSubjectBody.js";
 
-/** One Atom's copy of a subject: `atom_seq` is how far `state` holds that Atom's own journal. */
+/** One Atom's copy of a subject: `atom_seqs` is how far `state` holds each of that Atom's own journals. */
 export const atomSubjectBodyFor = ({
 	body,
 	atomId,
@@ -9,5 +9,5 @@ export const atomSubjectBodyFor = ({
 	atomId: string | null;
 }): AtomSubjectBody => ({
 	...body,
-	atom_seq: atomId ? (body.state.atomSeqs?.[atomId] ?? null) : null,
+	atom_seqs: atomId ? (body.state.customer.atom_seqs?.[atomId] ?? null) : null,
 });
