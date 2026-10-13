@@ -60,9 +60,13 @@ export const trackUsageEventSchema = z
 
 export type TrackUsageEvent = z.infer<typeof trackUsageEventSchema>;
 
-/** The Atom that granted this deduction and its journal seq: stamped by the server on `tracks.append`, never by the Atom. */
+/** The Atom that granted this deduction, its journal (writer) and seq there: stamped by the server on `tracks.append`. */
 export const trackSourceSchema = z
-	.object({ atomId: nonEmptyStringSchema, seq: z.number().int().positive() })
+	.object({
+		atomId: nonEmptyStringSchema,
+		writerId: nonEmptyStringSchema,
+		seq: z.number().int().positive(),
+	})
 	.loose();
 
 export type TrackSource = z.infer<typeof trackSourceSchema>;

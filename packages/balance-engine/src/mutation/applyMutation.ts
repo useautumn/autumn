@@ -1,4 +1,3 @@
-import { advanceAtomSeqs } from "../commands/track/advanceAtomSeqs.js";
 import {
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
@@ -75,13 +74,5 @@ export const applyMutation = ({
 		changes: mutation.changes,
 	});
 
-	const source =
-		mutation.command.type === "track" ? mutation.command.source : undefined;
-	return {
-		...changedState,
-		...(source && {
-			atomSeqs: advanceAtomSeqs({ atomSeqs: changedState.atomSeqs, source }),
-		}),
-		revision: mutation.revision.after,
-	};
+	return { ...changedState, revision: mutation.revision.after };
 };

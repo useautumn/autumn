@@ -4,6 +4,7 @@ import {
 	computeTrack,
 	parseTrackCommand,
 	type SubjectState,
+	type SubjectStateMutation,
 } from "../../../../src/balanceEngine.js";
 import {
 	createState,
@@ -11,54 +12,69 @@ import {
 	createTrackCommand,
 } from "../../engineFixtures.js";
 
-const applyTrack = ({
+type AtomSeqs = Record<string, Record<string, number>>;
+
+const stateHolding = (atomSeqs?: AtomSeqs): SubjectState => {
+	const state = createState();
+	return { ...state, customer: { ...state.customer, atom_seqs: atomSeqs } };
+};
+
+const trackOn = ({
 	state,
 	source,
-	commandId = "cmd_1",
 }: {
 	state: SubjectState;
-	source?: { atomId: string; seq: number };
-	commandId?: string;
-}): SubjectState =>
-	applyMutation({
-		state,
-		mutation: computeTrack({
-			fullSubject: createSubjectFor({ state }),
-			command: parseTrackCommand({
-				input: { ...createTrackCommand({ commandId }), source },
-			}),
-		}),
+	source?: { atomId: string; writerId: string; seq: number };
+}): SubjectStateMutation =>
+	computeTrack({
+		fullSubject: createSubjectFor({ state }),
+		command: parseTrackCommand({ input: { ...createTrackCommand(), source } }),
 	});
+
+const seqsAfter = (params: Parameters<typeof trackOn>[0]) =>
+	applyMutation({ state: params.state, mutation: trackOn(params) }).customer
+		.atom_seqs;
 
 describe("a track an Atom handed in", () => {
 	test.concurrent(
-		"moves that Atom's seq on the customer to the command's",
+		"raises that journal's seq on the customer row, leaving every other journal's",
 		() => {
-			const state = applyTrack({
-				state: { ...createState(), atomSeqs: { atom_other: 9 } },
-				source: { atomId: "atom_1", seq: 4 },
-			});
+			const state = stateHolding({ atom_1: { w_old: 40 }, atom_2: { w_x: 9 } });
 
-			expect(state.atomSeqs).toEqual({ atom_other: 9, atom_1: 4 });
+			expect(
+				seqsAfter({
+					state,
+					source: { atomId: "atom_1", writerId: "w_new", seq: 3 },
+				}),
+			).toEqual({ atom_1: { w_old: 40, w_new: 3 }, atom_2: { w_x: 9 } });
 		},
 	);
 
-	test.concurrent("never moves it back for a lower seq", () => {
-		const state = applyTrack({
-			state: { ...createState(), atomSeqs: { atom_1: 7 } },
-			source: { atomId: "atom_1", seq: 3 },
-		});
+	test.concurrent(
+		"a seq at or below the journal's held one changes nothing on the customer row",
+		() => {
+			const state = stateHolding({ atom_1: { w_1: 7 } });
 
-		expect(state.atomSeqs).toEqual({ atom_1: 7 });
-	});
+			for (const seq of [3, 7]) {
+				const mutation = trackOn({
+					state,
+					source: { atomId: "atom_1", writerId: "w_1", seq },
+				});
+				expect(
+					mutation.changes.some((change) => change.table === "customer"),
+				).toBe(false);
+			}
+		},
+	);
 
 	test.concurrent(
-		"a track no Atom handed in leaves the seqs as they were",
+		"a track no Atom handed in never touches the customer row",
 		() => {
-			const held = { ...createState(), atomSeqs: { atom_1: 7 } };
+			const mutation = trackOn({ state: stateHolding({ atom_1: { w_1: 7 } }) });
 
-			expect(applyTrack({ state: held }).atomSeqs).toEqual({ atom_1: 7 });
-			expect(applyTrack({ state: createState() }).atomSeqs).toBeUndefined();
+			expect(
+				mutation.changes.some((change) => change.table === "customer"),
+			).toBe(false);
 		},
 	);
 });
