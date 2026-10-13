@@ -100,6 +100,9 @@ const isAppendedTo = ({
 	owed.length > previous.length &&
 	previous.every((entry, index) => owed[index] === entry);
 
+/** Freezing a view walks the whole subject, a quarter of a deduction's CPU, so only tests pay it. */
+const FREEZES_VIEWS = process.env.NODE_ENV === "test";
+
 /** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
 const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
 
@@ -137,8 +140,8 @@ export const readCurrentSubject = ({
 		base,
 		entityId,
 	});
-	// Frozen, because every check until the next push or append shares it.
-	deepFreeze(current);
+	// Every check until the next push or append shares it: frozen under test, so a mutation fails there.
+	if (FREEZES_VIEWS) deepFreeze(current);
 	subjectJoinCache.set(target, {
 		customer,
 		shared,
