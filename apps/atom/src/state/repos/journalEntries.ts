@@ -72,6 +72,20 @@ export const readLastJournalSeqs = ({
 			.map(({ customerId, lastSeq }) => [customerId, Number(lastSeq)]),
 	);
 
+export const readJournalWriterId = ({
+	ctx,
+}: {
+	ctx: JournalContext;
+}): string => {
+	const row = ctx.sqliteDb
+		.query<{ writerId: string }, []>(
+			"SELECT writer_id AS writerId FROM journal_meta WHERE id = 1",
+		)
+		.get();
+	if (!row) throw new Error("A journal file holds no writer id");
+	return row.writerId;
+};
+
 export const deleteJournalEntriesUpTo = ({
 	ctx,
 	customerId,
@@ -86,4 +100,16 @@ export const deleteJournalEntriesUpTo = ({
 			"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq <= $seq",
 		)
 		.run({ customerId, seq });
+};
+
+export const deleteCustomerJournalEntries = ({
+	ctx,
+	customerId,
+}: {
+	ctx: JournalContext;
+	customerId: string;
+}): void => {
+	ctx.sqliteDb
+		.query("DELETE FROM journal_entries WHERE customer_id = $customerId")
+		.run({ customerId });
 };

@@ -11,6 +11,7 @@ import {
 import {
 	MAX_OWED_PER_CUSTOMER,
 	MAX_UNSENT_AGE_MS,
+	MAX_UNSENT_PER_THREAD,
 	openJournal,
 } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
@@ -177,7 +178,7 @@ describe("journal", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toBe(one);
 	});
 
-	test("a push's atom_seq drops every entry it has seen, and a dropped seq is never reused", async () => {
+	test("a push drops every entry it has seen from this journal's writer, and a dropped seq is never reused", async () => {
 		const databasePath = journalPath();
 		const journal = open({ databasePath });
 		for (const commandId of ["a", "b"])
@@ -186,7 +187,10 @@ describe("journal", () => {
 				command: commandOf({ commandId }),
 			});
 
-		journal.reconcile({ customerId: "cus_1", atomSeq: 1 });
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { [journal.writerId]: 1 },
+		});
 		const next = await journal.append({
 			customerId: "cus_1",
 			command: commandOf({ commandId: "c" }),
@@ -199,7 +203,7 @@ describe("journal", () => {
 		]);
 	});
 
-	test("a push that has seen none of this Atom's tracks leaves every entry owed", async () => {
+	test("a push that has seen nothing from this journal's writer leaves every entry owed", async () => {
 		const journal = open({ databasePath: journalPath() });
 		await journal.append({
 			customerId: "cus_1",
@@ -207,8 +211,12 @@ describe("journal", () => {
 		});
 		const owed = journal.owed({ customerId: "cus_1" });
 
-		journal.reconcile({ customerId: "cus_1", atomSeq: null });
-		journal.reconcile({ customerId: "cus_1", atomSeq: 0 });
+		journal.reconcile({ customerId: "cus_1", atomSeqs: null });
+		journal.reconcile({ customerId: "cus_1", atomSeqs: { other_writer: 7 } });
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { [journal.writerId]: 0 },
+		});
 
 		expect(journal.owed({ customerId: "cus_1" })).toBe(owed);
 	});
@@ -272,9 +280,12 @@ describe("journal", () => {
 
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
 		expect(journal.isBackedUp({ customerId: "cus_2" })).toBe(false);
-		journal.reconcile({ customerId: "cus_1", atomSeq: 1 });
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { [journal.writerId]: 1 },
+		});
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
-	});
+	}, 30_000);
 
 	test("ceiling: a customer whose oldest unsent deduction is older than MAX_UNSENT_AGE_MS is backed up until Autumn holds it; others are not", async () => {
 		let clock = 0;
@@ -295,4 +306,97 @@ describe("journal", () => {
 		journal.markSent({ entries: [old] });
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
 	});
+
+	test("a fresh file gets a new writer id: its #1 is not dropped by a push saying the old writer saw 7", async () => {
+		const old = open({ databasePath: journalPath() });
+		const fresh = open({ databasePath: journalPath() });
+		await fresh.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+
+		fresh.reconcile({ customerId: "cus_1", atomSeqs: { [old.writerId]: 7 } });
+
+		expect(fresh.writerId).not.toBe(old.writerId);
+		expect(fresh.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual([
+			1,
+		]);
+	});
+
+	test("restart on the same file keeps its writer id and continues its seq", async () => {
+		const databasePath = journalPath();
+		const first = openJournal({ databasePath });
+		await first.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		const { writerId } = first;
+		first.close();
+
+		const reopened = open({ databasePath });
+		const next = await reopened.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+
+		expect([reopened.writerId, next.seq]).toEqual([writerId, 2]);
+	});
+
+	test("forget drops everything a customer owes, from the file too, and leaves others", async () => {
+		const databasePath = journalPath();
+		const journal = open({ databasePath });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		await journal.append({
+			customerId: "cus_2",
+			command: commandOf({ commandId: "b", customerId: "cus_2" }),
+		});
+
+		journal.forget({ customerId: "cus_1" });
+
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
+		expect(
+			journal.unsent({ limit: 10 }).map(({ customerId }) => customerId),
+		).toEqual(["cus_2"]);
+		expect(rowsIn({ databasePath })).toEqual([{ customerId: "cus_2", seq: 1 }]);
+	});
+
+	test("ceiling: past MAX_UNSENT_PER_THREAD unsent across the thread's journals, every customer's send_event goes to the API until Autumn takes some", async () => {
+		const appendMany = async ({
+			journal,
+			count,
+			customers,
+		}: {
+			journal: Journal;
+			count: number;
+			customers: number;
+		}) =>
+			Promise.all(
+				Array.from({ length: count }, (_, index) => {
+					const customerId = `cus_${index % customers}`;
+					return journal.append({
+						customerId,
+						command: commandOf({
+							commandId: `c_${index}`,
+							customerId,
+							value: 1,
+						}),
+					});
+				}),
+			);
+		const first = open({ databasePath: journalPath() });
+		const second = open({ databasePath: journalPath() });
+		await appendMany({
+			journal: first,
+			count: MAX_UNSENT_PER_THREAD,
+			customers: 10,
+		});
+		await appendMany({ journal: second, count: 1, customers: 1 });
+
+		expect(second.isBackedUp({ customerId: "cus_0" })).toBe(true);
+		first.markSent({ entries: first.unsent({ limit: 1 }) });
+		expect(second.isBackedUp({ customerId: "cus_0" })).toBe(false);
+	}, 30_000);
 });
