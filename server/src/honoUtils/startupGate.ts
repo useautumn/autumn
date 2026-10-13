@@ -5,6 +5,7 @@
 // watches never connects. Kept well under the ECS health-check grace period so
 // the timeout latch always beats ECS's task-kill timer.
 export const STARTUP_GATE_MAX_WAIT_MS = 20_000;
+export const STARTUP_ROUTING_MAX_WAIT_MS = 5_000;
 
 /** Pure decision for the startup gate. `redisReady`/`redisV2Ready` already fold
  *  in "not configured" as ready. Once `elapsedMs` reaches the max wait we serve
@@ -28,6 +29,13 @@ export const evaluateStartupGate = ({
 	const redisAllReady = redisReady && redisV2Ready;
 	if (redisAllReady && routingReady) {
 		return { ready: true, reason: "Redis ready, worker routing ready" };
+	}
+	if (redisAllReady && elapsedMs >= STARTUP_ROUTING_MAX_WAIT_MS) {
+		return {
+			ready: true,
+			reason:
+				"Redis ready; worker routing still catching up, serving via runtime fail-open",
+		};
 	}
 	if (elapsedMs >= maxWaitMs) {
 		return {
