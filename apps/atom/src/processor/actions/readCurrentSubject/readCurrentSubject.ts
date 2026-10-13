@@ -8,7 +8,6 @@ import {
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
 import { deepFreeze } from "../../../state/deepFreeze.js";
-import { NOTHING_OWED } from "../../../state/journal/openJournal.js";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
@@ -103,7 +102,7 @@ export const readCurrentSubject = ({
 }): CurrentSubject => {
 	const { customer, entity } = readStoredParts({ ctx, customerId, entityId });
 	const shared = ctx.catalogStore.read();
-	const owed = ctx.journal?.owed({ customerId }) ?? NOTHING_OWED;
+	const owed = ctx.journal.owed({ customerId });
 	const target = entity ?? customer;
 	const joined = subjectJoinCache.get(target);
 	if (

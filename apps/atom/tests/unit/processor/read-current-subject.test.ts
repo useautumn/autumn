@@ -8,6 +8,7 @@ import {
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
@@ -46,9 +47,11 @@ const createContext = ({
 		held: freshHeld(),
 	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
+	const journal = openJournal({ databasePath: ":memory:" });
 	closers.push(
 		() => sqliteStore.close(),
 		() => catalogStore.close(),
+		() => journal.close(),
 	);
 	sqliteStore.setSubject({
 		subject: {
@@ -66,7 +69,7 @@ const createContext = ({
 		catalogStore,
 		logger: getAtomLogger(),
 		subjectPulls: noFolderPulls,
-		journal: null,
+		journal,
 	};
 };
 afterEach(() => {

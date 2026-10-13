@@ -13,22 +13,18 @@ export const check = async ({
 	ctx: SlotProcessorContext;
 	request: CheckRequest;
 }): Promise<CheckResponseV3> => {
-	const { journal } = ctx;
-	const answerableCheck = checkRequestToAnswerableCheck({
-		request,
-		writes: journal !== null,
-	});
+	const answerableCheck = checkRequestToAnswerableCheck({ request });
 
 	const subject = readCurrentSubject({
 		ctx,
 		customerId: answerableCheck.customerId,
 		entityId: answerableCheck.entityId,
 	});
-	// Past the forward rules, a send_event is the customer's own on a deployment that writes.
-	if (journal && request.params.send_event === true)
+	// Past the forward rules, a send_event is the customer's own.
+	if (request.params.send_event === true)
 		return answerDeductingCheck({
 			ctx,
-			journal,
+			journal: ctx.journal,
 			check: answerableCheck,
 			skipEvent: request.params.skip_event === true,
 			subject,

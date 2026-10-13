@@ -6,13 +6,10 @@ import type { AnswerableCheck, CheckRequest } from "../../types/check.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 
-/** Whether the deployment lets this Atom deduct: its writes flag, off by default. */
-type Deployment = { writes: boolean };
-
-/** Every kind of check Atom leaves to the API, told from the request and its deployment. The first rule that applies names the reason. */
+/** Every kind of check Atom leaves to the API, told from the request alone. The first rule that applies names the reason. */
 const FORWARD_RULES: {
 	reason: ForwardReason;
-	applies: (request: CheckRequest, deployment: Deployment) => boolean;
+	applies: (request: CheckRequest) => boolean;
 }[] = [
 	// The API derives a version from the org's creation date, which Atom does not hold.
 	{
@@ -24,11 +21,11 @@ const FORWARD_RULES: {
 		reason: "product_check",
 		applies: ({ params }) => !params.feature_id || Boolean(params.product_id),
 	},
-	// Atom deducts a customer's own send_event only where its deployment writes; an entity's stays the API's.
+	// Atom deducts a customer's own send_event; an entity's is the API's.
 	{
 		reason: "send_event",
-		applies: ({ params }, { writes }) =>
-			params.send_event === true && (!writes || Boolean(params.entity_id)),
+		applies: ({ params }) =>
+			params.send_event === true && Boolean(params.entity_id),
 	},
 	// A reservation is the API's.
 	{ reason: "lock", applies: ({ params }) => params.lock !== undefined },
@@ -47,26 +44,21 @@ const FORWARD_RULES: {
 	{ reason: "skip_cache", applies: ({ query }) => query.skip_cache === true },
 ];
 
-/** Why this check goes to the API; null when nothing in it rules Atom out. */
+/** Why this check goes to the API, judged from the request alone; null when nothing in it rules Atom out. */
 export const checkForwardReason = ({
 	request,
-	writes = false,
 }: {
 	request: CheckRequest;
-	writes?: boolean;
 }): ForwardReason | null =>
-	FORWARD_RULES.find(({ applies }) => applies(request, { writes }))?.reason ??
-	null;
+	FORWARD_RULES.find(({ applies }) => applies(request))?.reason ?? null;
 
 /** The request reduced to what Atom decides on; a request a rule applies to is left to the API. */
 export const checkRequestToAnswerableCheck = ({
 	request,
-	writes = false,
 }: {
 	request: CheckRequest;
-	writes?: boolean;
 }): AnswerableCheck => {
-	const reason = checkForwardReason({ request, writes });
+	const reason = checkForwardReason({ request });
 	if (reason) throw new CannotAnswerError({ reason });
 
 	const { params, apiVersion } = request;

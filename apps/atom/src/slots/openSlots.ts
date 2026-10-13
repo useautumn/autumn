@@ -49,12 +49,9 @@ export const openSlots = ({
 	held,
 	now = Date.now,
 	pulls,
-	writes = false,
 }: {
 	folder: string;
 	slotCount: number;
-	/** The deployment's writes flag: each slot this thread owns opens a journal, and send_event checks are deducted here. */
-	writes?: boolean;
 	/** The folder's name on a multi-tenant Atom, so a call to another thread names it too. */
 	atomId?: string | null;
 	owners: SlotOwners;
@@ -93,12 +90,10 @@ export const openSlots = ({
 			held,
 			now,
 		});
-		const journal = writes
-			? openJournal({
-					databasePath: journalFilePath({ folder, slot, slotCount }),
-				})
-			: null;
-		if (journal) journals.push(journal);
+		const journal = openJournal({
+			databasePath: journalFilePath({ folder, slot, slotCount }),
+		});
+		journals.push(journal);
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({

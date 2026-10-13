@@ -18,7 +18,10 @@ const forwardedRequests: [ForwardReason, CheckRequest][] = [
 		"product_check",
 		checkRequestFor({ params: { feature_id: undefined, product_id: "pro" } }),
 	],
-	["send_event", checkRequestFor({ params: { send_event: true } })],
+	[
+		"send_event",
+		checkRequestFor({ params: { send_event: true, entity_id: "seat_1" } }),
+	],
 	[
 		"lock",
 		checkRequestFor({ params: { lock: { enabled: true, lock_id: "lock_1" } } }),
@@ -63,6 +66,13 @@ describe("which checks Atom answers itself", () => {
 			query: {},
 			apiVersion: latestApiVersion,
 		});
+	});
+
+	test("a customer's own send_event is Atom's", () => {
+		const request = checkRequestFor({ params: { send_event: true } });
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request }).customerId).toBe("cus_1");
 	});
 
 	test("a check on an entity is Atom's too", () => {

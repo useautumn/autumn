@@ -6,6 +6,7 @@ import { createTrackCommand } from "../../../../../packages/balance-engine/tests
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
@@ -21,14 +22,14 @@ export const createSlotFolder = () => {
 	};
 };
 
-/** One slot's processor; `journal` null is a deployment whose writes flag is off. */
+/** One slot's processor, its journal in memory unless one is given. */
 export const openSlotProcessor = ({
 	subjectsPath = ":memory:",
-	journal,
+	journal = openJournal({ databasePath: ":memory:" }),
 }: {
 	subjectsPath?: string;
-	journal: Journal | null;
-}) => {
+	journal?: Journal;
+} = {}) => {
 	const sqliteStore = openSqliteStore({
 		databasePath: subjectsPath,
 		held: freshHeld(),
@@ -47,7 +48,7 @@ export const openSlotProcessor = ({
 		close: () => {
 			sqliteStore.close();
 			catalogStore.close();
-			journal?.close();
+			journal.close();
 		},
 	};
 };

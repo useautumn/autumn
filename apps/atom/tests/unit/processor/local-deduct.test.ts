@@ -22,7 +22,7 @@ afterEach(() => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-/** A slot whose deployment writes: its journal on disk, so a failed commit is a real one. */
+/** A slot with its journal on disk, so a failed commit is a real one. */
 const openWritingSlot = async ({
 	subject = storedSubjectWith({ balance: 1000 }),
 }: {
@@ -190,20 +190,6 @@ describe("a send_event check the Atom deducts itself", () => {
 				processor.check({
 					request: sendEvent({ params: { entity_id: "ent_42" } }),
 				}),
-			),
-		).toBe("send_event");
-	});
-
-	test("writes flag off -> send_event forwards exactly as before", async () => {
-		const slot = openSlotProcessor({ journal: null });
-		cleanups.push(slot.close);
-		await slot.processor.setSubject(
-			subjectPushOf({ subject: storedSubjectWith({ balance: 1000 }) }),
-		);
-
-		expect(
-			await forwardReasonOf(() =>
-				slot.processor.check({ request: sendEvent() }),
 			),
 		).toBe("send_event");
 	});

@@ -18,7 +18,6 @@ export const createDeployedAuth = ({
 	held,
 	now,
 	subjectPulls,
-	writes,
 }: {
 	dataDir: string;
 	tokenHash: string;
@@ -27,8 +26,6 @@ export const createDeployedAuth = ({
 	held: HeldSubjects;
 	now?: () => number;
 	subjectPulls: SubjectPulls;
-	/** The deployment's writes flag. */
-	writes?: boolean;
 }): DeployedAuth => {
 	const slots = openSlots({
 		folder: dataDir,
@@ -37,7 +34,6 @@ export const createDeployedAuth = ({
 		held,
 		now,
 		pulls: { subjectPulls, tokenHash: () => tokenHash },
-		writes,
 	});
 
 	function authorize({ token }: { token: string }) {

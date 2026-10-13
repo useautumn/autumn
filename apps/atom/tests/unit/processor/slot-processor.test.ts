@@ -8,6 +8,7 @@ import {
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
@@ -29,14 +30,15 @@ const createProcessor = () => {
 		held: freshHeld(),
 	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
-	stores.push(sqliteStore, catalogStore);
+	const journal = openJournal({ databasePath: ":memory:" });
+	stores.push(sqliteStore, catalogStore, journal);
 	const processor = createSlotProcessor({
 		ctx: {
 			sqliteStore,
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
-			journal: null,
+			journal,
 		},
 	});
 	return {
@@ -385,7 +387,8 @@ describe("a push the slot could not store", () => {
 			held: freshHeld(),
 		});
 		const catalogStore = openCatalogStore({ databasePath: ":memory:" });
-		stores.push(sqliteStore, catalogStore);
+		const journal = openJournal({ databasePath: ":memory:" });
+		stores.push(sqliteStore, catalogStore, journal);
 		let failing = false;
 		const pulled: string[] = [];
 		const processor = createSlotProcessor({
@@ -402,7 +405,7 @@ describe("a push the slot could not store", () => {
 				subjectPulls: {
 					request: ({ customerId }) => void pulled.push(customerId),
 				},
-				journal: null,
+				journal,
 			},
 		});
 		const request = checkBalance({ requiredBalance: 5 });
