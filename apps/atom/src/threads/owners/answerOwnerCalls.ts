@@ -5,6 +5,7 @@ import {
 	errorToReply,
 	wireToCheckRequest,
 } from "./ownerCallContract.js";
+import { createPortBatcher } from "./portBatcher.js";
 import type { OwnerCall } from "./types/ownerCall.js";
 
 type OwnerContext = { auth: Pick<Auth, "slotsFor"> };
@@ -61,17 +62,18 @@ export const answerOwnerCalls = ({
 	ctx: OwnerContext;
 	port: MessagePort;
 }): void => {
-	async function answer(
-		event: MessageEvent<string | OwnerCall>,
-	): Promise<void> {
-		const call: OwnerCall =
-			typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+	const send = createPortBatcher();
+
+	async function answer(sent: string | OwnerCall): Promise<void> {
+		const call: OwnerCall = typeof sent === "string" ? JSON.parse(sent) : sent;
 		try {
 			const value = await runOwnerCall({ ctx, call });
-			port.postMessage({ id: call.id, ok: true, value });
+			send({ port, message: { id: call.id, ok: true, value } });
 		} catch (error) {
-			port.postMessage(errorToReply({ id: call.id, error }));
+			send({ port, message: errorToReply({ id: call.id, error }) });
 		}
 	}
-	port.onmessage = answer;
+	port.onmessage = (event: MessageEvent<(string | OwnerCall)[]>) => {
+		for (const sent of event.data) void answer(sent);
+	};
 };

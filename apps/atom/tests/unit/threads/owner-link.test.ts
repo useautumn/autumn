@@ -5,10 +5,12 @@ import { OwnerUnavailableError } from "../../../src/threads/owners/ownerUnavaila
 test("a full link sheds pushes but still delivers a catalog install", async () => {
 	const { port1, port2 } = new MessageChannel();
 	const received: string[] = [];
-	port2.onmessage = (event: MessageEvent) => {
-		const message =
-			typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-		received.push(message.type);
+	// A turn's calls arrive as one batch.
+	port2.onmessage = (event: MessageEvent<unknown[]>) => {
+		for (const sent of event.data) {
+			const message = typeof sent === "string" ? JSON.parse(sent) : sent;
+			received.push(message.type);
+		}
 	};
 	const link = createOwnerLink({ thread: 1 });
 	link.connect({ port: port1 });

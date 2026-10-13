@@ -15,6 +15,7 @@ import {
 	wireToDigest,
 } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
+import { createPortBatcher } from "./portBatcher.js";
 import type {
 	AppliedSubjectOnWire,
 	OwnerCallBody,
@@ -66,11 +67,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	const waiting = new Map<number, WaitingCall>();
 	let port: MessagePort | null = null;
 	let nextId = 0;
+	const send = createPortBatcher();
 
-	function receiveReply(event: MessageEvent<OwnerReply>): void {
-		const reply = event.data;
-		waiting.get(reply.id)?.resolve(reply);
-		waiting.delete(reply.id);
+	function receiveReplies(event: MessageEvent<OwnerReply[]>): void {
+		for (const reply of event.data) {
+			waiting.get(reply.id)?.resolve(reply);
+			waiting.delete(reply.id);
+		}
 	}
 
 	function failCallsSentBefore(cutoff: number): void {
@@ -101,9 +104,11 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		};
 		waiting.set(id, reply);
 		const message = { id, ...body };
-		port.postMessage(
-			message.type === "setSubject" ? message : JSON.stringify(message),
-		);
+		send({
+			port,
+			message:
+				message.type === "setSubject" ? message : JSON.stringify(message),
+		});
 		const answered = await reply.promise;
 		if (!answered.ok) throw replyToError(answered);
 		return answered.value;
@@ -178,7 +183,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 
 	function connect({ port: next }: { port: MessagePort }): void {
 		port = next;
-		port.onmessage = receiveReply;
+		port.onmessage = receiveReplies;
 	}
 
 	function disconnect(): void {
