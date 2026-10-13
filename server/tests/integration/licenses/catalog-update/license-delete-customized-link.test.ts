@@ -131,6 +131,88 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("licenses-delete: deleting a plan's only customer keeps its customized catalog link")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const customerId = `license-delete-catalog-${suffix}`;
+		const parent = productFixtures.base({
+			id: `delete-catalog-parent-${suffix}`,
+			items: [items.dashboard()],
+		});
+		const license = productFixtures.base({
+			id: `delete-catalog-license-${suffix}`,
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: {
+						add_items: [itemsV2.monthlyWords({ included: 100 })],
+					},
+				},
+			],
+		});
+
+		// A plain attach points the customer's pool at the catalog link.
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: parent.id,
+		});
+
+		const licenseProduct = await ctx.db.query.products.findFirst({
+			where: and(
+				eq(products.id, license.id),
+				eq(products.org_id, ctx.org.id),
+				eq(products.env, ctx.env),
+			),
+		});
+		if (!licenseProduct) throw new Error("License product not found");
+
+		const catalogLinks = () =>
+			ctx.db.query.planLicenses.findMany({
+				where: and(
+					eq(
+						planLicenses.license_internal_product_id,
+						licenseProduct.internal_id,
+					),
+					eq(planLicenses.is_custom, false),
+				),
+			});
+
+		const [catalogLink] = await catalogLinks();
+		if (!catalogLink) throw new Error("Catalog link not found");
+		const junctionRowsBefore = await ctx.db.query.licenseEntitlements.findMany({
+			where: eq(licenseEntitlements.plan_license_id, catalogLink.id),
+		});
+		expect(junctionRowsBefore.length).toBeGreaterThan(0);
+
+		// Pre-fix: the customer was the link's last referrer, so the catalog
+		// link and its customized items were deleted with the customer.
+		await autumnV1.customers.delete(customerId);
+
+		const linksAfter = await catalogLinks();
+		expect(linksAfter.map((link) => link.id)).toEqual([catalogLink.id]);
+		const junctionRowsAfter = await ctx.db.query.licenseEntitlements.findMany({
+			where: eq(licenseEntitlements.plan_license_id, catalogLink.id),
+		});
+		expect(junctionRowsAfter).toHaveLength(junctionRowsBefore.length);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("licenses-delete: catalogV2 removes parent and customized license in one call, license first")}`,
 	async () => {
 		const suffix = Math.random().toString(36).slice(2, 9);
