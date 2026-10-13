@@ -1,5 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
+import { IDEMPOTENCY_KEY_HEADER } from "../../handlers/receiveCheck.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -58,6 +59,7 @@ export function requestLogMiddleware({
 
 		const durationMs = Date.now() - startedAt;
 		const failure = context.get("failure");
+		const idempotencyKey = context.req.header(IDEMPOTENCY_KEY_HEADER);
 		const line = {
 			statusCode,
 			durationMs,
@@ -68,6 +70,8 @@ export function requestLogMiddleware({
 					body: context.get("body"),
 					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 				}),
+				// A deduction's key at Autumn is this when present, the request id otherwise.
+				...(idempotencyKey && { idempotencyKey }),
 			},
 			res: await loggedResponseOf({ context }),
 			...(sampled && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),

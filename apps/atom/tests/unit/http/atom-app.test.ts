@@ -722,6 +722,21 @@ describe("the request line", () => {
 		}
 	});
 
+	test("a check that names an Idempotency-Key has it at req.idempotencyKey: the key its deduction carries to Autumn", async () => {
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+
+		const denied = checkMessages({ required_balance: 11 });
+		await app.request("/v1/balances.check", {
+			...denied,
+			headers: { ...denied.headers, "Idempotency-Key": "key_from_client" },
+		});
+
+		expect(logged[0]?.fields).toMatchObject({
+			req: { path: "/v1/balances.check", idempotencyKey: "key_from_client" },
+		});
+	});
+
 	test("an allowed check outside the sample leaves no line; every deny is logged, and every check is counted", async () => {
 		sampleEveryAllow({ sampled: false });
 		const { app, logged } = createDeployedApp();

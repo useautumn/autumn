@@ -2,10 +2,12 @@ import { spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseTrackCommand } from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
@@ -293,3 +295,33 @@ export const heldEverywhere = async (replica: Replica) =>
 	).flat();
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+/** Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from. */
+export const recordJournals = () => {
+	const appended: {
+		writer: string;
+		/** Who claims the key at Autumn's worker: the same owner again resumes its claim, any other is a duplicate. */
+		owner: string;
+		key: string | undefined;
+		value: number;
+	}[] = [];
+	const forwarder = createJournalForwarder({
+		ctx: {
+			autumnClient: {
+				appendTracks: async ({ writer, tracks }) => {
+					for (const { command: sent } of tracks) {
+						const command = parseTrackCommand({ input: sent });
+						appended.push({
+							writer,
+							owner: command.requestId,
+							key: command.idempotency?.key,
+							value: command.value,
+						});
+					}
+				},
+			},
+			logger: quiet,
+		},
+	});
+	return { forwarder, appended };
+};
