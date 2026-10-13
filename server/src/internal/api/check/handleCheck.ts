@@ -18,6 +18,7 @@ import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queue
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import {
 	type CheckFailOpenReason,
@@ -112,41 +113,49 @@ export const handleCheck = createRoute({
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
 			const search = new URL(c.req.url).search;
-			const runOnWorker = ({
-				idempotencyKey,
-			}: {
-				idempotencyKey: string | undefined;
-			}) => runBalanceWorkerCheck({ ctx, body: rawBody, idempotencyKey });
-			const idempotencyKey = c.req.header("idempotency-key");
+			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
 			// A lock must settle its reservation, so a lock check never answers without the worker.
-			if (rawBody.lock?.enabled)
-				return c.json(await runOnWorker({ idempotencyKey }));
+			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
+			// The middleware already claimed a client's key, so a hand-in under it would be skipped: those stay on the API.
+			const hasClientKey = Boolean(c.req.header("idempotency-key"));
 			const { body, status } = await withAtomShadowDeduction({
 				ctx,
 				call:
-					rawBody.send_event === true
+					rawBody.send_event === true && !hasClientKey
 						? { route: "check", params: rawBody }
 						: null,
 				search,
-				idempotencyKey,
-				runOnApi: async ({ idempotencyKey }) => {
-					const { result, failedOpen } =
-						await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
-							ctx,
-							source: "check",
-							run: () => runOnWorker({ idempotencyKey }),
-							fallback: async ({ error, reason }) =>
-								checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
-						});
-					if (!failedOpen)
-						queueAtomShadowCheck({
-							ctx,
-							params: rawBody,
-							search,
-							apiResponse: result,
-						});
-					return { body: result, status: failedOpen ? 202 : 200 };
-				},
+				idempotencyKey: undefined,
+				// The fallback claims the key Atom journaled under, as the API's middleware claims an SDK's on its fallback.
+				runOnApi: ({ idempotencyKey }) =>
+					withIdempotencyKey({
+						ctx,
+						idempotencyKey,
+						routeGroup: RouteGroup.Balances,
+						run: async () => {
+							const { result, failedOpen } =
+								await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
+									ctx,
+									source: "check",
+									run: runOnWorker,
+									fallback: async ({ error, reason }) =>
+										checkFailOpenResponse({
+											ctx,
+											params: rawBody,
+											error,
+											reason,
+										}),
+								});
+							if (!failedOpen)
+								queueAtomShadowCheck({
+									ctx,
+									params: rawBody,
+									search,
+									apiResponse: result,
+								});
+							return { body: result, status: failedOpen ? 202 : 200 };
+						},
+					}),
 			});
 			return c.json(body, status);
 		}

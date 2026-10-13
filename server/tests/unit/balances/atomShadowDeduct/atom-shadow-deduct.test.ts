@@ -23,6 +23,7 @@ import { atomShadowDeductOrgIds } from "@/internal/balances/atomShadowDeduct/ato
 import * as balanceWorkerCheck from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
 import * as balanceWorkerTrack from "@/internal/balances/track/balanceWorker/trackOnBalanceWorker.js";
+import * as idempotencyClaim from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
 import { _setShadowAtomConfigForTesting } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
@@ -71,6 +72,15 @@ const workerTrackSpy = spyOn(
 	result: { customer_id: body.customer_id, value: 1, balance: null },
 	status: 202,
 }));
+
+/** Every key the API claimed, as its idempotency store would see it. */
+const claimedKeys: string[] = [];
+const claimSpy = spyOn(
+	idempotencyClaim,
+	"checkIdempotencyKey",
+).mockImplementation(async ({ idempotencyKey }) => {
+	claimedKeys.push(idempotencyKey);
+});
 
 /** A fake shadow Atom: answers with `reply`, and records what it was sent. */
 const answerAsAtom = (path: string): Response =>
@@ -126,6 +136,7 @@ afterEach(() => {
 	atom.calls = [];
 	workerCheckSpy.mockClear();
 	workerTrackSpy.mockClear();
+	claimedKeys.length = 0;
 	setEnv(TEST_ENV);
 });
 
@@ -133,6 +144,7 @@ afterAll(() => {
 	server.stop(true);
 	workerCheckSpy.mockRestore();
 	workerTrackSpy.mockRestore();
+	claimSpy.mockRestore();
 	setEnv(previousEnv);
 	_setShadowAtomConfigForTesting({ config: {} });
 });
@@ -261,7 +273,7 @@ describe("a deducting check", () => {
 		]);
 	});
 
-	test("Atom hands back runs on the API under the same key", async () => {
+	test("Atom hands back runs on the API, which claims the key Atom was sent", async () => {
 		atom.reply = () =>
 			Response.json(
 				{ code: "atom_not_forwarded" },
@@ -269,17 +281,14 @@ describe("a deducting check", () => {
 			);
 		useShadowAtom();
 		const { ctx, deductLogs } = createCtx();
-		const response = await post({
-			ctx,
-			route: "check",
-			body: deductingCheck,
-			headers: { "idempotency-key": "client_key" },
-		});
+		const response = await post({ ctx, route: "check", body: deductingCheck });
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual(workerAnswer);
-		expect(atom.calls[0].headers.get("idempotency-key")).toBe("client_key");
-		expect(workerCheckSpy.mock.calls[0][0].idempotencyKey).toBe("client_key");
+		expect(atom.calls[0].headers.get("idempotency-key")).toBe(
+			"atom_shadow_req_1",
+		);
+		expect(claimedKeys).toEqual(["atom_shadow_req_1"]);
 		expect(deductLogs[0]).toMatchObject({
 			atom_reply: "forwarded",
 			atom_reason: "journal_backlog",
@@ -295,18 +304,17 @@ describe("a deducting check", () => {
 		const response = await post({ ctx, route: "check", body: deductingCheck });
 
 		expect(await response.json()).toEqual(workerAnswer);
-		expect(workerCheckSpy.mock.calls[0][0].idempotencyKey).toBe(
-			"atom_shadow_req_1",
-		);
+		expect(workerCheckSpy).toHaveBeenCalledTimes(1);
+		expect(claimedKeys).toEqual(["atom_shadow_req_1"]);
 		expect(deductLogs[0]).toMatchObject({
 			atom_reply: "down",
 			atom_reason: "http_503",
 		});
 	});
 
-	test("from an org not allowlisted is unchanged", async () => {
+	test("one carrying the client's own key stays on the API: its middleware already claimed it", async () => {
 		useShadowAtom();
-		const { ctx, deductLogs } = createCtx({ orgId: "org_unlisted" });
+		const { ctx, deductLogs } = createCtx();
 		const response = await post({
 			ctx,
 			route: "check",
@@ -317,7 +325,17 @@ describe("a deducting check", () => {
 		expect(await response.json()).toEqual(workerAnswer);
 		expect(atom.calls).toHaveLength(0);
 		expect(deductLogs).toHaveLength(0);
-		expect(workerCheckSpy.mock.calls[0][0].idempotencyKey).toBe("client_key");
+	});
+
+	test("from an org not allowlisted is unchanged", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx({ orgId: "org_unlisted" });
+		const response = await post({ ctx, route: "check", body: deductingCheck });
+
+		expect(await response.json()).toEqual(workerAnswer);
+		expect(atom.calls).toHaveLength(0);
+		expect(deductLogs).toHaveLength(0);
+		expect(claimedKeys).toEqual([]);
 	});
 
 	test("a plain check is the API's, mirrored to Atom only afterwards", async () => {

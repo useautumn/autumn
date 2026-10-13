@@ -30,6 +30,27 @@ const claimOf = ({
 const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
+/** An Atom's command that will never deduct still lands its seq, so the Atom can clear it from its journal. */
+async function landAtomSeqOnly({
+	ctx,
+	command,
+}: {
+	ctx: ConsumeContext;
+	command: TrackCommand;
+}): Promise<QueuedCommand | null> {
+	if (!command.source) return null;
+	const decided = await ctx.processor.decideTrack({
+		command: {
+			...command,
+			value: 0,
+			usageEvent: null,
+			enforceOverdueBlock: false,
+			idempotency: undefined,
+		},
+	});
+	return { decided };
+}
+
 /** A queued track: claim the item's key, then decide it in arrival order. Null when another item holds the key. */
 export async function consumeTrack({
 	ctx,
@@ -39,13 +60,24 @@ export async function consumeTrack({
 	command: TrackCommand;
 }): Promise<QueuedCommand | null> {
 	const claim = claimOf({ command });
-	const decided = await withIdempotencyKey({
-		store: ctx.idempotencyKeys,
-		claim,
-		run: () => ctx.processor.decideTrack({ command }),
-		onDuplicate: () => null,
-		releaseOnError: isRefusal,
-	});
+	let decided: QueuedCommand["decided"] | null;
+	try {
+		decided = await withIdempotencyKey({
+			store: ctx.idempotencyKeys,
+			claim,
+			run: () => ctx.processor.decideTrack({ command }),
+			onDuplicate: () => null,
+			releaseOnError: isRefusal,
+		});
+	} catch (cause) {
+		if (!command.source || !isRefusal(cause)) throw cause;
+		ctx.logger?.warn("Queued track refused; its Atom seq still lands", {
+			commandId: command.commandId,
+			customerId: command.identity.customerId,
+			error: cause,
+		});
+		return landAtomSeqOnly({ ctx, command });
+	}
 	if (decided === null) {
 		ctx.logger?.info("Queued track skipped: idempotency key already used", {
 			commandId: command.commandId,
@@ -53,7 +85,7 @@ export async function consumeTrack({
 			customerId: command.identity.customerId,
 			featureId: command.featureId,
 		});
-		return null;
+		return landAtomSeqOnly({ ctx, command });
 	}
 	/** A commit the store refused is consumed, never retried: free the key so the item can be sent again. */
 	async function releaseClaim(): Promise<void> {

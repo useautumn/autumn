@@ -1,22 +1,23 @@
 /**
- * A deducting check the client sent under an Idempotency-Key, and the same deduction granted by an Atom first.
+ * A deducting check the client sent under an Idempotency-Key, and the same deduction granted by an Atom.
  *
- * Contract: the SDK falls back to the API when its Atom is slow, so one deduction can reach Autumn twice. With
- * Idempotency-Key K both claim `track:K`, as a track with body key K does:
- *  1. the API's check, then the Atom's hand-in under K: one deduction;
- *  2. the Atom's hand-in under K, then the API's check: one deduction, and the API answers 200 as a plain check of
- *     the balance the hand-in left;
- *  3. without a header, the API claims nothing: the two are two deductions, as today;
- *  4. the same API call sent again under K is the header middleware's duplicate (409), as today, and deducts nothing.
+ * Contract: the SDK falls back to the API when its Atom is slow, so one deduction can reach Autumn twice. The Atom
+ * journals it under the client's raw key K, the claim the API's header middleware makes:
+ *  1. the API's check under K, then the Atom's hand-in under K: one deduction, and the hand-in still lands its seq,
+ *     so the Atom can clear it from its journal;
+ *  2. the Atom's hand-in under K, then the API's check under K: the middleware's 409, and one deduction;
+ *  3. without a key, the two are two deductions, as today.
  */
 
 import { afterAll, expect, test } from "bun:test";
-import { ATOM_TRACKS_APPEND_PATH } from "@autumn/byoc";
+import { ATOM_SUBJECT_READ_PATH, ATOM_TRACKS_APPEND_PATH } from "@autumn/byoc";
+import type { AtomSubjectBody } from "@autumn/byoc/subjects";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -35,7 +36,7 @@ afterAll(async () => {
 	await deleteAtomDeployment({ autumn });
 });
 
-/** A customer with 100 monthly messages, and the handle to hand its Atom's deductions in. */
+/** A customer with 100 monthly messages, and its Atom handing in one deduction of 10 as seq 1 of a fresh journal. */
 const initHandIn = async ({ customerId }: { customerId: string }) => {
 	const free = products.base({
 		id: "free",
@@ -48,26 +49,39 @@ const initHandIn = async ({ customerId }: { customerId: string }) => {
 	});
 	const atom = await ensureAtomDeployment({ autumn });
 	const tokenHash = atomTokenToHash({ token: atom.token });
-	/** Hands in `tracks`, then a 1-message track: one customer's commands apply in order, so it landing means they were decided. */
-	const handIn = async ({
-		tracks,
-	}: {
-		tracks: ReturnType<typeof atomTrack>[];
-	}) => {
+	const writer = `w_${crypto.randomUUID()}`;
+	const handIn = async ({ idempotencyKey }: { idempotencyKey?: string }) => {
 		const reply = await postAsAtom({
 			autumn,
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash,
 			body: {
-				writer: `w_${crypto.randomUUID()}`,
-				tracks: [...tracks, atomTrack({ customerId, value: 1 })].map(
-					(command, index) => ({ seq: index + 1, command }),
-				),
+				writer,
+				tracks: [
+					{
+						seq: 1,
+						command: atomTrack({ customerId, value: 10, idempotencyKey }),
+					},
+				],
 			},
 		});
 		expect(reply.status).toBe(204);
 	};
-	return { autumnV2_4, handIn };
+	/** Settles once the hand-in was decided, whether it deducted or not: its seq is on the subject the Atom reads. */
+	const waitForSeq = () =>
+		pollUntilAsserted({
+			fetch: async () =>
+				(await (
+					await postAsAtom({
+						autumn,
+						path: ATOM_SUBJECT_READ_PATH,
+						tokenHash,
+						body: { customer_id: customerId, entity_id: null },
+					})
+				).json()) as AtomSubjectBody,
+			assert: (body) => expect(body.atom_seqs?.[writer]).toBe(1),
+		});
+	return { autumnV2_4, handIn, waitForSeq };
 };
 
 const deductingCheck = ({
@@ -93,109 +107,84 @@ const deductingCheck = ({
 		}),
 	});
 
+const expectRemaining = ({
+	customerId,
+	remaining,
+}: {
+	customerId: string;
+	remaining: number;
+}) =>
+	expectBalanceCorrect({
+		customerId,
+		featureId: TestFeature.Messages,
+		remaining,
+	});
+
 // A handed-in track only lands through the balance worker's log.
 test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-check-idem1: the API's check under K, then the Atom's hand-in under K: one deduction")}`,
+	`${chalk.yellowBright("atom-check-idem1: the API's check under K, then the Atom's hand-in under K: one deduction, and the hand-in's seq lands")}`,
 	async () => {
 		const customerId = "atom-check-idem1";
 		const key = `idem_${crypto.randomUUID()}`;
-		const { autumnV2_4, handIn } = await initHandIn({ customerId });
+		const { autumnV2_4, handIn, waitForSeq } = await initHandIn({
+			customerId,
+		});
 
 		const checked = await deductingCheck({
 			client: autumnV2_4,
 			customerId,
 			idempotencyKey: key,
 		});
-		await handIn({
-			tracks: [atomTrack({ customerId, value: 10, idempotencyKey: key })],
-		});
+		await handIn({ idempotencyKey: key });
+		await waitForSeq();
 
 		expect(checked.status).toBe(200);
-		await expectBalanceCorrect({
-			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 89,
-		});
+		await expectRemaining({ customerId, remaining: 90 });
 	},
 	120_000,
 );
 
 test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-check-idem2: the Atom's hand-in under K, then the API's check under K: one deduction, the check answers the balance left")}`,
+	`${chalk.yellowBright("atom-check-idem2: the Atom's hand-in under K, then the API's check under K: the middleware's 409, one deduction")}`,
 	async () => {
 		const customerId = "atom-check-idem2";
 		const key = `idem_${crypto.randomUUID()}`;
-		const { autumnV2_4, handIn } = await initHandIn({ customerId });
-
-		await handIn({
-			tracks: [atomTrack({ customerId, value: 10, idempotencyKey: key })],
-		});
-		await expectBalanceCorrect({
+		const { autumnV2_4, handIn, waitForSeq } = await initHandIn({
 			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 89,
 		});
+
+		await handIn({ idempotencyKey: key });
+		await waitForSeq();
+		await expectRemaining({ customerId, remaining: 90 });
 		const checked = await deductingCheck({
 			client: autumnV2_4,
 			customerId,
 			idempotencyKey: key,
 		});
 
-		expect(checked.status).toBe(200);
+		expect(checked.status).toBe(409);
 		expect(await checked.json()).toMatchObject({
-			allowed: true,
-			balance: { remaining: 89 },
-		});
-		await expectBalanceCorrect({
-			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 89,
-		});
-	},
-	120_000,
-);
-
-test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-check-idem3: without an Idempotency-Key the API's check and the Atom's hand-in are two deductions")}`,
-	async () => {
-		const customerId = "atom-check-idem3";
-		const { autumnV2_4, handIn } = await initHandIn({ customerId });
-
-		const checked = await deductingCheck({ client: autumnV2_4, customerId });
-		await handIn({ tracks: [atomTrack({ customerId, value: 10 })] });
-
-		expect(checked.status).toBe(200);
-		await expectBalanceCorrect({
-			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 79,
-		});
-	},
-	120_000,
-);
-
-test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-check-idem4: the same API check sent again under K is the middleware's duplicate, and deducts once")}`,
-	async () => {
-		const customerId = "atom-check-idem4";
-		const key = `idem_${crypto.randomUUID()}`;
-		const { autumnV2_4 } = await initHandIn({ customerId });
-		const send = () =>
-			deductingCheck({ client: autumnV2_4, customerId, idempotencyKey: key });
-
-		const first = await send();
-		const replay = await send();
-
-		expect(first.status).toBe(200);
-		expect(replay.status).toBe(409);
-		expect(await replay.json()).toMatchObject({
 			code: ErrCode.DuplicateIdempotencyKey,
 		});
-		await expectBalanceCorrect({
+		await expectRemaining({ customerId, remaining: 90 });
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-check-idem3: without a key the API's check and the Atom's hand-in are two deductions")}`,
+	async () => {
+		const customerId = "atom-check-idem3";
+		const { autumnV2_4, handIn, waitForSeq } = await initHandIn({
 			customerId,
-			featureId: TestFeature.Messages,
-			remaining: 90,
 		});
+
+		const checked = await deductingCheck({ client: autumnV2_4, customerId });
+		await handIn({});
+		await waitForSeq();
+
+		expect(checked.status).toBe(200);
+		await expectRemaining({ customerId, remaining: 80 });
 	},
 	120_000,
 );
