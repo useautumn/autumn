@@ -2,7 +2,6 @@ import {
 	ErrCode,
 	type Feature,
 	featureUtils,
-	notNullish,
 	type ProductItem,
 	RecaseError,
 	TierBehavior,
@@ -10,8 +9,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** Stripe prices allocated seats and bills tier 1's flat fee even at 0 seats;
- * included usage puts a free tier first, so the fee only applies past it. */
+/** Stripe bills volume seats over included, and charges tier 1's flat fee even when none are over. */
 export const handleAllocatedVolumeFlatFeeErrors = ({
 	item,
 	feature,
@@ -33,12 +31,10 @@ export const handleAllocatedVolumeFlatFeeErrors = ({
 			(entry) => entry.flat_amount,
 		),
 	].some((flatAmount) => (flatAmount ?? 0) > 0);
-	const hasIncludedUsage =
-		notNullish(item.included_usage) && item.included_usage !== 0;
-	if (!hasFirstTierFlatAmount || hasIncludedUsage) return;
+	if (!hasFirstTierFlatAmount) return;
 
 	throw new RecaseError({
-		message: `Volume-based allocated items can't have a flat_amount on the first tier without included usage (feature: ${item.feature_id}): Stripe would charge it at 0 seats. Add included usage or move the fee to a later tier.`,
+		message: `Volume-based allocated items can't have a flat_amount on the first tier (feature: ${item.feature_id}): Stripe would charge it even with no seats over included. Move the fee to a later tier.`,
 		code: ErrCode.InvalidInputs,
 		statusCode: StatusCodes.BAD_REQUEST,
 	});

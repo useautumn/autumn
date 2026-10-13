@@ -128,14 +128,14 @@ describe("volume tier item errors", () => {
 			).toThrow("can't have a flat_amount on the first tier");
 		});
 
-		test("accepts it with included usage", () => {
+		test("rejects it with included usage too, since only seats over included are billed", () => {
 			expect(() =>
 				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 3 }),
 					feature: seats,
 				}),
-			).not.toThrow();
+			).toThrow("can't have a flat_amount on the first tier");
 		});
 	});
 
