@@ -5,6 +5,7 @@ import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 /**
  * Stores a subject as its owners hold it: the customer's own rows, and an entity's own rows beside them.
  * So every push refreshes the customer's rows, and no entity keeps a copy of them that could go stale.
+ * A stored push then settles what the journal owes; one older than held settles nothing.
  */
 export const setSubject = ({
 	ctx,
@@ -19,5 +20,11 @@ export const setSubject = ({
 		subjects: parts.map((state) => ({ ...subject, state })),
 	});
 	// The pushed subject's own part is the last: false when a newer read of it is already held.
-	return stored.at(-1) ?? false;
+	const isStored = stored.at(-1) ?? false;
+	if (isStored)
+		ctx.journal?.reconcile({
+			customerId: subject.state.identity.customerId,
+			subject,
+		});
+	return isStored;
 };

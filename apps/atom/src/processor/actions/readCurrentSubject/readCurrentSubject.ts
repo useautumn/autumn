@@ -8,11 +8,14 @@ import {
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
 import { deepFreeze } from "../../../state/deepFreeze.js";
+import { NOTHING_OWED } from "../../../state/journal/openJournal.js";
+import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "./freshestCatalog.js";
+import { replayOwed } from "./replayOwed.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
 const subjectNotStored = ({
@@ -73,10 +76,11 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
-/** The parts a subject was joined from: the view is current while the store still holds these very copies. */
+/** The parts a subject was joined from: the view is current while the store and journal still hold these very copies. */
 type SubjectJoinCacheEntry = {
 	customer: StoredSubject;
 	shared: SharedCatalog | null;
+	owed: readonly JournalEntry[];
 	current: CurrentSubject;
 };
 
@@ -84,8 +88,9 @@ type SubjectJoinCacheEntry = {
 const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
 
 /**
- * The subject a request is decided on, as Autumn last sent it: for an entity, the customer's rows and its own as one.
- * Joined once per change to its parts, not per check. A customer or entity Atom does not hold is left to the API.
+ * The subject a request is decided on: as Autumn last sent it, with what the Atom owes Autumn for the customer replayed
+ * on top; for an entity, the customer's rows and its own as one. Joined once per change to its parts, not per check.
+ * A customer or entity Atom does not hold is left to the API.
  */
 export const readCurrentSubject = ({
 	ctx,
@@ -98,15 +103,20 @@ export const readCurrentSubject = ({
 }): CurrentSubject => {
 	const { customer, entity } = readStoredParts({ ctx, customerId, entityId });
 	const shared = ctx.catalogStore.read();
+	const owed = ctx.journal?.owed({ customerId }) ?? NOTHING_OWED;
 	const target = entity ?? customer;
 	const joined = subjectJoinCache.get(target);
-	if (joined?.customer === customer && joined.shared === shared)
+	if (
+		joined?.customer === customer &&
+		joined.shared === shared &&
+		joined.owed === owed
+	)
 		return joined.current;
-	// Frozen, because every check until the next push shares it.
+	// Frozen, because every check until the next push or append shares it.
 	const current = deepFreeze(
-		joinSubject({ customer, entity, shared, entityId }),
+		joinSubject({ customer, entity, shared, owed, entityId }),
 	);
-	subjectJoinCache.set(target, { customer, shared, current });
+	subjectJoinCache.set(target, { customer, shared, owed, current });
 	return current;
 };
 
@@ -114,11 +124,13 @@ const joinSubject = ({
 	customer,
 	entity,
 	shared,
+	owed,
 	entityId,
 }: {
 	customer: StoredSubject;
 	entity: StoredSubject | null;
 	shared: SharedCatalog | null;
+	owed: readonly JournalEntry[];
 	entityId: string | null;
 }): CurrentSubject => {
 	// The part read later is merged last, so where both hold a row its copy is the one kept.
@@ -132,10 +144,16 @@ const joinSubject = ({
 		),
 	});
 
+	// Only a customer's own deductions are owed, and they move only the customer's own rows.
+	const customerState =
+		owed.length === 0
+			? customer.state
+			: replayOwed({ owed, state: customer.state, catalog });
+
 	return {
 		fullSubject: subjectStateToFullSubject({
 			state: mergeSubjectStates({
-				customer: customer.state,
+				customer: customerState,
 				entity: entity?.state ?? null,
 			}),
 			catalog,

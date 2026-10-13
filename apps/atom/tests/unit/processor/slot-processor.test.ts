@@ -36,6 +36,7 @@ const createProcessor = () => {
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
+			journal: null,
 		},
 	});
 	return {
@@ -401,6 +402,7 @@ describe("a push the slot could not store", () => {
 				subjectPulls: {
 					request: ({ customerId }) => void pulled.push(customerId),
 				},
+				journal: null,
 			},
 		});
 		const request = checkBalance({ requiredBalance: 5 });

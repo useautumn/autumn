@@ -86,7 +86,7 @@ export const openSlots = ({
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
-				ctx: { sqliteStore, catalogStore, logger, subjectPulls },
+				ctx: { sqliteStore, catalogStore, logger, subjectPulls, journal: null },
 			}),
 		};
 	});
