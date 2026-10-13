@@ -4,6 +4,7 @@ import type { AtomHealth } from "./atomHealth.js";
 type IntervalCounter =
 	| "requests"
 	| "forwarded"
+	| "shed"
 	| "pushes"
 	| "subjectMisses"
 	| "subjectPulls"
@@ -34,6 +35,7 @@ export const bootTotals = ({
 	cpuSeconds: 0,
 	requests: 0,
 	forwarded: 0,
+	shed: 0,
 	pushes: 0,
 	subjectMisses: 0,
 	subjectPulls: 0,
@@ -58,6 +60,7 @@ export const healthTotalsOf = ({
 		cpuSeconds: health.container.cpuUsageSeconds,
 		requests: sumOf("requests"),
 		forwarded: sumOf("forwarded"),
+		shed: sumOf("shed"),
 		pushes: sumOf("pushes"),
 		subjectMisses: sumOf("subjectMisses"),
 		subjectPulls: sumOf("subjectPulls"),
@@ -83,6 +86,7 @@ export const healthIntervalBetween = ({
 			: current.cpuSeconds - previous.cpuSeconds,
 	requests: current.requests - previous.requests,
 	forwarded: current.forwarded - previous.forwarded,
+	shed: current.shed - previous.shed,
 	pushes: current.pushes - previous.pushes,
 	subjectMisses: current.subjectMisses - previous.subjectMisses,
 	subjectPulls: current.subjectPulls - previous.subjectPulls,
