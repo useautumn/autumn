@@ -8,6 +8,23 @@ import type { CurrentSubject } from "../../types/currentSubject.js";
 const TRACK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * The key the worker claims, as the API claims it for the same call: a check's Idempotency-Key raw (the API's middleware),
+ * a track's body key as `track:<key>` (getTrackBodyIdempotencyKey); with neither, this request's own id.
+ */
+const claimKeyOf = ({
+	kind,
+	idempotencyKey,
+	requestId,
+}: {
+	kind: CheckRequest["kind"];
+	idempotencyKey: string | null;
+	requestId: string;
+}): string => {
+	if (idempotencyKey === null) return `track:${requestId}`;
+	return kind === "track" ? `track:${idempotencyKey}` : idempotencyKey;
+};
+
+/**
  * The balance worker's own track for a deduction Atom granted, as the API builds a deducting check's: `overflow`, since
  * the units are already given. A flag is never usage-tracked, so the API refuses its send_event.
  */
@@ -21,7 +38,7 @@ export const trackToCommand = ({
 	command: CheckCommand;
 	subject: CurrentSubject;
 	skipEvent: boolean;
-	/** The caller's own key, which the API's deducting check claims too; else this check's request id. */
+	/** The caller's key as it sent it: the Idempotency-Key header on a check, the body's on a track. */
 	idempotencyKey: string | null;
 	kind: CheckRequest["kind"];
 }): TrackCommand => {
@@ -49,8 +66,8 @@ export const trackToCommand = ({
 					id: null,
 				},
 		idempotency: {
-			// Never the request id: it is the claim's owner at the worker, and an owner claiming again is resumed, not refused.
-			key: `track:${idempotencyKey ?? command.requestId}`,
+			// Never the caller's key as the request id: that is the claim's owner, and an owner claiming again is resumed.
+			key: claimKeyOf({ kind, idempotencyKey, requestId: command.requestId }),
 			ttlMs: TRACK_IDEMPOTENCY_TTL_MS,
 		},
 	};
