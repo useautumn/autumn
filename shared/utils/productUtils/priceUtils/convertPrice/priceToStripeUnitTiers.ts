@@ -4,12 +4,17 @@ import { priceConfigForCurrency } from "@models/productModels/priceModels/priceC
 import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
-import { isNotFinalTier } from "@utils/productUtils/priceUtils/classifyPriceUtils";
+import {
+	isNotFinalTier,
+	isPrepaidPrice,
+	isVolumePrice,
+} from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import { atmnToStripeAmountDecimal } from "@utils/productUtils/priceUtils/convertAmountUtils";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
-/** Per-unit Stripe tiers for a quantity of total usage; a free leading tier covers the allowance.
+/** Per-unit Stripe tiers; a free leading tier covers the allowance, except usage-based volume,
+ * whose Stripe quantity is only the units over the allowance.
  * `skipFlatFees` for metered volume prices, whose quantity stays 0 so tier 1's fee would bill every cycle. */
 export const priceToStripeUnitTiers = ({
 	price,
@@ -34,7 +39,8 @@ export const priceToStripeUnitTiers = ({
 	const usageTiers =
 		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
 		config.usage_tiers;
-	const allowance = entitlement.allowance ?? 0;
+	let allowance = entitlement.allowance ?? 0;
+	if (isVolumePrice(price) && !isPrepaidPrice(price)) allowance = 0;
 
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 

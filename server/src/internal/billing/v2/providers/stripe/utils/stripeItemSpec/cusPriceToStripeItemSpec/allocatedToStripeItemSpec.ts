@@ -1,9 +1,11 @@
 import {
+	cusEntsToAllowance,
 	cusEntToBillingObjects,
 	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	getPriceCurrencyStripeId,
 	InternalError,
+	isVolumePrice,
 	roundUsageToNearestBillingUnit,
 	type StripeItemSpec,
 	type UsagePriceConfig,
@@ -42,10 +44,16 @@ export const allocatedToStripeItemSpec = ({
 		});
 	}
 
-	const existingUsage = cusEntToInvoiceUsage({
+	let existingUsage = cusEntToInvoiceUsage({
 		cusEnt: cusEntWithCusProduct,
 		subtractReplaceables: true,
 	});
+
+	// Volume seat prices bill only the seats over included, on net tiers.
+	if (isVolumePrice(price)) {
+		const allowance = cusEntsToAllowance({ cusEnts: [cusEntWithCusProduct] });
+		existingUsage = Math.max(0, existingUsage - allowance);
+	}
 
 	// Round existing usage to the nearest billing unit
 	const roundedUsage = roundUsageToNearestBillingUnit({

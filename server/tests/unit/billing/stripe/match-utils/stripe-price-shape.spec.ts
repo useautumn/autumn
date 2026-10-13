@@ -385,9 +385,9 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 		});
 
 		expect(shape?.tiersMode).toBe("volume");
+		// Usage-based volume bills only the overage, so its tiers aren't shifted by included.
 		expect(shape?.tiers).toEqual([
-			{ upTo: 100, unitAmountDecimal: "0" },
-			{ upTo: 600, unitAmountDecimal: "10" },
+			{ upTo: 500, unitAmountDecimal: "10" },
 			{ upTo: "inf", unitAmountDecimal: "5" },
 		]);
 	});

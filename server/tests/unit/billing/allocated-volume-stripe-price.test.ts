@@ -109,16 +109,15 @@ const createStripePrices = async ({ price }: { price: Price }) => {
 };
 
 describe("allocated Stripe price tiers", () => {
-	test("volume: tiers_mode volume, free tier for included seats, bands shifted by included", async () => {
+	test("volume: tiers_mode volume on the net tiers, since only seats over included are billed", async () => {
 		const { seatPrice, placeholderPrice } = await createStripePrices({
 			price: allocatedPrice({ tierBehavior: TierBehavior.VolumeBased }),
 		});
 
 		expect(seatPrice.tiers_mode).toBe("volume");
 		expect(seatPrice.tiers).toEqual([
-			{ unit_amount_decimal: "0", up_to: INCLUDED },
 			{
-				up_to: 5 + INCLUDED,
+				up_to: 5,
 				unit_amount_decimal: "1000",
 				flat_amount_decimal: "500",
 			},
@@ -128,8 +127,7 @@ describe("allocated Stripe price tiers", () => {
 		// (Stripe would bill tier 1's at quantity 0 every cycle).
 		expect(placeholderPrice.tiers_mode).toBe("volume");
 		expect(placeholderPrice.tiers).toEqual([
-			{ unit_amount_decimal: "0", up_to: INCLUDED },
-			{ up_to: 5 + INCLUDED, unit_amount_decimal: "1000" },
+			{ up_to: 5, unit_amount_decimal: "1000" },
 			{ up_to: "inf", unit_amount_decimal: "600" },
 		]);
 	});
@@ -147,8 +145,7 @@ describe("allocated Stripe price tiers", () => {
 		});
 
 		expect(seatPrice.tiers).toEqual([
-			{ unit_amount_decimal: "0", up_to: INCLUDED },
-			{ up_to: 10 + INCLUDED, unit_amount_decimal: "1000" },
+			{ up_to: 10, unit_amount_decimal: "1000" },
 			{ up_to: "inf", unit_amount_decimal: "500" },
 		]);
 	});
