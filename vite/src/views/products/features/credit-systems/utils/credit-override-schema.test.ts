@@ -53,7 +53,7 @@ test("the effective schema applies rate rows and drops excluded rows", () => {
 test("only edited, added and removed rows are stored", () => {
 	const override = effectiveSchemaToOverride({
 		schema: [row("gateway", 2.857), row("search", 0.5), row("video", 4)],
-		creditSystem,
+		catalog: creditSystem.config.schema,
 	});
 
 	expect(override).toEqual([
@@ -67,7 +67,7 @@ test("an unedited card stores nothing", () => {
 	expect(
 		effectiveSchemaToOverride({
 			schema: creditSystem.config.schema,
-			creditSystem,
+			catalog: creditSystem.config.schema,
 		}),
 	).toEqual([]);
 });

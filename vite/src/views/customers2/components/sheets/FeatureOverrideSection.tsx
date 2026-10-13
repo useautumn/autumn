@@ -26,13 +26,6 @@ export function FeatureOverrideSection({
 		selectedCusEnt.entitlement;
 	const markups = feature_override?.markups;
 	const product = cusProduct?.product;
-	const plan = product?.name ?? "this plan";
-	const sources = {
-		inherited: `From ${creditSystem.name}`,
-		changed: `Set on ${plan}`,
-		added: `Set on ${plan}`,
-		excluded: `Removed on ${plan}`,
-	};
 
 	if (feature_override?.schema?.length)
 		return (
@@ -55,13 +48,14 @@ export function FeatureOverrideSection({
 				>
 					{rateCardRows({
 						override: feature_override.schema,
-						creditSystem,
+						catalog: creditSystem.config?.schema ?? [],
 					}).map((row) => (
 						<RateCardRow
 							key={row.featureId}
 							row={row}
 							features={features}
-							source={sources[row.state]}
+							planName={product?.name ?? "this plan"}
+							creditSystemName={creditSystem.name}
 						/>
 					))}
 				</RateCardTable>

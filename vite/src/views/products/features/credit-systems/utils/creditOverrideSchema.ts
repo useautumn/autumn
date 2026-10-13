@@ -6,9 +6,6 @@ import {
 	type Feature,
 } from "@autumn/shared";
 
-const catalogSchemaOf = (creditSystem?: Feature): CreditSchemaItem[] =>
-	creditSystem?.config?.schema ?? [];
-
 /** The rate card customers on the plan get: catalog rows merged with the override. */
 export const overrideToEffectiveSchema = ({
 	override,
@@ -29,12 +26,11 @@ export const overrideToEffectiveSchema = ({
 /** Stores only what differs: edited and added rows, plus removed catalog rows as excluded. */
 export const effectiveSchemaToOverride = ({
 	schema,
-	creditSystem,
+	catalog: catalogSchema,
 }: {
 	schema: CreditSchemaItem[];
-	creditSystem?: Feature;
+	catalog: CreditSchemaItem[];
 }): CreditSchemaOverrideItem[] => {
-	const catalogSchema = catalogSchemaOf(creditSystem);
 	const catalog = new Map(
 		catalogSchema.map((item) => [item.metered_feature_id, item]),
 	);

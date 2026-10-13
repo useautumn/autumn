@@ -46,11 +46,8 @@ import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
-import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
-import {
-	rateCardItemChanges,
-	rateText,
-} from "@/views/products/features/credit-systems/utils/rateCardRows";
+import { RateCardRow } from "@/views/products/features/credit-systems/components/rate-card/RateCardRow";
+import { rateCardItemChanges } from "@/views/products/features/credit-systems/utils/rateCardRows";
 import {
 	useProductQuery,
 	useProductQueryState,
@@ -684,47 +681,16 @@ export default function PlanChangeDialog({
 																	Rate card changed
 																</Badge>
 															</div>
-															{rows.map((row) => (
-																<div
-																	key={row.featureId}
-																	className="flex justify-between gap-3 border-input border-t py-1.5 text-xs"
-																>
-																	<span
-																		className={
-																			row.state === "excluded"
-																				? "text-tertiary-foreground"
-																				: ""
-																		}
-																	>
-																		{featureDisplayName({
-																			features,
-																			featureId: row.featureId,
-																		})}
-																	</span>
-																	{row.state === "excluded" ? (
-																		<span className="text-tertiary-foreground">
-																			Not covered
-																		</span>
-																	) : (
-																		<span className="flex gap-1.5 text-subtle">
-																			{row.state === "changed" && (
-																				<>
-																					<s>
-																						{rateText({
-																							rate: row.catalogRate,
-																							features,
-																						}).replace(/ credits?$/, "")}
-																					</s>
-																					→
-																				</>
-																			)}
-																			<span className="font-medium text-foreground">
-																				{rateText({ rate: row.rate, features })}
-																			</span>
-																		</span>
-																	)}
-																</div>
-															))}
+															<ul>
+																{rows.map((row) => (
+																	<RateCardRow
+																		key={row.featureId}
+																		row={row}
+																		features={features}
+																		dense
+																	/>
+																))}
+															</ul>
 														</div>
 													)
 												);

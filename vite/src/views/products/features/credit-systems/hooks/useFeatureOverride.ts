@@ -46,7 +46,10 @@ export const useFeatureOverride = () => {
 		markups: override?.markups,
 
 		setSchema: (schema: CreditSchemaItem[]) => {
-			const rows = effectiveSchemaToOverride({ schema, creditSystem });
+			const rows = effectiveSchemaToOverride({
+				schema,
+				catalog: creditSystem?.config?.schema ?? [],
+			});
 			setOverride(rows.length > 0 ? { schema: rows } : null);
 		},
 		setMarkups: (markups: FeatureMarkupsOverride | null) =>

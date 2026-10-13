@@ -6,8 +6,6 @@ import {
 	creditSchemaItemsAreSame,
 	type Feature,
 	findFeatureById,
-	getFeatureName,
-	isAiCreditSystem,
 	isExcludedCreditSchemaItem,
 	itemsEqual,
 	type PlanItemChangeV0,
@@ -16,7 +14,7 @@ import {
 	effectiveSchemaToOverride,
 	overrideToEffectiveSchema,
 } from "./creditOverrideSchema";
-import { creditRateSummary } from "./creditRateSummary";
+import { rateText } from "./creditRateSummary";
 
 /** One feature of a plan's effective rate card and where its rate comes from. */
 export type RateCardRow = { featureId: string } & (
@@ -29,12 +27,11 @@ export type RateCardRow = { featureId: string } & (
 /** Catalog rows in the credit system's order, removed ones in place, then features the plan adds. */
 export const rateCardRows = ({
 	override,
-	creditSystem,
+	catalog,
 }: {
 	override: CreditSchemaOverrideItem[];
-	creditSystem?: Feature;
+	catalog: CreditSchemaItem[];
 }): RateCardRow[] => {
-	const catalog: CreditSchemaItem[] = creditSystem?.config?.schema ?? [];
 	const byFeature = new Map(
 		override.map((row) => [row.metered_feature_id, row]),
 	);
@@ -79,27 +76,6 @@ export const rateCardSubtitle = ({
 			`From ${creditSystemName}`,
 		);
 
-/** creditRateSummary with the unit taken from the feature, e.g. "3 credits per 10 searches". */
-export const rateText = ({
-	rate,
-	features,
-}: {
-	rate: CreditSchemaItem;
-	features: Feature[];
-}) => {
-	const feature = findFeatureById({
-		features,
-		featureId: rate.metered_feature_id,
-		errorOnNotFound: false,
-	});
-	const isAiChild = isAiCreditSystem(feature?.type);
-	const unitName = isAiChild
-		? "of AI usage"
-		: getFeatureName({ feature, plural: (rate.feature_amount ?? 1) !== 1 }) ||
-			"units";
-	return creditRateSummary({ item: rate, unitName, isAiChild });
-};
-
 const withoutOverride = (item: ApiPlanItemV1) => ({
 	...item,
 	feature_override: undefined,
@@ -136,16 +112,13 @@ export const rateCardItemChanges = ({
 					: [],
 				creditSystem,
 			});
-		const before = {
-			...creditSystem,
-			config: { ...creditSystem.config, schema: effective(deleted) },
-		};
+		const before = effective(deleted);
 		const rows = rateCardRows({
+			catalog: before,
 			override: effectiveSchemaToOverride({
 				schema: effective(created),
-				creditSystem: before,
+				catalog: before,
 			}),
-			creditSystem: before,
 		}).filter((row) => row.state !== "inherited");
 		const unreadable = rows.some(
 			(row) =>

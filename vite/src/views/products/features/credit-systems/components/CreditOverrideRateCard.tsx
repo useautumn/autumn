@@ -12,7 +12,10 @@ export function CreditOverrideRateCard() {
 	const { creditSystem, override, schema, setSchema, clear } =
 		useFeatureOverride();
 	const list = useCreditSchemaList({ schema, onChange: setSchema });
-	const rows = rateCardRows({ override: override?.schema ?? [], creditSystem });
+	const rows = rateCardRows({
+		override: override?.schema ?? [],
+		catalog: creditSystem?.config?.schema ?? [],
+	});
 	const creditSystemName = creditSystem?.name ?? "the credit system";
 
 	return (

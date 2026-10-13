@@ -18,7 +18,7 @@ const creditSystem = {
 	config: { schema: [rate("a", 3), rate("b", 1), rate("c", 0.5)] },
 } as Feature;
 const statesOf = (override: CreditSchemaOverrideItem[]) =>
-	rateCardRows({ override, creditSystem }).map(
+	rateCardRows({ override, catalog: creditSystem.config.schema }).map(
 		(r) => `${r.featureId}:${r.state}`,
 	);
 

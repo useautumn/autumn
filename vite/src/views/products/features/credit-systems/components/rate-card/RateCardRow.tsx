@@ -4,32 +4,39 @@ import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
+import { rateText } from "../../utils/creditRateSummary";
 import { featureDisplayName } from "../../utils/featureDisplayName";
-import { type RateCardRow as Row, rateText } from "../../utils/rateCardRows";
+import type { RateCardRow as Row } from "../../utils/rateCardRows";
 
-const BADGES = { changed: "Changed", added: "Added", excluded: "Not covered" };
-
-const badge = (state: keyof typeof BADGES) => (
+const stateBadge = (label: string, muted = false) => (
 	<Badge
 		variant="muted"
 		className={cn(
 			"shrink-0 font-medium",
-			state === "excluded" ? "text-tertiary-foreground" : "text-foreground",
+			muted ? "text-tertiary-foreground" : "text-foreground",
 		)}
 	>
-		{BADGES[state]}
+		{label}
 	</Badge>
 );
 
-/** The rate, with the credit system's rate it replaced struck through. */
+/** The rate, after the one it replaced: "<s>3</s> → 2.857 credits", with a shared unit written once. */
 const rateValue = ({ row, features }: { row: Row; features: Feature[] }) => {
-	if (row.state === "excluded") return badge("excluded");
-	const was =
-		row.state === "changed" &&
-		rateText({ rate: row.catalogRate, features }).replace(/ credits?$/, "");
+	if (row.state === "excluded") return stateBadge("Not covered", true);
+	const to = rateText({ rate: row.rate, features });
+	const from =
+		row.state === "changed" && rateText({ rate: row.catalogRate, features });
+	const unit = to.replace(/^\S+/, "");
 	return (
 		<>
-			{was && <s className="text-subtle text-xs">was {was}</s>}
+			{from && (
+				<>
+					<s className="text-subtle">
+						{from.endsWith(unit) ? from.slice(0, -unit.length) : from}
+					</s>
+					<span className="text-subtle">→</span>
+				</>
+			)}
 			<span
 				className={
 					row.state === "inherited"
@@ -37,49 +44,106 @@ const rateValue = ({ row, features }: { row: Row; features: Feature[] }) => {
 						: "font-medium text-foreground"
 				}
 			>
-				{rateText({ rate: row.rate, features })}
+				{to}
 			</span>
 		</>
 	);
 };
 
-/** One rate card row. With `source` it is read-only and says where the rate is set. */
-export function RateCardRow({
+/** Where a read-only row's rate is set, with a dot that is solid when the plan set it. */
+const sourceLine = ({
+	row,
+	planName,
+	creditSystemName,
+}: {
+	row: Row;
+	planName: string;
+	creditSystemName?: string;
+}) => {
+	const setOnPlan = row.state === "changed" || row.state === "added";
+	const label =
+		row.state === "inherited"
+			? `From ${creditSystemName}`
+			: `${row.state === "excluded" ? "Removed" : "Set"} on ${planName}`;
+	return (
+		<span
+			className={cn(
+				"flex items-center gap-1.5 text-xs",
+				setOnPlan ? "font-medium text-foreground" : "text-tertiary-foreground",
+			)}
+		>
+			<span
+				className={cn(
+					"size-1.5 rounded-full",
+					setOnPlan ? "bg-foreground" : "bg-subtle",
+				)}
+			/>
+			{label}
+		</span>
+	);
+};
+
+/** Icon, name and "Changed"/"Added" badge, shown only on the editable plan card. */
+const editableExtras = ({
 	row,
 	features,
-	source,
-	onClick,
-	action,
 }: {
 	row: Row;
 	features: Feature[];
-	source?: string;
-	onClick?: () => void;
-	action?: ReactNode;
-}) {
+}) => {
 	const feature = findFeatureById({
 		features,
 		featureId: row.featureId,
 		errorOnNotFound: false,
 	});
+	return {
+		icon: feature && (
+			<span className="shrink-0 text-tertiary-foreground">
+				{
+					getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
+						.icon
+				}
+			</span>
+		),
+		badge:
+			row.state === "changed" || row.state === "added"
+				? stateBadge(row.state === "changed" ? "Changed" : "Added")
+				: null,
+	};
+};
+
+/** One rate card row: editable on the plan; read-only with `planName` (says where the rate is set) or `dense` (save dialog). */
+export function RateCardRow({
+	row,
+	features,
+	planName,
+	creditSystemName,
+	dense = false,
+	onClick,
+	action,
+}: {
+	row: Row;
+	features: Feature[];
+	planName?: string;
+	creditSystemName?: string;
+	dense?: boolean;
+	onClick?: () => void;
+	action?: ReactNode;
+}) {
 	const name = featureDisplayName({ features, featureId: row.featureId });
-	const setOnPlan = row.state === "changed" || row.state === "added";
-	const icon =
-		!source &&
-		feature &&
-		getFeatureIconConfig(feature.type, feature.config?.usage_type, 14).icon;
+	const readOnly = dense || planName !== undefined;
+	const extras = readOnly ? null : editableExtras({ row, features });
 
 	const content = (
 		<>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
-					{icon && (
-						<span className="shrink-0 text-tertiary-foreground">{icon}</span>
-					)}
+					{extras?.icon}
 					<span
 						title={name}
 						className={cn(
-							"truncate text-sm",
+							"truncate",
+							!dense && "text-sm",
 							row.state === "excluded"
 								? "text-tertiary-foreground"
 								: "font-medium text-foreground",
@@ -87,28 +151,17 @@ export function RateCardRow({
 					>
 						{name}
 					</span>
-					{!source && setOnPlan && badge(row.state)}
+					{extras?.badge}
 				</span>
-				{source && (
-					<span
-						className={cn(
-							"flex items-center gap-1.5 text-xs",
-							setOnPlan
-								? "font-medium text-foreground"
-								: "text-tertiary-foreground",
-						)}
-					>
-						<span
-							className={cn(
-								"size-1.5 rounded-full",
-								setOnPlan ? "bg-foreground" : "bg-subtle",
-							)}
-						/>
-						{source}
-					</span>
-				)}
+				{planName !== undefined &&
+					sourceLine({ row, planName, creditSystemName })}
 			</span>
-			<span className="ml-auto flex shrink-0 items-baseline gap-1.5 whitespace-nowrap text-sm">
+			<span
+				className={cn(
+					"ml-auto flex shrink-0 items-baseline gap-1.5 whitespace-nowrap",
+					!dense && "text-sm",
+				)}
+			>
 				{rateValue({ row, features })}
 			</span>
 		</>
@@ -117,9 +170,14 @@ export function RateCardRow({
 	return (
 		<li
 			className={cn(
-				TABLE_TRAY_SURFACE_DIVIDER_CLASS,
-				"flex items-center gap-1.5 px-3",
-				source ? "h-12" : "h-11",
+				"flex items-center gap-1.5",
+				dense
+					? "border-input border-t py-1.5 text-xs"
+					: [
+							TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+							"px-3",
+							planName === undefined ? "h-11" : "h-12",
+						],
 				onClick && "hover:bg-table-row-hover",
 			)}
 		>
