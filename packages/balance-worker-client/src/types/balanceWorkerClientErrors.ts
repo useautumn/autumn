@@ -28,6 +28,7 @@ export type WorkerRequestRouting = {
 	followedHint: boolean;
 	/** NOT_READY answers from an owner still activating, each retried at the same route. */
 	notReadyAnswers: number;
+	ownerlessWaits: number;
 };
 
 export class BalanceWorkerClientError extends Error {

@@ -139,6 +139,8 @@ export type PartitionsDependencies = {
 	served?: {
 		claim(entry: { partition: number }): void;
 		release(entry: { partition: number }): void;
+		assign(entry: { partitions: readonly number[] }): void;
+		relinquish(entry: { partition: number }): void;
 	};
 	/** The ownership tail and the plain producer behind `announceReady`; started before the group is joined. */
 	ownershipLink?: { start(): Promise<void>; stop(): Promise<void> };

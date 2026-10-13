@@ -61,6 +61,7 @@ export type BalanceWorkerFailure = {
 	refreshes?: number;
 	followedHint?: boolean;
 	notReadyAnswers?: number;
+	ownerlessWaits?: number;
 };
 
 function balanceWorkerFailureOf({

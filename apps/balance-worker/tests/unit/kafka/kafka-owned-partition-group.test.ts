@@ -461,6 +461,7 @@ describe("Kafka owned partition group", () => {
 			const unavailable: unknown[] = [];
 			const claimed: number[] = [];
 			const released: number[] = [];
+			const assignments: number[][] = [];
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -481,6 +482,10 @@ describe("Kafka owned partition group", () => {
 					release: ({ partition }) => {
 						released.push(partition);
 					},
+					assign: ({ partitions }) => {
+						assignments.push([...partitions]);
+					},
+					relinquish: () => undefined,
 				},
 				onError: () => undefined,
 				onUnhealthyPartition: () => undefined,
@@ -518,6 +523,7 @@ describe("Kafka owned partition group", () => {
 			expect(stopped).toEqual([0]);
 			expect(unavailable).toEqual([]);
 			expect(claimed).toEqual([0, 1]);
+			expect(assignments).toEqual([[0], [0], [1]]);
 			expect(released).toEqual([0]);
 			await group.stop();
 		} finally {
@@ -1118,6 +1124,7 @@ describe("Kafka owned partition group", () => {
 				(failure: { cause: unknown }) => void
 			>();
 			const failedAttempt = new Map<number, number>();
+			const relinquished: number[] = [];
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -1127,6 +1134,14 @@ describe("Kafka owned partition group", () => {
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5,
 				partitionBootstrapRetryIntervalMs: 5,
+				served: {
+					claim: () => undefined,
+					release: () => undefined,
+					assign: () => undefined,
+					relinquish: ({ partition }) => {
+						relinquished.push(partition);
+					},
+				},
 				createRuntime: ({ partition }) => ({
 					start: async () => {
 						startAttempts.set(
@@ -1190,6 +1205,7 @@ describe("Kafka owned partition group", () => {
 			await waitFor(() => startAttempts.get(1) === 2);
 
 			expect(released).toEqual([1]);
+			expect(relinquished).toEqual([1]);
 			expect(startAttempts.get(0)).toBe(1);
 			expect(consumer.lifecycle).not.toContain("consumer-stop");
 			expect(events).toEqual([]);
