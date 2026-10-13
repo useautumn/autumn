@@ -171,6 +171,8 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			dataDir: ctx.volume.folder,
 		},
 		counters,
+		// The sim runs on a virtual clock; a busy test process must never read as a loop behind.
+		loop: { lagMs: () => 0 },
 		replication,
 		peer: { port: SIM_PORT, fetch },
 		now,

@@ -5,6 +5,7 @@ import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { notReadyCheckMiddleware } from "./middlewares/notReadyCheckMiddleware.js";
@@ -17,6 +18,8 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
+	// Before the request line: under load, a line per refused check would cost what refusing saves.
+	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
