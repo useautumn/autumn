@@ -124,11 +124,23 @@ export const removeTier = ({
 		return;
 	}
 
-	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee.
+	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee,
+	// so drop both rather than show volume pricing that won't save.
+	const [onlyTier] = stripTierUids(newTiers);
 	setItem({
 		...remaining,
-		tiers: stripTierUids(newTiers).map(tierToPerUnit),
 		tier_behavior: undefined,
+		tiers: [
+			{
+				...onlyTier,
+				amount: onlyTier.amount || (onlyTier.flat_amount ?? 0),
+				flat_amount: undefined,
+				additional_currencies: migrateTierCurrenciesForMode({
+					entries: onlyTier.additional_currencies,
+					mode: "per_unit",
+				}),
+			},
+		],
 	});
 };
 
@@ -239,17 +251,6 @@ export const itemToTierBehavior = ({
 		})),
 	};
 };
-
-/** A single tier saves as a plain per-unit price, so a flat-only tier keeps its fee as the rate. */
-const tierToPerUnit = (tier: PriceTier): PriceTier => ({
-	...tier,
-	amount: tier.amount || tier.flat_amount || 0,
-	flat_amount: undefined,
-	additional_currencies: migrateTierCurrenciesForMode({
-		entries: tier.additional_currencies,
-		mode: "per_unit",
-	}),
-});
 
 export type TierRow = { range: string; value: string };
 

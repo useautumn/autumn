@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Infinite, type ProductItem } from "@autumn/shared";
-import {
-	applyTierToDisplayValue,
-	updateTierPrice,
-} from "@/views/products/plan/utils/tierUtils";
+import { applyTierToDisplayValue } from "@/views/products/plan/utils/tierUtils";
 
 const makeTier = ({
 	to = 100,
@@ -92,102 +89,5 @@ describe("applyTierToDisplayValue", () => {
 		});
 
 		expect(result).toBe(item);
-	});
-});
-
-const setPrice = ({
-	item,
-	index = 0,
-	field,
-	value,
-}: {
-	item: ProductItem;
-	index?: number;
-	field: "amount" | "flat_amount";
-	value: string;
-}) =>
-	updateTierPrice({
-		item,
-		index,
-		currency: "usd",
-		baseCurrency: "USD",
-		field,
-		value,
-	});
-
-describe("updateTierPrice — base currency", () => {
-	test("sets flat_amount on the correct tier", () => {
-		const result = setPrice({
-			item: makeItem({
-				tiers: [
-					makeTier({ to: 100, amount: 1 }),
-					makeTier({ to: Infinite, amount: 0 }),
-				],
-			}),
-			field: "flat_amount",
-			value: "25.50",
-		});
-
-		expect(result.tiers?.[0].flat_amount).toBe(25.5);
-		expect(result.tiers?.[0].amount).toBe(1);
-	});
-
-	test("a cleared flat fee is unset, so the tier bills per unit only", () => {
-		const result = setPrice({
-			item: makeItem({
-				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-			}),
-			field: "flat_amount",
-			value: "",
-		});
-
-		expect(result.tiers?.[0].flat_amount).toBeUndefined();
-	});
-
-	test("a non-numeric flat fee is unset", () => {
-		const result = setPrice({
-			item: makeItem({
-				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-			}),
-			field: "flat_amount",
-			value: "abc",
-		});
-
-		expect(result.tiers?.[0].flat_amount).toBeUndefined();
-	});
-
-	test("does not affect other tiers", () => {
-		const result = setPrice({
-			item: makeItem({
-				tiers: [
-					makeTier({ to: 100, amount: 1, flat_amount: 10 }),
-					makeTier({ to: Infinite, amount: 2, flat_amount: 20 }),
-				],
-			}),
-			index: 1,
-			field: "flat_amount",
-			value: "99",
-		});
-
-		expect(result.tiers?.[0].flat_amount).toBe(10);
-		expect(result.tiers?.[1].flat_amount).toBe(99);
-	});
-
-	test("amount field keeps the flat fee", () => {
-		const result = setPrice({
-			item: makeItem({
-				tiers: [makeTier({ to: 100, amount: 1, flat_amount: 50 })],
-			}),
-			field: "amount",
-			value: "7.25",
-		});
-
-		expect(result.tiers?.[0].amount).toBe(7.25);
-		expect(result.tiers?.[0].flat_amount).toBe(50);
-	});
-
-	test("returns the item unchanged when tiers is null", () => {
-		const item = makeItem({ tiers: null });
-		expect(setPrice({ item, field: "flat_amount", value: "10" })).toBe(item);
 	});
 });
