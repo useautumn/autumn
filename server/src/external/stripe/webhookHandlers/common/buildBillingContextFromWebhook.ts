@@ -10,6 +10,7 @@ import {
 import type Stripe from "stripe";
 import type { ExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
+import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 
 /**
  * Common fields between InvoiceCreatedContext and StripeSubscriptionDeletedContext.
@@ -94,6 +95,10 @@ export const buildBillingContextForArrearInvoice = ({
 
 		stripeCustomer: stripeSubscription.customer,
 		stripeSubscription,
+		subscriptionInvoiceTerms: setupSubscriptionInvoiceTerms({
+			params: {},
+			stripeSubscription,
+		}),
 		paymentMethod: paymentMethod ?? undefined,
 
 		billingVersion: BillingVersion.V2,
