@@ -1,8 +1,10 @@
 import type { TrackCommand } from "@autumn/balance-engine";
 import { deepFreeze } from "../deepFreeze.js";
 import {
+	deleteCustomerJournalEntries,
 	deleteJournalEntriesUpTo,
 	insertJournalEntries,
+	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
@@ -13,9 +15,13 @@ import type { Journal, JournalEntry } from "./types/journal.js";
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
 const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
 
-/** Past either, the customer's send_event checks go to the API until Autumn catches up. */
+/** Past any of these, a customer's send_event checks go to the API until Autumn catches up. */
 export const MAX_OWED_PER_CUSTOMER = 20_000;
 export const MAX_UNSENT_AGE_MS = 5 * 60_000;
+export const MAX_UNSENT_PER_THREAD = 50_000;
+
+/** Unsent entries across every journal this thread has open: module state is the thread's own. */
+let unsentOnThread = 0;
 
 /**
  * One slot's journal, opened by the slot's owner thread only, so what it holds in memory is the file plus the appends
@@ -30,15 +36,25 @@ export const openJournal = ({
 	now?: () => number;
 }): Journal => {
 	const ctx = { sqliteDb: openJournalDatabase({ databasePath }) };
+	const writerId = readJournalWriterId({ ctx });
 	const lastSeqs = readLastJournalSeqs({ ctx });
 	const owedByCustomer = new Map<string, readonly JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
 	let notifyCommitted = () => {};
 
+	function holdUnsent(entry: JournalEntry): void {
+		unsent.add(entry);
+		unsentOnThread++;
+	}
+
+	function releaseUnsent(entry: JournalEntry): void {
+		if (unsent.delete(entry)) unsentOnThread--;
+	}
+
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
 			insertJournalEntries({ ctx, entries });
-			for (const entry of entries) unsent.add(entry);
+			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
 		},
 	});
@@ -49,7 +65,7 @@ export const openJournal = ({
 			...owed({ customerId: entry.customerId }),
 			entry,
 		]);
-		unsent.add(entry);
+		holdUnsent(entry);
 	}
 
 	function owed({ customerId }: { customerId: string }) {
@@ -101,11 +117,12 @@ export const openJournal = ({
 	}
 
 	function markSent({ entries }: { entries: JournalEntry[] }): void {
-		for (const entry of entries) unsent.delete(entry);
+		for (const entry of entries) releaseUnsent(entry);
 	}
 
 	function isBackedUp({ customerId }: { customerId: string }): boolean {
 		const entries = owed({ customerId });
+		if (unsentOnThread > MAX_UNSENT_PER_THREAD) return true;
 		if (entries.length > MAX_OWED_PER_CUSTOMER) return true;
 		const oldestUnsent = entries.find((entry) => unsent.has(entry));
 		return (
@@ -116,21 +133,34 @@ export const openJournal = ({
 
 	function reconcile({
 		customerId,
-		atomSeq,
+		atomSeqs,
 	}: {
 		customerId: string;
-		atomSeq: number | null;
+		atomSeqs: Record<string, number> | null;
 	}): void {
-		if (atomSeq === null) return;
+		const atomSeq = atomSeqs?.[writerId];
+		if (atomSeq === undefined) return;
 		const entries = owed({ customerId });
 		const unseen = entries.filter(({ seq }) => seq > atomSeq);
 		if (unseen.length === entries.length) return;
 		deleteJournalEntriesUpTo({ ctx, customerId, seq: atomSeq });
-		for (const entry of entries) if (entry.seq <= atomSeq) unsent.delete(entry);
+		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
 		setOwed({ customerId, entries: unseen });
 	}
 
+	function forget({ customerId }: { customerId: string }): void {
+		deleteCustomerJournalEntries({ ctx, customerId });
+		for (const entry of owed({ customerId })) releaseUnsent(entry);
+		setOwed({ customerId, entries: [] });
+	}
+
+	function close(): void {
+		for (const entry of [...unsent]) releaseUnsent(entry);
+		ctx.sqliteDb.close();
+	}
+
 	return {
+		writerId,
 		append,
 		owed,
 		unsent: takeUnsent,
@@ -140,6 +170,7 @@ export const openJournal = ({
 		},
 		isBackedUp,
 		reconcile,
-		close: () => ctx.sqliteDb.close(),
+		forget,
+		close,
 	};
 };
