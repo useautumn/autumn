@@ -286,7 +286,10 @@ function UnlimitedBalanceForm({
 				</Button>
 			</div>
 
-			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
+			<FeatureOverrideSection
+				selectedCusEnt={selectedCusEnt}
+				cusProduct={cusProduct}
+			/>
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
 			/>
@@ -350,7 +353,10 @@ function BalanceEditForm({
 				cusPrice={cusPrice}
 			/>
 
-			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
+			<FeatureOverrideSection
+				selectedCusEnt={selectedCusEnt}
+				cusProduct={cusProduct}
+			/>
 
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}

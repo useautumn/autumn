@@ -1,86 +1,98 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
-import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
-import { diffCreditOverride } from "../utils/diffCreditOverride";
-import { featureDisplayName } from "../utils/featureDisplayName";
-import { CreditRateCardList } from "./CreditRateCardList";
-import { RowStatusBadge } from "./RowStatusBadge";
+import { Button, InlineAction } from "@autumn/ui";
+import { ArrowCounterClockwiseIcon, PlusIcon } from "@phosphor-icons/react";
+import { useCreditSchemaList } from "../hooks/useCreditSchemaList";
+import { useFeatureOverride } from "../hooks/useFeatureOverride";
+import { rateCardRows, rateCardSubtitle } from "../utils/rateCardRows";
+import { CreditRateCardRow } from "./CreditRateCardRow";
+import { RateCardRow } from "./rate-card/RateCardRow";
+import { RateCardTable } from "./rate-card/RateCardTable";
 
-export function CreditOverrideRateCard({
-	schema,
-	creditSystem,
-	onChange,
-	onRemoveLast,
-}: {
-	schema: CreditSchemaItem[];
-	creditSystem?: Feature;
-	onChange: (schema: CreditSchemaItem[]) => void;
-	onRemoveLast: () => void;
-}) {
-	const { features } = useFeaturesQuery();
-	const diff = diffCreditOverride({ schema, creditSystem });
-
-	const restoreFeature = (featureId: string) => {
-		const catalogItem = creditSystem?.config?.schema?.find(
-			(item: CreditSchemaItem) => item.metered_feature_id === featureId,
-		);
-		if (catalogItem) onChange([...schema, catalogItem]);
-	};
+/** A plan item's rate card: the credit system's rates with this plan's changes on top, edited live. */
+export function CreditOverrideRateCard() {
+	const { creditSystem, override, schema, setSchema, clear } =
+		useFeatureOverride();
+	const list = useCreditSchemaList({ schema, onChange: setSchema });
+	const rows = rateCardRows({
+		override: override?.schema ?? [],
+		catalog: creditSystem?.config?.schema ?? [],
+	});
+	const creditSystemName = creditSystem?.name ?? "the credit system";
 
 	return (
-		<CreditSchemaListProvider
-			schema={schema}
-			onChange={onChange}
-			onRemoveLast={onRemoveLast}
+		<RateCardTable
+			subtitle={rateCardSubtitle({ creditSystemName, rows })}
+			action={
+				rows.some((row) => row.state !== "inherited") && (
+					<InlineAction className="px-1.5" onClick={clear}>
+						Reset all
+					</InlineAction>
+				)
+			}
+			footer={
+				<Button
+					variant="dotted"
+					size="sm"
+					className="w-full text-tertiary-foreground"
+					disabled={schema.length >= list.allSchemaCandidateFeatures.length}
+					onClick={list.addSchemaItem}
+				>
+					<PlusIcon size={12} />
+					Add a feature {creditSystemName} does not cover
+				</Button>
+			}
 		>
-			<div className="flex flex-col gap-3">
-				{diff.changedCount > 0 && (
-					<span className="text-tertiary-foreground text-xs">
-						{diff.changedCount} of {diff.totalCount} rates differ from the
-						credit system
-					</span>
-				)}
-
-				<CreditRateCardList
-					renderRowLabel={(index) => (
-						<RowStatusBadge status={diff.statusByIndex[index]} />
-					)}
-				/>
-
-				{diff.excludedFeatureIds.length > 0 && (
-					<div className="flex flex-col gap-1">
-						<span className="text-tertiary-foreground text-xs">
-							Not covered on this plan
-						</span>
-						{diff.excludedFeatureIds.map((featureId) => (
-							<div
-								key={featureId}
-								className="flex items-center justify-between text-sm text-t3"
-							>
-								<span className="line-through">
-									{featureDisplayName({
-										features,
-										featureId,
-										plural: true,
-										capitalize: true,
-									})}
-								</span>
-								<IconButton
-									variant="skeleton"
-									iconOrientation="left"
-									icon={<ArrowCounterClockwiseIcon size={12} />}
-									onClick={() => restoreFeature(featureId)}
-									className="!text-subtle hover:!text-foreground text-xs"
+			{rows.map((row) => {
+				const index = schema.findIndex(
+					(item) => item.metered_feature_id === row.featureId,
+				);
+				const key = list.schemaKeys[index] ?? row.featureId;
+				if (index >= 0 && list.expandedKey === key)
+					return (
+						<li key={key} className="p-1">
+							<CreditRateCardRow
+								item={schema[index]}
+								availableFeatures={list.availableFeaturesFor(schema[index])}
+								allFeatures={list.allSchemaCandidateFeatures}
+								onChange={(item) => list.setSchemaItem({ index, item })}
+								onRemove={() => list.removeSchemaItem(index)}
+								isExpanded
+								onToggle={() => list.toggleExpandedKey(key)}
+								showRateCardControls
+							/>
+						</li>
+					);
+				const restorable = row.state === "changed" || row.state === "excluded";
+				return (
+					<RateCardRow
+						key={key}
+						row={row}
+						features={list.allSchemaCandidateFeatures}
+						onClick={index >= 0 ? () => list.toggleExpandedKey(key) : undefined}
+						action={
+							restorable && (
+								<InlineAction
+									className="px-1.5"
+									icon={
+										row.state === "excluded" && (
+											<ArrowCounterClockwiseIcon size={13} />
+										)
+									}
+									onClick={() =>
+										setSchema([
+											...schema.filter(
+												(item) => item.metered_feature_id !== row.featureId,
+											),
+											row.catalogRate,
+										])
+									}
 								>
-									Restore
-								</IconButton>
-							</div>
-						))}
-					</div>
-				)}
-			</div>
-		</CreditSchemaListProvider>
+									{row.state === "excluded" ? "Restore" : "Reset"}
+								</InlineAction>
+							)
+						}
+					/>
+				);
+			})}
+		</RateCardTable>
 	);
 }

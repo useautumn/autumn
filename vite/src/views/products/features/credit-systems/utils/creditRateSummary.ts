@@ -1,4 +1,10 @@
-import type { CreditSchemaItem } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	findFeatureById,
+	getFeatureName,
+	isAiCreditSystem,
+} from "@autumn/shared";
 import { isGraduated } from "./creditSchemaUtils";
 
 export const formatCredits = (amount: number) =>
@@ -34,3 +40,38 @@ export const creditRateSummary = ({
 
 	return `${rate}${dimensionCountSuffix(item)}`;
 };
+
+/** The unit a feature's rate is counted in: "web searches", or "of AI usage" for AI children. */
+export const rateUnit = ({
+	feature,
+	billingUnits = 1,
+}: {
+	feature?: Feature;
+	billingUnits?: number;
+}) => {
+	const isAiChild = isAiCreditSystem(feature?.type);
+	const unitName = isAiChild
+		? "of AI usage"
+		: getFeatureName({ feature, plural: billingUnits !== 1 }) || "units";
+	return { unitName, isAiChild };
+};
+
+/** creditRateSummary with the unit taken from the rate's feature. */
+export const rateText = ({
+	rate,
+	features,
+}: {
+	rate: CreditSchemaItem;
+	features: Feature[];
+}) =>
+	creditRateSummary({
+		item: rate,
+		...rateUnit({
+			feature: findFeatureById({
+				features,
+				featureId: rate.metered_feature_id,
+				errorOnNotFound: false,
+			}),
+			billingUnits: rate.feature_amount,
+		}),
+	});

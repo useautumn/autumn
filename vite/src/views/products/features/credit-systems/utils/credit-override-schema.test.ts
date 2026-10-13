@@ -19,7 +19,6 @@ import {
 	effectiveSchemaToOverride,
 	overrideToEffectiveSchema,
 } from "./creditOverrideSchema";
-import { diffCreditOverride } from "./diffCreditOverride";
 
 const row = (metered_feature_id: string, credit_amount: number) =>
 	({ metered_feature_id, credit_amount }) as CreditSchemaItem;
@@ -54,7 +53,7 @@ test("the effective schema applies rate rows and drops excluded rows", () => {
 test("only edited, added and removed rows are stored", () => {
 	const override = effectiveSchemaToOverride({
 		schema: [row("gateway", 2.857), row("search", 0.5), row("video", 4)],
-		creditSystem,
+		catalog: creditSystem.config.schema,
 	});
 
 	expect(override).toEqual([
@@ -68,18 +67,7 @@ test("an unedited card stores nothing", () => {
 	expect(
 		effectiveSchemaToOverride({
 			schema: creditSystem.config.schema,
-			creditSystem,
+			catalog: creditSystem.config.schema,
 		}),
 	).toEqual([]);
-});
-
-test("the diff marks changed and added rows and lists excluded features", () => {
-	const diff = diffCreditOverride({
-		schema: [row("gateway", 2.857), row("search", 0.5), row("video", 4)],
-		creditSystem,
-	});
-
-	expect(diff.statusByIndex).toEqual(["changed", "inherited", "added"]);
-	expect(diff.excludedFeatureIds).toEqual(["image_gen"]);
-	expect(diff.changedCount).toBe(3);
 });
