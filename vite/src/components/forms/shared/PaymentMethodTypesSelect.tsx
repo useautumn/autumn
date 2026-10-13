@@ -3,6 +3,7 @@ import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormLabel,
 	Tooltip,
@@ -18,6 +19,11 @@ import {
 	paymentMethodLabel,
 } from "@/utils/invoicePaymentMethodOptions";
 import { getStripePaymentMethodConfigLink } from "@/utils/linkUtils";
+import {
+	DEFAULT_PAYMENT_METHODS,
+	nextPaymentMethodTypes,
+	type PaymentMethodChoice,
+} from "./utils/nextPaymentMethodTypes";
 
 export const ORG_PAYMENT_METHODS_HELPER =
 	"Prefilled from your org's allowed payment methods";
@@ -29,7 +35,8 @@ export function PaymentMethodTypesSelect({
 	disabled,
 }: {
 	value: InvoicePaymentMethod[] | null;
-	onValueChange: (types: InvoicePaymentMethod[]) => void;
+	/** null means no override, so the form falls back to its default methods. */
+	onValueChange: (types: InvoicePaymentMethod[] | null) => void;
 	description?: string;
 	disabled?: boolean;
 }) {
@@ -50,20 +57,15 @@ export function PaymentMethodTypesSelect({
 				.join(", ")
 		: "Default methods";
 
-	const toggle = ({
-		type,
+	const choose = ({
+		choice,
 		checked,
 	}: {
-		type: InvoicePaymentMethod;
+		choice: PaymentMethodChoice;
 		checked: boolean;
 	}) => {
-		const next = INVOICE_PAYMENT_METHOD_OPTIONS.map(
-			(option) => option.value,
-		).filter((option) =>
-			option === type ? checked : selected.includes(option),
-		);
-		// Stripe rejects an empty list, so the last type cannot be removed.
-		if (next.length > 0) onValueChange(next);
+		const next = nextPaymentMethodTypes({ selected, choice, checked });
+		if (next !== undefined) onValueChange(next);
 	};
 
 	return (
@@ -83,13 +85,23 @@ export function PaymentMethodTypesSelect({
 					<ChevronDownIcon className="size-4 shrink-0 text-muted-foreground opacity-50" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-(--anchor-width)">
+					<DropdownMenuCheckboxItem
+						className="cursor-pointer"
+						checked={!selected.length}
+						onCheckedChange={() =>
+							choose({ choice: DEFAULT_PAYMENT_METHODS, checked: true })
+						}
+					>
+						Default methods
+					</DropdownMenuCheckboxItem>
+					<DropdownMenuSeparator />
 					{options.map((option) => (
 						<DropdownMenuCheckboxItem
 							key={option.value}
 							className="cursor-pointer"
 							checked={selected.includes(option.value)}
 							onCheckedChange={(checked) =>
-								toggle({ type: option.value, checked })
+								choose({ choice: option.value, checked })
 							}
 						>
 							{option.label}
