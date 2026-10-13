@@ -130,6 +130,7 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: provisioning });
 	expect(await cachedRoutes()).toEqual([
 		{
+			id: provisioning.id,
 			status: ByocCacheStatus.Provisioning,
 			deployment_id: null,
 			endpoint_url: null,
@@ -157,6 +158,7 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 	expect(await getMiscRedis().exists(cacheKey)).toBe(0);
 	expect(await cachedRoutes()).toEqual([
 		{
+			id: provisioning.id,
 			status: ByocCacheStatus.Ready,
 			deployment_id: "dep_1",
 			endpoint_url: "https://atom.example.com",
