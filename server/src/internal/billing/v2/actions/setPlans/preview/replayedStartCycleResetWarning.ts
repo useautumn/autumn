@@ -31,7 +31,9 @@ export const replayedStartCycleResetWarning = ({
 	return {
 		type: "cycle_reset_ignored",
 		...warningText([
-			plainText("The billing cycle isn't reset: the first phase starts on"),
+			plainText(
+				"Resetting the cycle on the phase start moves nothing: the first phase starts on",
+			),
 			boldText(formatMsToDate(immediatePhase.starts_at)),
 			plainText(
 				"when the current cycle started. Start it now to reset the cycle today.",

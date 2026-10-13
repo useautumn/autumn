@@ -993,7 +993,7 @@ describe("setPlansPreviewToWarnings: cycle reset on a replayed start", () => {
 				type: "cycle_reset_ignored",
 				severity: "warning",
 				message:
-					"The billing cycle isn't reset: the first phase starts on 22 Sep 2026 when the current cycle started. Start it now to reset the cycle today.",
+					"Resetting the cycle on the phase start moves nothing: the first phase starts on 22 Sep 2026 when the current cycle started. Start it now to reset the cycle today.",
 			},
 		]);
 	});

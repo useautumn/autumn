@@ -112,7 +112,11 @@ export function buildCreateScheduleRequestBody({
 				phase.persistedStartsAt != null && phase.persistedStartsAt <= now;
 			if (allowFirstPhaseBackdate || startsLater)
 				startsAt = phase.startsAt ?? now;
-			else if (resetsCycleNow || phase.persistedStartsAt == null)
+			else if (phase.persistedStartsAt == null) startsAt = now;
+			else if (
+				resetsCycleNow &&
+				(phase.startsAt ?? phase.persistedStartsAt) >= phase.persistedStartsAt
+			)
 				startsAt = now;
 			else
 				startsAt = hasStarted

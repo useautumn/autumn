@@ -1385,6 +1385,24 @@ describe("buildCreateScheduleRequestBody first phase on a saved schedule", () =>
 		expect(result!.phases[0].billing_cycle_anchor).toBe(customAnchor);
 	});
 
+	test("a start moved before the saved start keeps that backdate with a reset", () => {
+		const movedStart = Date.UTC(2027, 0, 10);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: movedStart, persistedStartsAt: savedStart }),
+				savedPhases[1],
+			],
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+		});
+
+		expect(result!.phases[0].starts_at).toBe(movedStart);
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
+	});
+
 	test("an explicit backdate keeps its own start with a reset", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
