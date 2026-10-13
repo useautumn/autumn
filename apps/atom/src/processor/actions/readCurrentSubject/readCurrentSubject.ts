@@ -1,6 +1,7 @@
 import {
 	mergeCatalogs,
 	mergeSubjectStates,
+	type SubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import {
@@ -103,8 +104,24 @@ type SubjectJoinCacheEntry = {
 	customer: StoredSubject;
 	shared: SharedCatalog | null;
 	owed: readonly JournalEntry[];
+	/** The customer's own rows with `owed` applied, which a later append continues from. */
+	customerState: SubjectState;
 	current: CurrentSubject;
 };
+
+/** What a view's customer rows start from: the stored copy, or a cached view that already applied `applied`. */
+type ReplayBase = { state: SubjectState; applied: readonly JournalEntry[] };
+
+/** Only appends happened since `previous`: anything else (a drop, a refusal, a restart) replaces an entry before its end. */
+const isAppendedTo = ({
+	owed,
+	previous,
+}: {
+	owed: readonly JournalEntry[];
+	previous: readonly JournalEntry[];
+}): boolean =>
+	owed.length > previous.length &&
+	previous.every((entry, index) => owed[index] === entry);
 
 /** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
 const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
@@ -128,17 +145,30 @@ export const readCurrentSubject = ({
 	const owed = ctx.journal.owed({ customerId });
 	const target = entity ?? customer;
 	const joined = subjectJoinCache.get(target);
-	if (
-		joined?.customer === customer &&
-		joined.shared === shared &&
-		joined.owed === owed
-	)
-		return joined.current;
+	const isSameCopy = joined?.customer === customer && joined.shared === shared;
+	if (isSameCopy && joined.owed === owed) return joined.current;
+	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
+	const base: ReplayBase =
+		isSameCopy && isAppendedTo({ owed, previous: joined.owed })
+			? { state: joined.customerState, applied: joined.owed }
+			: { state: customer.state, applied: [] };
+	const { current, customerState } = joinSubject({
+		customer,
+		entity,
+		shared,
+		owed,
+		base,
+		entityId,
+	});
 	// Frozen, because every check until the next push or append shares it.
-	const current = deepFreeze(
-		joinSubject({ customer, entity, shared, owed, entityId }),
-	);
-	subjectJoinCache.set(target, { customer, shared, owed, current });
+	deepFreeze(current);
+	subjectJoinCache.set(target, {
+		customer,
+		shared,
+		owed,
+		customerState,
+		current,
+	});
 	return current;
 };
 
@@ -147,14 +177,16 @@ const joinSubject = ({
 	entity,
 	shared,
 	owed,
+	base,
 	entityId,
 }: {
 	customer: StoredSubject;
 	entity: StoredSubject | null;
 	shared: SharedCatalog | null;
 	owed: readonly JournalEntry[];
+	base: ReplayBase;
 	entityId: string | null;
-}): CurrentSubject => {
+}): { current: CurrentSubject; customerState: SubjectState } => {
 	// The part read later is merged last, so where both hold a row its copy is the one kept.
 	const parts = entity ? [customer, entity] : [customer];
 	const partsOldestFirst = [...parts].sort(
@@ -167,12 +199,13 @@ const joinSubject = ({
 	});
 
 	// Only a customer's own deductions are owed, and they move only the customer's own rows.
+	const unapplied = owed.slice(base.applied.length);
 	const customerState =
-		owed.length === 0
-			? customer.state
-			: replayOwed({ owed, state: customer.state, catalog });
+		unapplied.length === 0
+			? base.state
+			: replayOwed({ owed: unapplied, state: base.state, catalog });
 
-	return {
+	const current: CurrentSubject = {
 		fullSubject: subjectStateToFullSubject({
 			state: mergeSubjectStates({
 				customer: customerState,
@@ -189,4 +222,5 @@ const joinSubject = ({
 		}),
 		org: customer.org,
 	};
+	return { current, customerState };
 };
