@@ -14,6 +14,15 @@ export {
 	type QueuedAtomPush,
 } from "./atomPushes/atomPushMessage.js";
 export {
+	ATOM_TRACKS_APPEND_PATH,
+	AtomTrackOutcome,
+	AtomTracksAppendErrorCode,
+	type AtomTracksAppendRequest,
+	AtomTracksAppendRequestSchema,
+	type AtomTracksAppendResponse,
+	AtomTracksAppendResponseSchema,
+} from "./atomTracks/atomTracksContract.js";
+export {
 	BYOC_CACHE_API_VERSION,
 	BYOC_CACHE_MAX_ENTRY_BYTES,
 	BYOC_CACHE_SCHEMA_VERSION,

@@ -12,4 +12,6 @@ export type AtomSubjectBody = {
 	read_at: number;
 	/** On a customer push, the offset of its latest evict: the Atom forwards checks on entities read before it. */
 	customer_version?: string;
+	/** The highest journal seq from the Atom it is sent to that `state` holds; null or absent when none. */
+	atom_seq?: number | null;
 };
