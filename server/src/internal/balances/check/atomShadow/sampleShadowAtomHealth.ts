@@ -1,7 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Per server process; with ~15 processes shadowing, each replica behind the ALB is read about every 10 s. */
-const SAMPLE_EVERY_MS = 5_000;
+/** Per server process: staging shadows from ~60 processes, so each replica behind the ALB is still read every ~1 s. */
+const SAMPLE_EVERY_MS = 20_000;
 const HEALTH_TIMEOUT_MS = 2_000;
 
 let lastSampledAt = Number.NEGATIVE_INFINITY;
