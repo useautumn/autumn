@@ -10,6 +10,7 @@ import {
 	identity,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
+import { isDeletedSubject } from "../../../src/state/types/storedSubject.js";
 import { atomOrg } from "../../unit/utils/atomFixtures.js";
 import {
 	createSimNetwork,
@@ -580,7 +581,7 @@ export const createSimCluster = ({
 					readAt: subject.readAt,
 					logOffset: subject.logOffset,
 				};
-				if ("deleted" in subject.state) {
+				if (isDeletedSubject(subject)) {
 					byCustomer.set(
 						subjectKey({ customerId, entityId: entityId ?? null }),
 						{

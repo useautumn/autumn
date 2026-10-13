@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { HeldSubject } from "../types/heldSubject.js";
-import type { StoredSubject } from "../types/storedSubject.js";
+import type { SubjectRow } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
 
@@ -26,7 +26,7 @@ export type SubjectSlice = {
 
 /** One subject to write; `sliceStored` when its slice row already holds this slice, so only the state row is written. */
 export type SubjectWrite = {
-	subject: StoredSubject;
+	subject: SubjectRow;
 	slice: SubjectSlice;
 	sliceStored: boolean;
 };
@@ -37,7 +37,7 @@ const textBytes = (texts: string[]): number =>
 export const subjectToSlice = ({
 	subject,
 }: {
-	subject: StoredSubject;
+	subject: SubjectRow;
 }): SubjectSlice => {
 	const catalogJson = JSON.stringify(subject.catalog);
 	const orgJson = JSON.stringify(subject.org);
@@ -87,6 +87,21 @@ export const readSubjectVersion = ({
 	return row ? { readAt: Number(row.readAt), logOffset: row.logOffset } : null;
 };
 
+/** The entities of a customer the file holds a row for, its own row aside. */
+export const listEntityIds = ({
+	ctx,
+	customerId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+}): string[] =>
+	ctx.sqliteDb
+		.query<{ entityId: string }, { customerId: string }>(
+			"SELECT entity_id AS entityId FROM subject_states WHERE customer_id = $customerId AND entity_id != ''",
+		)
+		.all({ customerId })
+		.map(({ entityId }) => entityId);
+
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
@@ -132,7 +147,7 @@ export type SubjectCursor = {
 };
 
 /** A stored subject with when this file wrote it, by this replica's clock: what a copy to a peer is ordered by. */
-export type AppliedSubject = { subject: StoredSubject; appliedAt: number };
+export type AppliedSubject = { subject: SubjectRow; appliedAt: number };
 
 /**
  * Subjects this file wrote at or after `after` (null: all of them), oldest write first, ties broken by key, after
