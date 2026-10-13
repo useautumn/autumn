@@ -125,10 +125,10 @@ const priceVolumeLine = (params: Parameters<typeof buildVolumeLine>[0]) =>
 const SINGLE_TIER = [{ to: "inf", amount: 0.5 }] as UsageTier[];
 
 describe("usagePriceToLineItem: pay-per-use volume", () => {
-	test("100 included, 150 used → all 150 at the band rate ($75, not $0)", () => {
+	test("100 included, 150 used → only the 50 over included at the band rate ($25)", () => {
 		expect(
 			priceVolumeLine({ tiers: SINGLE_TIER, allowance: 100, balance: -50 }),
-		).toBe(75);
+		).toBe(25);
 	});
 
 	test("no included, 40 used → 40 × $0.50 = $20", () => {
@@ -143,7 +143,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 		).toBe(0);
 	});
 
-	test("billing units round total usage up: 250 used in packs of 100 → 3 packs × $5 = $15", () => {
+	test("billing units round the overage up: 150 over in packs of 100 → 2 packs × $5 = $10", () => {
 		expect(
 			priceVolumeLine({
 				tiers: [{ to: "inf", amount: 5 }] as UsageTier[],
@@ -151,10 +151,10 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				balance: -150,
 				billingUnits: 100,
 			}),
-		).toBe(15);
+		).toBe(10);
 	});
 
-	test("band is picked from total usage on the net tiers: 5 included, 25 used → 25 × $0.80 = $20", () => {
+	test("band is picked from total usage on the net tiers: 5 included, 25 used → 20 over × $0.80 = $16", () => {
 		// Total-usage bands 10/20/30/40 stored net of 5 included.
 		const netTiers = [
 			{ to: 5, amount: 1 },
@@ -166,7 +166,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 
 		expect(
 			priceVolumeLine({ tiers: netTiers, allowance: 5, balance: -20 }),
-		).toBe(20);
+		).toBe(16);
 	});
 
 	describe("flat_amount", () => {
@@ -201,7 +201,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 	});
 
 	test("entity feature: band and amount come from the customer's actual total usage", () => {
-		// 130 + 120 + 90 used = 340 units at $0.50; ent_c's 10 unused included units aren't billed.
+		// 130 + 120 + 90 = 340 used against 300 included: the customer's 40 over at $0.50.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -30, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: -20, adjustment: 0 },
@@ -215,7 +215,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				balance: 0,
 				entities,
 			}),
-		).toBe(170);
+		).toBe(20);
 	});
 
 	test("entity feature: total usage within the customer's included amount → $0", () => {
@@ -255,7 +255,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 });
 
 describe("usagePriceToLineItem: allocated (v1) volume", () => {
-	test("3 included, 5 seats → all 5 seats at the band rate ($50, not $0)", () => {
+	test("3 included, 5 seats → the 2 seats over included at the band rate ($20)", () => {
 		expect(
 			priceVolumeLine({
 				kind: "allocated",
@@ -263,7 +263,7 @@ describe("usagePriceToLineItem: allocated (v1) volume", () => {
 				allowance: 3,
 				balance: -2,
 			}),
-		).toBe(50);
+		).toBe(20);
 	});
 
 	test("within included seats → $0", () => {
@@ -305,10 +305,10 @@ describe("usagePriceToLineItem: one volume line", () => {
 			balance: -50,
 		});
 
-		// Stored tiers sit above the 100 included, so 150 lands in 101–200 at $1.
-		expect(line.amount).toBe(150);
+		// Stored tiers sit above the 100 included, so 150 lands in 101–200; the 50 over bill at $1.
+		expect(line.amount).toBe(50);
 		expect(line.description).toBe(
-			"Pro - Messages: 150 @ $1.00 (volume tier 101–200)",
+			"Pro - Messages: 50 @ $1.00 (volume tier 101–200)",
 		);
 	});
 

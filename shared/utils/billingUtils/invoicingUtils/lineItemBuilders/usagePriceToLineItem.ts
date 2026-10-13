@@ -4,7 +4,6 @@ import { Decimal } from "decimal.js";
 import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { cusEntsToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity";
 import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEntToStripeIds";
@@ -21,24 +20,6 @@ import { volumeUsageToLineDescription } from "../descriptionUtils/volumeUsageToL
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
 import { volumeUsageToTier } from "../lineItemUtils/volumeUsageToTier";
 import { buildLineItem } from "./buildLineItem";
-
-/** Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included. */
-const payPerUseIsWithinIncluded = ({
-	price,
-	overage,
-	paidOverage,
-	allowance,
-}: {
-	price: Price;
-	overage: number;
-	paidOverage: number;
-	allowance: number;
-}) => {
-	if (isPrepaidPrice(price)) return false;
-	// Volume compares the customer's total, since entities can offset each other's allowance.
-	if (isVolumePrice(price)) return overage <= allowance;
-	return paidOverage === 0;
-};
 
 export const usagePriceToLineItem = ({
 	cusEnt,
@@ -74,20 +55,22 @@ export const usagePriceToLineItem = ({
 	// 1. Get overage
 	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
 	const isPrepaid = isPrepaidPrice(price);
-	let paidOverage = 0;
+	const isUsageBasedVolume = isVolumePrice(price) && !isPrepaid;
+	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
+
 	let overage = 0;
 	if (isPrepaid) {
 		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
-	} else {
-		paidOverage = cusEntToInvoiceOverage({ cusEnt });
-		// Volume prices bill on total usage, so their overage includes the allowance.
-		overage = cusEntToVolumeInvoiceQuantity({
+	} else if (isUsageBasedVolume) {
+		// Usage-based volume bills the customer's total usage past the included amount.
+		const totalUsage = cusEntToVolumeInvoiceQuantity({
 			cusEnt,
-			paidQuantity: paidOverage,
+			paidQuantity: cusEntToInvoiceOverage({ cusEnt }),
 		});
+		overage = Decimal.max(0, new Decimal(totalUsage).sub(allowance)).toNumber();
+	} else {
+		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
-
-	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
 	// 2. Get usage
 	let usage = 0;
@@ -111,12 +94,8 @@ export const usagePriceToLineItem = ({
 		customerEntitlement: cusEnt,
 	};
 
-	const isWithinIncluded = payPerUseIsWithinIncluded({
-		price,
-		overage,
-		paidOverage,
-		allowance,
-	});
+	// Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included.
+	const isWithinIncluded = !isPrepaid && overage === 0;
 
 	// 3. Generate description
 	let description = usagePriceToLineDescription({
@@ -124,10 +103,10 @@ export const usagePriceToLineItem = ({
 		context: lineItemContext,
 		includePeriodDescription: options.includePeriodDescription,
 	});
-	if (isVolumePrice(price) && !isPrepaid && !isWithinIncluded) {
+	if (isUsageBasedVolume && !isWithinIncluded) {
 		const billedTier = volumeUsageToTier({
 			price,
-			totalUsage: overage,
+			overage,
 			allowance,
 			currency: context.currency,
 		});
@@ -141,12 +120,15 @@ export const usagePriceToLineItem = ({
 	}
 
 	// 4. Get amount
+	// Only prepaid overage includes the allowance, so only prepaid tiers shift by it.
+	let tierShift = 0;
+	if (isPrepaid) tierShift = allowance;
 	let amount = 0;
 	if (!isWithinIncluded) {
 		amount = priceToLineAmount({
 			price,
 			overage,
-			allowance,
+			allowance: tierShift,
 			currency: context.currency,
 		});
 	}

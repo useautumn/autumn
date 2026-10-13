@@ -6,15 +6,15 @@ import { isNotFinalTier } from "@utils/productUtils/priceUtils/classifyPriceUtil
 import { findTierByQuantity } from "@utils/productUtils/priceUtils/findTier/findTierByQuantity";
 import { addAllowanceToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 
-/** The one tier a volume price bills total usage at, with that tier's first unit in total-usage positions. */
+/** The tier a volume price bills its overage at: the one total usage lands in, in total-usage positions. */
 export const volumeUsageToTier = ({
 	price,
-	totalUsage,
+	overage,
 	allowance,
 	currency,
 }: {
 	price: Price;
-	totalUsage: number;
+	overage: number;
 	allowance: number;
 	currency?: string;
 }):
@@ -26,11 +26,14 @@ export const volumeUsageToTier = ({
 	if (!usageTiers) return undefined;
 
 	const billedUsage = roundUsageToNearestBillingUnit({
-		usage: totalUsage,
+		usage: overage,
 		billingUnits: price.config.billing_units ?? 1,
 	});
 	const tiers = addAllowanceToTiers({ tiers: usageTiers, allowance });
-	const billedTier = findTierByQuantity({ tiers, quantity: billedUsage });
+	const billedTier = findTierByQuantity({
+		tiers,
+		quantity: billedUsage + allowance,
+	});
 	if (!billedTier) return undefined;
 
 	const previousTier = tiers[tiers.indexOf(billedTier) - 1];
