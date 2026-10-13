@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { SHADOW_ATOM_OWNER } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { nextFreeAtomId } from "@/internal/byoc/utils/nextFreeAtomId.js";
 import { startableShadowAtomNames } from "@/internal/misc/shadowAtom/shadowAtomNames.js";
@@ -14,6 +14,16 @@ const withGroups = (externalIds: string[]) => ({
 });
 
 describe("the next Atom id apart from leftover groups", () => {
+	// These are the shadow Atom's real ids, which carry no dev stack prefix.
+	const originalPrefix = process.env.ATOM_DEPLOYMENT_PREFIX;
+	beforeEach(() => {
+		delete process.env.ATOM_DEPLOYMENT_PREFIX;
+	});
+	afterAll(() => {
+		if (originalPrefix === undefined) delete process.env.ATOM_DEPLOYMENT_PREFIX;
+		else process.env.ATOM_DEPLOYMENT_PREFIX = originalPrefix;
+	});
+
 	test("with one Atom being removed the bare id alternates: previous [b55ee…] names dd3d20bd…", async () => {
 		expect(
 			await nextFreeAtomId({
