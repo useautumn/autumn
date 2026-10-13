@@ -18,6 +18,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { expectPooledBalanceCorrect } from "../utils/expectPooledBalanceCorrect.js";
 import {
 	getPooledBalanceDbState,
@@ -94,6 +95,9 @@ test.concurrent(
 			usage: trackValue,
 		});
 
+		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
 		const after = await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,

@@ -64,6 +64,7 @@ export type ByocCacheDeployment = typeof atomDeployments.$inferSelect;
 
 /** All herald needs to route to an Atom, so the cached org holds only these. */
 export const atomRouteColumns = {
+	id: true,
 	status: true,
 	deployment_id: true,
 	endpoint_url: true,
