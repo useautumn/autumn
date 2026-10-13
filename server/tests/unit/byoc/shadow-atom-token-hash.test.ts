@@ -18,6 +18,7 @@ import { atomRouter } from "@/internal/byoc/atomRouter.js";
 import { cacheDeploymentRepo } from "@/internal/byoc/repos/cacheDeploymentRepo.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { _setShadowAtomConfigForTesting } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
+import { _setShadowAtomCutOffForTesting } from "@/internal/misc/shadowAtom/shadowAtomCutOffStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { createTrackCommand } from "../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 
@@ -72,6 +73,7 @@ beforeAll(() => {
 afterEach(() => {
 	queued = [];
 	setEnv(TEST_ENV);
+	_setShadowAtomCutOffForTesting({ until: null });
 });
 afterAll(() => {
 	for (const spy of spies.splice(0)) spy.mockRestore();
@@ -148,4 +150,16 @@ test("outside staging the shadow config is never consulted", async () => {
 		expect(reply.status).toBe(401);
 	}
 	expect(queued).toEqual([]);
+});
+
+test("while the cut-off window is open the shadow gets 503, and once it closes its hand-in lands", async () => {
+	const tokenHash = atomTokenToHash({ token: LIVE_TOKEN });
+	_setShadowAtomCutOffForTesting({ until: Date.now() + 60_000 });
+	const cut = await appendAs({ tokenHash });
+	expect(cut.status).toBe(503);
+	expect(await cut.json()).toMatchObject({ code: "atom_shadow_cut_off" });
+	expect(queued).toEqual([]);
+
+	_setShadowAtomCutOffForTesting({ until: Date.now() - 1 });
+	expect((await appendAs({ tokenHash })).status).toBe(204);
 });
