@@ -2,13 +2,10 @@ import type { Context } from "hono";
 import type { ForwardReason } from "../../lib/forward/cannotAnswerError.js";
 import { ATOM_TOKEN_HEADER } from "../middlewares/atomTokenMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
-import { forwardRequest } from "./forwardRequest.js";
+import { FORWARDED_HEADER, forwardRequest } from "./forwardRequest.js";
 
 /** Long enough for the API's own slowest check; past it the caller gets an error, not a hung request. */
 const FORWARD_TIMEOUT_MS = 30_000;
-
-/** Tells a caller, and a test, that the API answered and why. */
-const FORWARDED_HEADER = "x-atom-forwarded";
 
 /**
  * Sends the caller's request to the Autumn API as it arrived and hands back the API's reply unchanged:
