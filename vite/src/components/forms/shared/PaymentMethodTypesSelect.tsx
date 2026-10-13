@@ -77,7 +77,7 @@ export function PaymentMethodTypesSelect({
 	};
 
 	return (
-		<div className="min-w-0 space-y-1.5">
+		<div className="flex min-w-0 flex-col">
 			<FormLabel>Payment methods</FormLabel>
 			<DropdownMenu>
 				<DropdownMenuTrigger
@@ -108,7 +108,7 @@ export function PaymentMethodTypesSelect({
 				</DropdownMenuContent>
 			</DropdownMenu>
 			{description && (
-				<p className="text-xs text-tertiary-foreground">{description}</p>
+				<p className="mt-1.5 text-xs text-tertiary-foreground">{description}</p>
 			)}
 		</div>
 	);
