@@ -1,3 +1,4 @@
+export { atomSubjectBodyFor } from "./atomSubjectBodyFor.js";
 export { orgToAtomTargets } from "./orgToAtomTargets.js";
 export { readAtomSubjectBody } from "./readAtomSubjectBody.js";
 export type {

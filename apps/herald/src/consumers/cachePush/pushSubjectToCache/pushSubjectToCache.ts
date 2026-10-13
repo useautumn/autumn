@@ -1,4 +1,7 @@
-import { readAtomSubjectBody } from "@autumn/byoc/subjects";
+import {
+	atomSubjectBodyFor,
+	readAtomSubjectBody,
+} from "@autumn/byoc/subjects";
 import type { CachePushTiming } from "../pushQueue/createCachePushStats.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
@@ -31,7 +34,11 @@ export const pushSubjectToCache = async ({
 	const sendStartedAt = performance.now();
 	await Promise.all(
 		targets.atomConnections.map((atomConnection) =>
-			sendSubjectToAtom({ ctx, atomConnection, body }),
+			sendSubjectToAtom({
+				ctx,
+				atomConnection,
+				body: atomSubjectBodyFor({ body, atomId: atomConnection.id }),
+			}),
 		),
 	);
 	return {
