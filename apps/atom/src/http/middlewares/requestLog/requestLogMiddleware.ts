@@ -14,6 +14,8 @@ import {
 const UNLOGGED_PATHS = new Set(["/health"]);
 /** A line per allowed check costs a saturated Atom about an eighth of its capacity, so 1 in 100 is kept; denies all are. */
 const ALLOWED_CHECK_SAMPLE_RATE = 0.01;
+/** Autumn's pushes run at a third of the checks and each is counted in /health, so a stored one is only sampled too. */
+const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 /** A thread's first allowed checks are all logged, so the dashboard can show an org its first checks arriving. */
 export const FIRST_ALLOWED_CHECKS_LOGGED = 10;
 
@@ -21,7 +23,7 @@ const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
 /** The outermost layer: one line per request, `[status] METHOD path Nms`, with who it was about, what came back and how it
- * failed. Allowed checks past a thread's first few, most of the traffic, are only sampled and say at what rate; denies and failures are all kept. */
+ * failed. Allowed checks past a thread's first few and stored pushes, most of the traffic, are only sampled and say at what rate; denies and failures are all kept. */
 export function requestLogMiddleware({
 	ctx,
 	handleError,
@@ -53,7 +55,9 @@ export function requestLogMiddleware({
 		if (failuresOnly && statusCode < 400) return;
 		const allowed = context.get("allowed") === true;
 		if (allowed) allowedChecks++;
-		const sampled = allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED;
+		const isStoredPush = PUSH_PATHS.has(context.req.path) && statusCode < 300;
+		const sampled =
+			(allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED) || isStoredPush;
 		if (sampled && Math.random() >= ALLOWED_CHECK_SAMPLE_RATE) return;
 
 		const durationMs = Date.now() - startedAt;
