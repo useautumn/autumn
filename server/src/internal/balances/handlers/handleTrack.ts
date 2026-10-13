@@ -7,6 +7,7 @@ import {
 	TrackParamsSchema,
 	TrackQuerySchema,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -16,7 +17,6 @@ import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollo
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getValidatedTrackFeatureDeductions } from "@/internal/balances/track/utils/getValidatedTrackFeatureDeductions.js";
 import { isQueuedTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
-import { setTrackSpanAttributes } from "@/internal/balances/track/utils/setTrackSpanAttributes.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrack = createRoute({
@@ -36,6 +36,13 @@ async function track(
 ) {
 	const body = c.req.valid("json");
 	const ctx = c.get("ctx");
+	const span = trace.getActiveSpan();
+	span?.setAttributes({
+		"track.feature_id": body.feature_id,
+		"track.event_name": body.event_name,
+		"track.idempotency_key": body.idempotency_key,
+		"track.value": body.value ?? 1,
+	});
 
 	const isAsync = isQueuedTrack({ ctx, body });
 
@@ -47,18 +54,18 @@ async function track(
 			body,
 			isAsync,
 		});
-		if (status === 202) setTrackSpanAttributes({ body, queued: true });
+		span?.setAttribute("track.queued", status === 202);
 		return c.json(result, status);
 	}
 
 	if (isAsync) {
 		await runAsyncTrack({ ctx, body });
-		setTrackSpanAttributes({ body, queued: true });
+		span?.setAttribute("track.queued", true);
 		return c.json(getQueuedTrackResponse({ ctx, body }), 202);
 	}
 
 	const response = await runTrackWithRollout({ ctx, body, featureDeductions });
 	const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
-	if (status === 202) setTrackSpanAttributes({ body, queued: true });
+	span?.setAttribute("track.queued", status === 202);
 	return c.json(response, status);
 }

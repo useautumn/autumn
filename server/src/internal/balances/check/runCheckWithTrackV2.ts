@@ -13,6 +13,7 @@ import {
 	type TrackParams,
 	UsageLimitExceededError,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
@@ -21,7 +22,6 @@ import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUt
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { getCheckResponseV2 } from "./getCheckResponseV2.js";
-import { setCheckSpanAttributes } from "./setCheckSpanAttributes.js";
 
 export const runCheckWithTrackV2 = async ({
 	ctx,
@@ -166,12 +166,12 @@ export const runCheckWithTrackV2 = async ({
 		}
 	}
 
-	setCheckSpanAttributes({
-		featureId: body.feature_id,
-		allowed,
-		requiredBalance: responseRequiredBalance,
-		balance: checkData.apiBalance?.remaining,
-		denyReason,
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": body.feature_id,
+		"check.allowed": allowed,
+		"check.required_balance": responseRequiredBalance,
+		"check.balance": checkData.apiBalance?.remaining,
+		"check.deny_reason": denyReason,
 	});
 
 	return CheckResponseV3Schema.parse({

@@ -1,12 +1,12 @@
 import { formatZodError, reportError } from "@autumn/errors";
 import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 import { callerErrorToRecaseError } from "./callerErrorToRecaseError.js";
 
 /** The API's error contract; bodies are unchanged from before @autumn/errors. */
@@ -62,26 +62,25 @@ export const errorToResponse = ({
 
 const MAX_ERROR_MESSAGE_ATTR_LENGTH = 500;
 
-/** The error on the root span. The HTTP middleware already records the exception and sets the status. */
+/** The error on the request span. The HTTP middleware already records the exception and sets the status. */
 const setErrorSpanAttributes = ({
 	error,
 	statusCode,
 }: {
 	error: Error;
 	statusCode: number;
-}) =>
-	setRootSpanAttributes(() => {
-		const { code } = error as { code?: unknown };
-		return {
-			"error.code": typeof code === "string" ? code : undefined,
-			"error.message": String(error.message).slice(
-				0,
-				MAX_ERROR_MESSAGE_ATTR_LENGTH,
-			),
-			"error.type": error.constructor.name,
-			"http.response.status_code": statusCode,
-		};
+}) => {
+	const { code } = error as { code?: unknown };
+	trace.getActiveSpan()?.setAttributes({
+		"error.code": typeof code === "string" ? code : undefined,
+		"error.message": String(error.message).slice(
+			0,
+			MAX_ERROR_MESSAGE_ATTR_LENGTH,
+		),
+		"error.type": error.constructor.name,
+		"http.response.status_code": statusCode,
 	});
+};
 
 /** Hono's error boundary: report through @autumn/errors, then answer with the API's error contract. */
 export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {

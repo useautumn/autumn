@@ -1,8 +1,8 @@
 import type { BillingContext, StripeBillingPlan } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import { customerProductsToPricesWithProduct } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 
 export const logStripeBillingPlan = ({
 	ctx,
@@ -46,7 +46,7 @@ export const logStripeBillingPlan = ({
 		checkoutSessionAction,
 		replacedSubscriptionAction,
 	} = restBillingPlan;
-	setRootSpanAttributes({
+	trace.getActiveSpan()?.setAttributes({
 		// Empty when the plan leaves Stripe untouched.
 		"billing.stripe_actions": [
 			subscriptionAction &&

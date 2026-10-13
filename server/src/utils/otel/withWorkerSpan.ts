@@ -1,7 +1,6 @@
 import { context, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 import { isMapleEnabled } from "@/external/maple/mapleEnabled.js";
-import { withRootSpan } from "./rootSpan.js";
 import { type TenantAttrs, withTenantContext } from "./tenantContext.js";
 import { parseTraceparent } from "./traceparent.js";
 
@@ -64,9 +63,9 @@ export const withWorkerSpan = async <T>({
 			}
 
 			try {
-				return await withRootSpan({
-					span,
-					fn: () => withTenantContext({ attrs: tenantAttrs ?? {}, fn }),
+				return await withTenantContext({
+					attrs: tenantAttrs ?? {},
+					fn,
 				});
 			} catch (err) {
 				span.recordException(err as Error);

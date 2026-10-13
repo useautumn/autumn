@@ -6,7 +6,6 @@ import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { isMapleEnabled } from "@/external/maple/mapleEnabled.js";
 import { markJobTraceForMaple } from "@/external/maple/mapleTraceScope.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import {
@@ -485,11 +484,9 @@ export const processMessage = async ({
 				customer_id: job.data?.customerId,
 			},
 			attributes: {
-				...(isMapleEnabled && {
-					"messaging.system": "aws_sqs",
-					"messaging.operation.type": "process",
-					"autumn.job_name": job.name,
-				}),
+				"messaging.system": "aws_sqs",
+				"messaging.operation.type": "process",
+				"autumn.job_name": job.name,
 				...(Number.isFinite(sentAtMs) && {
 					"queue.dwell_ms": Math.max(0, Date.now() - sentAtMs),
 				}),
@@ -502,7 +499,6 @@ export const processMessage = async ({
 				markJobTraceForMaple({
 					jobName: job.name,
 					isContinued:
-						isMapleEnabled &&
 						parseTraceparent({ traceparent: job.traceparent }) !== undefined,
 				});
 				return executeJob();

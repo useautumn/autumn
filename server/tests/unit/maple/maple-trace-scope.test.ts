@@ -8,7 +8,6 @@
 import { describe, expect, test } from "bun:test";
 import {
 	type Attributes,
-	ROOT_CONTEXT,
 	type Span,
 	type SpanContext,
 	SpanKind,
@@ -30,7 +29,6 @@ import {
 } from "@/external/maple/mapleTraceScope.js";
 import { JobName } from "@/queue/JobName.js";
 import { MapleScopedSpanProcessor } from "@/utils/otel/MapleScopedSpanProcessor.js";
-import { getRootSpan, setRootSpan } from "@/utils/otel/rootSpan.js";
 import {
 	formatTraceparent,
 	parseTraceparent,
@@ -222,10 +220,9 @@ describe("isLogReplacedByMapleTrace", () => {
 		statusCode?: number;
 	}) =>
 		isLogReplacedByMapleTrace({
-			traceId,
-			method,
-			path,
+			req: { method, path },
 			statusCode,
+			traceId,
 			enabled: true,
 		});
 
@@ -238,10 +235,9 @@ describe("isLogReplacedByMapleTrace", () => {
 		expect(replaced({ traceId, statusCode: 500 })).toBe(false);
 		expect(
 			isLogReplacedByMapleTrace({
-				traceId,
-				method: "POST",
-				path: "/v1/balances.check",
+				req: { method: "POST", path: "/v1/balances.check" },
 				statusCode: 200,
+				traceId,
 				enabled: false,
 			}),
 		).toBe(false);
@@ -302,21 +298,6 @@ describe("markTraceForMaple", () => {
 		markTraceForMaple({ traceId, rootSpanId: "late", mode: "keep" });
 		expect(mark?.rootSpanIds.size).toBe(64);
 		expect(mark?.mode).toBe("keep");
-	});
-});
-
-describe("getRootSpan", () => {
-	const fakeSpan = (recording: boolean) =>
-		({ isRecording: () => recording }) as Span;
-
-	test("returns the bound span only while it is open, and never guesses", () => {
-		const bound = (span: Span) =>
-			getRootSpan(setRootSpan({ context: ROOT_CONTEXT, span }));
-
-		expect(getRootSpan(ROOT_CONTEXT)).toBeUndefined();
-		const open = fakeSpan(true);
-		expect(bound(open)).toBe(open);
-		expect(bound(fakeSpan(false))).toBeUndefined();
 	});
 });
 
@@ -398,7 +379,8 @@ describe("MapleScopedSpanProcessor", () => {
 	test("keeps a sampled trace whose root was a client error or a denial", () => {
 		for (const root of [
 			createSpan({ spanId: ROOT, statusCode: 404 }),
-			createSpan({ spanId: ROOT, attributes: { "maple.keep": true } }),
+			createSpan({ spanId: ROOT, attributes: { "check.allowed": false } }),
+			createSpan({ spanId: ROOT, attributes: { "check.fail_open": true } }),
 		]) {
 			const { processor, delegate } = processorFor({
 				mode: "sample",
@@ -573,9 +555,8 @@ describe("MapleScopedSpanProcessor", () => {
 		const traceId = "6".repeat(32);
 		markTraceForMaple({ traceId, rootSpanId: ROOT, mode: "sample" });
 		const logSide = {
+			req: { method: "POST", path: "/v1/track" },
 			traceId,
-			method: "POST",
-			path: "/v1/track",
 			enabled: true,
 		};
 		expect(isLogReplacedByMapleTrace({ ...logSide, statusCode: 429 })).toBe(

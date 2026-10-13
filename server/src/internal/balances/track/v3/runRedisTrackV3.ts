@@ -5,6 +5,7 @@ import type {
 	TrackResponseV3,
 } from "@autumn/shared";
 import { buildAiCreditCostProperty, sumValues, tryCatch } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -22,7 +23,6 @@ import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/m
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
-import { setTrackSpanAttributes } from "../utils/setTrackSpanAttributes.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
 const queueSyncItem = ({
@@ -205,16 +205,16 @@ export const runRedisTrackV3 = async ({
 	});
 
 	// Row balances, summed over every entitlement the event drew from.
-	setTrackSpanAttributes({
-		body,
-		balance: () => {
-			const rowUpdates = Object.values(updates);
-			if (rowUpdates.length === 0) return {};
-			const deducted = sumValues(rowUpdates.map((update) => update.deducted));
-			const after = sumValues(rowUpdates.map((update) => update.balance));
-			return { before: sumValues([after, deducted]), after, deducted };
-		},
-	});
+	const rowUpdates = Object.values(updates);
+	if (rowUpdates.length > 0) {
+		const deducted = sumValues(rowUpdates.map((update) => update.deducted));
+		const after = sumValues(rowUpdates.map((update) => update.balance));
+		trace.getActiveSpan()?.setAttributes({
+			"balance.before": sumValues([after, deducted]),
+			"balance.after": after,
+			"balance.deducted": deducted,
+		});
+	}
 
 	return {
 		customer_id: body.customer_id,

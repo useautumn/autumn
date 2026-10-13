@@ -1,7 +1,7 @@
 import type { CheckParams, ParsedCheckParams } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { describeBalanceWorkerFailure } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
-import { setCheckSpanAttributes } from "@/internal/balances/check/setCheckSpanAttributes.js";
 import { buildCheckFallbackResponse } from "./buildCheckFallbackResponse.js";
 
 export type CheckFailOpenReason =
@@ -33,11 +33,11 @@ export const getCheckFailOpenFallback = ({
 		feature_id: body.feature_id,
 		required_balance: requiredBalance,
 	});
-	setCheckSpanAttributes({
-		featureId: body.feature_id,
-		allowed: true,
-		requiredBalance,
-		failOpen: true,
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": body.feature_id,
+		"check.allowed": true,
+		"check.required_balance": requiredBalance,
+		"check.fail_open": true,
 	});
 
 	return buildCheckFallbackResponse({

@@ -48,7 +48,8 @@ const isAlwaysKeptRoot = (span: ReadableSpan) => {
 	return (
 		span.status.code === SpanStatusCode.ERROR ||
 		(status >= 400 && status !== TOO_MANY_REQUESTS) ||
-		span.attributes["maple.keep"] === true
+		span.attributes["check.allowed"] === false ||
+		span.attributes["check.fail_open"] === true
 	);
 };
 

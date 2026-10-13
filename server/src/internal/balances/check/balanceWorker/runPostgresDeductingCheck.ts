@@ -13,6 +13,7 @@ import {
 	type TrackParams,
 	UsageLimitExceededError,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type CheckResponseWithPreview,
@@ -20,7 +21,6 @@ import {
 } from "@/internal/api/check/getCheckPreview.js";
 import { getTrackFeatureDeductions } from "../../track/utils/getFeatureDeductions.js";
 import { runPostgresTrackV3 } from "../../track/v3/runPostgresTrackV3.js";
-import { setCheckSpanAttributes } from "../setCheckSpanAttributes.js";
 
 const isRefusedDeduction = (
 	error: unknown,
@@ -104,12 +104,12 @@ export async function runPostgresDeductingCheck({
 		denyReason = error.code;
 		balance = fullSubjectToApiBalance({ ctx, fullSubject, feature });
 	}
-	setCheckSpanAttributes({
-		featureId: feature.id,
-		allowed,
-		requiredBalance,
-		balance: balance?.remaining,
-		denyReason,
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": feature.id,
+		"check.allowed": allowed,
+		"check.required_balance": requiredBalance,
+		"check.balance": balance?.remaining,
+		"check.deny_reason": denyReason,
 	});
 
 	const response = applyResponseVersionChanges<CheckResponseV3>({

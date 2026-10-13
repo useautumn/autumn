@@ -1,4 +1,3 @@
-import { trace } from "@opentelemetry/api";
 import chalk from "chalk";
 import type { Context } from "hono";
 import { isLogReplacedByMapleTrace } from "@/external/maple/mapleTraceScope.js";
@@ -116,13 +115,9 @@ export const logRequestResult = async ({
 			return;
 		}
 
-		// Read before the first await: a sampled trace still holds its mark here.
-		const isReplacedByTrace = isLogReplacedByMapleTrace({
-			traceId: trace.getActiveSpan()?.spanContext().traceId,
-			method: c.req.method,
-			path: c.req.path,
-			statusCode,
-		});
+		if (isLogReplacedByMapleTrace({ req: c.req, statusCode })) {
+			return;
+		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
 		const reduceResponseBodyIngest = isAxiomResponseBodyReductionEnabled();
@@ -217,19 +212,17 @@ export const logRequestResult = async ({
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
 		const statusColor = isSuccess ? chalk.green : chalk.yellow;
 
-		if (!isReplacedByTrace) {
-			log(
-				`[${statusColor(statusCode)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`,
-				{
-					statusCode,
-					durationMs,
-					...(ctx.requestLogContext === undefined
-						? {}
-						: { req: ctx.requestLogContext }),
-					res: finalResponseBody ?? null,
-				},
-			);
-		}
+		log(
+			`[${statusColor(statusCode)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`,
+			{
+				statusCode,
+				durationMs,
+				...(ctx.requestLogContext === undefined
+					? {}
+					: { req: ctx.requestLogContext }),
+				res: finalResponseBody ?? null,
+			},
+		);
 
 		if (
 			Object.keys(ctx.extraLogs).length > 0 &&

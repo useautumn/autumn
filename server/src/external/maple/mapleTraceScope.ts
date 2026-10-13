@@ -1,7 +1,6 @@
 import { context, type Span, trace } from "@opentelemetry/api";
 import type { MiddlewareHandler } from "hono";
 import { JobName } from "@/queue/JobName.js";
-import { withRootSpan } from "@/utils/otel/rootSpan.js";
 import { isMapleEnabled } from "./mapleEnabled.js";
 import { BILLING_PATHS } from "./parseMapleLog.js";
 
@@ -225,7 +224,7 @@ export const mapleTraceScopeMiddleware: MiddlewareHandler = (c, next) => {
 		const { traceId, spanId } = span.spanContext();
 		markTraceForMaple({ traceId, rootSpanId: spanId, mode });
 	}
-	return withRootSpan({ span, fn: next });
+	return next();
 };
 
 /** A further span that carries tenant attrs in a trace already going to Maple, e.g. the deferred half of an early-acked webhook. */
@@ -265,21 +264,19 @@ const TOO_MANY_REQUESTS = 429;
  * one: its trace is sampled like a healthy one.
  */
 export const isLogReplacedByMapleTrace = ({
-	traceId,
-	method,
-	path,
+	req,
 	statusCode,
+	traceId = trace.getActiveSpan()?.spanContext().traceId,
 	enabled = REPLACE_REQUEST_LOGS,
 }: {
-	traceId: string | undefined;
-	method: string;
-	path: string;
+	req: { method: string; path: string };
 	statusCode: number;
+	traceId?: string;
 	enabled?: boolean;
 }) =>
 	enabled &&
 	statusCode < 500 &&
 	statusCode !== TOO_MANY_REQUESTS &&
-	isLogReplaceableRequest({ method, path }) &&
+	isLogReplaceableRequest(req) &&
 	traceId !== undefined &&
 	getMapleTraceMark(traceId) !== undefined;

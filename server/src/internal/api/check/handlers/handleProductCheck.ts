@@ -4,12 +4,11 @@ import {
 	type FullCusProduct,
 	SuccessCode,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { setCheckSpanAttributes } from "@/internal/balances/check/setCheckSpanAttributes.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
@@ -76,14 +75,11 @@ export const handleProductCheck = async ({
 			})
 		: undefined;
 
-	setRootSpanAttributes({ "check.product_id": product_id });
-
 	if (!cusProduct) {
-		setCheckSpanAttributes({
-			featureId: undefined,
-			allowed: false,
-			requiredBalance: 0,
-			denyReason: "product_not_attached",
+		trace.getActiveSpan()?.setAttributes({
+			"check.product_id": product_id,
+			"check.allowed": false,
+			"check.deny_reason": "product_not_attached",
 		});
 		return {
 			customer_id,
@@ -102,11 +98,10 @@ export const handleProductCheck = async ({
 		cusProduct.status === CusProductStatus.Active ||
 		cusProduct.status === CusProductStatus.PastDue;
 
-	setCheckSpanAttributes({
-		featureId: undefined,
-		allowed,
-		requiredBalance: 0,
-		denyReason: "product_not_active",
+	trace.getActiveSpan()?.setAttributes({
+		"check.product_id": product_id,
+		"check.allowed": allowed,
+		"check.deny_reason": allowed ? undefined : "product_not_active",
 	});
 
 	return {
