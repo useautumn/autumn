@@ -1,6 +1,7 @@
 import {
 	type ApiByocCache,
 	type AtomCheck,
+	BYOC_CACHE_DISK_GB,
 	BYOC_CACHE_REMOVAL_STAGES,
 	BYOC_CACHE_STAGES,
 	type ByocCacheMachine,
@@ -39,7 +40,7 @@ export const atomStageDetail = ({
 }): string => {
 	const details: Record<ByocCacheStage, string> = {
 		stack: stackName,
-		disk: "10 GB volume",
+		disk: `${BYOC_CACHE_DISK_GB} GB volume`,
 		machine: [machine?.instanceType, region].filter(Boolean).join(" · "),
 		load_balancer: "TLS certificate",
 		atom: "Health check",
