@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
+	Badge,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -30,6 +31,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
+import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -42,6 +45,12 @@ import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
+import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
+import {
+	rateCardItemChanges,
+	rateText,
+} from "@/views/products/features/credit-systems/utils/rateCardRows";
 import {
 	useProductQuery,
 	useProductQueryState,
@@ -74,7 +83,6 @@ import {
 } from "./mintTargetSlugs";
 import { PlanChangeFieldLabel } from "./PlanChangeFieldLabel";
 import { PlanIdChangeNotice } from "./PlanIdChangeNotice";
-import { PlanItemChangeList } from "./PlanItemChangeList";
 import {
 	PlanSettingsChanges,
 	previousAttributesToSettingChanges,
@@ -376,6 +384,10 @@ export default function PlanChangeDialog({
 	);
 
 	const planPreview = createConfirm?.preview ?? preview;
+	const { rateCardChanges, otherChanges } = rateCardItemChanges({
+		itemChanges: preview?.plan_change?.item_changes ?? [],
+		features,
+	});
 	const aliasReplacements = catalogPreviewAliasReplacements({
 		preview: planPreview,
 	});
@@ -650,9 +662,74 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<PlanItemChangeList
-												itemChanges={preview?.plan_change?.item_changes ?? []}
-											/>
+											{rateCardChanges.map(({ change, rows }) => {
+												const item = planItemV1ToProductItem({
+													item: change.item,
+													features,
+												});
+												return (
+													item && (
+														<div
+															key={change.feature_id}
+															className="flex flex-col"
+														>
+															<div className="flex items-center gap-2 py-1">
+																<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+																	<PlanItemLabel item={item} />
+																</div>
+																<Badge
+																	variant="muted"
+																	className="shrink-0 font-medium text-foreground"
+																>
+																	Rate card changed
+																</Badge>
+															</div>
+															{rows.map((row) => (
+																<div
+																	key={row.featureId}
+																	className="flex justify-between gap-3 border-input border-t py-1.5 text-xs"
+																>
+																	<span
+																		className={
+																			row.state === "excluded"
+																				? "text-tertiary-foreground"
+																				: ""
+																		}
+																	>
+																		{featureDisplayName({
+																			features,
+																			featureId: row.featureId,
+																		})}
+																	</span>
+																	{row.state === "excluded" ? (
+																		<span className="text-tertiary-foreground">
+																			Not covered
+																		</span>
+																	) : (
+																		<span className="flex gap-1.5 text-subtle">
+																			{row.state === "changed" && (
+																				<>
+																					<s>
+																						{rateText({
+																							rate: row.catalogRate,
+																							features,
+																						}).replace(/ credits?$/, "")}
+																					</s>
+																					→
+																				</>
+																			)}
+																			<span className="font-medium text-foreground">
+																				{rateText({ rate: row.rate, features })}
+																			</span>
+																		</span>
+																	)}
+																</div>
+															))}
+														</div>
+													)
+												);
+											})}
+											<ItemChangeList itemChanges={otherChanges} />
 											<PlanSettingsChanges changes={settingsChanges} />
 											<LicenseChangeList
 												changes={preview?.plan_change?.license_changes ?? []}

@@ -18,7 +18,6 @@ import {
 import {
 	effectiveSchemaToOverride,
 	overrideToEffectiveSchema,
-	withRate,
 } from "./creditOverrideSchema";
 
 const row = (metered_feature_id: string, credit_amount: number) =>
@@ -71,16 +70,4 @@ test("an unedited card stores nothing", () => {
 			creditSystem,
 		}),
 	).toEqual([]);
-});
-
-test("withRate replaces a feature's rate in place and appends a new feature", () => {
-	const schema = [row("gateway", 3), row("search", 0.5)];
-	expect(withRate({ schema, rate: row("gateway", 2) })).toEqual([
-		row("gateway", 2),
-		row("search", 0.5),
-	]);
-	expect(withRate({ schema, rate: row("video", 4) })).toEqual([
-		...schema,
-		row("video", 4),
-	]);
 });

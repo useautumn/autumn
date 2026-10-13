@@ -1,6 +1,13 @@
-import type { FullCustomerEntitlement } from "@autumn/shared";
+import type { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
+import { Link } from "react-router";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
+import { RateCardRow } from "@/views/products/features/credit-systems/components/rate-card/RateCardRow";
+import { RateCardTable } from "@/views/products/features/credit-systems/components/rate-card/RateCardTable";
+import { rateCardRows } from "@/views/products/features/credit-systems/utils/rateCardRows";
 import { OverrideRow } from "./OverrideRow";
 
 const countLabel = (count: number, noun: string) =>
@@ -8,11 +15,58 @@ const countLabel = (count: number, noun: string) =>
 
 export function FeatureOverrideSection({
 	selectedCusEnt,
+	cusProduct,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
+	cusProduct?: FullCusProduct;
 }) {
-	const markups = selectedCusEnt.entitlement.feature_override?.markups;
+	const env = useEnv();
+	const { features } = useFeaturesQuery();
+	const { feature: creditSystem, feature_override } =
+		selectedCusEnt.entitlement;
+	const markups = feature_override?.markups;
+	const product = cusProduct?.product;
+	const plan = product?.name ?? "this plan";
+	const sources = {
+		inherited: `From ${creditSystem.name}`,
+		changed: `Set on ${plan}`,
+		added: `Set on ${plan}`,
+		excluded: `Removed on ${plan}`,
+	};
 
+	if (feature_override?.schema?.length)
+		return (
+			<SheetSection withSeparator>
+				<RateCardTable
+					subtitle="What this balance pays for each feature"
+					action={
+						product && (
+							<Link
+								className="px-1.5 py-1 text-subtle text-xs transition-colors hover:text-muted-foreground"
+								to={getRedirectUrl(
+									`/products/${product.id}?version=${product.version}`,
+									env,
+								)}
+							>
+								Edit on plan
+							</Link>
+						)
+					}
+				>
+					{rateCardRows({
+						override: feature_override.schema,
+						creditSystem,
+					}).map((row) => (
+						<RateCardRow
+							key={row.featureId}
+							row={row}
+							features={features}
+							source={sources[row.state]}
+						/>
+					))}
+				</RateCardTable>
+			</SheetSection>
+		);
 	if (!markups) return null;
 
 	const providerMarkups = Object.entries(markups.provider_markups ?? {});

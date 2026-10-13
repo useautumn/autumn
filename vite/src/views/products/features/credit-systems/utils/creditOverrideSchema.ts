@@ -56,17 +56,3 @@ export const effectiveSchemaToOverride = ({
 
 	return [...differingRows, ...excludedRows];
 };
-
-/** Puts a rate on the card, replacing the feature's current rate if it has one. */
-export const withRate = ({
-	schema,
-	rate,
-}: {
-	schema: CreditSchemaItem[];
-	rate: CreditSchemaItem;
-}): CreditSchemaItem[] =>
-	schema.some((item) => item.metered_feature_id === rate.metered_feature_id)
-		? schema.map((item) =>
-				item.metered_feature_id === rate.metered_feature_id ? rate : item,
-			)
-		: [...schema, rate];
