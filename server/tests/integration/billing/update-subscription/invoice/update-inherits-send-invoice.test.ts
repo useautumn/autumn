@@ -5,7 +5,11 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingInterval,
+	CusProductStatus,
+} from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -132,5 +136,45 @@ test.concurrent(
 		expect(result.payment_url ?? null).toBeNull();
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features.messages?.included_usage).toBe(200);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("update inherits send_invoice: an explicit invoice_mode enabled false still charges the card")}`,
+	async () => {
+		const customerId = "update-inherit-send-invoice-explicit-charge";
+		const pro = products.base({
+			id: "pro",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		});
+		const { autumnV2_4, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+		await autumnV2_4.billing.attach({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: { enabled: true, enable_plan_immediately: true },
+		});
+
+		const result = await autumnV2_4.subscriptions.update({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: { amount: 30, interval: BillingInterval.Month } },
+			invoice_mode: { enabled: false },
+		});
+
+		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
+			result.invoice!.stripe_id,
+		);
+		expect(stripeInvoice.collection_method).toBe("charge_automatically");
+		expect(stripeInvoice.status).toBe("paid");
 	},
 );

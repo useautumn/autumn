@@ -29,6 +29,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/markAutumnManagedTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
@@ -373,6 +374,10 @@ export const setupAttachBillingContext = async ({
 			: params.proration_behavior,
 
 		invoiceMode,
+		subscriptionInvoiceTerms: setupSubscriptionInvoiceTerms({
+			params,
+			stripeSubscription,
+		}),
 		paymentBehaviorIntent,
 		shouldFinalizeFirstInvoice,
 		skipCustomPaymentMethodGuard: contextOverride.skipCustomPaymentMethodGuard,
