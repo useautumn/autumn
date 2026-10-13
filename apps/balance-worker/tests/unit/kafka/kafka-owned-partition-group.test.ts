@@ -451,7 +451,7 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("a partition assigned back after a rebalance keeps its runtime; one assigned away retires", async () => {
+	test("a partition assigned back after a rebalance keeps its runtime; one assigned away keeps serving until the worker stops", async () => {
 		const fixture = createStoreFixture();
 		try {
 			initializePartitions({ store: fixture.store });
@@ -518,14 +518,19 @@ describe("Kafka owned partition group", () => {
 			consumer.emitRebalancing();
 			consumer.emitGroupJoin([1]);
 			await waitFor(() => started.length === 2);
-			await waitFor(() => stopped.length === 1);
+			await new Promise<void>((resolve) => setTimeout(resolve, 20));
 			expect(started).toEqual([0, 1]);
-			expect(stopped).toEqual([0]);
+			expect(stopped).toEqual([]);
 			expect(unavailable).toEqual([]);
 			expect(claimed).toEqual([0, 1]);
 			expect(assignments).toEqual([[0], [0], [1]]);
-			expect(released).toEqual([0]);
+			expect(released).toEqual([]);
+			expect(
+				group.findRuntime({ partition: 0, routeEpoch: "0" }),
+			).toBeDefined();
 			await group.stop();
+			expect([...stopped].sort()).toEqual([0, 1]);
+			expect(released).toContain(0);
 		} finally {
 			closeStoreFixture(fixture);
 		}
