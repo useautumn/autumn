@@ -1,5 +1,6 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import { SQLITE_PAGE_CACHE_BYTES } from "@autumn/env/atom";
+import { newSqliteConnection } from "./newSqliteConnection.js";
 
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
@@ -82,21 +83,26 @@ const initializeSchema = ({
 	if (emptied) database.run("VACUUM");
 };
 
-/** Threads opening a new file together can still trip each other's first transaction; a fresh connection then succeeds. */
-const OPEN_ATTEMPTS = 5;
-const OPEN_RETRY_MS = 20;
-
-const openOnce = ({
+/** Opens one of Atom's SQLite files with its schema in place; a file of any other version is emptied. */
+export const openSqliteDatabase = ({
 	databasePath,
 	schemaVersion,
 	dropSchema,
 	createSchema,
-}: Parameters<typeof openSqliteDatabase>[0]): Database => {
-	const database = new Database(databasePath, {
-		create: true,
-		readwrite: true,
-		safeIntegers: true,
-		strict: true,
+}: {
+	databasePath: string;
+	schemaVersion: number;
+	dropSchema: (params: { database: Database }) => void;
+	createSchema: (params: { database: Database }) => void;
+}): Database => {
+	const database = newSqliteConnection({
+		path: databasePath,
+		options: {
+			create: true,
+			readwrite: true,
+			safeIntegers: true,
+			strict: true,
+		},
 	});
 	try {
 		configureDatabase({ database });
@@ -105,22 +111,5 @@ const openOnce = ({
 	} catch (error) {
 		database.close();
 		throw error;
-	}
-};
-
-/** Opens one of Atom's SQLite files with its schema in place; a file of any other version is emptied. */
-export const openSqliteDatabase = (params: {
-	databasePath: string;
-	schemaVersion: number;
-	dropSchema: (params: { database: Database }) => void;
-	createSchema: (params: { database: Database }) => void;
-}): Database => {
-	for (let attempt = 1; ; attempt++) {
-		try {
-			return openOnce(params);
-		} catch (error) {
-			if (attempt >= OPEN_ATTEMPTS) throw error;
-			Bun.sleepSync(OPEN_RETRY_MS);
-		}
 	}
 };
