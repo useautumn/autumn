@@ -37,7 +37,6 @@
 				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
 				"src/internal/billing/v2/providers/stripe/utils/sync/**/*.ts",
 				"src/trigger/metering/pushHourlyMetersTask.ts",
-				"src/trigger/init.ts",
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],

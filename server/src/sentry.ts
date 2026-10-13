@@ -1,11 +1,8 @@
-import { errorReportingOptionsOf } from "@autumn/errors";
 import * as Sentry from "@sentry/bun";
 
-const errorReportingOptions = errorReportingOptionsOf();
-
-if (errorReportingOptions) {
+if (process.env.SENTRY_DSN) {
 	Sentry.init({
-		...errorReportingOptions,
+		dsn: process.env.SENTRY_DSN,
 		sendDefaultPii: true,
 		skipOpenTelemetrySetup: true,
 	});

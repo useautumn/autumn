@@ -20,10 +20,7 @@ const loggedFrames = [
 	},
 ];
 const stackParser = mock(() => loggedFrames);
-// Bun module mocks are process-wide, so keep the real SDK for other test files.
-const actualSentry = { ...(await import("@sentry/bun")) };
 mock.module("@sentry/bun", () => ({
-	...actualSentry,
 	captureException,
 	captureEvent,
 	getClient: () => ({

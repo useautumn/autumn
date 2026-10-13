@@ -75,7 +75,9 @@ async function main(): Promise<void> {
 
 /** The lifecycle has already flushed logs; queued Sentry events get the same chance. */
 function endProcess(code: number): void {
-	void flushErrorReports().finally(() => process.exit(code));
+	void flushErrorReports({ timeoutMs: 2_000 }).finally(() =>
+		process.exit(code),
+	);
 }
 
 async function run(): Promise<void> {

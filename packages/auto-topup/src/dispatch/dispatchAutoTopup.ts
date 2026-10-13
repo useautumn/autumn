@@ -26,7 +26,7 @@ export const dispatchAutoTopup = async ({
 		return { enqueued: false, reason: "redis_unavailable" };
 	}
 	if (claim === "pending_exists") {
-		ctx.logger.info(
+		ctx.logger.warn(
 			`[dispatchAutoTopup] Skipping auto top-up job for customer ${customerId} and feature ${featureId} because pending key already exists`,
 		);
 		return { enqueued: false, reason: "pending_key_exists" };

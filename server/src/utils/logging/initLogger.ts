@@ -1,12 +1,7 @@
 import { hostname } from "node:os";
 import { Writable } from "node:stream";
-import { createErrorLogHook, flushErrorReports } from "@autumn/errors";
-import {
-	createSazabiLogStream,
-	normalizeErrorValues,
-	resolveDeployment,
-	type SazabiLogStream,
-} from "@autumn/logging";
+import { createErrorLogHook } from "@autumn/errors";
+import { normalizeErrorValues, resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 import { createMapleLogStreams } from "@/external/maple/createMapleLogStreams.js";
@@ -163,16 +158,6 @@ const createConsoleJsonStream = () =>
 		},
 	});
 
-const sazabiLogStreams: SazabiLogStream[] = [];
-
-/** Drains queued Sazabi logs and error reports; call once on shutdown, each sink is time-capped. */
-export const flushTelemetry = async (): Promise<void> => {
-	await Promise.all([
-		...sazabiLogStreams.map((stream) => stream.flush()),
-		flushErrorReports(),
-	]);
-};
-
 /**
  * `mode: "dual"` is opt-in only — used by trigger.dev tasks so logs hit
  * both stdout (trigger run UI) and axiom (long-term store).
@@ -268,12 +253,6 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	}
 
 	streams.push(...createMapleLogStreams());
-
-	const sazabi = createSazabiLogStream({ service: "server" });
-	if (sazabi) {
-		streams.push(sazabi.entry);
-		sazabiLogStreams.push(sazabi);
-	}
 
 	const logger = pino(
 		{

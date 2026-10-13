@@ -1,4 +1,3 @@
-export { LOG_FLUSH_TIMEOUT_MS } from "./config.js";
 export {
 	addAppContextToLogs,
 	addExtrasToLogs,
@@ -30,10 +29,6 @@ export {
 	resolveDeployment,
 	resolveLoggerOptions,
 } from "./logger/resolveLoggerOptions.js";
-export {
-	createSazabiLogStream,
-	type SazabiLogStream,
-} from "./otlp/sazabiLogStream.js";
 export { asAxiomMap } from "./payload/asAxiomMap.js";
 export {
 	type GuardLogPayloadOptions,

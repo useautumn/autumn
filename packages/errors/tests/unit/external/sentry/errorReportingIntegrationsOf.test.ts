@@ -6,7 +6,6 @@ const defaults = [
 	"Http",
 	"NodeFetch",
 	"RequestData",
-	"OnUncaughtException",
 	"OnUnhandledRejection",
 	"LinkedErrors",
 ].map((name) => ({ name, mode: "default" }));
@@ -26,7 +25,6 @@ describe("errorReportingIntegrationsOf", () => {
 			"Http",
 			"NodeFetch",
 			"RequestData",
-			"OnUncaughtException",
 			"LinkedErrors",
 			"OnUnhandledRejection",
 		]);
@@ -34,18 +32,8 @@ describe("errorReportingIntegrationsOf", () => {
 
 	it("without request tracing keeps error capture and drops what wraps every request", () => {
 		expect(namesOf({ tracesRequests: false })).toEqual([
-			"OnUncaughtException",
 			"LinkedErrors",
 			"OnUnhandledRejection",
 		]);
-	});
-
-	it("without a rejection handler leaves process-level error handling to the host", () => {
-		expect(
-			errorReportingIntegrationsOf({
-				defaults,
-				tracesRequests: false,
-			}).map((integration) => integration.name),
-		).toEqual(["LinkedErrors"]);
 	});
 });

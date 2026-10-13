@@ -10,20 +10,8 @@ import { ThemeProvider } from "./contexts/ThemeProvider";
 
 declare const __APP_ENV__: string;
 
-// Sazabi ingests Sentry envelopes, so its DSN is primary; a set VITE_SENTRY_DSN also gets a copy of every event.
-const errorReportingDsns = [
-	import.meta.env.VITE_SAZABI_DSN,
-	import.meta.env.VITE_SENTRY_DSN,
-].filter((dsn): dsn is string => Boolean(dsn));
-
 Sentry.init({
-	dsn: errorReportingDsns[0],
-	...(errorReportingDsns.length > 1 && {
-		transport: Sentry.makeMultiplexedTransport(
-			Sentry.makeFetchTransport,
-			() => errorReportingDsns,
-		),
-	}),
+	dsn: import.meta.env.VITE_SENTRY_DSN,
 	// Vercel's prod build doesn't set VITE_APP_ENV, and only it carries the DSN.
 	environment: __APP_ENV__ || "production",
 	sendDefaultPii: true,
@@ -48,7 +36,7 @@ const queryClient = new QueryClient({
 
 const shouldInitializePostHog = process.env.NODE_ENV === "production";
 
-/** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
+/** React 19 routes render errors through these root hooks, not window.onerror, so Sentry must hear them here. */
 const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
 	console.error(error, errorInfo.componentStack);
 });

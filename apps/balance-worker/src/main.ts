@@ -78,7 +78,10 @@ function exitAfterServiceStopped({
 }
 
 async function flushLogsAndErrorReports(): Promise<void> {
-	await Promise.all([getBalanceWorkerLogger().flush?.(), flushErrorReports()]);
+	await Promise.all([
+		getBalanceWorkerLogger().flush?.(),
+		flushErrorReports({ timeoutMs: 2_000 }),
+	]);
 }
 
 function causeToLine({ name, message }: { name: string; message: string }) {

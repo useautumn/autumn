@@ -1,6 +1,5 @@
 export { classifyError } from "./classify/classifyError.js";
 export { stripeErrorToRecaseError } from "./classify/stripe/stripeErrorToRecaseError.js";
-export { errorReportingOptionsOf } from "./external/sentry/errorReportingOptionsOf.js";
 export { flushErrorReports } from "./external/sentry/flushErrorReports.js";
 export { initErrorReporting } from "./external/sentry/initErrorReporting.js";
 export { formatZodError } from "./format/formatZodError.js";
