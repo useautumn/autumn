@@ -42,7 +42,6 @@ export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";
 export * from "./planV1Utils/customize";
 export * from "./planV1Utils/diff/applyDiff";
 export * from "./planV1Utils/diff/compareFeatureOverrides";
-export { itemsEqualIgnoringFeatureOverride } from "./planV1Utils/diff/comparePlanItems";
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";

@@ -263,24 +263,26 @@ export const createPlanMigrationDraft = async ({
 	// should exist before the parent one that follows it.
 	const insertDrafts = async (drafts: (MigrationDraft | null)[]) => {
 		const ids: string[] = [];
-		for (const draft of drafts.filter((draft) => draft !== null)) {
+		const itemsByPlanId = new Map([
+			[planId, fromPlan.items],
+			...selectedVariantsBefore.map(
+				({ product, plan }) => [product.id, plan.items] as const,
+			),
+		]);
+		for (const unstamped of drafts.filter((draft) => draft !== null)) {
+			const draft = withPreviousFeatureOverrides({
+				draft: unstamped,
+				itemsByPlanId,
+			});
 			const migration = await migrationRepo.insert({
 				ctx,
-				insert: withPreviousFeatureOverrides({
-					draft: withPreviousPrice({
-						draft,
-						previousPriceByPlanId: buildPreviousPriceMap({
-							planId,
-							fromPlan,
-							variantsBefore: selectedVariantsBefore,
-						}),
+				insert: withPreviousPrice({
+					draft,
+					previousPriceByPlanId: buildPreviousPriceMap({
+						planId,
+						fromPlan,
+						variantsBefore: selectedVariantsBefore,
 					}),
-					itemsByPlanId: new Map([
-						[planId, fromPlan.items],
-						...selectedVariantsBefore.map(
-							({ product, plan }) => [product.id, plan.items] as const,
-						),
-					]),
 				}),
 			});
 			ids.push(migration.id);

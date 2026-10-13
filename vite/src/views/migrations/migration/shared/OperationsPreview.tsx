@@ -41,7 +41,7 @@ function EditedRow({
 	hint?: ReactNode;
 }) {
 	return (
-		<div className="flex items-center w-full shrink-0 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				{icon}
 				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
@@ -60,7 +60,7 @@ function EditedRow({
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (
-		<div className="flex items-center w-full shrink-0 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden opacity-50">
 				<FeatureIconCluster item={filterToProductItem(filter)} />
 				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
@@ -70,6 +70,20 @@ function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 			<div className="flex items-center shrink-0">
 				<ItemStatusDot state="removed" />
 			</div>
+		</div>
+	);
+}
+
+/** SubscriptionItemRow draws its own bare row, so the card lives here to match
+ * the edited and removed rows beside it. */
+function AddedItemRow({
+	item,
+}: {
+	item: Parameters<typeof SubscriptionItemRow>[0]["item"];
+}) {
+	return (
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2 [&>div]:flex-1 [&>div]:min-w-0">
+			<SubscriptionItemRow item={item} isCreated />
 		</div>
 	);
 }
@@ -109,8 +123,10 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const planIds = planIdsFromFilter(updateOp.plan_filter);
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
-					const removeItems = customize?.remove_items ?? [];
 					const rateRows = migrationOpRateRows({ op: updateOp, features });
+					const removeItems = (customize?.remove_items ?? []).filter(
+						(_, idx) => !rateRows.mergedRemoveIndices.has(idx),
+					);
 					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];
@@ -256,17 +272,10 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 											/>
 										)}
 										{(license.customize?.add_items ?? []).map((item, idx) => (
-											<ItemRateChangeRow
-												changes={[]}
+											<AddedItemRow
 												key={`license-add-${idx}`}
-											>
-												<div className="flex-1 min-w-0">
-													<SubscriptionItemRow
-														isCreated
-														item={migrationItemToProductItem(item, features)}
-													/>
-												</div>
-											</ItemRateChangeRow>
+												item={migrationItemToProductItem(item, features)}
+											/>
 										))}
 										{(license.customize?.remove_items ?? []).map(
 											(item, idx) => (
@@ -280,15 +289,12 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 								</div>
 							))}
 
-							{removeItems.map(
-								(item, idx) =>
-									!rateRows.mergedRemoveIndices.has(idx) && (
-										<RemovedFilterRow
-											key={`remove-${idx}`}
-											filter={item as ItemFilter}
-										/>
-									),
-							)}
+							{removeItems.map((item, idx) => (
+								<RemovedFilterRow
+									key={`remove-${idx}`}
+									filter={item as ItemFilter}
+								/>
+							))}
 						</div>
 					);
 				})}

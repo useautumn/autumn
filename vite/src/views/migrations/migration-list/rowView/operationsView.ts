@@ -22,18 +22,16 @@ import {
 	withoutTile,
 } from "./chipView";
 
-/** A rate an item's feature override sets, nested under that item with its metered feature's tile. */
-export type RateChildView = {
-	key: string;
-	tile: NonNullable<ChipView["tile"]>;
-	change: RateChange;
-};
-
 export type ModificationView = {
 	sign: "add" | "change" | "remove";
 	chip: ChipView;
 	isVersion?: boolean;
-	children?: RateChildView[];
+	/** Changed rates, each with its metered feature's tile. */
+	children?: {
+		key: string;
+		tile: NonNullable<ChipView["tile"]>;
+		change: RateChange;
+	}[];
 	/** Set when the card covers several update ops, so the cell can group rows by plan. */
 	planLabel?: string;
 };
@@ -147,21 +145,6 @@ const addItemDetail = ({
 	return parts.length > 0 ? parts.join(" · ") : "added";
 };
 
-const rateChildren = ({
-	item,
-	changes,
-	catalog,
-}: {
-	item: AddItem;
-	changes: RateChange[];
-	catalog: MigrationCatalog;
-}): RateChildView[] =>
-	changes.map((change) => ({
-		key: change.key,
-		tile: catalog.feature(change.meteredFeatureId ?? item.feature_id).tile,
-		change,
-	}));
-
 const priceModification = ({
 	customize,
 	catalog,
@@ -249,23 +232,24 @@ const updatePlanModifications = ({
 				details: ["customized"],
 			},
 		})),
-		...rateRows.rows.map((row) => {
-			const item = addItems[row.addIndex];
-			const children = rateChildren({ item, changes: row.changes, catalog });
-			const withChildren = children.length > 0 ? { children } : {};
-			if (row.updated)
-				return {
-					sign: "change" as const,
-					chip: itemChip(item, "updated"),
-					...withChildren,
-				};
+		...rateRows.rows.map(({ addIndex, updated, changes }) => {
+			const item = addItems[addIndex];
+			const detail = addItemDetail({
+				item,
+				isBoolean: isBooleanItem(item),
+				catalog,
+			});
 			return {
-				sign: "add" as const,
-				chip: itemChip(
-					item,
-					addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
-				),
-				...withChildren,
+				sign: updated ? ("change" as const) : ("add" as const),
+				chip: itemChip(item, updated ? "updated" : detail),
+				...(changes.length > 0 && {
+					children: changes.map((change) => ({
+						key: change.key,
+						tile: catalog.feature(change.meteredFeatureId ?? item.feature_id)
+							.tile,
+						change,
+					})),
+				}),
 			};
 		}),
 		...(customize?.update_items ?? []).map((item) => ({

@@ -10,24 +10,16 @@ export function ItemSummaryRow({
 	item,
 	onClick,
 	changes = NO_RATE_CHANGES,
-	updated = false,
 }: {
 	item: Record<string, unknown>;
 	onClick?: () => void;
 	changes?: RateChange[];
-	updated?: boolean;
 }) {
 	const { features } = useFeaturesQuery();
 	const productItem = migrationItemToProductItem(item, features);
 
 	return (
-		<ItemRateChangeRow
-			changes={changes}
-			compact
-			onClick={onClick}
-			showUpdatedTag={false}
-			updated={updated}
-		>
+		<ItemRateChangeRow changes={changes} compact onClick={onClick}>
 			<PlanItemLabel item={productItem} unnamedText="Unconfigured" />
 		</ItemRateChangeRow>
 	);

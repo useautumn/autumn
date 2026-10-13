@@ -13,7 +13,7 @@ import { ApiFeatureOverrideSchema } from "../../../../features/apiFeatureOverrid
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
 
-/** A remove filter plus display-only notes about the item it replaces; execution never reads them. */
+/** A remove filter plus the matched item's old override, for display only; execution never reads it. */
 export const MigrationRemoveItemSchema = z
 	.object({
 		...PlanItemFilterSchema.shape,
@@ -21,11 +21,6 @@ export const MigrationRemoveItemSchema = z
 			internal: true,
 			description:
 				"The matched item's feature_override before the update; empty when it inherited the feature's.",
-		}),
-		only_feature_override_changed: z.boolean().optional().meta({
-			internal: true,
-			description:
-				"True when the matched item and its replacement differ only by feature_override.",
 		}),
 	})
 	.refine(

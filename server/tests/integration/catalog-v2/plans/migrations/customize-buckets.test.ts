@@ -513,7 +513,6 @@ test.concurrent(
 										interval_count: 1,
 										included: 100,
 										previous_feature_override: previousOverride,
-										only_feature_override_changed: true,
 									},
 								],
 								add_items: [

@@ -29,12 +29,8 @@ import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import {
-	type AddItem,
 	type ItemRateRow,
 	migrationOpRateRows,
-	type RemoveFilter,
-	withEditedAddItem,
-	withEditedRemoveFilter,
 } from "@/utils/product/featureOverrideRates";
 import {
 	parsePlanKey,
@@ -107,6 +103,10 @@ export function UpdatePlanOpForm({
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
 	const rateRows = migrationOpRateRows({ op: value, features });
+	const visibleRemoveItems = (customize?.remove_items ?? []).flatMap(
+		(item, index) =>
+			rateRows.mergedRemoveIndices.has(index) ? [] : [{ item, index }],
+	);
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
 
 	const customizedLicenseIds = new Set(
@@ -163,22 +163,13 @@ export function UpdatePlanOpForm({
 
 			if (newItems.length === 0) return;
 
+			const items = [...addItems];
 			if (editingItemIndex !== null) {
-				update({
-					customize: withEditedAddItem({
-						customize,
-						addIndex: editingItemIndex,
-						item: newItems[0] as AddItem,
-					}),
-				});
-				return;
+				items[editingItemIndex] = newItems[0];
+			} else {
+				items.push(...newItems);
 			}
-			update({
-				customize: {
-					...customize,
-					add_items: [...addItems, ...(newItems as AddItem[])],
-				},
-			});
+			update({ customize: { ...customize, add_items: items } });
 		}
 	};
 
@@ -308,7 +299,6 @@ export function UpdatePlanOpForm({
 						changes={row.changes}
 						item={addItems[row.addIndex]}
 						onClick={() => openSheet("edit-feature", row.addIndex)}
-						updated={row.updated}
 					/>
 					<RemoveButton onClick={() => handleRemoveItem(row)} />
 				</div>
@@ -338,34 +328,28 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			{(customize?.remove_items ?? []).map(
-				(item, index) =>
-					!rateRows.mergedRemoveIndices.has(index) && (
-						<RemoveItemRows
-							key={`remove-${index}`}
-							item={item}
-							onChange={(updated) => {
-								const items = [...(customize?.remove_items ?? [])];
-								items[index] = withEditedRemoveFilter({
-									previous: item,
-									next: updated as RemoveFilter,
-								});
-								update({ customize: { ...customize, remove_items: items } });
-							}}
-							onRemove={() => {
-								const items = (customize?.remove_items ?? []).filter(
-									(_, i) => i !== index,
-								);
-								update({
-									customize: {
-										...customize,
-										remove_items: items.length > 0 ? items : undefined,
-									},
-								});
-							}}
-						/>
-					),
-			)}
+			{visibleRemoveItems.map(({ item, index }) => (
+				<RemoveItemRows
+					key={`remove-${index}`}
+					item={item}
+					onChange={(updated) => {
+						const items = [...(customize?.remove_items ?? [])];
+						items[index] = updated;
+						update({ customize: { ...customize, remove_items: items } });
+					}}
+					onRemove={() => {
+						const items = (customize?.remove_items ?? []).filter(
+							(_, i) => i !== index,
+						);
+						update({
+							customize: {
+								...customize,
+								remove_items: items.length > 0 ? items : undefined,
+							},
+						});
+					}}
+				/>
+			))}
 
 			<DropdownMenu>
 				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>

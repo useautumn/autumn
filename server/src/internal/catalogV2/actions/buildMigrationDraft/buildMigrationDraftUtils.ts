@@ -3,7 +3,6 @@ import {
 	basePriceToKey,
 	type DiffedCustomizePlanV1,
 	featureOverrideToKey,
-	itemsEqualIgnoringFeatureOverride,
 	type MigrationUpdatePlanCustomize,
 	type PlanFilter,
 	planItemMatchesFilter,
@@ -67,8 +66,7 @@ export const stampPreviousPrice = ({
 	};
 };
 
-/** Display-only stamps on each remove filter, set only when every target's replaced item agrees and the override changes:
- * the old override (empty when inherited) and whether nothing else changed. */
+/** Stamps each remove filter with its item's old override (empty when inherited) when every target agrees and it changed. */
 export const stampPreviousFeatureOverrides = ({
 	customize,
 	previousItemSets,
@@ -79,40 +77,22 @@ export const stampPreviousFeatureOverrides = ({
 	if (!customize.remove_items || previousItemSets.length === 0)
 		return customize;
 	const remove_items = customize.remove_items.map((filter) => {
-		const adds = (customize.add_items ?? []).filter(
-			(item) => item.feature_id === filter.feature_id,
-		);
-		const next =
-			adds.length === 1
-				? adds[0]
-				: adds.find(
-						(item) =>
-							String(item.price?.interval ?? item.reset?.interval) ===
-								String(filter.interval) &&
-							(item.price?.interval_count ??
-								item.reset?.interval_count ??
-								1) === (filter.interval_count ?? 1),
-					);
 		const previous = previousItemSets.map((items) =>
 			items.find((item) => planItemMatchesFilter({ item, filter })),
 		);
 		const keys = new Set(
 			previous.map((item) => featureOverrideToKey(item?.feature_override)),
 		);
-		if (
-			!next ||
-			previous.some((item) => !item) ||
-			keys.size !== 1 ||
-			keys.has(featureOverrideToKey(next.feature_override))
-		)
-			return filter;
-		const onlyOverrideChanged = previous.every(
-			(item) => item && itemsEqualIgnoringFeatureOverride(item, next),
+		const changed = customize.add_items?.some(
+			(item) =>
+				item.feature_id === filter.feature_id &&
+				!keys.has(featureOverrideToKey(item.feature_override)),
 		);
+		if (!changed || keys.size !== 1 || previous.some((item) => !item))
+			return filter;
 		return {
 			...filter,
 			previous_feature_override: previous[0]?.feature_override ?? {},
-			...(onlyOverrideChanged && { only_feature_override_changed: true }),
 		};
 	});
 	return { ...customize, remove_items };

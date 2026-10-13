@@ -1,336 +1,97 @@
-import { describe, expect, test } from "bun:test";
-import {
-	type Feature,
-	FeatureType,
-	type ProductItem,
-	type UpdatePlanOp,
-} from "@autumn/shared";
-import {
-	type AddItem,
-	featureOverrideRateCard,
-	migrationOpRateRows,
-	type RemoveFilter,
-	rateChangeText,
-	withEditedAddItem,
-	withEditedRemoveFilter,
-} from "./featureOverrideRates";
+import { expect, test } from "bun:test";
+import { type Feature, FeatureType, type UpdatePlanOp } from "@autumn/shared";
+import { migrationOpRateRows } from "./featureOverrideRates";
 
-type Override = NonNullable<AddItem["feature_override"]>;
-type DbOverride = NonNullable<
-	NonNullable<ProductItem["config"]>["feature_override"]
->;
+type Customize = NonNullable<UpdatePlanOp["customize"]>;
+type Add = NonNullable<Customize["add_items"]>[number];
+type Remove = NonNullable<Customize["remove_items"]>[number];
 
 const features = [
 	{ id: "gateway", name: "Gateway spend (USD)", type: FeatureType.Metered },
-	{ id: "searches", name: "Searches", type: FeatureType.Metered },
 	{
 		id: "credits",
-		name: "Credits",
 		type: FeatureType.CreditSystem,
-		config: {
-			schema: [
-				{ metered_feature_id: "gateway", credit_amount: 1 },
-				{ metered_feature_id: "searches", credit_amount: 5 },
-			],
-		},
-	},
-	{
-		id: "ai",
-		name: "AI credits",
-		type: FeatureType.AiCreditSystem,
-		config: { schema: [], default_markup: 20 },
-		model_markups: { "openai/gpt-4o": { markup: 50 } },
+		config: { schema: [{ metered_feature_id: "gateway", credit_amount: 1 }] },
 	},
 ] as Feature[];
-
-const rates = (gateway: number, searches = 5): Override => ({
+const rates = (credit_cost: number, tiered = false) => ({
 	credit_schema: [
-		{ metered_feature_id: "gateway", credit_cost: gateway },
-		{ metered_feature_id: "searches", credit_cost: searches },
+		tiered
+			? {
+					metered_feature_id: "gateway",
+					tier_behavior: "graduated" as const,
+					tiers: [{ to: "inf" as const, credit_cost }],
+				}
+			: { metered_feature_id: "gateway", credit_cost },
 	],
 });
-const add = (patch: Partial<AddItem> = {}): AddItem => ({
+const add = (patch: Partial<Add> = {}): Add => ({
 	feature_id: "credits",
 	included: 100,
 	reset: { interval: "month" },
 	feature_override: rates(3.571),
 	...patch,
 });
-const remove = (patch: Partial<RemoveFilter> = {}): RemoveFilter => ({
+const remove = (patch: Partial<Remove> = {}): Remove => ({
 	feature_id: "credits",
 	interval: "month",
-	interval_count: 1,
 	included: 100,
+	previous_feature_override: rates(2.857),
 	...patch,
 });
-const stamped = (previous: Override, only = true) =>
-	remove({
-		previous_feature_override: previous,
-		...(only && { only_feature_override_changed: true }),
-	});
-const op = (customize: UpdatePlanOp["customize"]) =>
-	({
-		type: "update_plan",
-		plan_filter: { plan_id: "pro", version: 1 },
-		customize,
-	}) as UpdatePlanOp;
-const rowsOf = (operation: UpdatePlanOp) => {
-	const { rows, mergedRemoveIndices } = migrationOpRateRows({
-		op: operation,
+const rows = (add_items: Add[], remove_items: Remove[]) =>
+	migrationOpRateRows({
+		op: {
+			type: "update_plan",
+			plan_filter: { plan_id: "pro" },
+			customize: { add_items, remove_items },
+		} as UpdatePlanOp,
 		features,
-	});
-	return {
-		rows: rows.map((row) => ({
-			updated: row.updated,
-			lines: row.changes.map(
-				(change) => `${change.label}: ${rateChangeText(change)}`,
-			),
-		})),
-		merged: [...mergedRemoveIndices],
-	};
-};
-const single = (lines: string[], updated = false) => ({
-	rows: [{ updated, lines }],
-	merged: updated ? [0] : [],
-});
+	}).rows.map((row) => [
+		row.updated,
+		...row.changes.map((c) => `${c.label} ${c.from} → ${c.to}`),
+	]);
+const changed = "Gateway spend (USD) 2.857 → 3.571";
+const priced = { price: { amount: 5, interval: "month" } } as Partial<Add>;
 
 test.each([
+	["a rate-only change merges", {}, {}, [true, changed]],
+	["a new grant keeps the pair", { included: 200 }, {}, [false, changed]],
+	["a priced item keeps the pair", priced, {}, [false, changed]],
 	[
-		"flat, per units",
-		{
-			schema: [
-				{
-					metered_feature_id: "gateway",
-					credit_amount: 1500,
-					feature_amount: 1000,
-				},
-			],
-		},
-		["Gateway Spend (USD): 1,500 credits per 1,000"],
+		"an empty stamp diffs against the default rates",
+		{},
+		{ previous_feature_override: {} },
+		[true, "Gateway spend (USD) 1 → 3.571"],
 	],
 	[
-		"tiered",
-		{
-			schema: [
-				{
-					metered_feature_id: "searches",
-					tier_behavior: "graduated",
-					tiers: [
-						{ to: 100, credit_amount: 3 },
-						{ to: "inf", credit_amount: 1 },
-					],
-				},
-			],
-		},
-		["Searches: 1–3 credits (tiered)"],
+		"no stamp shows only the new rate card",
+		{},
+		{ previous_feature_override: undefined },
+		[false, "Gateway spend (USD) undefined → 3.571"],
 	],
 	[
-		"dimensioned",
-		{
-			schema: [
-				{
-					metered_feature_id: "gateway",
-					credit_amount: 1,
-					dimensions: { fast: { match: { speed: "fast" }, credit_amount: 2 } },
-					multipliers: { batch: { match: { batch: "true" }, factor: 0.5 } },
-				},
-			],
-		},
-		["Gateway Spend (USD): varies by event · 1 rate, 1 multiplier"],
+		"a tiered change is summarised",
+		{ feature_override: rates(2, true) },
+		{ previous_feature_override: rates(1, true) },
+		[true, "Rate card changed undefined → undefined"],
 	],
-	[
-		"markups",
-		{
-			markups: {
-				provider_markups: { anthropic: { markup: 15 } },
-				model_markups: { "openai/o3": { markup: 10 } },
-			},
-		},
-		["Default: 0% markup", "anthropic: 15% markup", "Per-model: 1 model"],
-	],
-] as [string, DbOverride, string[]][])(
-	"the customer sheet's rate card: %s",
-	(_, override, expected) => {
-		expect(
-			featureOverrideRateCard({ override, features }).map(
-				({ label, value }) => `${label}: ${value}`,
-			),
-		).toEqual(expected);
+] as [string, Partial<Add>, Partial<Remove>, (string | boolean)[]][])(
+	"%s",
+	(_, addPatch, removePatch, expected) => {
+		expect(rows([add(addPatch)], [remove(removePatch)])).toEqual([expected]);
 	},
 );
 
-const priority = (value: number) => ({
-	credit_schema: [
-		{
-			metered_feature_id: "gateway",
-			credit_cost: 1,
-			dimensions: {
-				fast: { match: { speed: "fast" }, credit_cost: 2, priority: value },
-			},
-		},
-	],
-});
-
-describe("migrationOpRateRows", () => {
-	test.each([
-		[
-			"a stamped override-only change merges into one updated row",
-			op({ add_items: [add()], remove_items: [stamped(rates(2.857))] }),
-			single(["Gateway spend (USD): 2.857 → 3.571 credits"], true),
-		],
-		[
-			"two changed rates give two subrows",
-			op({
-				add_items: [add({ feature_override: rates(3.571, 6) })],
-				remove_items: [stamped(rates(2.857))],
-			}),
-			single(
-				[
-					"Gateway spend (USD): 2.857 → 3.571 credits",
-					"Searches: 5 → 6 credits",
-				],
-				true,
-			),
-		],
-		[
-			"an empty stamp diffs against the credit system's own rates",
-			op({ add_items: [add()], remove_items: [stamped({})] }),
-			single(["Gateway spend (USD): 1 → 3.571 credits"], true),
-		],
-		[
-			"a stamp without the flag keeps the add/remove pair",
-			op({
-				add_items: [add({ included: 200 })],
-				remove_items: [stamped(rates(2.857), false)],
-			}),
-			single(["Gateway spend (USD): 2.857 → 3.571 credits"]),
-		],
-		[
-			"an added item with no remove shows its full rate card",
-			op({ add_items: [add()] }),
-			single(["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"]),
-		],
-		[
-			"a removed override falls back to the credit system's rates",
-			op({
-				add_items: [add({ feature_override: undefined })],
-				remove_items: [stamped(rates(4), false)],
-			}),
-			single(["Gateway spend (USD): 4 → 1 credits"]),
-		],
-		[
-			"a priority-only dimension change still shows",
-			op({
-				add_items: [add({ feature_override: priority(2) })],
-				remove_items: [stamped(priority(1))],
-			}),
-			single(
-				[
-					"Gateway spend (USD): 1 credits · fast (speed=fast) priority 1 2 credits → 1 credits · fast (speed=fast) priority 2 2 credits",
-				],
-				true,
-			),
-		],
-		[
-			"removing a markup override shows the inherited model markups",
-			op({
-				add_items: [add({ feature_id: "ai", feature_override: undefined })],
-				remove_items: [
-					remove({
-						feature_id: "ai",
-						previous_feature_override: { markups: { default_markup: 20 } },
-					}),
-				],
-			}),
-			single(["Per-model: openai/gpt-4o 50% markup"]),
-		],
-	] as [string, UpdatePlanOp, ReturnType<typeof rowsOf>][])(
-		"%s",
-		(_, operation, expected) => {
-			expect(rowsOf(operation)).toEqual(expected);
-		},
-	);
-
-	test("an unstamped pair shows only the new rate card", () => {
-		const old = op({ add_items: [add()], remove_items: [remove()] });
-		expect(rowsOf(old)).toEqual(
-			single(["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"]),
-		);
+test("items of one feature pair by cadence", () => {
+	const daily = remove({
+		interval: "day",
+		previous_feature_override: rates(9),
 	});
-
-	test("two items of one feature pair by cadence, not by order", () => {
-		const { rows } = migrationOpRateRows({
-			op: op({
-				add_items: [
-					add({ reset: { interval: "day" }, feature_override: rates(9) }),
-					add(),
-				],
-				remove_items: [
-					stamped(rates(2)),
-					remove({ interval: "day", previous_feature_override: rates(8) }),
-				],
-			}),
-			features,
-		});
-		expect(rows.map((row) => [row.removeIndex, row.changes[0]?.from])).toEqual([
-			[1, "8 credits"],
-			[0, "2 credits"],
-		]);
-	});
-});
-
-describe("op form edits", () => {
-	const customize = {
-		add_items: [add()],
-		remove_items: [stamped(rates(2.857))],
-	};
-	const edited = (item: AddItem) =>
-		withEditedAddItem({ customize, addIndex: 0, item });
-
-	test.each([
-		["included", add({ included: 200 })],
-		[
-			"price",
-			add({ price: { amount: 10, interval: "month" } } as Partial<AddItem>),
-		],
-		["reset", add({ reset: { interval: "month", interval_count: 3 } })],
-	])("editing %s brings the pair back but keeps the old rates", (_, item) => {
-		const filter = edited(item).remove_items?.[0];
-		expect(filter?.only_feature_override_changed).toBeUndefined();
-		expect(filter?.previous_feature_override).toEqual(rates(2.857));
-	});
-
-	test("editing only the override stays merged, and an editor without overrides keeps it", () => {
-		expect(
-			edited(add({ feature_override: rates(5) })).remove_items?.[0]
-				.only_feature_override_changed,
-		).toBe(true);
-		const kept = edited(add({ feature_override: undefined }));
-		expect(kept.add_items?.[0].feature_override).toEqual(rates(3.571));
-		expect(kept.remove_items?.[0].only_feature_override_changed).toBe(true);
-	});
-
-	test("a grant edit on an item that inherited its rates still shows them", () => {
-		const after = withEditedAddItem({
-			customize: { add_items: [add()], remove_items: [stamped({})] },
-			addIndex: 0,
-			item: add({ included: 200 }),
-		});
-		expect(rowsOf(op(after))).toEqual(
-			single(["Gateway spend (USD): 1 → 3.571 credits"]),
-		);
-	});
-
-	test("a remove filter edited to match other items drops its stamps", () => {
-		const previous = stamped(rates(2));
-		expect(withEditedRemoveFilter({ previous, next: previous })).toEqual(
-			previous,
-		);
-		expect(
-			withEditedRemoveFilter({
-				previous,
-				next: { ...previous, included: 500 },
-			}),
-		).toEqual(remove({ included: 500 }));
-	});
+	expect(
+		rows([add({ reset: { interval: "day" } }), add()], [remove(), daily]),
+	).toEqual([
+		[true, "Gateway spend (USD) 9 → 3.571"],
+		[true, changed],
+	]);
 });

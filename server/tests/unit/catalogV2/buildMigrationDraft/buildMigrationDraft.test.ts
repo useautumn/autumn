@@ -11,11 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	BillingInterval,
-	type DiffedCustomizePlanV1,
-	ResetInterval,
-} from "@autumn/shared";
+import { BillingInterval, type DiffedCustomizePlanV1, ResetInterval } from "@autumn/shared";
 import { buildMigrationDraft } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraft.js";
 import type { MigrationTarget } from "@/internal/catalogV2/actions/buildMigrationDraft/types.js";
 
@@ -407,108 +403,63 @@ test("any target with billing changes sets no_billing_changes false", () => {
 const creditsOverride = (creditCost: number) => ({
 	credit_schema: [{ metered_feature_id: "gateway", credit_cost: creditCost }],
 });
+const creditsFilter = { feature_id: "credits", interval: ResetInterval.Month };
 
-const creditsTarget = ({
-	planId,
-	previousCost,
-	nextCost,
-	nextIncluded = 100,
-}: {
-	planId: string;
-	previousCost: number | null;
-	nextCost: number;
-	nextIncluded?: number;
-}) =>
-	target({
-		planId,
-		version: 1,
-		customize: {
-			remove_items: [
-				{ feature_id: "credits", interval: ResetInterval.Month, included: 100 },
-			],
-			add_items: [
+test("previous_feature_override is stamped only when the override changes", () => {
+	const creditsTarget = (
+		planId: string,
+		previous: number | null,
+		next: number,
+	) =>
+		target({
+			planId,
+			version: 1,
+			customize: {
+				remove_items: [creditsFilter],
+				add_items: [
+					{
+						feature_id: "credits",
+						included: 100,
+						unlimited: false,
+						reset: { interval: ResetInterval.Month },
+						feature_override: creditsOverride(next),
+					},
+				],
+			},
+			previousItems: [
 				{
 					feature_id: "credits",
-					included: nextIncluded,
-					unlimited: false,
 					reset: { interval: ResetInterval.Month },
-					feature_override: creditsOverride(nextCost),
-				},
+					...(previous !== null && {
+						feature_override: creditsOverride(previous),
+					}),
+				} as NonNullable<MigrationTarget["previousItems"]>[number],
 			],
-		},
-		previousItems: [
-			{
-				feature_id: "credits",
-				included: 100,
-				unlimited: false,
-				reset: { interval: ResetInterval.Month },
-				...(previousCost === null
-					? {}
-					: { feature_override: creditsOverride(previousCost) }),
-			} as NonNullable<MigrationTarget["previousItems"]>[number],
-		],
-	});
-
-test("previous_feature_override is stamped only when the override changes; the only-override flag only when nothing else does", () => {
+		});
 	const draft = buildMigrationDraft({
 		targets: [
-			creditsTarget({
-				planId: "changed",
-				previousCost: 2.857,
-				nextCost: 3.571,
-			}),
-			creditsTarget({ planId: "unchanged", previousCost: 2, nextCost: 2 }),
-			creditsTarget({ planId: "inherited", previousCost: null, nextCost: 3 }),
-			creditsTarget({
-				planId: "regranted",
-				previousCost: 2,
-				nextCost: 4,
-				nextIncluded: 200,
-			}),
+			creditsTarget("changed", 2.857, 3.571),
+			creditsTarget("unchanged", 2, 2),
+			creditsTarget("inherited", null, 3),
 		],
 		versionsWithCustomersByPlanId: {
 			changed: [1],
 			unchanged: [1],
 			inherited: [1],
-			regranted: [1],
 		},
 	});
-	const removeItemsByPlan = Object.fromEntries(
-		updatePlanOps(draft).map((operation) => [
-			operation.plan_filter.plan_id,
-			operation.customize?.remove_items,
-		]),
-	);
-
-	expect(removeItemsByPlan).toEqual({
+	expect(
+		Object.fromEntries(
+			updatePlanOps(draft).map((op) => [
+				op.plan_filter.plan_id,
+				op.customize?.remove_items,
+			]),
+		),
+	).toEqual({
 		changed: [
-			{
-				feature_id: "credits",
-				interval: ResetInterval.Month,
-				included: 100,
-				previous_feature_override: creditsOverride(2.857),
-				only_feature_override_changed: true,
-			},
+			{ ...creditsFilter, previous_feature_override: creditsOverride(2.857) },
 		],
-		inherited: [
-			{
-				feature_id: "credits",
-				interval: ResetInterval.Month,
-				included: 100,
-				previous_feature_override: {},
-				only_feature_override_changed: true,
-			},
-		],
-		regranted: [
-			{
-				feature_id: "credits",
-				interval: ResetInterval.Month,
-				included: 100,
-				previous_feature_override: creditsOverride(2),
-			},
-		],
-		unchanged: [
-			{ feature_id: "credits", interval: ResetInterval.Month, included: 100 },
-		],
+		inherited: [{ ...creditsFilter, previous_feature_override: {} }],
+		unchanged: [creditsFilter],
 	});
 });
