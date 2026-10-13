@@ -3,6 +3,7 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getSqliteOpenLock } from "../../../src/state/newSqliteConnection.js";
 import { openSlotDatabase } from "../../../src/state/openSlotDatabase.js";
 import { OPENER_PATH } from "./utils/openSlotInWorker.js";
 
@@ -27,7 +28,7 @@ const openOnWorkers = async ({
 		{ length: threads },
 		() =>
 			new Worker(OPENER_PATH, {
-				workerData: { path, start, threads },
+				workerData: { path, start, threads, lock: getSqliteOpenLock() },
 			} as never),
 	);
 	const outcomes = await Promise.all(
