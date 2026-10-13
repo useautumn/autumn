@@ -1,8 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { isRoutineWarning } from "../../src/otlp/isRoutineWarning.js";
-import { sazabiIntakeUrlOf } from "../../src/otlp/sazabiConfig.js";
-import { pinoLineToOtlpLogRecord } from "../../src/otlp/sazabiLogStream.js";
-import { createSazabiTriggerLogExporters } from "../../src/otlp/sazabiTriggerLogExporters.js";
+import {
+	pinoLineToOtlpLogRecord,
+	sazabiIntakeUrlOf,
+} from "../../src/otlp/sazabiLogStream.js";
 
 const SAZABI_INTAKE_URL = "https://abc.us-west-2.intake.sazabi.com/";
 
@@ -45,26 +46,6 @@ describe("pinoLineToOtlpLogRecord", () => {
 			timestamp: 1,
 			attributes: { service: "server", context: '{"org_id":"org_123"}' },
 		});
-	});
-});
-
-describe("createSazabiTriggerLogExporters", () => {
-	it("is empty when Sazabi is off", () => {
-		expect(createSazabiTriggerLogExporters({ env: {} })).toEqual([]);
-	});
-
-	it("skips the network when every record is below the threshold", () => {
-		const [exporter] = createSazabiTriggerLogExporters({
-			env: { NODE_ENV: "production", SAZABI_INTAKE_URL },
-		});
-		let code: number | undefined;
-		exporter?.export(
-			[{ severityNumber: 9 }] as Parameters<typeof exporter.export>[0],
-			(result) => {
-				code = result.code;
-			},
-		);
-		expect(code).toBe(0);
 	});
 });
 

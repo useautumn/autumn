@@ -6,15 +6,33 @@ import {
 } from "@opentelemetry/sdk-logs";
 import type pino from "pino";
 import { resolveDeployment } from "../logger/resolveLoggerOptions.js";
+import type { LoggerLevel } from "../types.js";
 import { isRoutineWarning } from "./isRoutineWarning.js";
-import {
-	SEVERITY_NUMBERS,
-	sazabiIntakeUrlOf,
-	sazabiLogLevelOf,
-} from "./sazabiConfig.js";
 
 const EXPORT_TIMEOUT_MS = 5000;
 const FLUSH_TIMEOUT_MS = 2000;
+
+const SEVERITY_NUMBERS: Record<string, number> = {
+	TRACE: 1,
+	DEBUG: 5,
+	INFO: 9,
+	WARN: 13,
+	ERROR: 17,
+	FATAL: 21,
+};
+
+/** The intake URL with no trailing slash, or undefined when Sazabi is off; dev/test need SAZABI_DEV_LOGS=1. */
+export const sazabiIntakeUrlOf = ({
+	env,
+}: {
+	env: NodeJS.ProcessEnv;
+}): string | undefined => {
+	const intakeUrl = env.SAZABI_INTAKE_URL?.replace(/\/+$/, "");
+	if (!intakeUrl) return undefined;
+	const isDevOrTest = env.NODE_ENV === "development" || env.NODE_ENV === "test";
+	if (isDevOrTest && env.SAZABI_DEV_LOGS !== "1") return undefined;
+	return intakeUrl;
+};
 
 type PinoLogLine = {
 	msg?: string;
@@ -79,7 +97,7 @@ export const createSazabiLogStream = ({
 
 	return {
 		entry: {
-			level: sazabiLogLevelOf({ env }),
+			level: (env.SAZABI_LOG_LEVEL as LoggerLevel | undefined) ?? "warn",
 			stream: {
 				write: (line: string) => {
 					try {

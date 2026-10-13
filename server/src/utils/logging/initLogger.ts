@@ -163,6 +163,13 @@ const createConsoleJsonStream = () =>
 		},
 	});
 
+const sazabiLogStreams: SazabiLogStream[] = [];
+
+/** Sends warnings still queued for Sazabi; call on shutdown beside flushErrorReports. */
+export const flushSazabiLogs = async (): Promise<void> => {
+	await Promise.all(sazabiLogStreams.map((stream) => stream.flush()));
+};
+
 /**
  * `mode: "dual"` is opt-in only — used by trigger.dev tasks so logs hit
  * both stdout (trigger run UI) and axiom (long-term store).
@@ -173,13 +180,6 @@ const createConsoleJsonStream = () =>
  *
  * `mode: "default"` preserves existing prod behavior verbatim.
  */
-const sazabiLogStreams: SazabiLogStream[] = [];
-
-/** Sends warnings still queued for Sazabi; call on shutdown beside flushErrorReports. */
-export const flushSazabiLogs = async (): Promise<void> => {
-	await Promise.all(sazabiLogStreams.map((stream) => stream.flush()));
-};
-
 export type InitLoggerOptions = {
 	mode?: "default" | "dual";
 	transport?: "direct" | "firelens";

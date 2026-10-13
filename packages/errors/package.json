@@ -9,11 +9,6 @@
 			"types": "./src/errors.ts",
 			"import": "./src/errors.ts",
 			"default": "./src/errors.ts"
-		},
-		"./errorReportingOptions": {
-			"types": "./src/external/sentry/errorReportingOptionsOf.ts",
-			"import": "./src/external/sentry/errorReportingOptionsOf.ts",
-			"default": "./src/external/sentry/errorReportingOptionsOf.ts"
 		}
 	},
 	"scripts": {

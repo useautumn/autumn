@@ -1,4 +1,4 @@
-import { errorReportingOptionsOf } from "@autumn/errors/errorReportingOptions";
+import { errorReportingOptionsOf } from "@autumn/errors";
 import * as Sentry from "@sentry/bun";
 
 const errorReportingOptions = errorReportingOptionsOf();
