@@ -10,12 +10,13 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isPayablePendingInvoice } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { updateCheckoutDbAndCache } from "@/internal/checkouts/actions/updateDbAndCache";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/** An open or paid invoice is resumed or awaited by findPendingInvoiceConflict instead. */
+/** Open or paid invoices stay for findPendingInvoiceConflict to resume or wait on. */
 const hasLiveInvoice = async ({
 	ctx,
 	metadata,
@@ -33,15 +34,13 @@ const hasLiveInvoice = async ({
 		expand: [],
 		onNotFound: () => undefined,
 	});
-	if (stripeInvoice?.status === "paid") return true;
 	return (
-		stripeInvoice?.status === "open" &&
-		Boolean(stripeInvoice.hosted_invoice_url)
+		stripeInvoice?.status === "paid" || isPayablePendingInvoice(stripeInvoice)
 	);
 };
 
-/** Re-attaching a plan replaces its pending copy on the same customer or entity,
- * closing the long-lived link that sold it. */
+/** Re-attaching a plan replaces its pending copy and closes the long-lived link that sold it.
+ * Returns the pending rows left afterwards. */
 export const discardReplacedPendingPlans = async ({
 	ctx,
 	fullCustomer,
@@ -52,13 +51,15 @@ export const discardReplacedPendingPlans = async ({
 	fullCustomer: FullCustomer;
 	attachProduct: FullProduct;
 	pendingCustomerProducts: FullCusProduct[];
-}) => {
+}): Promise<FullCusProduct[]> => {
 	const replacedCustomerProducts = pendingCustomerProducts.filter(
 		(customerProduct) =>
 			cp(customerProduct)
+				.recurring()
 				.hasProductId({ productId: attachProduct.id })
 				.onEntity({ internalEntityId: fullCustomer.entity?.internal_id }).valid,
 	);
+	const discardedIds = new Set<string>();
 
 	for (const customerProduct of replacedCustomerProducts) {
 		const metadata = customerProduct.metadata_id
@@ -66,7 +67,7 @@ export const discardReplacedPendingPlans = async ({
 					db: ctx.db,
 					id: customerProduct.metadata_id,
 				})
-			: undefined;
+			: null;
 		if (metadata && (await hasLiveInvoice({ ctx, metadata }))) continue;
 
 		const longLivedCheckout =
@@ -77,6 +78,7 @@ export const discardReplacedPendingPlans = async ({
 			}));
 
 		await discardPendingCustomerProduct({ ctx, customerProduct });
+		discardedIds.add(customerProduct.id);
 
 		if (longLivedCheckout) {
 			await updateCheckoutDbAndCache({
@@ -86,4 +88,6 @@ export const discardReplacedPendingPlans = async ({
 			});
 		}
 	}
+
+	return pendingCustomerProducts.filter(({ id }) => !discardedIds.has(id));
 };

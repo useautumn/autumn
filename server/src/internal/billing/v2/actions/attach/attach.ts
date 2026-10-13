@@ -169,28 +169,25 @@ export async function attach({
 		}
 	}
 
-	// Confirm flows complete the pending plan they were opened for, so only direct attaches replace it.
-	if (!skipAutumnCheckout) {
-		await discardReplacedPendingPlans({
-			ctx,
-			fullCustomer: billingContext.fullCustomer,
-			attachProduct: billingContext.attachProduct,
-			pendingCustomerProducts: await listPendingCustomerProducts({
+	const pendingCustomerProducts = await listPendingCustomerProducts({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+	});
+	// System and confirm flows (incl. the long-lived link's own start) never replace a pending plan.
+	const remainingPendingCustomerProducts = skipAutumnCheckout
+		? pendingCustomerProducts
+		: await discardReplacedPendingPlans({
 				ctx,
 				fullCustomer: billingContext.fullCustomer,
-			}),
-		});
-	}
+				attachProduct: billingContext.attachProduct,
+				pendingCustomerProducts,
+			});
 
 	const pendingInvoiceResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		attachProduct: billingContext.attachProduct,
-		loadPendingCustomerProducts: () =>
-			listPendingCustomerProducts({
-				ctx,
-				fullCustomer: billingContext.fullCustomer,
-			}),
+		loadPendingCustomerProducts: async () => remainingPendingCustomerProducts,
 	});
 	if (pendingInvoiceResult) {
 		preserveSubjectCache({ ctx });
