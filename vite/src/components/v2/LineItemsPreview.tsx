@@ -6,7 +6,11 @@ import {
 	AccordionTrigger,
 	Badge,
 } from "@autumn/ui";
-import { ArrowCounterClockwiseIcon, XIcon } from "@phosphor-icons/react";
+import {
+	ArrowCounterClockwiseIcon,
+	CircleNotchIcon,
+	XIcon,
+} from "@phosphor-icons/react";
 import { Decimal } from "decimal.js";
 import type { ReactNode } from "react";
 import { AddInvoiceLineForm } from "@/components/forms/shared/invoiceLineEdits/AddInvoiceLineForm";
@@ -35,6 +39,8 @@ export interface LineItemsContentProps<T extends BillingLineItem> {
 	accordionTitle?: string;
 	/** Set when the previewed invoice accepts add_lines / remove_lines. */
 	lineEdits?: InvoiceLineEditsController;
+	/** A refetch is in flight, so removals and additions are still settling. */
+	isRefreshing?: boolean;
 }
 
 export interface LineItemsPreviewProps<T extends BillingLineItem>
@@ -104,7 +110,7 @@ const RowIconButton = ({
 }) => (
 	<button
 		aria-label={label}
-		className="flex size-5 shrink-0 items-center justify-center rounded text-tertiary-foreground hover:bg-interactive-secondary-hover hover:text-foreground"
+		className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-tertiary-foreground hover:bg-interactive-secondary-hover hover:text-foreground"
 		onClick={onClick}
 		title={label}
 		type="button"
@@ -121,8 +127,22 @@ export function LineItemsContent<T extends BillingLineItem>({
 	totals = [],
 	accordionTitle = "Line Items",
 	lineEdits,
+	isRefreshing = false,
 }: LineItemsContentProps<T>) {
-	const filteredItems = visibleLineItems({ lineItems, filterZeroAmounts });
+	const removedSelectors = new Set(
+		(lineEdits?.removed ?? []).map(({ removeLine }) =>
+			JSON.stringify(removeLine),
+		),
+	);
+	// Until the refetch lands, the stale preview still holds lines that were just removed.
+	const filteredItems = visibleLineItems({
+		lineItems,
+		filterZeroAmounts,
+	}).filter(
+		(item) =>
+			!item.remove_line ||
+			!removedSelectors.has(JSON.stringify(item.remove_line)),
+	);
 	const addedIndexes = addedLineIndexes({ items: filteredItems, lineEdits });
 	const removedLines = lineEdits?.removed ?? [];
 	const showLineList =
@@ -142,7 +162,7 @@ export function LineItemsContent<T extends BillingLineItem>({
 					<AccordionItem value="line-items" className="border-none">
 						<AccordionTrigger
 							className={cn(
-								"group py-1 hover:no-underline",
+								"group cursor-pointer py-1 hover:no-underline",
 								"data-[state=open]:text-foreground hover:text-foreground",
 								"[&>svg]:group-hover:text-foreground [&>svg]:group-data-[state=open]:text-foreground",
 							)}
@@ -210,12 +230,18 @@ export function LineItemsContent<T extends BillingLineItem>({
 										<span className="shrink-0 text-sm text-tertiary-foreground line-through">
 											{amountLabel({ amount: lineItem.total, currency })}
 										</span>
-										<RowIconButton
-											label="Undo remove"
-											onClick={() => lineEdits?.undoRemove(removedIndex)}
-										>
-											<ArrowCounterClockwiseIcon size={12} />
-										</RowIconButton>
+										{isRefreshing ? (
+											<span className="flex size-5 shrink-0 items-center justify-center text-tertiary-foreground">
+												<CircleNotchIcon size={12} className="animate-spin" />
+											</span>
+										) : (
+											<RowIconButton
+												label="Undo remove"
+												onClick={() => lineEdits?.undoRemove(removedIndex)}
+											>
+												<ArrowCounterClockwiseIcon size={12} />
+											</RowIconButton>
+										)}
 									</div>
 								))}
 								{lineEdits && <AddInvoiceLineForm onAdd={lineEdits.addLine} />}

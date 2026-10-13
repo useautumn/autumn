@@ -222,6 +222,7 @@ export function PreviewSection({
 						totals={totals}
 						filterZeroAmounts={filterZeroAmounts}
 						lineEdits={activeLineEdits}
+						isRefreshing={loading}
 					/>
 					{totalsBlockVisible && (
 						<PreviewTotalsBlock previewData={previewData} />
