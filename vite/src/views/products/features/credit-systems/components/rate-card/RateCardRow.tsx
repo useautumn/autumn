@@ -9,6 +9,40 @@ import { type RateCardRow as Row, rateText } from "../../utils/rateCardRows";
 
 const BADGES = { changed: "Changed", added: "Added", excluded: "Not covered" };
 
+const badge = (state: keyof typeof BADGES) => (
+	<Badge
+		variant="muted"
+		className={cn(
+			"shrink-0 font-medium",
+			state === "excluded" ? "text-tertiary-foreground" : "text-foreground",
+		)}
+	>
+		{BADGES[state]}
+	</Badge>
+);
+
+/** The rate, with the credit system's rate it replaced struck through. */
+const rateValue = ({ row, features }: { row: Row; features: Feature[] }) => {
+	if (row.state === "excluded") return badge("excluded");
+	const was =
+		row.state === "changed" &&
+		rateText({ rate: row.catalogRate, features }).replace(/ credits?$/, "");
+	return (
+		<>
+			{was && <s className="text-subtle text-xs">was {was}</s>}
+			<span
+				className={
+					row.state === "inherited"
+						? "text-tertiary-foreground"
+						: "font-medium text-foreground"
+				}
+			>
+				{rateText({ rate: row.rate, features })}
+			</span>
+		</>
+	);
+};
+
 /** One rate card row. With `source` it is read-only and says where the rate is set. */
 export function RateCardRow({
 	row,
@@ -30,32 +64,17 @@ export function RateCardRow({
 	});
 	const name = featureDisplayName({ features, featureId: row.featureId });
 	const setOnPlan = row.state === "changed" || row.state === "added";
-	const badge = (state: keyof typeof BADGES) => (
-		<Badge
-			variant="muted"
-			className={cn(
-				"shrink-0 font-medium",
-				state === "excluded" ? "text-tertiary-foreground" : "text-foreground",
-			)}
-		>
-			{BADGES[state]}
-		</Badge>
-	);
+	const icon =
+		!source &&
+		feature &&
+		getFeatureIconConfig(feature.type, feature.config?.usage_type, 14).icon;
 
 	const content = (
 		<>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
-					{!source && feature && (
-						<span className="shrink-0 text-tertiary-foreground">
-							{
-								getFeatureIconConfig(
-									feature.type,
-									feature.config?.usage_type,
-									14,
-								).icon
-							}
-						</span>
+					{icon && (
+						<span className="shrink-0 text-tertiary-foreground">{icon}</span>
 					)}
 					<span
 						title={name}
@@ -90,28 +109,7 @@ export function RateCardRow({
 				)}
 			</span>
 			<span className="ml-auto flex shrink-0 items-baseline gap-1.5 whitespace-nowrap text-sm">
-				{row.state === "changed" && (
-					<s className="text-subtle text-xs">
-						was{" "}
-						{rateText({ rate: row.catalogRate, features }).replace(
-							/ credits?$/,
-							"",
-						)}
-					</s>
-				)}
-				{row.state === "excluded" ? (
-					badge("excluded")
-				) : (
-					<span
-						className={
-							row.state === "inherited"
-								? "text-tertiary-foreground"
-								: "font-medium text-foreground"
-						}
-					>
-						{rateText({ rate: row.rate, features })}
-					</span>
-				)}
+				{rateValue({ row, features })}
 			</span>
 		</>
 	);
