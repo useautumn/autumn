@@ -10,8 +10,12 @@ const trackCommandOnWire = z.custom<TrackCommand>(
 	(value) => typeof value === "object" && value !== null,
 );
 
-/** `seq` is the Atom's per-customer journal number, so Autumn can say "seen up to #N from you". */
+/**
+ * One journal's tracks: `writer` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up
+ * to #N from that journal". A new file is a new writer, so its numbering never collides with an old one's.
+ */
 export const AtomTracksAppendRequestSchema = z.object({
+	writer: z.string().min(1),
 	tracks: z.array(
 		z.object({
 			seq: z.number().int().positive(),
