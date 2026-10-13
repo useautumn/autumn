@@ -33,8 +33,12 @@ const DAY_SECONDS = 24 * 60 * 60;
 
 const decreaseSetup = ({
 	onDecrease = OnDecrease.ProrateImmediately,
+	tiers = TIERS,
+	billingUnits = 1,
 }: {
 	onDecrease?: OnDecrease;
+	tiers?: UsageTier[];
+	billingUnits?: number;
 } = {}) => {
 	const customerEntitlement = customerEntitlements.create({
 		entitlementId: "ent_users",
@@ -55,7 +59,7 @@ const decreaseSetup = ({
 	const price = {
 		...base,
 		tier_behavior: TierBehavior.VolumeBased,
-		config: { ...base.config, usage_tiers: TIERS, billing_units: 1 },
+		config: { ...base.config, usage_tiers: tiers, billing_units: billingUnits },
 		proration_config: {
 			on_increase: OnIncrease.ProrateImmediately,
 			on_decrease: onDecrease,
@@ -192,6 +196,26 @@ describe("volume seat decrease that raises the bill", () => {
 
 		expect(setup.calls.invoiceItems[0]?.description).toStartWith(
 			"Pro - Users: 0 @ $0.00 (volume tier 1–3)",
+		);
+	});
+
+	test("with packs of 5, the line names the packed seats over included, not the re-rounded total", async () => {
+		// 3 included, 11 → 6 seats: 3 over rounds up to one 5-seat pack, not 10.
+		const setup = decreaseSetup({
+			tiers: [
+				{ to: 20, amount: 50 },
+				{ to: "inf", amount: 40 },
+			] as UsageTier[],
+			billingUnits: 5,
+		});
+		await handleProratedDowngrade({
+			...setup,
+			prevBalance: INCLUDED - 11,
+			newBalance: INCLUDED - 6,
+		});
+
+		expect(setup.calls.invoiceItems[0]?.description).toStartWith(
+			"Pro - Users: 5 @ $50.00 per 5 (volume tier 4–23)",
 		);
 	});
 });

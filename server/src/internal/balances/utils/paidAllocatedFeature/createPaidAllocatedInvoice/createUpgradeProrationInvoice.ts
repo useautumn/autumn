@@ -24,7 +24,7 @@ const getUpgradeProrationInvoiceItem = ({
 	newPrice,
 	now,
 	feature,
-	newRoundedUsage,
+	newUsage,
 	allowance,
 	price,
 	onIncrease,
@@ -37,7 +37,7 @@ const getUpgradeProrationInvoiceItem = ({
 	newPrice: number;
 	now: number;
 	feature: Feature;
-	newRoundedUsage: number;
+	newUsage: number;
 	allowance: number;
 	price: Price;
 	onIncrease: OnIncrease;
@@ -52,7 +52,7 @@ const getUpgradeProrationInvoiceItem = ({
 		price,
 		product,
 		feature,
-		usage: newRoundedUsage,
+		usage: newUsage,
 		allowance,
 		currency: org?.default_currency ?? "usd",
 	});
@@ -101,7 +101,7 @@ export const createUpgradeProrationInvoice = async ({
 	subItem,
 	newPrice,
 	prevPrice,
-	newRoundedUsage,
+	newUsage,
 	allowance,
 	feature,
 	product,
@@ -115,7 +115,7 @@ export const createUpgradeProrationInvoice = async ({
 	subItem: Stripe.SubscriptionItem;
 	newPrice: number;
 	prevPrice: number;
-	newRoundedUsage: number;
+	newUsage: number;
 	allowance: number;
 	feature: Feature;
 	product: Product;
@@ -134,7 +134,7 @@ export const createUpgradeProrationInvoice = async ({
 		newPrice,
 		now,
 		feature,
-		newRoundedUsage,
+		newUsage,
 		allowance,
 		price: cusPrice.price,
 		onIncrease,

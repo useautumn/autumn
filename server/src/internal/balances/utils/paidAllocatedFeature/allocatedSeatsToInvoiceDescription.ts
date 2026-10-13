@@ -8,9 +8,10 @@ import {
 } from "@autumn/shared";
 import { volumeUsageToLineDescription } from "@shared/utils/billingUtils/invoicingUtils/descriptionUtils/volumeUsageToLineDescription";
 import { volumeUsageToTier } from "@shared/utils/billingUtils/invoicingUtils/lineItemUtils/volumeUsageToTier";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
-/** A seat proration line's description. Volume names the seats over included at the tier
- * they reach, as renewal lines do; other prices keep the total-seat wording. */
+/** A seat proration line's description from unrounded seats. Volume names the seats over included
+ * at the tier they reach, as renewal lines do; other prices keep the total-seat wording. */
 export const allocatedSeatsToInvoiceDescription = ({
 	price,
 	product,
@@ -28,7 +29,7 @@ export const allocatedSeatsToInvoiceDescription = ({
 }): string => {
 	const totalSeatDescription = getFeatureInvoiceDescription({
 		feature,
-		usage,
+		usage: roundUsage({ usage, price }),
 		billingUnits: (price.config as UsagePriceConfig).billing_units,
 		prodName: product.name,
 	});

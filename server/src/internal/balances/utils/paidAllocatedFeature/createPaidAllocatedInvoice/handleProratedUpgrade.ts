@@ -149,11 +149,6 @@ export const handleProratedUpgrade = async ({
 		cusPrice.price.proration_config?.on_increase ||
 		OnIncrease.ProrateImmediately;
 
-	const newRoundedUsage = roundUsage({
-		usage: newUsage,
-		price: cusPrice.price,
-	});
-
 	let invoice = null;
 	if (shouldCreateInvoiceItem(onIncrease) && sub.status !== "trialing") {
 		invoice = await createUpgradeProrationInvoice({
@@ -164,7 +159,7 @@ export const handleProratedUpgrade = async ({
 			subItem,
 			newPrice,
 			prevPrice,
-			newRoundedUsage,
+			newUsage,
 			allowance: cusEnt.entitlement.allowance ?? 0,
 			feature,
 			product,

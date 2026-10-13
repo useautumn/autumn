@@ -34,7 +34,7 @@ const createDowngradeProrationInvoice = async ({
 	subItem,
 	newPrice,
 	prevPrice,
-	newRoundedUsage,
+	newUsage,
 	allowance,
 	feature,
 	product,
@@ -48,7 +48,7 @@ const createDowngradeProrationInvoice = async ({
 	subItem: Stripe.SubscriptionItem;
 	newPrice: number;
 	prevPrice: number;
-	newRoundedUsage: number;
+	newUsage: number;
 	allowance: number;
 	feature: Feature;
 	product: Product;
@@ -70,7 +70,7 @@ const createDowngradeProrationInvoice = async ({
 		price: cusPrice.price,
 		product,
 		feature,
-		usage: newRoundedUsage,
+		usage: newUsage,
 		allowance,
 		currency: ctx.org?.default_currency ?? "usd",
 	});
@@ -203,10 +203,7 @@ export const handleProratedDowngrade = async ({
 			subItem,
 			newPrice,
 			prevPrice,
-			newRoundedUsage: roundUsage({
-				usage: newUsage,
-				price: cusPrice.price,
-			}),
+			newUsage,
 			allowance: cusEnt.entitlement.allowance ?? 0,
 			feature,
 			product,
