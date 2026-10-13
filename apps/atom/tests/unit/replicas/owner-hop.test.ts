@@ -94,6 +94,7 @@ describe("a check on a replica that does not own the customer", () => {
 
 		expect(deducted.headers.get("x-atom-forwarded")).toBeNull();
 		expect(viaB.headers.get("x-atom-proxied")).toBe("owner");
+		expect(viaB.headers.get("x-atom-forwarded")).toBeNull();
 		expect((await viaB.json()).balance.remaining).toBe(9);
 		expect(b.stats().checksProxied).toBe(1);
 		expect(a.stats().checksProxied).toBe(0);
@@ -187,7 +188,7 @@ describe("a check on a replica that does not own the customer", () => {
 		expect(autumn.calls).toEqual([]);
 	});
 
-	test("gets the owner's own refusal as it was given: status and body", async () => {
+	test("gets the owner's own refusal as it was given: status, body, and the API's answer marked as forwarded", async () => {
 		const { a, b } = await agreeingPair();
 		const autumn = countingAutumn(() =>
 			Response.json({ code: "feature_not_found" }, { status: 404 }),
@@ -202,6 +203,8 @@ describe("a check on a replica that does not own the customer", () => {
 		expect(reply.status).toBe(404);
 		expect(await reply.json()).toEqual({ code: "feature_not_found" });
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		// Without it the SDK takes the API's reply for the Atom's own, and asks the API again.
+		expect(reply.headers.get("x-atom-forwarded")).toBe("feature_not_stored");
 		expect(autumn.calls).toEqual(["/v1/balances.check"]);
 	});
 });
