@@ -1,6 +1,7 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { newSqliteConnection } from "./newSqliteConnection.js";
 import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
 const TICK_MS = 1000;
@@ -39,7 +40,10 @@ export const startWalCheckpointer = ({
 		try {
 			let database = open.get(path);
 			if (!database) {
-				database = new Database(path, { readwrite: true, create: false });
+				database = newSqliteConnection({
+					path,
+					options: { readwrite: true, create: false },
+				});
 				open.set(path, database);
 			}
 			// Passive never waits on a reader or writer: what it cannot copy now it copies next time.
