@@ -17,6 +17,7 @@ import type { ApiFeatureProcessors } from "../../api/features/components/process
 import type {
 	ApiCreditDimension,
 	ApiCreditSchemaItem,
+	ApiCreditSchemaOverrideItem,
 } from "../../api/features/creditRateCard.js";
 import type {
 	CreateFeatureV1Params,
@@ -31,6 +32,7 @@ import {
 import type {
 	CreditDimension,
 	CreditSchemaItem,
+	CreditSchemaOverrideItem,
 	CreditTier,
 	FeatureConfigOverride,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
@@ -175,15 +177,18 @@ export const apiCreditSchemaItemToDb = (
 	...apiCreditRateToDb(credit),
 });
 
+// Excluded rows carry no rate, so they map across unchanged.
+const apiOverrideRowToDb = (row: ApiCreditSchemaOverrideItem) =>
+	isExcludedCreditSchemaItem(row) ? row : apiCreditSchemaItemToDb(row);
+
+const dbOverrideRowToApi = (row: CreditSchemaOverrideItem) =>
+	isExcludedCreditSchemaItem(row) ? row : dbCreditSchemaItemToApi(row);
+
 export const apiFeatureOverrideToDb = (
 	override: ApiFeatureOverride,
 ): FeatureConfigOverride => ({
 	...(override.credit_schema
-		? {
-				schema: override.credit_schema.map((row) =>
-					"excluded" in row ? row : apiCreditSchemaItemToDb(row),
-				),
-			}
+		? { schema: override.credit_schema.map(apiOverrideRowToDb) }
 		: {}),
 	...(override.markups ? { markups: override.markups } : {}),
 });
@@ -192,11 +197,7 @@ export const dbFeatureOverrideToApi = (
 	override: FeatureConfigOverride,
 ): ApiFeatureOverride => ({
 	...(override.schema
-		? {
-				credit_schema: override.schema.map((row) =>
-					isExcludedCreditSchemaItem(row) ? row : dbCreditSchemaItemToApi(row),
-				),
-			}
+		? { credit_schema: override.schema.map(dbOverrideRowToApi) }
 		: {}),
 	...(override.markups ? { markups: override.markups } : {}),
 });
