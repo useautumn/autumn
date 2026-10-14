@@ -213,5 +213,12 @@ export default defineConfig({
 	build: {
 		// Disable sourcemaps in CI to reduce memory usage during build
 		sourcemap: !process.env.CI,
+		rollupOptions: {
+			output: {
+				// Without this, every icon shared by two lazy pages becomes its own
+				// chunk, so opening a page costs ~150 tiny requests and import hops.
+				experimentalMinChunkSize: 20_000,
+			},
+		},
 	},
 });

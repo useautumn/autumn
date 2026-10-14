@@ -6,26 +6,17 @@ import {
 	parseAsStringLiteral,
 	useQueryStates,
 } from "nuqs";
-import { useMemo } from "react";
 import { useParams } from "react-router";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import type { PlanVariant } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type { ProductDataCatalogLicense } from "../productDataTypes";
+import {
+	type ProductQueryResponse,
+	useProductDataQueryOptions,
+} from "./useProductDataQueryOptions";
 
-import { throwBackendError } from "@/utils/genUtils";
-
-import type { ProductDataResponse } from "../productDataTypes";
-import { useCachedProduct } from "./getCachedProduct";
-import { useProductCountsQuery } from "./queries/useProductCountsQuery";
-
-type ProductQueryResponse = ProductDataResponse & {
-	variants: PlanVariant[];
-	numVersions: number;
-	versionCounts: Record<
-		number,
-		{ active: number; canceled: number; custom: number; trialing: number }
-	>;
-};
+const EMPTY_CATALOG_LICENSES: ProductDataCatalogLicense[] = [];
+const EMPTY_VARIANTS: PlanVariant[] = [];
+const EMPTY_VERSION_COUNTS: ProductQueryResponse["versionCounts"] = {};
 
 // Product query state...
 export const ALL_VARIANTS_VIEW = "all-variants" as const;
@@ -55,47 +46,17 @@ export const useProductQuery = () => {
 	const { queryStates } = useProductQueryState();
 	const productId = queryStates.productId || product_id;
 
-	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const buildKey = useQueryKeyFactory();
-	const { getCachedProduct } = useCachedProduct({ productId: productId });
+	const productDataQueryOptions = useProductDataQueryOptions();
 
-	const cachedProduct = useMemo(getCachedProduct, []);
-
-	const fetcher = async () => {
-		if (!productId) return null;
-
-		try {
-			const url = `/products/${productId}/data`;
-			const queryParams = {
-				version: queryStates.version,
-			};
-
-			const { data } = await axiosInstance.get<ProductQueryResponse>(url, {
-				params: queryParams,
-			});
-			return data;
-		} catch (error) {
-			throwBackendError(error);
-		}
-	};
-
+	// Hold the current version on screen until the next one has fully loaded,
+	// so a version switch swaps atomically. Never carry data across plans.
 	const { data, isLoading, refetch, error } = useQuery({
-		queryKey: buildKey(["product", productId, queryStates.version]),
-		queryFn: fetcher,
-		retry: false, // Don't retry on error (e.g., product not found)
-		enabled: !!productId, // Only run query if productId exists
+		...productDataQueryOptions({ productId, version: queryStates.version }),
+		placeholderData: (previous, previousQuery) =>
+			previousQuery?.queryKey[1] === productId ? previous : undefined,
 	});
 
-	const { refetch: refetchCounts } = useProductCountsQuery();
-
-	const product = data?.product || cachedProduct;
-	const variants = (data?.variants || []) as PlanVariant[];
-	const isLoadingWithCache = cachedProduct ? false : isLoading;
-
-	/**
-	 * Invalidates all individual product queries across the app
-	 */
 	const invalidate = async () => {
 		await queryClient.invalidateQueries({ queryKey: ["product"] });
 		await Promise.all([
@@ -106,21 +67,15 @@ export const useProductQuery = () => {
 	};
 
 	return {
-		product,
-		catalogLicenses: data?.catalogLicenses ?? [],
-		variants,
-		numVersions: data?.numVersions || cachedProduct?.version || 1,
-		versionCounts: (data?.versionCounts || {}) as Record<
-			number,
-			{ active: number; canceled: number; custom: number; trialing: number }
-		>,
-		isLoading: isLoadingWithCache,
+		product: data?.product,
+		catalogLicenses: data?.catalogLicenses ?? EMPTY_CATALOG_LICENSES,
+		variants: data?.variants ?? EMPTY_VARIANTS,
+		numVersions: data?.numVersions || data?.product.version || 1,
+		versionCounts: data?.versionCounts ?? EMPTY_VERSION_COUNTS,
+		isLoading,
 		refetch: async () => {
 			await refetch();
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["migrations"] }),
-				refetchCounts(),
-			]);
+			await queryClient.invalidateQueries({ queryKey: ["migrations"] });
 		},
 		invalidate,
 		error,

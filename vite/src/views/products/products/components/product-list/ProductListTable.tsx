@@ -13,6 +13,7 @@ import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
+import { usePrefetchPlanPage } from "@/views/products/plan/hooks/usePrefetchPlanPage";
 import { LicenseListTable } from "./LicenseListTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
@@ -51,6 +52,7 @@ function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
 	const { queryStates } = useProductsQueryState();
+	const prefetchPlanPage = usePrefetchPlanPage();
 
 	// Shared sorting state for all tables
 	const [sorting, setSorting] = useState<SortingState>([]);
@@ -235,6 +237,7 @@ export function ProductListTable() {
 								numberOfColumns: columns.length,
 								enableSorting,
 								getRowHref,
+								onRowIntent: prefetchPlanPage,
 								getRowClassName: (product: ProductWithCounts) =>
 									product.base_id ? "[&>td]:bg-background" : undefined,
 								emptyStateText: queryStates.showArchivedProducts
@@ -260,6 +263,7 @@ export function ProductListTable() {
 									numberOfColumns: columns.length,
 									enableSorting,
 									getRowHref,
+									onRowIntent: prefetchPlanPage,
 									rowClassName: "h-10",
 								}}
 							>
@@ -279,6 +283,7 @@ export function ProductListTable() {
 								numberOfColumns: columns.length,
 								enableSorting,
 								getRowHref,
+								onRowIntent: prefetchPlanPage,
 								emptyStateText:
 									"One-time prices for top-ups or lifetime purchases",
 								rowClassName: "h-10",
