@@ -394,3 +394,39 @@ test(
 		expect(inserted.next_reset_at).toBeNull();
 	},
 );
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: a pool written before credit-rate signatures keeps its usage",
+	),
+	() => {
+		const overriddenLicense = customerLicense({ granted: 3 });
+		const seatProduct = overriddenLicense.planLicense?.product;
+		if (!seatProduct) throw new Error("seat product missing");
+		seatProduct.entitlements = [
+			{
+				...pooledMessagesEntitlement(),
+				feature_override: {
+					schema: [{ metered_feature_id: "tokens", credit_amount: 2 }],
+				},
+			} as EntitlementWithFeature,
+		];
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [
+				existingPool({ granted: 300, balance: 100 }),
+			],
+		});
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [overriddenLicense],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		expect(computeContext.plan.insertPoolBalances).toHaveLength(0);
+		expect(computeContext.plan.updatePoolBalances).toHaveLength(0);
+	},
+);

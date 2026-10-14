@@ -6,7 +6,8 @@
  *   - Two unpriced plans granting 48 and 24 give 24, not 72 (PRD case 1).
  *   - Equal values (100 + 100) give 100, not 200 (PRD case 2).
  *   - A plan without the feature is left out, never counting as 0 (PRD case 9).
- *   - The pool's contributions list both 48 and 24 as competing, first.
+ *   - The pool's contributions list both 48 and 24 as competing, with 24 as the
+ *     pool-wide winner.
  *   - A lower plan granted for a while wins, and its removal restores the
  *     previous winner (the "Grant for free" trial).
  */
@@ -91,14 +92,17 @@ test.concurrent(
 			db: ctx.db,
 			customerId,
 		});
-		const { list } = (await autumnV2_3.post(
+		const { list, winning_contribution_id } = (await autumnV2_3.post(
 			"/pooled_balances.list_contributions",
 			{
 				pooled_balance_id: contributions[0].pooled_balance_id,
 				offset: 0,
 				limit: 10,
 			},
-		)) as { list: ApiPooledBalanceContributionV0[] };
+		)) as {
+			list: ApiPooledBalanceContributionV0[];
+			winning_contribution_id: string | null;
+		};
 		expect(
 			list.map(({ current_contribution, competes, unlimited }) => ({
 				current_contribution,
@@ -110,6 +114,11 @@ test.concurrent(
 				{ current_contribution: 48, competes: true, unlimited: false },
 				{ current_contribution: 24, competes: true, unlimited: false },
 			]),
+		);
+
+		expect(winning_contribution_id).toBe(
+			list.find(({ current_contribution }) => current_contribution === 24)
+				?.id ?? "missing",
 		);
 
 		// ── A plan without the feature changes nothing ─────────────────────

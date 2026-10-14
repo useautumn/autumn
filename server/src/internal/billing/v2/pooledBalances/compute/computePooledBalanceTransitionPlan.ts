@@ -11,8 +11,8 @@ import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceS
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
 import {
 	competingFeatureIdsOf,
-	unpooledCompetingCustomerProducts,
-} from "./competing/unpooledCompetingCustomerProducts";
+	staleCompetingCustomerProducts,
+} from "./competing/staleCompetingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
 
@@ -79,7 +79,7 @@ export const computePooledBalanceTransitionPlan = ({
 		});
 	}
 
-	for (const customerProduct of unpooledCompetingCustomerProducts({
+	for (const customerProduct of staleCompetingCustomerProducts({
 		fullCustomer,
 		featureIds: competingFeatureIdsOf({
 			incomingCustomerProducts,
@@ -90,6 +90,8 @@ export const computePooledBalanceTransitionPlan = ({
 			...outgoingCustomerProductIds,
 		]),
 	})) {
+		// An additive share from before the switch leaves first, then rejoins as a competing one.
+		applyOutgoingPooledBalanceSources({ computeContext, customerProduct });
 		applyIncomingPooledBalanceSources({
 			ctx,
 			computeContext,

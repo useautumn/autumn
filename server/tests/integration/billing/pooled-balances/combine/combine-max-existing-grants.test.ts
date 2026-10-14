@@ -1,12 +1,16 @@
 /**
- * A feature switched to `combine: "max"` after customers already hold plans:
- * those earlier grants join the pool, with their usage, the next time a plan
+ * A feature switched to `combine: "max"` / `"min"` after customers already hold
+ * plans: those earlier grants compete, with their usage, the next time a plan
  * change moves the feature.
  *
  * Contract:
  *   - Pro (1,000, 800 used) attached while the feature adds up, then the
  *     feature is set to max and a 5,000 plan is attached → one pool, granted
  *     5,000, 4,200 left: Pro's grant competes and its usage is kept.
+ *   - Same, with Pro's item explicitly pooled: its additive share converts to
+ *     a competing one instead of stacking (5,000, not 6,000).
+ *   - Lifetime grants 48 + 24 + 12 attached while adding up, feature set to
+ *     min, the 12 plan cancelled → the remaining grants compete: 24, not 72.
  */
 
 import { test } from "bun:test";
@@ -15,6 +19,7 @@ import {
 	type AttachParamsV1Input,
 	FeatureCombine,
 	FeatureType,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -25,29 +30,43 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 import { expectCombinePoolCorrect } from "./utils/expectCombinePoolCorrect.js";
 
-const featureId = uniqueTestId("combine_heal_messages");
+const autumn = new AutumnInt({ version: ApiVersion.V2_1 });
+
+const createSumFeature = async ({
+	prefix,
+	consumable,
+}: {
+	prefix: string;
+	consumable: boolean;
+}) => {
+	const featureId = uniqueTestId(prefix);
+	await autumn.post("/features.create", {
+		feature_id: featureId,
+		name: prefix,
+		type: FeatureType.Metered,
+		consumable,
+	});
+	return featureId;
+};
 
 const setFeatureCombine = async ({
-	autumn,
+	featureId,
 	combine,
 }: {
-	autumn: AutumnInt;
+	featureId: string;
 	combine: FeatureCombine;
 }) => {
 	await autumn.post("/features.update", { feature_id: featureId, combine });
 };
 
-test(
+test.concurrent(
 	chalk.yellowBright(
 		"combine max: grants attached before the switch join the pool with their usage",
 	),
 	async () => {
 		const customerId = "combine-heal-existing-grants";
-		const autumn = new AutumnInt({ version: ApiVersion.V2_1 });
-		await autumn.post("/features.create", {
-			feature_id: featureId,
-			name: "Combine heal messages",
-			type: FeatureType.Metered,
+		const featureId = await createSumFeature({
+			prefix: "combine_heal_messages",
 			consumable: true,
 		});
 
@@ -81,7 +100,7 @@ test(
 			remaining: 200,
 		});
 
-		await setFeatureCombine({ autumn, combine: FeatureCombine.Max });
+		await setFeatureCombine({ featureId, combine: FeatureCombine.Max });
 		await autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: module.id,
@@ -102,6 +121,157 @@ test(
 			granted: 5000,
 			remaining: 4200,
 			usage: 800,
+		});
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright(
+		"combine max: an explicitly pooled grant from before the switch competes instead of adding",
+	),
+	async () => {
+		const customerId = "combine-heal-pooled-grant";
+		const featureId = await createSumFeature({
+			prefix: "combine_heal_pooled",
+			consumable: true,
+		});
+
+		const pro = products.base({
+			id: "combine-heal-pooled-pro",
+			items: [
+				{
+					...constructFeatureItem({ featureId, includedUsage: 1000 }),
+					pooled: true,
+				},
+			],
+		});
+		const module = products.base({
+			id: "combine-heal-pooled-module",
+			isAddOn: true,
+			items: [constructFeatureItem({ featureId, includedUsage: 5000 })],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [pro, module] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId, value: 800 }),
+			],
+		});
+
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId,
+			granted: 1000,
+			balance: 200,
+			addingContributions: [1000],
+		});
+
+		await setFeatureCombine({ featureId, combine: FeatureCombine.Max });
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: module.id,
+		});
+
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId,
+			granted: 5000,
+			balance: 4200,
+			competingContributions: [1000, 5000],
+			addingContributions: [],
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId,
+			granted: 5000,
+			remaining: 4200,
+			usage: 800,
+		});
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright(
+		"combine min: cancelling a plan after the switch makes the remaining grants compete",
+	),
+	async () => {
+		const customerId = "combine-heal-cancel";
+		const featureId = await createSumFeature({
+			prefix: "combine_heal_hours",
+			consumable: false,
+		});
+		const hours = (amount: number) =>
+			constructFeatureItem({
+				featureId,
+				includedUsage: amount,
+				interval: null,
+			});
+
+		const base = products.base({
+			id: "combine-heal-cancel-base",
+			items: [hours(48)],
+		});
+		const run = products.base({
+			id: "combine-heal-cancel-run",
+			isAddOn: true,
+			items: [hours(24)],
+		});
+		const trial = products.base({
+			id: "combine-heal-cancel-trial",
+			isAddOn: true,
+			items: [hours(12)],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [base, run, trial] }),
+			],
+			actions: [
+				s.billing.attach({ productId: base.id }),
+				s.billing.attach({ productId: run.id }),
+				s.billing.attach({ productId: trial.id }),
+			],
+		});
+
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId,
+			granted: 84,
+			remaining: 84,
+		});
+
+		await setFeatureCombine({ featureId, combine: FeatureCombine.Min });
+		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: trial.id,
+			cancel_action: "cancel_immediately",
+		});
+
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId,
+			granted: 24,
+			balance: 24,
+			competingContributions: [48, 24],
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId,
+			granted: 24,
+			remaining: 24,
 		});
 	},
 );

@@ -2,10 +2,11 @@ import {
 	customerProductHasActiveStatus,
 	type FullCusProduct,
 	type FullCustomer,
+	type FullCustomerEntitlement,
 } from "@autumn/shared";
 import { customerEntitlementCompetes } from "./customerEntitlementCompetes";
 
-/** The max / min features a transition moves: its incoming competing grants and outgoing competing shares. */
+/** The max / min features a transition moves: grants on its incoming or outgoing plans that compete now or did before. */
 export const competingFeatureIdsOf = ({
 	incomingCustomerProducts,
 	outgoingCustomerProducts,
@@ -14,26 +15,38 @@ export const competingFeatureIdsOf = ({
 	outgoingCustomerProducts: FullCusProduct[];
 }): Set<string> => {
 	const featureIds = new Set<string>();
-	for (const customerProduct of incomingCustomerProducts) {
+	for (const customerProduct of [
+		...incomingCustomerProducts,
+		...outgoingCustomerProducts,
+	]) {
 		for (const customerEntitlement of customerProduct.customer_entitlements) {
-			if (customerEntitlementCompetes({ customerEntitlement, customerProduct }))
-				featureIds.add(customerEntitlement.entitlement.internal_feature_id);
-		}
-	}
-	for (const customerProduct of outgoingCustomerProducts) {
-		for (const customerEntitlement of customerProduct.customer_entitlements) {
-			if (customerEntitlement.pooled_balance_contribution?.competes)
+			if (
+				customerEntitlement.pooled_balance_contribution?.competes ||
+				customerEntitlementCompetes({ customerEntitlement, customerProduct })
+			)
 				featureIds.add(customerEntitlement.entitlement.internal_feature_id);
 		}
 	}
 	return featureIds;
 };
 
+/** Should compete but doesn't yet: never pooled, or pooled as an additive share before the switch to max / min. */
+const competesButIsNotCompeting = ({
+	customerEntitlement,
+	customerProduct,
+}: {
+	customerEntitlement: FullCustomerEntitlement;
+	customerProduct: FullCusProduct;
+}) => {
+	if (customerEntitlement.pooled_balance_contribution?.competes) return false;
+	return customerEntitlementCompetes({ customerEntitlement, customerProduct });
+};
+
 /**
  * Plans the customer already holds whose grants should compete but were attached before the
  * feature was set to max / min: they join the pool the next time a transition moves that feature.
  */
-export const unpooledCompetingCustomerProducts = ({
+export const staleCompetingCustomerProducts = ({
 	fullCustomer,
 	featureIds,
 	excludedCustomerProductIds,
@@ -47,14 +60,13 @@ export const unpooledCompetingCustomerProducts = ({
 		if (excludedCustomerProductIds.has(customerProduct.id)) return [];
 		if (!customerProductHasActiveStatus(customerProduct)) return [];
 
-		const unpooled = (customerProduct.customer_entitlements ?? []).filter(
+		const stale = (customerProduct.customer_entitlements ?? []).filter(
 			(customerEntitlement) =>
-				!customerEntitlement.pooled_contribution_id &&
 				featureIds.has(customerEntitlement.entitlement.internal_feature_id) &&
-				customerEntitlementCompetes({ customerEntitlement, customerProduct }),
+				competesButIsNotCompeting({ customerEntitlement, customerProduct }),
 		);
-		return unpooled.length > 0
-			? [{ ...customerProduct, customer_entitlements: unpooled }]
+		return stale.length > 0
+			? [{ ...customerProduct, customer_entitlements: stale }]
 			: [];
 	});
 };

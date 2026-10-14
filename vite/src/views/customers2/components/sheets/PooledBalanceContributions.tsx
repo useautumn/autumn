@@ -38,12 +38,16 @@ export function PooledBalanceContributions({
 	const [search, setSearch] = useState("");
 	const goToEntity = useGoToEntity();
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
-	const { contributions, totalCount, totalFilteredCount } =
-		usePooledBalanceContributionsQuery({
-			pooledBalanceId: pooledBalance?.id,
-			page,
-			search: debouncedSearch,
-		});
+	const {
+		contributions,
+		totalCount,
+		totalFilteredCount,
+		winningContributionId,
+	} = usePooledBalanceContributionsQuery({
+		pooledBalanceId: pooledBalance?.id,
+		page,
+		search: debouncedSearch,
+	});
 
 	if (!pooledBalance || totalCount === 0) return null;
 
@@ -58,7 +62,6 @@ export function PooledBalanceContributions({
 		contribution.plan_name ?? contribution.plan_id;
 
 	const combine = featureToCombine({ feature });
-	const winnerId = winningContributionId({ contributions, combine });
 
 	const amountLabel = (contribution: ApiPooledBalanceContributionV0) => {
 		if (contribution.competes) {
@@ -110,7 +113,8 @@ export function PooledBalanceContributions({
 								{contributions.map((contribution) => {
 									const entityId = contribution.entity_id;
 									const outcompeted =
-										contribution.competes && contribution.id !== winnerId;
+										contribution.competes &&
+										contribution.id !== winningContributionId;
 									return (
 										<div
 											key={contribution.id}
@@ -167,33 +171,6 @@ export function PooledBalanceContributions({
 			</SheetSection>
 		</>
 	);
-}
-
-/** The competing share that sets the pool: max lets unlimited win, min keeps the lowest limited one. */
-function winningContributionId({
-	contributions,
-	combine,
-}: {
-	contributions: ApiPooledBalanceContributionV0[];
-	combine: FeatureCombine;
-}): string | undefined {
-	const competing = contributions.filter(({ competes }) => competes);
-	const limited = competing.filter(({ unlimited }) => !unlimited);
-	if (combine === FeatureCombine.Max) {
-		const unlimitedShare = competing.find(({ unlimited }) => unlimited);
-		if (unlimitedShare) return unlimitedShare.id;
-	}
-	if (limited.length === 0) return competing[0]?.id;
-
-	const better = (
-		left: ApiPooledBalanceContributionV0,
-		right: ApiPooledBalanceContributionV0,
-	) =>
-		combine === FeatureCombine.Min
-			? right.current_contribution < left.current_contribution
-			: right.current_contribution > left.current_contribution;
-	return limited.reduce((best, share) => (better(best, share) ? share : best))
-		.id;
 }
 
 function Subheading({ children }: { children: ReactNode }) {

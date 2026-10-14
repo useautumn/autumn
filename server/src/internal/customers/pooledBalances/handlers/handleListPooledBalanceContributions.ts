@@ -14,7 +14,7 @@ export const handleListPooledBalanceContributions = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const { list, totalCount, totalFilteredCount } =
+		const { list, totalCount, totalFilteredCount, winningContributionId } =
 			await pooledBalancesRepo.listPooledBalanceContributionsPage({
 				db: ctx.db,
 				orgId: ctx.org.id,
@@ -29,12 +29,14 @@ export const handleListPooledBalanceContributions = createRoute({
 			PagePaginatedResponse<ApiPooledBalanceContributionV0> & {
 				total_count: number;
 				total_filtered_count: number;
+				winning_contribution_id: string | null;
 			}
 		>({
 			list,
 			total: list.length,
 			total_count: totalCount,
 			total_filtered_count: totalFilteredCount,
+			winning_contribution_id: winningContributionId,
 			limit: body.limit,
 			offset: body.offset,
 			has_more: body.offset + list.length < totalFilteredCount,
