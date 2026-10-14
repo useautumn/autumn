@@ -20,6 +20,12 @@ export const receiveJournalHandoff = ({
 				400,
 			);
 		const { customerId, entries } = parsed.data;
+		// On its way out itself: the sender keeps them and drains them to Autumn instead.
+		if (ctx.peer.membership?.isSelfLeaving())
+			return context.json(
+				{ message: "This replica is leaving too", code: "atom_leaving" },
+				503,
+			);
 		const held = await context
 			.get("slots")
 			.processorFor({ customerId })

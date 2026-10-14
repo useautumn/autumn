@@ -16,6 +16,8 @@ export type Membership = {
 	/** One thread has handed the peer its entries; true once every thread has, which is when the peer is joined. */
 	handedOff(params: { address: string; threads: number }): boolean;
 	markLeaving(address: string): void;
+	/** When the peer announced leaving, in ms; null unless it is leaving. */
+	leavingSince(address: string): number | null;
 	/** Forgotten once the service name has dropped it, so a replica back at the same address starts over. */
 	forget(address: string): void;
 	leaveSelf(): void;

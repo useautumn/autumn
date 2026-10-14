@@ -85,6 +85,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			folders,
 			replication: replicas.replication,
 			journalForwarder,
+			membershipTable: new Int32Array(init.membership),
 		},
 		config: {
 			env,
@@ -105,10 +106,11 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	/** Listens first, so peers can relay to it, then copies what it missed before it answers from its own files. */
+	/** Listens first, so peers can relay to it, copies what it missed, counts the ready peers, then answers from its own files. */
 	async function start(): Promise<void> {
 		await server.start();
 		await replicas.sync.catchUp();
+		await server.probePeers?.();
 		Atomics.store(health.threadsReady, index, 1);
 		void replicas.sync.runPasses();
 	}

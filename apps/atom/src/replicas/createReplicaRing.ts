@@ -93,11 +93,23 @@ export const createReplicaRing = ({
 		return before !== null && leaving.includes(before) ? before : null;
 	}
 
+	async function ownerOnceJoined({
+		customerId,
+		peer,
+	}: {
+		customerId: string;
+		peer: string;
+	}): Promise<string> {
+		const joined = [...new Set([...(await members()), peer])].sort();
+		return bestOf({ members: joined, customerId }) ?? self;
+	}
+
 	return {
 		self,
 		ownerOf,
 		isOwner: async ({ customerId }) => (await ownerOf({ customerId })) === self,
 		members,
 		movedFrom,
+		ownerOnceJoined,
 	};
 };

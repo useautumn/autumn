@@ -77,19 +77,15 @@ export function checkHopMiddleware({
 		return ready ? { to: ready, answeredBy: "starting" } : null;
 	}
 
-	/** The owner said it is leaving: this replica may own the customer now, or another peer does; one more hop at most. */
-	async function afterLeaving(
+	/** The owner said it is leaving: one more hop at most, to whoever owns the customer now; null when that is this replica. */
+	async function hopAfterLeaving(
 		context: Context<AtomHttpEnv>,
 		left: Hop,
-		next: Next,
-	): Promise<Response | void> {
+	): Promise<{ hop: Hop; reply: Response | null } | null> {
 		peer.membership?.markLeaving(left.to);
 		const hop = await hopOf(context);
-		if (!hop) return next();
-		const reply = await forwardHop(context, hop);
-		if (!reply || reply.status === 503) return unavailable(hop, next);
-		counters.add("checksProxied");
-		return reply;
+		if (!hop) return null;
+		return { hop, reply: await forwardHop(context, hop) };
 	}
 
 	/** A peer that never got the check, or shed it: a starting replica answers itself, a non-owner leaves it to the API. */
@@ -165,7 +161,12 @@ export function checkHopMiddleware({
 				code?: string;
 			} | null;
 			if (refusal?.code !== LEAVING_CODE) return unavailable(hop, next);
-			return afterLeaving(context, hop, next);
+			const again = await hopAfterLeaving(context, hop);
+			if (!again) return next();
+			if (!again.reply || again.reply.status === 503)
+				return unavailable(again.hop, next);
+			counters.add("checksProxied");
+			return again.reply;
 		} catch (error) {
 			if (error instanceof PeerTimeout) return peerTimeout(context);
 			throw error;

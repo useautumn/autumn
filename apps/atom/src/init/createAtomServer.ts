@@ -9,6 +9,10 @@ import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { createReplicaRing } from "../replicas/createReplicaRing.js";
+import { createHandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import { leaveRing } from "../replicas/handover/leaveRing.js";
+import { createMembership } from "../replicas/membership/createMembership.js";
+import { startReadinessProber } from "../replicas/membership/startReadinessProber.js";
 import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import { timeStage } from "../threads/stats/stageClock.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
@@ -60,6 +64,32 @@ export const createAtomServer = ({
 			: undefined;
 	const loop = startLoopWatch();
 	let stopping = false;
+	// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
+	const own = () =>
+		env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses();
+	const membership = createMembership({
+		self: own()[0] ?? env.ATOM_HOSTNAME,
+		table: ctx.membershipTable,
+	});
+	const ring = createReplicaRing({
+		ctx: { resolver: ctx.replication, own, membership },
+	});
+	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
+	const handoverContext = {
+		ring,
+		membership,
+		folders: ctx.folders,
+		peer,
+		logger: ctx.logger,
+	};
+	const prober = startReadinessProber({
+		ctx: {
+			...handoverContext,
+			replication: ctx.replication,
+			threads: env.ATOM_THREADS,
+			publicPort: env.ATOM_PORT,
+		},
+	});
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
@@ -72,16 +102,10 @@ export const createAtomServer = ({
 		replication: ctx.replication,
 		stopping: () => stopping,
 		peer: {
-			port: env.ATOM_PEER_PORT,
-			secret: env.ATOM_PEER_SECRET,
-			ring: createReplicaRing({
-				ctx: {
-					resolver: ctx.replication,
-					// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
-					own: () =>
-						env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses(),
-				},
-			}),
+			...peer,
+			ring,
+			membership,
+			barrier: createHandoffBarrier({ ctx: { counters: ctx.counters } }),
 		},
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -128,17 +152,22 @@ export const createAtomServer = ({
 		listen();
 		receiving = pushReceiver?.run();
 		void diskEvictor.run();
+		void prober.run();
 	}
 
 	/**
-	 * In-flight requests and leased pushes finish, then the journals drain to Autumn before the files close. The peer port
-	 * stays up through the drain, refusing handed-on checks, so a peer sends them to the API instead of failing to connect.
+	 * First the ring: this replica owns nothing, its peers are told and get what its journals owe. Leased pushes finish and
+	 * what no peer took drains to Autumn, while both ports stay up: a public check hops to the new owner, a handed-on one
+	 * is refused as leaving. Only then do the listeners and the files close.
 	 */
 	async function stop(): Promise<void> {
-		stopping = true;
+		prober.stop();
+		await leaveRing({ ctx: handoverContext });
 		pushReceiver?.stop();
-		await Promise.all([listener?.stop(), receiving]);
+		await receiving;
 		await ctx.journalForwarder.drainAll({ deadlineMs: DRAIN_DEADLINE_MS });
+		stopping = true;
+		await listener?.stop();
 		await peerListener?.stop();
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
@@ -149,5 +178,5 @@ export const createAtomServer = ({
 		ctx.auth.close();
 	}
 
-	return { start, stop };
+	return { start, stop, probePeers: () => prober.probeOnce() };
 };

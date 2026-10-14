@@ -6,6 +6,8 @@ const INTS_PER_PEER = 4;
 /** After the peer's address, in each row. */
 const STATE = 1;
 const HANDED_OFF = 2;
+/** When it was marked leaving, in seconds since the epoch (fits an Int32 until 2038). */
+const LEAVING_SINCE_S = 3;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
 export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
 
@@ -98,12 +100,23 @@ export const createMembership = ({
 			if (done) Atomics.store(table, at + STATE, STATES.joined);
 			return done;
 		},
-		markLeaving: (address) => set(address, "leaving"),
+		markLeaving: (address) => {
+			const at = rowFor(address);
+			Atomics.store(table, at + STATE, STATES.leaving);
+			Atomics.store(table, at + LEAVING_SINCE_S, Math.floor(Date.now() / 1000));
+		},
+		leavingSince: (address) => {
+			const at = rowOf(address);
+			if (at < 0 || Atomics.load(table, at + STATE) !== STATES.leaving)
+				return null;
+			return Atomics.load(table, at + LEAVING_SINCE_S) * 1000;
+		},
 		forget: (address) => {
 			const at = rowOf(address);
 			if (at < 0) return;
 			Atomics.store(table, at + STATE, 0);
 			Atomics.store(table, at + HANDED_OFF, 0);
+			Atomics.store(table, at + LEAVING_SINCE_S, 0);
 			Atomics.store(table, at, 0);
 		},
 		leaveSelf: () => Atomics.store(table, SELF_LEAVING_INDEX, 1),

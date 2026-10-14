@@ -18,6 +18,7 @@ export type HandOffContext = {
 	folders: Pick<ReplicaFolders, "all">;
 	peer: { port: number; secret: string; fetch?: typeof fetch };
 	logger: Pick<AutumnLogger, "info" | "warn">;
+	sleep?: (ms: number) => Promise<unknown>;
 };
 
 type Pending = {
@@ -69,8 +70,11 @@ const sendHandoff = async ({
  */
 export const handOffJournals = async ({
 	ctx,
+	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
 }: {
 	ctx: HandOffContext;
+	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
+	ownerOf?: (customerId: string) => Promise<string>;
 }): Promise<{ handed: number; kept: number }> => {
 	const pending: Pending[] = ctx.folders
 		.all()
@@ -89,7 +93,7 @@ export const handOffJournals = async ({
 	const lane = async () => {
 		while (next < pending.length) {
 			const item = pending[next++] as Pending;
-			const owner = await ctx.ring.ownerOf({ customerId: item.customerId });
+			const owner = await ownerOf(item.customerId);
 			const taken =
 				owner !== ctx.ring.self &&
 				(await sendHandoff({ ctx, owner, pending: item }));

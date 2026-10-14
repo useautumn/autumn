@@ -13,6 +13,8 @@ import type { ThreadHealthSource } from "../atomHealth.js";
 export type AtomServer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	/** One look at the listed peers before this thread answers, so a ready peer is counted from its first check on. */
+	probePeers?(): Promise<void>;
 };
 
 export type AtomServerDependencies = {
@@ -28,6 +30,8 @@ export type AtomServerDependencies = {
 	replication: Replication;
 	/** Hands Autumn what this thread's journals hold; drained before the files close. */
 	journalForwarder: Pick<JournalForwarder, "drainAll">;
+	/** The replica's membership table, shared by its threads (createMembership). */
+	membershipTable: Int32Array;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };
