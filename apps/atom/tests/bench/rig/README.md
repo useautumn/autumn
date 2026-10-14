@@ -32,19 +32,24 @@ export A=<replica A IP> B=<replica B IP> D=<driver IP> SECRET=<openssl rand -hex
 
 ## 2. Replica A, then replica B (one command each)
 
-The replicas find each other as `atom.svc`, as alien's service name resolves on the deployment network.
+Each replica finds its peer as `atom.svc`, from `/etc/hosts` lines its supervisor rewrites (run as root, as the boxes do):
+the same lookup and 5 s cache as on Alien, and the driver decides when a record comes and goes.
 
 ```sh
 # Replica A
-printf "$A atom.svc\n$B atom.svc\n" | sudo tee -a /etc/hosts >/dev/null
 bun run rig:replica --self $A --peer $B --stub http://$D:18877 --peer-secret $SECRET
 
 # Replica B
-printf "$A atom.svc\n$B atom.svc\n" | sudo tee -a /etc/hosts >/dev/null
 bun run rig:replica --self $B --peer $A --stub http://$D:18877 --peer-secret $SECRET
 ```
 
-Each prints one JSON line (variant, Bun revision, data dir, log path) and runs until Ctrl-C. The log is `~/atom-rig/replica-<ip>.log`. Every start uses a fresh data dir, so restart both replicas between runs.
+Each prints one JSON line (variant, Bun revision, data dir, control URL, log path) and supervises the Atom until Ctrl-C.
+The log is `~/atom-rig/replica-<ip>.log`. Every supervisor start uses a fresh data dir, which its Atom keeps across the
+restarts the driver asks for (as a container keeps its volume), so restart both supervisors between runs.
+
+The supervisor's control port (`replica.controlPort`, 8799; the rig's security group must admit it): `GET /status`,
+`POST /stop` (SIGTERM, returns when the Atom exited), `POST /start {peers?, srcDir?}` (the same data dir), `POST /peers {peers}`
+(what `atom.svc` resolves to on this box besides itself).
 
 ## 3. Driver (one command)
 
@@ -74,6 +79,25 @@ bun run rig:report ~/atom-rig/runs/<timestamp>
 ```
 
 The report prints, per step and per replica, the busiest thread (the hot customer's owner): its busy share, heap, every thread's busy share, and each stage's share of its busy time. That is the comparison against staging's stage shares.
+
+## 4b. Rolling deploy (`rig:roll`)
+
+```sh
+ulimit -n 65536 && RIG_OVERRIDES='{"stub":{"pushVia":"queue"}}' bun run rig:roll --replicas $A,$B
+bun run rig:rollreport ~/atom-rig/runs/roll-<timestamp>
+```
+
+Steady load on both replicas (`roll.deductionsPerSec`, flat, no hot customer), then each replica in `roll.order` is
+swapped as Alien swaps a container, each step at the offset measured on dep_tco9 (2026-10-13): new requests stop
+going to it (the ALB deregistration) → 12 s → SIGTERM → it exits when its drain is done → 12 s → its peer's peers file
+drops it (atom.svc after `Replica stopped`) → 10 s → it restarts on the same data dir and the peer lists it again at
+once (atom.svc lists a container at start) → `/health` 200 → 15 s → requests go to both again, and the next swap starts.
+
+`roll.jsonl` has one line per second with, per owner class (whose customer the request was about, by the Atom's own
+ring), sent / answered / allowed / forwarded by reason / failed by status / proxied, plus every swap event as a mark.
+`summary.json` has P1: every deduction a client saw allowed was applied once at the stub, under its Idempotency-Key, and
+nothing else was (lost, doubled, unexpected, ambiguous = the client saw a failure). The stub applies hand-ins behind a
+per-(writerId, seq) watermark, as Autumn's worker does, so a journal re-sent after a restart counts once.
 
 ## 5. Changing the experiment: config only
 

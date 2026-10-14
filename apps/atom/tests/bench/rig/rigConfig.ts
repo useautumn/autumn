@@ -2,6 +2,8 @@
 const defaults = {
 	/** Which code the boxes run; set by the branch, recorded in every run. */
 	variant: "chain-top" as "chain-top" | "chain-top+4765",
+	/** What rig:driver runs: the stepped hot customer, or a rolling deploy under steady load (rig:roll). */
+	mode: "steps" as "steps" | "roll",
 	tenant: {
 		atomId: "atom_rig",
 		token: "atom_token_rig",
@@ -14,6 +16,8 @@ const defaults = {
 		peerPort: 8791,
 		threads: 3,
 		slotCount: 128,
+		/** The supervisor's control port on each replica box (stop, start, peers, status); the driver scripts the roll through it. */
+		controlPort: 8799,
 		nodeEnv: "production",
 		/** Passed to the replica's Bun as environment, e.g. { BUN_JSC_useJIT: "1" }. */
 		bunJscFlags: {} as Record<string, string>,
@@ -49,6 +53,23 @@ const defaults = {
 	},
 	/** How a deduction is sent: a send_event check, as the shadow mirrors one, or `/v1/track`. */
 	deductionRoute: "check" as "check" | "track",
+	/**
+	 * A rolling deploy as Alien rolls a release (measured on dep_tco9, 2026-10-13): one replica at a time, deregistered from
+	 * the ALB and still serving for 12 s, then SIGTERM; its atom.svc record stays until the container is removed, 11–14 s
+	 * after it exits; the new container starts on the same volume ~10 s later and is listed in atom.svc at once; the ALB
+	 * sends to it again ~15 s after /health is 200, and the next replica's swap starts then.
+	 */
+	roll: {
+		deductionsPerSec: 300,
+		readChecksPerDeduction: 3.8,
+		warmupSeconds: 30,
+		settleSeconds: 30,
+		order: ["a", "b"] as ("a" | "b")[],
+		deregisterToSigtermMs: 12_000,
+		exitToDnsDropMs: 12_000,
+		dnsDropToStartMs: 10_000,
+		readyToRegisteredMs: 15_000,
+	},
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,
 	/** Load generator processes on the driver box; the generator must never be the bottleneck. */

@@ -19,6 +19,7 @@ import {
 	AtomTracksAppendRequestSchema,
 	atomPushMessageToPayload,
 } from "@autumn/byoc";
+import { createTrackCommand } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { rigConfig } from "./rigConfig.js";
 import { createRigQueue } from "./rigQueue.js";
 import { customerIdsOf, logNormalOf } from "./rigShared.js";
@@ -43,7 +44,14 @@ const counts = {
 	pulls: 0,
 	keyChecks: 0,
 	forwarded: {} as Record<string, number>,
+	/** Hand-ins at or below a writer's seq the customer already holds: Autumn's worker applies nothing for them. */
+	replays: 0,
+	forwardedDeductions: 0,
 };
+/** Each deduction applied, by the key the caller's Idempotency-Key gave it; a count above 1 is a double deduction. */
+const applied = new Map<string, number>();
+const recordApplied = (key: string) =>
+	applied.set(key, (applied.get(key) ?? 0) + 1);
 
 const stateOf = (customerId: string): SubjectState => {
 	const held = states.get(customerId);
@@ -65,6 +73,11 @@ const applyTrack = ({
 }) => {
 	const customerId = command.identity.customerId;
 	const state = stateOf(customerId);
+	// The worker's replay guard: a journal re-sent after a restart lands no seq twice.
+	if (seq <= (state.customer.atom_seqs?.[tenant.atomId]?.[writerId] ?? 0)) {
+		counts.replays++;
+		return;
+	}
 	const mutation = computeTrack({
 		fullSubject: subjectStateToFullSubject({
 			state,
@@ -73,6 +86,39 @@ const applyTrack = ({
 		command: { ...command, source: { atomId: tenant.atomId, writerId, seq } },
 	});
 	states.set(customerId, applyMutation({ state, mutation }));
+	recordApplied(command.idempotency?.key ?? command.commandId);
+};
+
+/** A deduction a replica left to the API, deducted here as the API's worker would, under the caller's key. */
+const applyForwardedDeduction = ({
+	customerId,
+	featureId,
+	value,
+	key,
+}: {
+	customerId: string;
+	featureId: string;
+	value: number;
+	key: string;
+}) => {
+	const state = stateOf(customerId);
+	const command = createTrackCommand({
+		commandId: key,
+		requestId: key,
+		featureId,
+		value,
+		overageBehavior: "overflow",
+	});
+	const mutation = computeTrack({
+		fullSubject: subjectStateToFullSubject({
+			state,
+			catalog: template.catalog,
+		}),
+		command: { ...command, identity: { ...command.identity, customerId } },
+	});
+	states.set(customerId, applyMutation({ state, mutation }));
+	recordApplied(key);
+	counts.forwardedDeductions++;
 };
 
 const subjectOf = (customerId: string) => {
@@ -137,6 +183,15 @@ const seed = async () => {
 	return ids.length;
 };
 
+const pushAfterLag = ({ customerId }: { customerId: string }) =>
+	setTimeout(
+		() =>
+			stub.pushVia === "queue"
+				? enqueuePush({ customerId })
+				: void push({ customerId }),
+		pushLag(),
+	);
+
 const appendTracks = async (request: Request) => {
 	const parsed = AtomTracksAppendRequestSchema.safeParse(await request.json());
 	if (!parsed.success)
@@ -148,24 +203,32 @@ const appendTracks = async (request: Request) => {
 	}
 	counts.appends++;
 	counts.tracks += parsed.data.tracks.length;
-	for (const customerId of touched)
-		setTimeout(
-			() =>
-				stub.pushVia === "queue"
-					? enqueuePush({ customerId })
-					: void push({ customerId }),
-			pushLag(),
-		);
+	for (const customerId of touched) pushAfterLag({ customerId });
 	return new Response(null, { status: 204 });
 };
 
-/** What the API answers a request a replica leaves to it: allowed, so the caller's count is unchanged. */
+/**
+ * What the API answers a request a replica leaves to it: allowed, and a deduction is applied here under the caller's
+ * Idempotency-Key and pushed back after herald's lag, as the API's worker does; so the caller's count is unchanged.
+ */
 const answerForwarded = async (request: Request, pathname: string) => {
 	counts.forwarded[pathname] = (counts.forwarded[pathname] ?? 0) + 1;
 	const body = (await request.json().catch(() => ({}))) as {
 		customer_id?: string;
+		feature_id?: string;
 		value?: number;
+		send_event?: boolean;
 	};
+	const deducts = pathname === "/v1/track" || body.send_event === true;
+	if (deducts && body.customer_id && body.feature_id) {
+		applyForwardedDeduction({
+			customerId: body.customer_id,
+			featureId: body.feature_id,
+			value: body.value ?? 1,
+			key: request.headers.get("idempotency-key") ?? crypto.randomUUID(),
+		});
+		pushAfterLag({ customerId: body.customer_id });
+	}
 	if (pathname === "/v1/track")
 		return Response.json(
 			{ customer_id: body.customer_id, value: body.value ?? 1, balance: null },
@@ -195,6 +258,8 @@ Bun.serve({
 			return Response.json({ seeded: await seed() });
 		if (pathname === "/__rig/stats")
 			return Response.json({ ...counts, queue: queue.stats() });
+		if (pathname === "/__rig/applied")
+			return Response.json({ applied: Object.fromEntries(applied) });
 		if (pathname.startsWith("/v1/")) return answerForwarded(request, pathname);
 		return new Response("no such route", { status: 404 });
 	},

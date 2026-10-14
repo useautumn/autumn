@@ -2,7 +2,14 @@
  * Reads a run's health.jsonl: per replica, the busiest thread in each interval (the hot customer's owner), its busy
  * share, heap and each stage's share of its busy time. `bun run rig:report <runDir>`.
  */
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+
+// A roll run has its own report; the boxes always call rig:report.
+if (existsSync(join(process.argv[2] ?? "", "roll.jsonl"))) {
+	await import("./rigRollReport.js");
+	process.exit(0);
+}
 
 type Poll = {
 	elapsedS: number;

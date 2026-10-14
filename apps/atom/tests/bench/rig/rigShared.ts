@@ -133,3 +133,76 @@ export const timelineOf = ({ config }: { config: RigConfig }) => {
 			config.background.shape === "flat" ? 1 : Math.min(1, elapsedS / 90),
 	};
 };
+
+/** Which replica owns the customer a request is about, by the Atom's ring over the pair. */
+export type OwnerClass = "a" | "b";
+
+/** What one owner class's requests did in one second of a roll, as a load process reports it and the driver merges. */
+export type RollCounts = {
+	sent: number;
+	/** Which replica each request was sent to, as the driver routed it then. */
+	sentTo: Record<string, number>;
+	answered: number;
+	/** Deductions the client saw allowed, by the Atom (in `answered` too) or by the API (in `forwarded` too). */
+	allowed: number;
+	forwarded: number;
+	forwardReasons: Record<string, number>;
+	/** x-atom-proxied: owner or starting, when another replica answered. */
+	proxied: Record<string, number>;
+	/** Replies that were neither answered nor forwarded, by status, timeout or error. */
+	failedStatus: Record<string, number>;
+	histogram: number[];
+};
+
+export const emptyRollCounts = (): RollCounts => ({
+	sent: 0,
+	sentTo: {},
+	answered: 0,
+	allowed: 0,
+	forwarded: 0,
+	forwardReasons: {},
+	proxied: {},
+	failedStatus: {},
+	histogram: new Array(BUCKETS).fill(0),
+});
+
+const mergeRecord = (
+	into: Record<string, number>,
+	from: Record<string, number>,
+) => {
+	for (const [key, n] of Object.entries(from)) into[key] = (into[key] ?? 0) + n;
+};
+
+export const mergeRollCounts = (
+	into: RollCounts,
+	from: RollCounts,
+): RollCounts => {
+	into.sent += from.sent;
+	into.answered += from.answered;
+	into.allowed += from.allowed;
+	into.forwarded += from.forwarded;
+	mergeRecord(into.sentTo, from.sentTo);
+	mergeRecord(into.forwardReasons, from.forwardReasons);
+	mergeRecord(into.proxied, from.proxied);
+	mergeRecord(into.failedStatus, from.failedStatus);
+	for (const [bucket, n] of from.histogram.entries())
+		into.histogram[bucket] = (into.histogram[bucket] ?? 0) + n;
+	return into;
+};
+
+export type RollLoadPlan = {
+	index: number;
+	replicaUrls: Record<OwnerClass, string>;
+	/** The replicas' addresses as their rings know them. */
+	members: Record<OwnerClass, string>;
+	startAt: number;
+	durationS: number;
+	customerIds: string[];
+	deductionsPerSec: number[];
+	readChecksPerDeduction: number;
+};
+
+/** The driver's routing, on each load process's stdin: the replicas new requests go to, as the ALB's targets; then stop. */
+export type RollRouting =
+	| { type: "route"; to: OwnerClass[] }
+	| { type: "stop" };
