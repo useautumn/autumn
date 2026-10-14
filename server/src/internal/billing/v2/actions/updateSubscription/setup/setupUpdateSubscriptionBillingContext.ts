@@ -28,7 +28,10 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
+import {
+	setupSubscriptionInvoiceTerms,
+	stripeSubscriptionToInvoiceTerms,
+} from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
@@ -211,6 +214,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		params,
 		stripeCustomer,
+		subscriptionInvoiceTerms: stripeSubscriptionToInvoiceTerms({
+			stripeSubscription,
+		}),
 	});
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined

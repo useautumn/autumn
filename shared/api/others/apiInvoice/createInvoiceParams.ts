@@ -5,14 +5,15 @@ import { UnixMsTimestampSchema } from "@api/billing/common/unixMsTimestamp.js";
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
-import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import {
 	PlanItemPriceParamsSchema,
 	planItemParamsIssues,
 } from "@api/products/items/crud/createPlanItemParamsV1.js";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
+import { InvoiceIssueMethodSchema } from "./invoiceIssueMethod.js";
 
 const LinePeriodShape = {
 	period_start: UnixMsTimestampSchema.optional().meta({
@@ -317,9 +318,6 @@ export const InvoiceCustomLineItemSchema = CustomLineItemSchema.extend({
 	}),
 }).check((ctx) => pushLineIssues({ ctx }));
 
-/** How far a new invoice advances: left editable, opened silently, or opened and sent. */
-export const InvoiceIssueMethodSchema = z.enum(["draft", "finalize", "send"]);
-
 const ISSUE_METHOD_DESCRIPTION =
 	"draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.";
 
@@ -474,5 +472,4 @@ export type CreateInvoicePreview = z.infer<typeof CreateInvoicePreviewSchema>;
 export type CreateInvoicePreviewLine = z.infer<
 	typeof CreateInvoicePreviewLineSchema
 >;
-export type InvoiceIssueMethod = z.infer<typeof InvoiceIssueMethodSchema>;
 export type CreateInvoiceResponse = z.infer<typeof CreateInvoiceResponseSchema>;

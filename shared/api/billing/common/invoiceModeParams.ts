@@ -1,5 +1,7 @@
+import { InvoiceIssueMethodSchema } from "@api/others/apiInvoice/invoiceIssueMethod.js";
 import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { z } from "zod/v4";
+
 export const InvoiceModeParamsSchema = z
 	.object({
 		enabled: z.boolean().meta({
@@ -10,9 +12,15 @@ export const InvoiceModeParamsSchema = z
 			description:
 				"If true, enables the plan immediately even though the invoice is not paid yet.",
 		}),
-		finalize: z.boolean().default(true).meta({
+		// No zod default: an omitted finalize must not outrank issue_method. Omitting both still sends.
+		finalize: z.boolean().optional().meta({
 			description:
-				"If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.",
+				"Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.",
+			deprecated: true,
+		}),
+		issue_method: InvoiceIssueMethodSchema.optional().meta({
+			description:
+				"How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.",
 		}),
 		invoice_template_id: z.string().optional().meta({
 			description:
