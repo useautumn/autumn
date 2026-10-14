@@ -1,6 +1,7 @@
 import {
 	customerProductHasActiveStatus,
 	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
 	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type StripeSubscriptionScope,
 	secondsToMs,
@@ -18,11 +19,15 @@ type LiveStartParams = {
 
 const latestLivePlanStart = ({
 	fullCustomer,
+	stripeSubscription,
 	stripeSubscriptionScope,
 }: LiveStartParams) => {
-	const liveStarts = filterCustomerProductsInStripeSubscriptionScope({
-		stripeSubscriptionScope,
-		customerProducts: fullCustomer.customer_products,
+	const liveStarts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
+			stripeSubscriptionScope,
+			customerProducts: fullCustomer.customer_products,
+		}),
+		stripeSubscriptionId: stripeSubscription.id,
 	})
 		.filter(customerProductHasActiveStatus)
 		.map(({ starts_at }) => starts_at);
@@ -30,25 +35,24 @@ const latestLivePlanStart = ({
 };
 
 /** A schedule's current phase can begin after its plans, when an earlier phase's plan ended. */
-const liveStart = (params: LiveStartParams) => {
-	const { stripeSubscription, stripeSubscriptionSchedule } = params;
+const schedulePhaseStart = ({
+	stripeSubscription,
+	stripeSubscriptionSchedule,
+}: LiveStartParams) => {
 	const currentPhaseStart =
 		scheduleSubscriptionId(stripeSubscriptionSchedule) === stripeSubscription.id
 			? stripeSubscriptionSchedule?.current_phase?.start_date
 			: undefined;
-	return currentPhaseStart
-		? secondsToMs(currentPhaseStart)
-		: latestLivePlanStart(params);
+	return currentPhaseStart ? secondsToMs(currentPhaseStart) : undefined;
 };
 
-/** Re-saving a live subscription sends back the start it runs from. */
+/** Re-saving a live subscription sends back a start it runs from: its plans' own start, or its schedule phase's. */
 export const replaysLiveStart = ({
 	startsAt,
 	...params
-}: LiveStartParams & { startsAt: number }) => {
-	const start = liveStart(params);
-	return (
-		start !== undefined &&
-		Math.abs(start - startsAt) <= SET_PLANS_FIRST_PHASE_TOLERANCE_MS
+}: LiveStartParams & { startsAt: number }) =>
+	[latestLivePlanStart(params), schedulePhaseStart(params)].some(
+		(start) =>
+			start !== undefined &&
+			Math.abs(start - startsAt) <= SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	);
-};
