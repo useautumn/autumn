@@ -8,6 +8,8 @@ import { createPeerApp } from "../http/createPeerApp.js";
 import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { createReplicaRing } from "../replicas/createReplicaRing.js";
+import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -15,6 +17,9 @@ import type {
 	AtomServerConfig,
 	AtomServerDependencies,
 } from "./types/atomServer.js";
+
+/** Inside a typical 30 s grace before SIGKILL, leaving room for the replication flush (5 s) and closing the files. */
+const DRAIN_DEADLINE_MS = 20_000;
 
 /** One thread's server: it answers on the shared port and, when told to, receives Autumn's queued pushes. */
 export const createAtomServer = ({
@@ -53,6 +58,7 @@ export const createAtomServer = ({
 				})
 			: undefined;
 	const loop = startLoopWatch();
+	let stopping = false;
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
@@ -63,7 +69,19 @@ export const createAtomServer = ({
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
-		peer: { port: env.ATOM_PORT },
+		stopping: () => stopping,
+		peer: {
+			port: env.ATOM_PEER_PORT,
+			secret: env.ATOM_PEER_SECRET,
+			ring: createReplicaRing({
+				ctx: {
+					resolver: ctx.replication,
+					// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
+					own: () =>
+						env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses(),
+				},
+			}),
+		},
 	};
 	const app = createAtomApp({ ctx: httpContext });
 	// The other replicas are listened to on the port the stack keeps off the public endpoint.
@@ -111,10 +129,16 @@ export const createAtomServer = ({
 		void diskEvictor.run();
 	}
 
-	/** In-flight requests and leased pushes finish before the files close. */
+	/**
+	 * In-flight requests and leased pushes finish, then the journals drain to Autumn before the files close. The peer port
+	 * stays up through the drain, refusing handed-on checks, so a peer sends them to the API instead of failing to connect.
+	 */
 	async function stop(): Promise<void> {
+		stopping = true;
 		pushReceiver?.stop();
-		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
+		await Promise.all([listener?.stop(), receiving]);
+		await ctx.journalForwarder.drainAll({ deadlineMs: DRAIN_DEADLINE_MS });
+		await peerListener?.stop();
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
 		diskEvictor.stop();

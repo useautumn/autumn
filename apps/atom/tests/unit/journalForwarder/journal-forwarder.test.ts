@@ -18,12 +18,19 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	latestApiVersion,
+	noFolderPulls,
 	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
+	withAtomSeqs,
 } from "../utils/atomFixtures.js";
 import { startFakeAutumn, until } from "../utils/fakeAutumnTracks.js";
-import { openSlotProcessor, owedCommand } from "../utils/journalFixtures.js";
+import {
+	createSlotFolder,
+	openSlotProcessor,
+	owedCommand,
+} from "../utils/journalFixtures.js";
 
 const autumn = startFakeAutumn();
 afterAll(() => autumn.stop());
@@ -64,7 +71,10 @@ const forwarderTo = ({
 	createJournalForwarder({
 		ctx: {
 			autumnClient: createAutumnClient({ autumnApiUrl: autumn.url }),
-			logger: { warn: (fields: unknown) => void warnings.push(fields) },
+			logger: {
+				info: () => {},
+				warn: (fields: unknown) => void warnings.push(fields),
+			},
 			sleep,
 		},
 	});
@@ -98,7 +108,10 @@ const openForwardedSlot = async ({
 	const forwarding = forwarderTo({ sleep: sleeps.sleep, warnings }).forward({
 		journal: slot.journal,
 		tokenHash: () => "hash_folder",
-		pulls: { request: ({ customerId }) => void pulled.push(customerId) },
+		pulls: {
+			request() {},
+			settle: async ({ customerId }) => void pulled.push(customerId),
+		},
 	});
 	cleanups.push(() => {
 		forwarding.stop();
@@ -137,7 +150,7 @@ const remainingOf = async ({
 		?.remaining;
 
 const nothingUnsent = ({ journal }: { journal: Journal }) =>
-	journal.unsent({ limit: 1 }).length === 0;
+	journal.countUnsent() === 0;
 
 describe("handing the journal to Autumn", () => {
 	test("2xx: the batch is marked sent, and stays in the view until a push shows it", async () => {
@@ -214,6 +227,56 @@ describe("handing the journal to Autumn", () => {
 		expect(autumn.applied).toHaveLength(1);
 	});
 
+	test("deductions committed a few ms apart go to Autumn together, not one tracks.append each", async () => {
+		const { journal } = await openForwardedSlot();
+
+		for (let index = 0; index < 10; index++) {
+			await journal.append({
+				customerId: "cus_1",
+				command: owedCommand({ commandId: `spaced_${index}`, value: 1 }),
+			});
+			await Bun.sleep(1);
+		}
+		await until(() => nothingUnsent({ journal }));
+
+		expect(autumn.applied).toHaveLength(10);
+		expect(autumn.requestSizes.length).toBeLessThanOrEqual(2);
+	});
+
+	test("a folder's journals go to Autumn together: one tracks.append carries every journal with something to send", async () => {
+		const forwarder = forwarderTo({ sleep: heldSleeps().sleep });
+		const tokenHash = () => "hash_folder";
+		const journals = [1, 2, 3].map(() =>
+			openJournal({ databasePath: ":memory:" }),
+		);
+		const forwardings = journals.map((journal) =>
+			forwarder.forward({ journal, tokenHash, pulls: noFolderPulls }),
+		);
+		cleanups.push(() => {
+			for (const forwarding of forwardings) forwarding.stop();
+			for (const journal of journals) journal.close();
+		});
+
+		await Promise.all(
+			journals.map((journal, index) =>
+				journal.append({
+					customerId: `cus_${index}`,
+					command: owedCommand({
+						commandId: `slot_${index}`,
+						value: 1,
+						customerId: `cus_${index}`,
+					}),
+				}),
+			),
+		);
+		await until(() => journals.every((journal) => nothingUnsent({ journal })));
+
+		expect(autumn.requestSizes).toEqual([3]);
+		expect(new Set(autumn.applied.map(({ writer }) => writer))).toEqual(
+			new Set(journals.map(({ writerId }) => writerId)),
+		);
+	});
+
 	test("batches hold at most 500 tracks, each customer's in seq order", async () => {
 		const { journal } = await openForwardedSlot();
 		autumn.switches.down = true;
@@ -244,6 +307,251 @@ describe("handing the journal to Autumn", () => {
 	});
 });
 
+describe("a track Autumn refuses on its own", () => {
+	/** Each `[customerId, commandId]` appended at once, so they commit and go to Autumn as one batch. */
+	const appendTogether = ({
+		journal,
+		commands,
+	}: {
+		journal: Journal;
+		commands: [customerId: string, commandId: string][];
+	}) =>
+		Promise.all(
+			commands.map(([customerId, commandId]) =>
+				journal.append({
+					customerId,
+					command: owedCommand({ commandId, value: 1, customerId }),
+				}),
+			),
+		);
+	const appliedTo = (customerId: string) =>
+		autumn.applied
+			.filter((track) => track.customerId === customerId)
+			.map(({ seq }) => seq);
+
+	test("one refused track parks its customer: that customer's later entries wait, the other customers' 7 go, with one warn line", async () => {
+		const { journal, warnings } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+
+		const appended = await appendTogether({
+			journal,
+			commands: [
+				["cus_2", "x1"],
+				["cus_2", "x2"],
+				["cus_2", "x3"],
+				["cus_1", "bad"],
+				["cus_2", "x4"],
+				["cus_2", "x5"],
+				["cus_1", "later"],
+				["cus_2", "x6"],
+				["cus_2", "x7"],
+			],
+		});
+
+		await until(() => journal.parked().length === 1);
+		expect(autumn.applied).toHaveLength(7);
+		expect(appliedTo("cus_2")).toEqual([1, 2, 3, 4, 5, 6, 7]);
+		expect(journal.unsent({ limit: 10 })).toEqual([]);
+		expect(appliedTo("cus_1")).toEqual([]);
+		expect(journal.parked()).toEqual([appended[3]]);
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([
+			appended[3],
+			appended[6],
+		]);
+		expect(warnings).toEqual([
+			expect.objectContaining({
+				type: "atom_journal_track_parked",
+				customerId: "cus_1",
+				seq: 1,
+			}),
+		]);
+	});
+
+	test("a parked customer's refused track is retried alone, backing off 1 s to 30 s, while other customers still go; once Autumn takes it, the customer's remaining entries follow in order", async () => {
+		const { journal, sleeps, warnings } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+		await appendTogether({
+			journal,
+			commands: [
+				["cus_1", "bad"],
+				["cus_2", "other_0"],
+			],
+		});
+		await until(() => journal.parked().length === 1);
+
+		for (const [index, delay] of [...RETRY_DELAYS_MS, 30_000].entries()) {
+			const retry = await sleeps.next({ ms: delay });
+			await appendTogether({
+				journal,
+				commands: [
+					["cus_1", `waiting_${index}`],
+					["cus_2", `other_${index + 1}`],
+				],
+			});
+			await until(() => appliedTo("cus_2").length === index + 2);
+			retry.wake();
+		}
+		const accepted = await sleeps.next({ ms: 30_000 });
+		autumn.switches.refuseCommandIds.clear();
+		accepted.wake();
+
+		await until(() => nothingUnsent({ journal }));
+		expect(journal.parked()).toEqual([]);
+		expect(appliedTo("cus_1")).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+		expect(
+			warnings.filter(
+				(fields) =>
+					(fields as { type: string }).type === "atom_journal_track_parked",
+			),
+		).toHaveLength(1);
+	});
+
+	test("an Autumn refusing every request parks nothing, and the whole batch backs off as before", async () => {
+		const { journal, sleeps, warnings } = await openForwardedSlot();
+		autumn.switches.refuseWith = 400;
+
+		await appendTogether({
+			journal,
+			commands: [
+				["cus_1", "a"],
+				["cus_2", "b"],
+				["cus_1", "c"],
+				["cus_2", "d"],
+			],
+		});
+		const retry = await sleeps.next({ ms: 1000 });
+
+		expect(journal.parked()).toEqual([]);
+		expect(journal.unsent({ limit: 10 })).toHaveLength(4);
+		expect(warnings).toEqual([
+			expect.objectContaining({ type: "atom_journal_forward_failed" }),
+		]);
+		autumn.switches.refuseWith = null;
+		retry.wake();
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toHaveLength(4);
+	});
+
+	test("a refused batch of one, with nothing beside it to show Autumn reads the rest, is not parked", async () => {
+		const { journal, sleeps } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+
+		await appendTogether({ journal, commands: [["cus_1", "bad"]] });
+		await sleeps.next({ ms: 1000 });
+
+		expect(journal.parked()).toEqual([]);
+		expect(journal.unsent({ limit: 10 })).toHaveLength(1);
+	});
+});
+
+describe("a finalize the Atom settled", () => {
+	test("is handed in after its lock as the lock it names: customer, lock, entity and feature from its row, never the row", async () => {
+		const { processor, journal } = await openForwardedSlot();
+		await processor.check({
+			request: {
+				...sendEvent(),
+				params: {
+					...sendEvent().params,
+					send_event: undefined,
+					lock: { enabled: true, lock_id: "lock_1" },
+				},
+			},
+		});
+		await processor.finalize({
+			request: {
+				requestId: "atom_req_finalize",
+				occurredAt: 1_700_000_000_000,
+				params: {
+					customer_id: "cus_1",
+					lock_id: "lock_1",
+					action: "confirm",
+					override_value: 4,
+					properties: { model: "small" },
+				},
+				apiVersion: latestApiVersion,
+			},
+		});
+
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1]);
+		expect(autumn.finalized).toEqual([
+			{
+				writerId: journal.writerId,
+				seq: 2,
+				requestId: "atom_req_finalize",
+				occurredAt: 1_700_000_000_000,
+				customer_id: "cus_1",
+				lock_id: "lock_1",
+				entity_id: null,
+				feature_id: "messages",
+				finalValue: 4,
+				properties: { model: "small" },
+			},
+		]);
+	});
+});
+
+describe("a deduction sent again after a restart", () => {
+	test("is the very command sent before: same request id, idempotency key, writer and seq", async () => {
+		const folder = createSlotFolder();
+		cleanups.push(folder.remove);
+		const handedIn: unknown[][] = [];
+		/** Each boot's forwarder, recording what it hands Autumn. */
+		const boot = () => {
+			const sent: unknown[] = [];
+			handedIn.push(sent);
+			const slot = openSlotProcessor({
+				subjectsPath: folder.subjectsPath,
+				journal: openJournal({ databasePath: folder.journalPath }),
+			});
+			const forwarding = createJournalForwarder({
+				ctx: {
+					autumnClient: {
+						appendTracks: async ({ tracks }) => {
+							for (const track of tracks)
+								sent.push({ writer: track.writerId, ...track });
+						},
+					},
+					logger: { info() {}, warn() {} },
+					sleep: () => new Promise(() => {}),
+				},
+			}).forward({
+				journal: slot.journal,
+				tokenHash: () => "hash_folder",
+				pulls: noFolderPulls,
+			});
+			return { ...slot, sent, stop: forwarding.stop };
+		};
+
+		const first = boot();
+		await first.processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 1000 }) }),
+		);
+		await first.processor.check({ request: sendEvent() });
+		await until(() => first.sent.length === 1);
+		first.stop();
+		first.close();
+
+		// No push showed it applied, so the restarted Atom sends it again.
+		const second = boot();
+		cleanups.push(() => {
+			second.stop();
+			second.close();
+		});
+		await until(() => second.sent.length === 1);
+
+		expect(second.sent).toEqual(first.sent);
+		expect(first.sent[0]).toMatchObject({
+			seq: 1,
+			command: {
+				requestId: expect.stringMatching(/^atom_req_/),
+				commandId: expect.stringMatching(/^atom_req_/),
+				idempotency: { key: expect.stringMatching(/^track:atom_req_/) },
+			},
+		});
+	});
+});
+
 describe("one writer per journal file", () => {
 	test("two journals for one customer are two writers: a push that has seen w1's tracks clears only w1's", async () => {
 		const journals = [0, 1].map(() =>
@@ -254,7 +562,7 @@ describe("one writer per journal file", () => {
 			const forwarding = forwarder.forward({
 				journal,
 				tokenHash: () => "hash_folder",
-				pulls: { request() {} },
+				pulls: { request() {}, settle: async () => {} },
 			});
 			cleanups.push(() => {
 				forwarding.stop();
@@ -274,7 +582,7 @@ describe("one writer per journal file", () => {
 		for (const journal of journals)
 			journal.reconcile({
 				customerId: "cus_1",
-				atomSeqs: { [w1.writerId]: 1 },
+				atomSeqs: { atom_1: { [w1.writerId]: 1 } },
 			});
 
 		expect(
@@ -300,18 +608,31 @@ describe("a sent deduction no push clears", () => {
 		await until(() => pulled.length > 0);
 		expect(pulled).toEqual(["cus_1"]);
 
-		const read = subjectPushOf({
-			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
-		});
-		await processor.setSubject({
-			customerId: read.customerId,
-			body: JSON.stringify({
-				...JSON.parse(read.body),
-				atom_seqs: { [journal.writerId]: 1 },
+		await processor.setSubject(
+			subjectPushOf({
+				subject: withAtomSeqs({
+					subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+					writerSeqs: { [journal.writerId]: 1 },
+				}),
 			}),
-		});
+		);
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(await remainingOf({ processor })).toBe(990);
+	});
+
+	test("a pull that does not clear it is tried again after another grace, three times at most", async () => {
+		const { processor, journal, sleeps, pulled } = await openForwardedSlot();
+		await processor.check({ request: sendEvent() });
+		await until(() => nothingUnsent({ journal }));
+
+		for (let round = 1; round <= 3; round++) {
+			(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
+			await until(() => pulled.length === round);
+		}
+		await Bun.sleep(10);
+
+		expect(pulled).toEqual(["cus_1", "cus_1", "cus_1"]);
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
 	test("a push that clears it within the grace pulls nothing", async () => {
@@ -319,16 +640,14 @@ describe("a sent deduction no push clears", () => {
 		await processor.check({ request: sendEvent() });
 		await until(() => nothingUnsent({ journal }));
 
-		const push = subjectPushOf({
-			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
-		});
-		await processor.setSubject({
-			customerId: push.customerId,
-			body: JSON.stringify({
-				...JSON.parse(push.body),
-				atom_seqs: { [journal.writerId]: 1 },
+		await processor.setSubject(
+			subjectPushOf({
+				subject: withAtomSeqs({
+					subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+					writerSeqs: { [journal.writerId]: 1 },
+				}),
 			}),
-		});
+		);
 		(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
 		await Bun.sleep(10);
 

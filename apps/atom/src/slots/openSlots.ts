@@ -10,6 +10,7 @@ import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
+import { createOpenLocks } from "../state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
@@ -83,8 +84,9 @@ export const openSlots = ({
 	// A miss is decided on the slot's owner thread, so the pulled body is stored there too.
 	const subjectPulls = pulls.subjectPulls.forFolder({
 		tokenHash: pulls.tokenHash,
-		applyPulled: ({ customerId, body }) =>
-			processorFor({ customerId }).setSubject({ customerId, body }),
+		applyPulled: async ({ customerId, body }) =>
+			(await processorFor({ customerId }).setSubject({ customerId, body }))
+				.stored,
 	});
 	const journals: Journal[] = [];
 	const forwardings: Forwarding[] = [];
@@ -113,7 +115,14 @@ export const openSlots = ({
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
-				ctx: { sqliteStore, catalogStore, logger, subjectPulls, journal },
+				ctx: {
+					sqliteStore,
+					catalogStore,
+					logger,
+					subjectPulls,
+					journal,
+					openLocks: createOpenLocks(),
+				},
 			}),
 		};
 	});

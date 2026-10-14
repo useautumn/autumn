@@ -1,5 +1,3 @@
-import type { TrackCommand } from "@autumn/balance-engine";
-import { deepFreeze } from "../deepFreeze.js";
 import {
 	deleteCustomerJournalEntries,
 	deleteJournalEntriesUpTo,
@@ -10,7 +8,11 @@ import {
 } from "../repos/journalEntries.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import { openJournalDatabase } from "./openJournalDatabase.js";
-import type { Journal, JournalEntry } from "./types/journal.js";
+import type {
+	Journal,
+	JournalEntry,
+	JournaledCommand,
+} from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
 const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
@@ -22,6 +24,26 @@ export const MAX_UNSENT_PER_THREAD = 50_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
 let unsentOnThread = 0;
+/** Each open journal's unsent entries, oldest commit first, so the thread's oldest is the first of one of them. */
+const unsentByJournal = new Set<Set<JournalEntry>>();
+let appendedOnThread = 0;
+let appendFailedOnThread = 0;
+
+/** What this thread's journals hold that Autumn does not, and what they took and failed to take since boot. */
+export const readJournalThreadStats = ({ now }: { now: number }) => {
+	let oldestAppendedAt = now;
+	for (const unsent of unsentByJournal) {
+		const [oldest] = unsent;
+		if (oldest && oldest.appendedAt < oldestAppendedAt)
+			oldestAppendedAt = oldest.appendedAt;
+	}
+	return {
+		journalUnsent: unsentOnThread,
+		journalOldestUnsentMs: now - oldestAppendedAt,
+		tracksAppended: appendedOnThread,
+		appendFailed: appendFailedOnThread,
+	};
+};
 
 /**
  * One slot's journal, opened by the slot's owner thread only, so what it holds in memory is the file plus the appends
@@ -38,38 +60,82 @@ export const openJournal = ({
 	const ctx = { sqliteDb: openJournalDatabase({ databasePath }) };
 	const writerId = readJournalWriterId({ ctx });
 	const lastSeqs = readLastJournalSeqs({ ctx });
-	const owedByCustomer = new Map<string, readonly JournalEntry[]>();
+	/** Grown in place by an append; anything else that changes it replaces it, so a reader can tell the two apart. */
+	const owedByCustomer = new Map<string, JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
+	unsentByJournal.add(unsent);
+	/** By customer, the entry Autumn refused that its later entries wait behind. */
+	const parkedCustomers = new Map<string, JournalEntry>();
+	/** Each customer's unsent entries in seq order, from `head`: those sent since leave the front as it is next settled. */
+	const unsentByCustomer = new Map<
+		string,
+		{ entries: JournalEntry[]; head: number }
+	>();
 	let notifyCommitted = () => {};
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
 		unsentOnThread++;
+		const queue = unsentByCustomer.get(entry.customerId);
+		if (queue) queue.entries.push(entry);
+		else unsentByCustomer.set(entry.customerId, { entries: [entry], head: 0 });
 	}
 
 	function releaseUnsent(entry: JournalEntry): void {
 		if (unsent.delete(entry)) unsentOnThread--;
+		if (parkedCustomers.get(entry.customerId) === entry)
+			parkedCustomers.delete(entry.customerId);
+	}
+
+	/** O(1) amortised: each entry leaves the front once, and the array is copied only once half of it has left. */
+	function oldestUnsent({
+		customerId,
+	}: {
+		customerId: string;
+	}): JournalEntry | undefined {
+		const queue = unsentByCustomer.get(customerId);
+		if (!queue) return undefined;
+		const { entries } = queue;
+		let oldest = entries[queue.head];
+		while (oldest && !unsent.has(oldest)) oldest = entries[++queue.head];
+		if (!oldest) {
+			unsentByCustomer.delete(customerId);
+			return undefined;
+		}
+		if (queue.head > entries.length / 2) {
+			queue.entries = entries.slice(queue.head);
+			queue.head = 0;
+		}
+		return oldest;
 	}
 
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
 			insertJournalEntries({ ctx, entries });
+			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
 		},
 	});
 
-	for (const read of readOwedJournalEntries({ ctx })) {
-		const entry = deepFreeze(read);
-		owedByCustomer.set(entry.customerId, [
-			...owed({ customerId: entry.customerId }),
-			entry,
-		]);
+	for (const entry of readOwedJournalEntries({ ctx })) {
+		owe({ entry });
 		holdUnsent(entry);
 	}
 
-	function owed({ customerId }: { customerId: string }) {
+	function owed({
+		customerId,
+	}: {
+		customerId: string;
+	}): readonly JournalEntry[] {
 		return owedByCustomer.get(customerId) ?? NOTHING_OWED;
+	}
+
+	/** O(1): the customer's array grows, never copied, however much it owes. */
+	function owe({ entry }: { entry: JournalEntry }): void {
+		const entries = owedByCustomer.get(entry.customerId);
+		if (entries) entries.push(entry);
+		else owedByCustomer.set(entry.customerId, [entry]);
 	}
 
 	function setOwed({
@@ -77,7 +143,7 @@ export const openJournal = ({
 		entries,
 	}: {
 		customerId: string;
-		entries: readonly JournalEntry[];
+		entries: JournalEntry[];
 	}): void {
 		if (entries.length === 0) owedByCustomer.delete(customerId);
 		else owedByCustomer.set(customerId, entries);
@@ -89,16 +155,17 @@ export const openJournal = ({
 		command,
 	}: {
 		customerId: string;
-		command: TrackCommand;
+		command: JournaledCommand;
 	}): Promise<JournalEntry> {
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
-		const entry = deepFreeze({ customerId, seq, appendedAt: now(), command });
-		setOwed({ customerId, entries: [...owed({ customerId }), entry] });
+		const entry = { customerId, seq, appendedAt: now(), command };
+		owe({ entry });
 		try {
 			await groupCommit.add(entry);
 			return entry;
 		} catch (error) {
+			appendFailedOnThread++;
 			setOwed({
 				customerId,
 				entries: owed({ customerId }).filter((held) => held !== entry),
@@ -111,23 +178,28 @@ export const openJournal = ({
 		const taken: JournalEntry[] = [];
 		for (const entry of unsent) {
 			if (taken.length === limit) break;
-			taken.push(entry);
+			if (!parkedCustomers.has(entry.customerId)) taken.push(entry);
 		}
 		return taken;
 	}
 
+	function park({ entry }: { entry: JournalEntry }): void {
+		if (unsent.has(entry)) parkedCustomers.set(entry.customerId, entry);
+	}
+
 	function markSent({ entries }: { entries: JournalEntry[] }): void {
 		for (const entry of entries) releaseUnsent(entry);
+		for (const customerId of new Set(entries.map((entry) => entry.customerId)))
+			oldestUnsent({ customerId });
 	}
 
 	function isBackedUp({ customerId }: { customerId: string }): boolean {
 		const entries = owed({ customerId });
 		if (unsentOnThread > MAX_UNSENT_PER_THREAD) return true;
 		if (entries.length > MAX_OWED_PER_CUSTOMER) return true;
-		const oldestUnsent = entries.find((entry) => unsent.has(entry));
+		const oldest = oldestUnsent({ customerId });
 		return (
-			oldestUnsent !== undefined &&
-			now() - oldestUnsent.appendedAt > MAX_UNSENT_AGE_MS
+			oldest !== undefined && now() - oldest.appendedAt > MAX_UNSENT_AGE_MS
 		);
 	}
 
@@ -136,26 +208,31 @@ export const openJournal = ({
 		atomSeqs,
 	}: {
 		customerId: string;
-		atomSeqs: Record<string, number> | null;
+		atomSeqs: Record<string, Record<string, number>> | null;
 	}): void {
-		const atomSeq = atomSeqs?.[writerId];
+		const atomSeq = Object.values(atomSeqs ?? {}).find(
+			(writerSeqs) => writerId in writerSeqs,
+		)?.[writerId];
 		if (atomSeq === undefined) return;
 		const entries = owed({ customerId });
 		const unseen = entries.filter(({ seq }) => seq > atomSeq);
 		if (unseen.length === entries.length) return;
 		deleteJournalEntriesUpTo({ ctx, customerId, seq: atomSeq });
 		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
+		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
 	}
 
 	function forget({ customerId }: { customerId: string }): void {
 		deleteCustomerJournalEntries({ ctx, customerId });
 		for (const entry of owed({ customerId })) releaseUnsent(entry);
+		unsentByCustomer.delete(customerId);
 		setOwed({ customerId, entries: [] });
 	}
 
 	function close(): void {
 		for (const entry of [...unsent]) releaseUnsent(entry);
+		unsentByJournal.delete(unsent);
 		ctx.sqliteDb.close();
 	}
 
@@ -164,6 +241,9 @@ export const openJournal = ({
 		append,
 		owed,
 		unsent: takeUnsent,
+		countUnsent: () => unsent.size,
+		park,
+		parked: () => [...parkedCustomers.values()],
 		markSent,
 		onCommitted: (listener) => {
 			notifyCommitted = listener;

@@ -10,6 +10,7 @@ import {
 	ATOM_PUT,
 } from "../../../src/multiTenant/replicateAtoms.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createMultiTenantFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -29,7 +30,6 @@ import {
 	AUTUMN_API_URL,
 	PEER_PORT,
 	PEER_SECRET,
-	PORT,
 	quiet,
 	SLOT_COUNT,
 } from "./replicaFixtures.js";
@@ -107,7 +107,14 @@ export const createMultiTenantReplica = ({
 		counters,
 		loop: loopOnTime,
 		replication,
-		peer: { port: PORT },
+		// No peers in its ring: a multi-tenant replica answers every check itself here.
+		peer: {
+			port: PEER_PORT,
+			secret: PEER_SECRET,
+			ring: createReplicaRing({
+				ctx: { resolver: { peers: async () => [] }, own: () => [address] },
+			}),
+		},
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });

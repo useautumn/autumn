@@ -1,5 +1,8 @@
+import type { TrackResponseV3 } from "@autumn/shared";
+import type { FinalizeResponse } from "../../processor/types/finalize.js";
 import type {
 	CheckAnswer,
+	PushedSubject,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
 import type {
@@ -9,7 +12,9 @@ import type {
 } from "../../state/repos/subjectStates.js";
 import {
 	checkRequestToWire,
+	finalizeRequestToWire,
 	replyToError,
+	trackRequestToWire,
 	wireToAppliedSubject,
 	wireToDigest,
 } from "./ownerCallContract.js";
@@ -83,7 +88,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	async function call(
 		body: OwnerCallBody,
 	): Promise<
-		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
+		| CheckAnswer
+		| TrackResponseV3
+		| FinalizeResponse
+		| PushedSubject
+		| boolean
+		| AppliedSubjectOnWire[]
+		| SubjectDigestOnWire[]
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
@@ -112,13 +123,25 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					request: checkRequestToWire({ request }),
 				})) as CheckAnswer,
+			track: async ({ request }) =>
+				(await call({
+					type: "track",
+					atomId,
+					request: trackRequestToWire({ request }),
+				})) as TrackResponseV3,
+			finalize: async ({ request }) =>
+				(await call({
+					type: "finalize",
+					atomId,
+					request: finalizeRequestToWire({ request }),
+				})) as FinalizeResponse,
 			setSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "setSubject",
 					atomId,
 					customerId,
 					body,
-				})) as boolean,
+				})) as PushedSubject,
 		};
 	}
 

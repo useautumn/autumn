@@ -1,4 +1,5 @@
 import {
+	lockParamsToTrackLock,
 	orgToCommandOrg,
 	type TrackCommand,
 	type TrackUsageEvent,
@@ -6,7 +7,6 @@ import {
 import { type LockParams, RecaseError, type TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
-import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
 /** One per feature on an event-name track, so each feature dedupes on its own and a retry can finish the rest. */

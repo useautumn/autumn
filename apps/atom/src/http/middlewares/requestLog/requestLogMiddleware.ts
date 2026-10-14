@@ -58,6 +58,7 @@ export function requestLogMiddleware({
 
 		const durationMs = Date.now() - startedAt;
 		const failure = context.get("failure");
+		const idempotencyKey = context.get("idempotencyKey");
 		const line = {
 			statusCode,
 			durationMs,
@@ -68,6 +69,8 @@ export function requestLogMiddleware({
 					body: context.get("body"),
 					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 				}),
+				// A deduction's key at Autumn is this when present, the request id otherwise.
+				...(idempotencyKey && { idempotencyKey }),
 			},
 			res: await loggedResponseOf({ context }),
 			...(sampled && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),

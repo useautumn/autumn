@@ -1,8 +1,14 @@
 import type { CatalogRow } from "@autumn/balance-engine";
-import type { ApiVersion } from "@autumn/shared";
+import type { ApiVersion, TrackResponseV3 } from "@autumn/shared";
+import type { AtomError } from "../../../http/handlers/errorHandler/atomErrorOf.js";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
+import type {
+	FinalizeRequest,
+	FinalizeResponse,
+} from "../../../processor/types/finalize.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
+import type { TrackRequest } from "../../../processor/types/track.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -14,12 +20,24 @@ export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
 	apiVersion: ApiVersion | null;
 };
 
+/** A track as it crosses threads: plain data, with the API version by name. */
+export type TrackRequestOnWire = Omit<TrackRequest, "apiVersion"> & {
+	apiVersion: ApiVersion;
+};
+
+/** A finalize as it crosses threads: plain data, with the API version by name. */
+export type FinalizeRequestOnWire = Omit<FinalizeRequest, "apiVersion"> & {
+	apiVersion: ApiVersion;
+};
+
 /** The whole shared catalog, as Autumn sent it. */
 export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 
 /** A call to the thread that owns a customer's slot, in the folder `atomId` names (null: a deployment's one folder). */
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
+	| { type: "track"; request: TrackRequestOnWire }
+	| { type: "finalize"; request: FinalizeRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
@@ -72,6 +90,8 @@ export type OwnerReply =
 			ok: true;
 			value:
 				| CheckAnswer
+				| TrackResponseV3
+				| FinalizeResponse
 				| boolean
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[];
@@ -84,5 +104,7 @@ export type OwnerReply =
 			invalid: boolean;
 			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
 			unavailable: boolean;
+			/** An answer in the API's shape, such as a lock refused as open: thrown again as AtomApiError. */
+			apiError: AtomError | null;
 			message: string;
 	  };

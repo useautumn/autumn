@@ -13,6 +13,7 @@ import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import type { AtomHttpEnv } from "../../../src/http/types/atomHttp.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createPeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
@@ -178,7 +179,14 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		// The sim runs on a virtual clock; a busy test process must never read as a loop behind.
 		loop: { lagMs: () => 0 },
 		replication,
-		peer: { port: SIM_PORT, fetch },
+		peer: {
+			port: SIM_PEER_PORT,
+			secret: ctx.secret,
+			ring: createReplicaRing({
+				ctx: { resolver: replication, own: () => [ctx.address] },
+			}),
+			fetch,
+		},
 		now,
 	};
 	const app: Hono<AtomHttpEnv> = createAtomApp({ ctx: httpContext });

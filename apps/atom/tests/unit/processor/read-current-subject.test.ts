@@ -10,6 +10,7 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	atomOrg,
@@ -70,6 +71,7 @@ const createContext = ({
 		logger: getAtomLogger(),
 		subjectPulls: noFolderPulls,
 		journal,
+		openLocks: createOpenLocks(),
 	};
 };
 afterEach(() => {
@@ -144,14 +146,13 @@ describe("the subject a check runs on", () => {
 		]);
 	});
 
-	test("is joined once per change to its parts: checks share one frozen view until the next push", () => {
+	test("is joined once per change to its parts: checks share one view until the next push", () => {
 		const ctx = createContext({ shared: null });
 		const read = () =>
 			readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
 
 		const first = read();
 		expect(read()).toBe(first);
-		expect(Object.isFrozen(first.fullSubject)).toBe(true);
 
 		ctx.sqliteStore.setSubject({
 			subject: {

@@ -2,11 +2,14 @@ import { spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -29,7 +32,6 @@ import {
 export const ATOM_TOKEN = "atom_token_1";
 export const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
 export const PEER_SECRET = "p".repeat(64);
-export const PORT = 8001;
 export const PEER_PORT = 8002;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
@@ -52,6 +54,9 @@ export const createReplica = ({
 	dataDir = mkdtempSync(join(tmpdir(), "atom-replica-")),
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
+	ringPeers = [],
+	journalForwarder = forwardingNowhere,
+	stopping = () => false,
 }: {
 	address: string;
 	peers: string[];
@@ -59,11 +64,16 @@ export const createReplica = ({
 	dataDir?: string;
 	secret?: string;
 	now?: () => number;
+	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
+	ringPeers?: string[];
+	journalForwarder?: typeof forwardingNowhere;
+	/** True from the moment the thread starts stopping, as its server's stop sets it. */
+	stopping?: () => boolean;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const auth = createDeployedAuth({
-		journalForwarder: forwardingNowhere,
+		journalForwarder,
 		dataDir,
 		tokenHash: TOKEN_HASH,
 		slotCount: SLOT_COUNT,
@@ -101,7 +111,17 @@ export const createReplica = ({
 		counters,
 		loop: loopOnTime,
 		replication,
-		peer: { port: PORT },
+		stopping,
+		peer: {
+			port: PEER_PORT,
+			secret,
+			ring: createReplicaRing({
+				ctx: {
+					resolver: { peers: async () => ringPeers },
+					own: () => [address],
+				},
+			}),
+		},
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -275,3 +295,36 @@ export const heldEverywhere = async (replica: Replica) =>
 	).flat();
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+/** Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from. */
+export const recordJournals = () => {
+	const appended: {
+		writer: string;
+		/** Who claims the key at Autumn's worker: the same owner again resumes its claim, any other is a duplicate. */
+		owner: string;
+		key: string | undefined;
+		value: number;
+	}[] = [];
+	const commands: TrackCommand[] = [];
+	const forwarder = createJournalForwarder({
+		ctx: {
+			autumnClient: {
+				appendTracks: async ({ tracks }) => {
+					for (const track of tracks) {
+						if (!("command" in track)) continue;
+						const command = parseTrackCommand({ input: track.command });
+						commands.push(command);
+						appended.push({
+							writer: track.writerId,
+							owner: command.requestId,
+							key: command.idempotency?.key,
+							value: command.value,
+						});
+					}
+				},
+			},
+			logger: quiet,
+		},
+	});
+	return { forwarder, appended, commands };
+};

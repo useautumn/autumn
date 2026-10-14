@@ -1,6 +1,7 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
+import type { JournalForwarder } from "../../journalForwarder/types/journalForwarder.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
 import type { Replication } from "../../replication/types/replication.js";
@@ -25,6 +26,8 @@ export type AtomServerDependencies = {
 	folders: Pick<ReplicaFolders, "all">;
 	/** Keeps the other replicas holding what this thread applies. */
 	replication: Replication;
+	/** Hands Autumn what this thread's journals hold; drained before the files close. */
+	journalForwarder: Pick<JournalForwarder, "drainAll">;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };

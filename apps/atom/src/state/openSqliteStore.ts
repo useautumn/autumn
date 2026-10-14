@@ -1,4 +1,3 @@
-import { deepFreeze } from "./deepFreeze.js";
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
@@ -21,6 +20,36 @@ import type { StoredSubject } from "./types/storedSubject.js";
 
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
+
+type Slice = Pick<StoredSubject, "catalog" | "org">;
+/**
+ * By slice hash, across every customer the thread holds: customers on one plan hold one catalog, not one each. Weak on
+ * the catalog and org themselves, which the held subjects hold, so a slice goes with the last subject holding it.
+ */
+const slicesByHash = new Map<
+	string,
+	{ catalog: WeakRef<Slice["catalog"]>; org: WeakRef<Slice["org"]> }
+>();
+
+/** The held copy of this slice when any customer holds one, else this one, kept for the next. */
+const sharedSlice = ({
+	hash,
+	slice,
+}: {
+	hash: string;
+	slice: Slice;
+}): Slice => {
+	const held = slicesByHash.get(hash);
+	const catalog = held?.catalog.deref();
+	const org = held?.org.deref();
+	if (catalog && org) return { catalog, org };
+	const shared = { catalog: slice.catalog, org: slice.org };
+	slicesByHash.set(hash, {
+		catalog: new WeakRef(shared.catalog),
+		org: new WeakRef(shared.org),
+	});
+	return shared;
+};
 
 const subjectKey = ({
 	customerId,
@@ -62,8 +91,10 @@ export const openSqliteStore = ({
 		if (found) return found.subject;
 		const read = readSubjectRow({ ctx, ...params });
 		if (read === null) return null;
-		// Frozen, because every check of the subject shares the copy.
-		const subject = deepFreeze(read.subject);
+		const subject = {
+			...read.subject,
+			...sharedSlice({ hash: read.sliceHash, slice: read.subject }),
+		};
 		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
 		return subject;
 	}
@@ -81,14 +112,18 @@ export const openSqliteStore = ({
 		return readSubjectVersion({ ctx, ...params });
 	}
 
-	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
+	/** A slice any held copy already has is reused; its row is rewritten only when this customer's held a different one. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
-		if (heldCopy?.sliceHash !== slice.hash)
-			return { subject, slice, sliceStored: false };
-		const { catalog, org } = heldCopy.subject;
-		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
+		return {
+			subject: {
+				...subject,
+				...sharedSlice({ hash: slice.hash, slice: subject }),
+			},
+			slice,
+			sliceStored: heldCopy?.sliceHash === slice.hash,
+		};
 	}
 
 	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
@@ -103,10 +138,10 @@ export const openSqliteStore = ({
 		if (bytes !== null) {
 			held.hold({
 				key,
-				subject: deepFreeze({
+				subject: {
 					...subject,
 					customerVersion: customerVersion ?? subject.customerVersion,
-				}),
+				},
 				bytes,
 				sliceHash: slice.hash,
 			});
@@ -121,7 +156,7 @@ export const openSqliteStore = ({
 			return;
 		held.hold({
 			key,
-			subject: deepFreeze({ ...heldCopy.subject, customerVersion }),
+			subject: { ...heldCopy.subject, customerVersion },
 			bytes: heldCopy.bytes,
 			sliceHash: heldCopy.sliceHash,
 		});

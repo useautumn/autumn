@@ -14,6 +14,7 @@ import {
 	forwardReasonOf,
 	storedSubjectWith,
 	subjectPushOf,
+	trackRequestFor,
 } from "../utils/atomFixtures.js";
 import { openSlotProcessor } from "../utils/journalFixtures.js";
 
@@ -91,7 +92,7 @@ describe("a send_event check the Atom deducts itself", () => {
 		await processor.check({ request: sendEvent({ requiredBalance: 7 }) });
 
 		const [entry] = journal.owed({ customerId: "cus_1" });
-		expect(parseTrackCommand({ input: entry?.command })).toEqual(
+		expect<unknown>(parseTrackCommand({ input: entry?.command })).toEqual(
 			entry?.command,
 		);
 		expect(entry?.command).toMatchObject({
@@ -192,5 +193,61 @@ describe("a send_event check the Atom deducts itself", () => {
 				}),
 			),
 		).toBe("send_event");
+	});
+});
+
+describe("a track the Atom deducts itself", () => {
+	test("is journaled as the API's own track: what fits, keyed by the body's idempotency_key; answered as a queued track", async () => {
+		const { processor, journal } = await openWritingSlot();
+
+		const answer = await processor.track({
+			request: trackRequestFor({
+				params: { value: 7, idempotency_key: "evt_1" },
+				idempotencyKey: "evt_1",
+			}),
+		});
+
+		expect(answer).toEqual({ customer_id: "cus_1", value: 7, balance: null });
+		const [entry] = journal.owed({ customerId: "cus_1" });
+		expect<unknown>(parseTrackCommand({ input: entry?.command })).toEqual(
+			entry?.command,
+		);
+		expect(entry?.command).toMatchObject({
+			type: "track",
+			commandId: "atom_req_1",
+			featureId: "messages",
+			value: 7,
+			overageBehavior: "cap",
+			usageEvent: { name: "messages", idempotencyKey: "evt_1", id: null },
+			idempotency: { key: "track:evt_1", ttlMs: 86_400_000 },
+		});
+		expect(entry?.command.enforceOverdueBlock).not.toBe(true);
+	});
+
+	test("without a body key is claimed by the Atom's request id", async () => {
+		const { processor, journal } = await openWritingSlot();
+
+		await processor.track({ request: trackRequestFor() });
+
+		expect(journal.owed({ customerId: "cus_1" })[0]?.command).toMatchObject({
+			value: 1,
+			usageEvent: { idempotencyKey: null },
+			idempotency: { key: "track:atom_req_1" },
+		});
+	});
+
+	test("past the balance is the API's, which decides whether it caps, overflows or is refused; nothing is journaled", async () => {
+		const { processor, journal } = await openWritingSlot({
+			subject: storedSubjectWith({ balance: 5 }),
+		});
+
+		expect(
+			await forwardReasonOf(() =>
+				processor.track({
+					request: trackRequestFor({ params: { value: 10 } }),
+				}),
+			),
+		).toBe("track_denied");
+		expect(owedSeqs({ journal })).toEqual([]);
 	});
 });

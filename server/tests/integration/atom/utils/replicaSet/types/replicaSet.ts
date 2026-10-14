@@ -60,9 +60,20 @@ export type ReplicaSet = TestAtom & {
 	/** The two replicas stop seeing each other, as a split network shows them; each still serves. */
 	cutPeer(left: number, right: number): Promise<void>;
 	healPeers(): Promise<void>;
+	/** The replica the Atom's own ring gives the customer to, among every replica of the set. */
+	ownerIndexOf(params: { customerId: string }): Promise<number>;
 	/** Every request the balancer gets goes to this replica; null spreads them over the running ones. */
 	routeTo(index: number | null): void;
 	pushes(): PushLanding[];
+	/** The replicas' hand-ins wait, each replica still waiting for Autumn's reply, until released. */
+	holdHandIns(): void;
+	/** The held hand-ins reach Autumn one at a time, in the order they were sent. */
+	releaseHandIns(): Promise<void>;
+	heldHandIns(): number;
+	/** Herald's pushes are taken but reach no replica until released, as a slow link delays them. */
+	holdPushes(): void;
+	/** The held pushes reach the replicas one at a time, in the order herald sent them. */
+	releasePushes(): Promise<void>;
 	/** Back to `size` running replicas, every link healed and the balancer spreading requests. */
 	restore(size: number): Promise<void>;
 	health(index: number): Promise<ReplicaHealth>;

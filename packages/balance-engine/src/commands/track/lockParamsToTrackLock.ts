@@ -1,6 +1,6 @@
-import type { TrackLock } from "@autumn/balance-engine";
 import { generateKsuid } from "@autumn/ksuid";
 import { type LockParams, ms } from "@autumn/shared";
+import type { TrackLock } from "./types/trackCommand.js";
 
 const DEFAULT_LOCK_LIFETIME_MS = ms.hours(24);
 

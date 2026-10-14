@@ -1,3 +1,4 @@
+import { ApiVersion } from "@autumn/shared";
 import {
 	CannotAnswerError,
 	type ForwardReason,
@@ -27,7 +28,16 @@ const FORWARD_RULES: {
 		applies: ({ params }) =>
 			params.send_event === true && Boolean(params.entity_id),
 	},
-	{ reason: "lock", applies: ({ params }) => params.lock !== undefined },
+	{
+		reason: "lock_version",
+		applies: ({ params, apiVersion }) =>
+			params.lock !== undefined && Boolean(apiVersion?.lt(ApiVersion.V2_6)),
+	},
+	{
+		reason: "lock",
+		applies: ({ params }) =>
+			params.lock !== undefined && Boolean(params.entity_id),
+	},
 	// A preview reads the org's plans from Postgres.
 	{
 		reason: "with_preview",
@@ -77,6 +87,7 @@ export const checkRequestToAnswerableCheck = ({
 			params.required_quantity ??
 			DEFAULT_REQUIRED_BALANCE,
 		properties: params.properties ?? null,
+		lock: params.lock ?? null,
 		query: request.query,
 		apiVersion,
 	};

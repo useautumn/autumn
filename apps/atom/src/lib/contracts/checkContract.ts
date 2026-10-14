@@ -8,7 +8,7 @@ import type { CheckRequest } from "../../processor/types/check.js";
 import { CannotAnswerError } from "../forward/cannotAnswerError.js";
 
 /** `x-api-version` as the API reads it: absent is null, unreadable is undefined. */
-const headerToApiVersion = ({
+export const headerToApiVersion = ({
 	header,
 }: {
 	header: string | undefined;
@@ -26,12 +26,15 @@ export const checkCallToRequest = ({
 	body,
 	query,
 	apiVersionHeader,
+	idempotencyKey,
 	requestId,
 	occurredAt,
 }: {
 	body: unknown;
 	query: Record<string, string>;
 	apiVersionHeader: string | undefined;
+	/** The caller's Idempotency-Key header. */
+	idempotencyKey: string | undefined;
 	requestId: string;
 	occurredAt: number;
 }): CheckRequest => {
@@ -44,6 +47,8 @@ export const checkCallToRequest = ({
 	return {
 		requestId,
 		occurredAt,
+		// The API takes an empty key as none.
+		idempotencyKey: idempotencyKey || null,
 		params: params.data,
 		query: parsedQuery.data,
 		apiVersion,

@@ -268,6 +268,29 @@ describe("an Atom in an org's cloud", () => {
 		expect(allowed.headers.get("x-atom-forwarded")).toBeNull();
 	});
 
+	test("a refused check names the engine's limit and reason in headers, for the comparer; an allowed one names neither", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+
+		const allowed = await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 10 }),
+		);
+		const refused = await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
+
+		expect([
+			refused.headers.get("x-atom-deny-reason"),
+			refused.headers.get("x-atom-limit-type"),
+		]).toEqual(["insufficient_balance", "included"]);
+		expect([
+			allowed.headers.get("x-atom-deny-reason"),
+			allowed.headers.get("x-atom-limit-type"),
+		]).toEqual([null, null]);
+	});
+
 	test("a push routed to one customer but holding another is refused and stores nothing", async () => {
 		const { app } = createDeployedApp();
 
@@ -720,6 +743,21 @@ describe("the request line", () => {
 				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
 			);
 		}
+	});
+
+	test("a check that names an Idempotency-Key has it at req.idempotencyKey: the key its deduction carries to Autumn", async () => {
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+
+		const denied = checkMessages({ required_balance: 11 });
+		await app.request("/v1/balances.check", {
+			...denied,
+			headers: { ...denied.headers, "Idempotency-Key": "key_from_client" },
+		});
+
+		expect(logged[0]?.fields).toMatchObject({
+			req: { path: "/v1/balances.check", idempotencyKey: "key_from_client" },
+		});
 	});
 
 	test("an allowed check outside the sample leaves no line; every deny is logged, and every check is counted", async () => {

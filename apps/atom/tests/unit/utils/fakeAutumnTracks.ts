@@ -2,6 +2,7 @@ import { parseTrackCommand } from "@autumn/balance-engine";
 import {
 	ATOM_TOKEN_HASH_HEADER,
 	ATOM_TRACKS_APPEND_PATH,
+	type AtomFinalize,
 	AtomTracksAppendRequestSchema,
 } from "@autumn/byoc";
 
@@ -19,11 +20,15 @@ export type AppliedTrack = {
 export const startFakeAutumn = () => {
 	const appliedKeys = new Set<string>();
 	const applied: AppliedTrack[] = [];
+	/** Each finalize handed in, as its element names the lock, beside its journal and seq. */
+	const finalized: (AtomFinalize & { writerId: string; seq: number })[] = [];
 	const requestSizes: number[] = [];
 	const switches = {
 		down: false,
 		loseNextAck: false,
 		refuseWith: null as 400 | 401 | null,
+		/** A batch holding any of these commands is refused whole, as Autumn refuses a body with one bad track. */
+		refuseCommandIds: new Set<string>(),
 	};
 
 	const appendTracks = async (request: Request): Promise<Response> => {
@@ -36,14 +41,31 @@ export const startFakeAutumn = () => {
 		);
 		if (!parsed.success || switches.refuseWith === 400)
 			return Response.json({ code: "unreadable" }, { status: 400 });
+		const handedIn = parsed.data.tracks.flatMap((entry) =>
+			"command" in entry ? [entry] : [],
+		);
+		const commands = handedIn.map(({ command }) =>
+			parseTrackCommand({ input: command }),
+		);
+		if (
+			commands.some(({ commandId }) => switches.refuseCommandIds.has(commandId))
+		)
+			return Response.json({ code: "unreadable" }, { status: 400 });
 		requestSizes.push(parsed.data.tracks.length);
-		for (const { seq, command: sent } of parsed.data.tracks) {
-			const command = parseTrackCommand({ input: sent });
+		for (const entry of parsed.data.tracks)
+			if ("finalize" in entry)
+				finalized.push({
+					...entry.finalize,
+					writerId: entry.writerId,
+					seq: entry.seq,
+				});
+		for (const [index, { writerId, seq }] of handedIn.entries()) {
+			const command = commands[index] as (typeof commands)[number];
 			const key = command.idempotency?.key ?? command.commandId;
 			if (appliedKeys.has(key)) continue;
 			appliedKeys.add(key);
 			applied.push({
-				writer: parsed.data.writer,
+				writer: writerId,
 				customerId: command.identity.customerId,
 				seq,
 				value: command.value,
@@ -71,17 +93,20 @@ export const startFakeAutumn = () => {
 	return {
 		url: `http://127.0.0.1:${server.port}`,
 		applied,
+		finalized,
 		requestSizes,
 		switches,
 		/** Forgets every track it took, and comes back up. */
 		reset: () => {
 			appliedKeys.clear();
 			applied.splice(0);
+			finalized.splice(0);
 			requestSizes.splice(0);
 			Object.assign(switches, {
 				down: false,
 				loseNextAck: false,
 				refuseWith: null,
+				refuseCommandIds: new Set<string>(),
 			});
 		},
 		stop: () => server.stop(true),

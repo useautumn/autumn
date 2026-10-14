@@ -3,6 +3,7 @@ import type { SecretKeys } from "../../auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../auth/types/auth.js";
 import type { ThreadHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
+import type { ReplicaRing } from "../../replicas/types/replicaRing.js";
 import type { Replication } from "../../replication/types/replication.js";
 import type { Slots } from "../../slots/types/slots.js";
 import type { LoopWatch } from "../../threads/stats/startLoopWatch.js";
@@ -23,8 +24,15 @@ export type AtomHttpContext = {
 	secretKeys?: SecretKeys;
 	/** Keeps the other replicas holding what this thread applies. */
 	replication: Replication;
-	/** The port the other replicas answer checks on while this one starts; a test may send its own way. */
-	peer: { port: number; fetch?: typeof fetch };
+	/** Where a check this replica does not answer goes: the owner's peer port, signed with the deployment's secret; a test may send its own way. */
+	peer: {
+		port: number;
+		secret: string;
+		ring: ReplicaRing;
+		fetch?: typeof fetch;
+	};
+	/** True once this thread stops taking checks: one a peer hands on is refused, and so goes to the API. */
+	stopping?: () => boolean;
 	/** This replica's clock; a test runs it. */
 	now?: () => number;
 };
@@ -47,6 +55,8 @@ export type AtomHttpEnv = {
 		allowed?: boolean;
 		/** Set when another replica passed the request on: applied here, passed no further. */
 		relayed?: boolean;
+		/** The key the request's deduction carries to Autumn, when the caller named one. */
+		idempotencyKey?: string | null;
 		failure?: AtomFailure;
 	};
 };

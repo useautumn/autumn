@@ -9,7 +9,11 @@
 		"dev": "NODE_ENV=development ATOM_PRETTY_LOGS=true bun --watch --no-clear-screen --config=./bunfig.toml src/main.ts",
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
-		"ts": "tsc --noEmit"
+		"ts": "tsc --noEmit",
+		"bench:deduct": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/deductBench.ts",
+		"bench:replicas": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/replicaBench.ts",
+		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts",
+		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",

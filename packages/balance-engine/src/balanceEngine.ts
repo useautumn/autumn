@@ -40,6 +40,7 @@ export {
 	checkAfterDeduction,
 } from "./commands/check/checkAfterDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
+export { trackResultToCheckResult } from "./commands/check/trackResultToCheckResult.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
 export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
@@ -82,6 +83,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { lockParamsToTrackLock } from "./commands/track/lockParamsToTrackLock.js";
 export {
 	isLandedSeq,
 	trackOfNothing,
@@ -242,6 +244,10 @@ export {
 	filterCatalogForState,
 	filterCatalogKeysMissingFrom,
 } from "./utils/catalogUtils/filterCatalogUtils.js";
+export {
+	findStructuralDifference,
+	type StructuralDifference,
+} from "./utils/findStructuralDifference.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,
@@ -249,6 +255,7 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { findLockInsertInMutation } from "./utils/mutationUtils/findMutationUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,
@@ -258,6 +265,10 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export {
+	findSubjectStateDifference,
+	subjectStateRowsOf,
+} from "./utils/subjectStateUtils/findSubjectStateUtils.js";
 export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,
