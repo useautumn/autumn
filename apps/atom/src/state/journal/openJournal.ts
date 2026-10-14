@@ -62,6 +62,8 @@ export const openJournal = ({
 	const owedByCustomer = new Map<string, JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
 	unsentByJournal.add(unsent);
+	/** By customer, the entry Autumn refused that its later entries wait behind. */
+	const parkedCustomers = new Map<string, JournalEntry>();
 	/** Each customer's unsent entries in seq order, from `head`: those sent since leave the front as it is next settled. */
 	const unsentByCustomer = new Map<
 		string,
@@ -79,6 +81,8 @@ export const openJournal = ({
 
 	function releaseUnsent(entry: JournalEntry): void {
 		if (unsent.delete(entry)) unsentOnThread--;
+		if (parkedCustomers.get(entry.customerId) === entry)
+			parkedCustomers.delete(entry.customerId);
 	}
 
 	/** O(1) amortised: each entry leaves the front once, and the array is copied only once half of it has left. */
@@ -173,9 +177,13 @@ export const openJournal = ({
 		const taken: JournalEntry[] = [];
 		for (const entry of unsent) {
 			if (taken.length === limit) break;
-			taken.push(entry);
+			if (!parkedCustomers.has(entry.customerId)) taken.push(entry);
 		}
 		return taken;
+	}
+
+	function park({ entry }: { entry: JournalEntry }): void {
+		if (unsent.has(entry)) parkedCustomers.set(entry.customerId, entry);
 	}
 
 	function markSent({ entries }: { entries: JournalEntry[] }): void {
@@ -232,6 +240,9 @@ export const openJournal = ({
 		append,
 		owed,
 		unsent: takeUnsent,
+		countUnsent: () => unsent.size,
+		park,
+		parked: () => [...parkedCustomers.values()],
 		markSent,
 		onCommitted: (listener) => {
 			notifyCommitted = listener;
