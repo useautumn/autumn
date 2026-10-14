@@ -369,6 +369,58 @@ describe("the leaving replica's owed entries", () => {
 	});
 });
 
+describe("a moved customer's first requests", () => {
+	test("H5: a moved customer's first request waits for its handoff and, past the barrier, goes on without it", async () => {
+		const { a, b } = await agreeingPair();
+		await deductOnA({ a, times: 2 });
+		handoffNetwork({ replicas: [a, b], holdMs: 200 });
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const startedAt = performance.now();
+		const late = await remainingAt(b);
+		const waitedMs = performance.now() - startedAt;
+		await leaving;
+
+		expect(late).toBe(10);
+		expect(waitedMs).toBeGreaterThanOrEqual(45);
+		expect(b.stats().handoffLate).toBe(1);
+		expect(await remainingAt(b)).toBe(8);
+	});
+
+	test("a moved customer that owed nothing is answered at once, once the leaver has said it handed everything", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+
+		await a.leave();
+		const startedAt = performance.now();
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+		const waitedMs = performance.now() - startedAt;
+
+		expect((await reply.json()).balance.remaining).toBe(10);
+		expect(waitedMs).toBeLessThan(40);
+		expect(b.membership.isHandoffComplete(A)).toBe(true);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+
+	test("a moved customer's first request inside the barrier is answered with the handed entries", async () => {
+		const { a, b } = await agreeingPair();
+		await deductOnA({ a, times: 2 });
+		handoffNetwork({ replicas: [a, b], holdMs: 20 });
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const first = await remainingAt(b);
+		await leaving;
+
+		expect(first).toBe(8);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+});
+
 describe("a replica leaving with nobody to hand to", () => {
 	test("H4: its peer is down: the announcement and the handoff fail, and the entries drain to Autumn as today", async () => {
 		const aAutumn = toggledAutumn();
