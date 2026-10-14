@@ -5,6 +5,7 @@ import {
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
 	referralCodeRepo,
@@ -13,6 +14,8 @@ import {
 import { generateReferralCode } from "@/internal/rewards/rewardUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
+
+const MAX_INSERT_ATTEMPTS = 5;
 
 export const handleGetReferralCode = createRoute({
 	scopes: [Scopes.Rewards.Write],
@@ -51,31 +54,60 @@ export const handleGetReferralCode = createRoute({
 			});
 		}
 
+		const getExisting = () =>
+			referralCodeRepo.getByCustomerAndProgram({
+				db,
+				orgId: org.id,
+				env,
+				internalCustomerId: customer.internal_id,
+				internalRewardProgramId: rewardProgram.internal_id,
+			});
+
 		// Get referral code by customer and reward trigger
-		let referralCode = await referralCodeRepo.getByCustomerAndProgram({
-			db,
-			orgId: org.id,
-			env,
-			internalCustomerId: customer.internal_id,
-			internalRewardProgramId: rewardProgram.internal_id,
-		});
+		let referralCode = await getExisting();
+
+		// Insert a fresh random code. A unique violation means either a concurrent
+		// request for the same customer + program won the race (return its code),
+		// or the random code collided with an existing one (retry with a new code).
+		for (
+			let attempt = 1;
+			!referralCode && attempt <= MAX_INSERT_ATTEMPTS;
+			attempt++
+		) {
+			try {
+				referralCode = await referralCodeRepo.insert({
+					db,
+					data: {
+						code: generateReferralCode(),
+						org_id: org.id,
+						env,
+						internal_customer_id: customer.internal_id,
+						internal_reward_program_id: rewardProgram.internal_id,
+						id: generateId("rc"),
+						created_at: Date.now(),
+					},
+				});
+			} catch (error) {
+				if (!isUniqueConstraintError(error)) throw error;
+
+				referralCode = await getExisting();
+
+				if (!referralCode && attempt === MAX_INSERT_ATTEMPTS) {
+					throw new RecaseError({
+						message:
+							"Could not generate a unique referral code, please try again",
+						code: ErrCode.InsertReferralCodeFailed,
+						statusCode: 409,
+						cause: error,
+					});
+				}
+			}
+		}
 
 		if (!referralCode) {
-			const code = generateReferralCode();
-
-			referralCode = {
-				code,
-				org_id: org.id,
-				env,
-				internal_customer_id: customer.internal_id,
-				internal_reward_program_id: rewardProgram.internal_id,
-				id: generateId("rc"),
-				created_at: Date.now(),
-			};
-
-			referralCode = await referralCodeRepo.insert({
-				db,
-				data: referralCode,
+			throw new RecaseError({
+				message: "Failed to create referral code",
+				code: ErrCode.InsertReferralCodeFailed,
 			});
 		}
 
