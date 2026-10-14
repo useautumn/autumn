@@ -12,7 +12,11 @@ import type { ToolDomain } from "./utils/types.js";
 
 type ScheduleRequest = {
 	enable_plan_immediately?: boolean;
-	invoice_mode?: { enabled?: boolean; finalize?: boolean };
+	invoice_mode?: {
+		enabled?: boolean;
+		finalize?: boolean;
+		issue_method?: "draft" | "finalize" | "send";
+	};
 	redirect_mode?: string;
 };
 
@@ -20,11 +24,15 @@ const paidScheduleInvoiceModeIssues = (data: ScheduleRequest) => {
 	if (data.invoice_mode?.enabled !== true) return [];
 
 	const issues: { message: string; path: string[] }[] = [];
-	if (data.invoice_mode.finalize !== false) {
+	// The API resolves issue_method over finalize, so the draft check must too.
+	const issueMethod =
+		data.invoice_mode.issue_method ??
+		(data.invoice_mode.finalize === false ? "draft" : "send");
+	if (issueMethod !== "draft") {
 		issues.push({
 			message:
-				"Paid schedule previews must use invoice_mode.finalize false unless a supported override path is added.",
-			path: ["invoice_mode", "finalize"],
+				"Paid schedule previews must use invoice_mode.issue_method draft unless a supported override path is added.",
+			path: ["invoice_mode", "issue_method"],
 		});
 	}
 	if (data.redirect_mode !== "if_required") {

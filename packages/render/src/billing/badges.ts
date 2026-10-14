@@ -20,7 +20,11 @@ export const billingActionBadges = (
 	const invoiceMode = asRecord(params?.invoice_mode) ?? {};
 	const invoiceOn =
 		params?.invoice_mode === true || invoiceMode.enabled === true;
-	const finalize = invoiceMode.finalize !== false;
+	// The API lets issue_method win over the deprecated finalize.
+	const finalize =
+		invoiceMode.issue_method !== undefined
+			? invoiceMode.issue_method !== "draft"
+			: invoiceMode.finalize !== false;
 	const enableImmediately =
 		typeof params?.enable_plan_immediately === "boolean"
 			? params.enable_plan_immediately

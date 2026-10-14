@@ -14,6 +14,7 @@ import {
 	resolveNextPhaseStartsAt,
 } from "@/components/forms/customer-state/customerStateUtils";
 import type { UseCustomerStateForm } from "@/components/forms/customer-state/useCustomerStateForm";
+import { newPlanEntityId } from "@/components/forms/customer-state/utils/newPlanEntityId";
 
 const clonePlans = (plans: CustomerStatePlan[]): CustomerStatePlan[] =>
 	plans.map((plan) => ({
@@ -59,16 +60,26 @@ export function useCustomerStateHandlers({
 		[form.store, products, nowMs],
 	);
 
-	const lastSelectedEntityId = useRef<string | null>(null);
+	const lastSelectedEntityId = useRef<string | null | undefined>(undefined);
 	// Pickers present at mount wait for the sheet to settle; user-added ones open at once.
 	const hasAddedEmptyPlan = useRef(false);
-	const newEmptyPlan = useCallback((): CustomerStatePlan => {
-		hasAddedEmptyPlan.current = true;
-		return {
-			...EMPTY_CUSTOMER_STATE_PLAN,
-			entityId: lastSelectedEntityId.current,
-		};
-	}, []);
+	const newEmptyPlan = useCallback(
+		({
+			phasePlans = [],
+		}: {
+			phasePlans?: CustomerStatePlan[];
+		} = {}): CustomerStatePlan => {
+			hasAddedEmptyPlan.current = true;
+			return {
+				...EMPTY_CUSTOMER_STATE_PLAN,
+				entityId: newPlanEntityId({
+					lastSelectedEntityId: lastSelectedEntityId.current,
+					phasePlans,
+				}),
+			};
+		},
+		[],
+	);
 	const shouldOpenPickerImmediately = useCallback(
 		() => hasAddedEmptyPlan.current,
 		[],
@@ -78,7 +89,7 @@ export function useCustomerStateHandlers({
 		const phases = form.store.state.values.phases;
 		form.pushFieldValue("phases", {
 			startsAt: defaultStartsAt({ afterIndex: phases.length - 1 }),
-			plans: [newEmptyPlan()],
+			plans: [newEmptyPlan({ phasePlans: phases.at(-1)?.plans })],
 		});
 	}, [form, defaultStartsAt, newEmptyPlan]);
 
@@ -93,7 +104,12 @@ export function useCustomerStateHandlers({
 	const handleAddPlan = useCallback(
 		({ phaseIndex }: { phaseIndex: number }) => {
 			if (isPhaseLocked({ phaseIndex })) return;
-			form.pushFieldValue(`phases[${phaseIndex}].plans`, newEmptyPlan());
+			form.pushFieldValue(
+				`phases[${phaseIndex}].plans`,
+				newEmptyPlan({
+					phasePlans: form.store.state.values.phases[phaseIndex]?.plans,
+				}),
+			);
 		},
 		[form, isPhaseLocked, newEmptyPlan],
 	);
@@ -105,7 +121,7 @@ export function useCustomerStateHandlers({
 			if (plans && plans.length === 1) {
 				form.setFieldValue(
 					`phases[${phaseIndex}].plans[${planIndex}]`,
-					newEmptyPlan(),
+					newEmptyPlan({ phasePlans: plans }),
 				);
 			} else {
 				form.removeFieldValue(`phases[${phaseIndex}].plans`, planIndex);

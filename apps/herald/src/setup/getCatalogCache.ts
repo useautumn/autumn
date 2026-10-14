@@ -1,5 +1,6 @@
 import { type CatalogCache, createCatalogCache } from "@autumn/catalog-lru";
 import {
+	BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS,
 	BALANCE_WORKER_CATALOG_MAX_BYTES,
 	BALANCE_WORKER_CATALOG_TTL_MS,
 } from "@autumn/env/balanceWorkerConstants";
@@ -23,6 +24,7 @@ export function getCatalogCache(): CatalogCache {
 			config: {
 				mutableRowTtlMs: BALANCE_WORKER_CATALOG_TTL_MS,
 				maxSizeBytes: BALANCE_WORKER_CATALOG_MAX_BYTES,
+				idleExpiryMs: BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS,
 			},
 		},
 	});

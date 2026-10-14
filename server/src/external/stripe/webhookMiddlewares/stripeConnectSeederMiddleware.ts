@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	AuthType,
 	ErrCode,
 	type Feature,
@@ -14,7 +14,6 @@ import {
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripeCli } from "../../connect/createStripeCli.js";
-import { stripeEventMatchesEnv } from "../common/stripeEventMatchesEnv.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -81,7 +80,11 @@ export const stripeConnectSeederMiddleware = async (
 		}
 	}
 
-	if (!stripeEventMatchesEnv({ event, env })) {
+	// Live Connect endpoints also receive connected accounts' test events; those belong to the sandbox endpoint.
+	if (
+		typeof event.livemode === "boolean" &&
+		event.livemode !== (env === AppEnv.Live)
+	) {
 		logger.warn(`Skipping Stripe webhook ${event.id}: livemode mismatch`, {
 			data: {
 				eventId: event.id,
@@ -91,7 +94,9 @@ export const stripeConnectSeederMiddleware = async (
 			},
 		});
 		return c.json(
-			{ message: "Event livemode does not match endpoint, skipping" },
+			{
+				message: `Skipping livemode=${event.livemode} event on ${env} endpoint`,
+			},
 			200,
 		);
 	}

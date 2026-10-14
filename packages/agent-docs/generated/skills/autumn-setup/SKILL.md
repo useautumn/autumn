@@ -82,7 +82,7 @@ Then:
 4. Connect the way they chose, by running `init` again with the flag:
 
    - **Sign in** → say a browser window is coming, then `atmn init --login`. It opens the browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open (SSH, sandbox), that's not a failure: send the user the printed URL as-is and wait. Keys get saved to `.env`. Fails → retry once, then stop and tell the user what failed. Offer the ways forward — go keyless, or they copy their own sandbox key from app.useautumn.com into `.env` as `AUTUMN_SECRET_KEY` — and wait for their answer. Never switch to keyless on your own.
-   - **Keyless** → `atmn init --keyless`. It provisions a sandbox org and saves its key to `.env` as `AUTUMN_SECRET_KEY`. No account, no browser, nothing for the user to do. The org is a real one: pushing, customers, and billing all work the same. It has no owner until Phase 7 links one, and the key doesn't change when that happens. `init` prints the deadline for linking; note it for Phase 7. For what provisioning and linking do underneath, and their limits, read `references/keyless.md`.
+   - **Keyless** → `atmn init --keyless`. It provisions a sandbox org and saves its key to `.env` as `AUTUMN_SECRET_KEY`. No account, no browser, nothing for the user to do. The org is a real one: pushing, customers, and billing all work the same. It has no owner until Phase 7 links one, and the key doesn't change when that happens. For what provisioning and linking do underneath, and their limits, read `references/keyless.md`.
 
 5. `init` pulled the org's catalog into the config. If plans showed up ("Pulled N entries"), say so and go through them with the user before changing anything. A brand-new or keyless org is empty; the config is a scaffold for Phase 4 to fill.
 
@@ -141,7 +141,7 @@ Offer once, right after they've seen the integration work, because that's when t
 
 No → fine, drop it and say the offer stands whenever. Yes → ask which email to send the link to, run `atmn login --claim <email>`, and give them the returned claim URL. Autumn also emails that same URL — say so, naming the address, so they know where to find it later ("Also sent to you@example.com"). Whoever opens the link and signs in becomes the owner — the email is only where the link is delivered, so treat the link like the key and give it to the user alone. Linking makes them the owner: same key, same plans, same customers, plus the dashboard. An account that already exists works the same way; the new org is added beside their existing ones and becomes active after confirmation.
 
-Unclaimed orgs don't wait forever, so mention the window `init` printed when you offer — as a fact, not a threat. If linking fails, nothing is lost: the key keeps working and they can try again, or sign up normally and push the same config. What the commands do underneath: `references/keyless.md`.
+There's no deadline for linking, so it can wait until the user is ready. If linking fails, nothing is lost: the key keeps working and they can try again, or sign up normally and push the same config. What the commands do underneath: `references/keyless.md`.
 
 ## Phase 8 — Done
 

@@ -1139,6 +1139,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
 			},
 			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
 				name: "processor_subscription_id",
 				type: "string",
 				required: false,
@@ -1618,6 +1632,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
 			},
 			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
 				name: "processor_subscription_id",
 				type: "string",
 				required: false,
@@ -1933,6 +1961,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 			},
 			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
 				name: "cancel_action",
 				type: "string",
 				required: false,
@@ -2091,6 +2133,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "cancel_action",
@@ -2380,6 +2436,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "processor_subscription_id",
@@ -3232,6 +3302,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
 			},
 			{
+				name: "measure",
+				type: "string",
+				required: false,
+				description:
+					'What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.',
+			},
+			{
 				name: "aggregate_on",
 				type: "string",
 				required: false,
@@ -3342,6 +3419,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description: "Stripe tax rate ID (txr_...) applied to every line.",
+			},
+			{
+				name: "payment_method_types",
+				type: "json",
+				required: false,
+				description:
+					"Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.",
 			},
 			{
 				name: "period_start",
@@ -3615,6 +3699,29 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description: "Add, change or drop lines relative to the original.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "update",
+		path: "/v1/invoices.update",
+		description:
+			"Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to update.",
+			},
+			{
+				name: "payment_method_types",
+				type: "json",
+				required: true,
+				description:
+					"Payment method types the customer can pay the invoice with. Only draft and open Stripe invoices can be updated.",
 			},
 		],
 	},

@@ -31,8 +31,6 @@ import {
   UnscheduledPlanUpsertLicenseBasePrice,
   UnscheduledPlanUpsertLicenseBasePrice$Outbound,
   UnscheduledPlanUpsertLicenseBasePrice$outboundSchema,
-  UnscheduledPlanUpsertLicenseOnDecrease,
-  UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema,
   UnscheduledPlanUpsertLicenseOnIncrease,
   UnscheduledPlanUpsertLicenseOnIncrease$outboundSchema,
   UnscheduledPlanUpsertLicensePrice,
@@ -44,7 +42,24 @@ import {
   UnscheduledPlanUpsertLicenseThresholdBilling,
   UnscheduledPlanUpsertLicenseThresholdBilling$Outbound,
   UnscheduledPlanUpsertLicenseThresholdBilling$outboundSchema,
-} from "./unscheduled-plan-upsert-license-on-decrease.js";
+} from "./unscheduled-plan-upsert-license-on-increase.js";
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const UnscheduledPlanUpsertLicenseOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type UnscheduledPlanUpsertLicenseOnDecrease = ClosedEnum<
+  typeof UnscheduledPlanUpsertLicenseOnDecrease
+>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
@@ -828,10 +843,16 @@ export type PhaseItemPriceTier2 = {
   additionalCurrencies?: Array<PhaseItemTierAdditionalCurrency2> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PhaseItemTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PhaseItemTierBehavior2 = ClosedEnum<typeof PhaseItemTierBehavior2>;
 
 /**
@@ -882,6 +903,9 @@ export type PhaseItemPrice2 = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PhaseItemPriceTier2> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PhaseItemTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1399,10 +1423,16 @@ export type PhaseAddItemPriceTier2 = {
   additionalCurrencies?: Array<PhaseAddItemTierAdditionalCurrency2> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PhaseAddItemTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PhaseAddItemTierBehavior2 = ClosedEnum<
   typeof PhaseAddItemTierBehavior2
 >;
@@ -1455,6 +1485,9 @@ export type PhaseAddItemPrice2 = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PhaseAddItemPriceTier2> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PhaseAddItemTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1816,26 +1849,11 @@ export type PhaseAddItemModelMarkups2 = {
   outputCost?: number | undefined;
 };
 
-/**
- * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
- */
-export type PhaseAddItemMarkups2 = {
-  /**
-   * Default percentage markup for customers on this plan. Use -100 to make usage free.
-   */
-  defaultMarkup?: number | undefined;
-  /**
-   * Per-provider markup percentages for customers on this plan.
-   */
-  providerMarkups?:
-    | { [k: string]: PhaseAddItemProviderMarkups2 }
-    | null
-    | undefined;
-  /**
-   * Per-model markup overrides for customers on this plan.
-   */
-  modelMarkups?: { [k: string]: PhaseAddItemModelMarkups2 } | null | undefined;
-};
+/** @internal */
+export const UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema:
+  z.ZodMiniEnum<typeof UnscheduledPlanUpsertLicenseOnDecrease> = z.enum(
+    UnscheduledPlanUpsertLicenseOnDecrease,
+  );
 
 /** @internal */
 export type UnscheduledPlanUpsertLicenseProration$Outbound = {
@@ -5669,51 +5687,5 @@ export function phaseAddItemModelMarkups2ToJSON(
 ): string {
   return JSON.stringify(
     PhaseAddItemModelMarkups2$outboundSchema.parse(phaseAddItemModelMarkups2),
-  );
-}
-
-/** @internal */
-export type PhaseAddItemMarkups2$Outbound = {
-  default_markup?: number | undefined;
-  provider_markups?:
-    | { [k: string]: PhaseAddItemProviderMarkups2$Outbound }
-    | null
-    | undefined;
-  model_markups?:
-    | { [k: string]: PhaseAddItemModelMarkups2$Outbound }
-    | null
-    | undefined;
-};
-
-/** @internal */
-export const PhaseAddItemMarkups2$outboundSchema: z.ZodMiniType<
-  PhaseAddItemMarkups2$Outbound,
-  PhaseAddItemMarkups2
-> = z.pipe(
-  z.object({
-    defaultMarkup: z.optional(z.number()),
-    providerMarkups: z.optional(z.nullable(z.record(
-      z.string(),
-      z.lazy(() => PhaseAddItemProviderMarkups2$outboundSchema),
-    ))),
-    modelMarkups: z.optional(z.nullable(z.record(
-      z.string(),
-      z.lazy(() => PhaseAddItemModelMarkups2$outboundSchema),
-    ))),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      defaultMarkup: "default_markup",
-      providerMarkups: "provider_markups",
-      modelMarkups: "model_markups",
-    });
-  }),
-);
-
-export function phaseAddItemMarkups2ToJSON(
-  phaseAddItemMarkups2: PhaseAddItemMarkups2,
-): string {
-  return JSON.stringify(
-    PhaseAddItemMarkups2$outboundSchema.parse(phaseAddItemMarkups2),
   );
 }

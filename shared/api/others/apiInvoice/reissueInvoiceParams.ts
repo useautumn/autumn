@@ -4,9 +4,9 @@ import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
 import {
 	CreateInvoicePreviewSchema,
-	InvoiceIssueMethodSchema,
 	InvoicePlanParamsSchema,
 } from "./createInvoiceParams.js";
+import { InvoiceIssueMethodSchema } from "./invoiceIssueMethod.js";
 
 /** Name/value pairs Stripe renders on the invoice, e.g. a PO number. */
 export const InvoiceCustomFieldSchema = z

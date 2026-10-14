@@ -1,10 +1,9 @@
-import { AuthType, tryCatch } from "@autumn/shared";
+import { AppEnv, AuthType, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { stripeEventMatchesEnv } from "../common/stripeEventMatchesEnv.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
 import { isStripeWebhookLockRequired } from "../webhookMiddlewares/classifyStripeWebhookAckMode.js";
 import {
@@ -51,7 +50,11 @@ export const runStripeWebhookReplay = async ({
 }) => {
 	const { stripeEvent } = payload;
 	const { logger } = ctx;
-	if (!stripeEventMatchesEnv({ event: stripeEvent, env: ctx.env })) return;
+	if (
+		typeof stripeEvent.livemode === "boolean" &&
+		stripeEvent.livemode !== (ctx.env === AppEnv.Live)
+	)
+		return;
 
 	const webhookCtx: StripeWebhookContext = {
 		...ctx,

@@ -1188,6 +1188,396 @@ class SetupPaymentCustomLineItem(BaseModel):
     r"""Description for the line item."""
 
 
+SetupPaymentDirection = Literal[
+    "charge",
+    "refund",
+]
+r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+
+SetupPaymentPriceRemoveLineInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class SetupPaymentPriceRemoveLineTypedDict(TypedDict):
+    interval: NotRequired[SetupPaymentPriceRemoveLineInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class SetupPaymentPriceRemoveLine(BaseModel):
+    interval: Optional[SetupPaymentPriceRemoveLineInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentPriceUnionTypedDict = TypeAliasType(
+    "SetupPaymentPriceUnionTypedDict", Union[SetupPaymentPriceRemoveLineTypedDict, bool]
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+SetupPaymentPriceUnion = TypeAliasType(
+    "SetupPaymentPriceUnion", Union[SetupPaymentPriceRemoveLine, bool]
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+SetupPaymentBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+SetupPaymentFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class SetupPaymentRemoveLineFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: SetupPaymentBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[SetupPaymentFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class SetupPaymentRemoveLineFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: SetupPaymentBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[SetupPaymentFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentPriceLicenseQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class SetupPaymentPriceLicenseQuantityTypedDict(TypedDict):
+    interval: NotRequired[SetupPaymentPriceLicenseQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class SetupPaymentPriceLicenseQuantity(BaseModel):
+    interval: Optional[SetupPaymentPriceLicenseQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentLicenseQuantityPriceUnionTypedDict = TypeAliasType(
+    "SetupPaymentLicenseQuantityPriceUnionTypedDict",
+    Union[SetupPaymentPriceLicenseQuantityTypedDict, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+SetupPaymentLicenseQuantityPriceUnion = TypeAliasType(
+    "SetupPaymentLicenseQuantityPriceUnion",
+    Union[SetupPaymentPriceLicenseQuantity, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+SetupPaymentLicenseQuantityBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+SetupPaymentLicenseQuantityFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class SetupPaymentLicenseQuantityFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: SetupPaymentLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[SetupPaymentLicenseQuantityFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class SetupPaymentLicenseQuantityFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: SetupPaymentLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[SetupPaymentLicenseQuantityFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class SetupPaymentRemoveLineLicenseQuantityTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+    price: NotRequired[SetupPaymentLicenseQuantityPriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[
+        List[SetupPaymentLicenseQuantityFeatureQuantityTypedDict]
+    ]
+
+
+class SetupPaymentRemoveLineLicenseQuantity(BaseModel):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+
+    price: Optional[SetupPaymentLicenseQuantityPriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[SetupPaymentLicenseQuantityFeatureQuantity]] = (
+        None
+    )
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_quantities"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class SetupPaymentRemoveLineTypedDict(TypedDict):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+    direction: NotRequired[SetupPaymentDirection]
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+    price: NotRequired[SetupPaymentPriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[
+        List[SetupPaymentRemoveLineFeatureQuantityTypedDict]
+    ]
+    license_quantities: NotRequired[
+        List[SetupPaymentRemoveLineLicenseQuantityTypedDict]
+    ]
+
+
+class SetupPaymentRemoveLine(BaseModel):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+
+    direction: Optional[SetupPaymentDirection] = None
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+    price: Optional[SetupPaymentPriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[SetupPaymentRemoveLineFeatureQuantity]] = None
+
+    license_quantities: Optional[List[SetupPaymentRemoveLineLicenseQuantity]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "entity_id",
+                "direction",
+                "price",
+                "feature_quantities",
+                "license_quantities",
+            ]
+        )
+        nullable_fields = set(["entity_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class SetupPaymentAddLineTypedDict(TypedDict):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+    period_start: NotRequired[int]
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+    period_end: NotRequired[int]
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+
+class SetupPaymentAddLine(BaseModel):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["period_start", "period_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class SetupPaymentCarryOverBalancesTypedDict(TypedDict):
     r"""Whether to carry over balances from the previous plan."""
 
@@ -1490,6 +1880,10 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+    remove_lines: NotRequired[List[SetupPaymentRemoveLineTypedDict]]
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+    add_lines: NotRequired[List[SetupPaymentAddLineTypedDict]]
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
     processor_subscription_id: NotRequired[str]
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
     carry_over_balances: NotRequired[SetupPaymentCarryOverBalancesTypedDict]
@@ -1567,6 +1961,12 @@ class SetupPaymentParams(BaseModel):
     custom_line_items: Optional[List[SetupPaymentCustomLineItem]] = None
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
+    remove_lines: Optional[List[SetupPaymentRemoveLine]] = None
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+
+    add_lines: Optional[List[SetupPaymentAddLine]] = None
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
+
     processor_subscription_id: Optional[str] = None
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
 
@@ -1625,6 +2025,8 @@ class SetupPaymentParams(BaseModel):
                 "ends_at",
                 "checkout_session_params",
                 "custom_line_items",
+                "remove_lines",
+                "add_lines",
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",

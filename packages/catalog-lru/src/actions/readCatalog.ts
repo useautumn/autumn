@@ -11,6 +11,7 @@ import type {
 	CatalogRead,
 } from "../types/catalogCacheContext.js";
 import { isCatalogRowCurrent } from "./catalogVersions.js";
+import { markCatalogRowUsed, purgeIdleCatalogRows } from "./idleExpiry.js";
 
 /** Every check and track reads the catalog, so a stored row is validated once and
  *  the result reused while that row stays cached; a replaced row is parsed afresh.
@@ -52,6 +53,7 @@ export const readCatalog = ({
 	for (const key of keys) {
 		const cacheKey = catalogKeyToString({ key });
 		const row = scope.state.entries.get(cacheKey, { allowStale });
+		if (row) markCatalogRowUsed({ scope, row });
 		const answered =
 			row && (allowStale || isCatalogRowCurrent({ scope, row }))
 				? row
@@ -61,5 +63,6 @@ export const readCatalog = ({
 	}
 	const catalog = catalogRowsToCatalog({ rows });
 	scope.state.reads.set(catalog, read);
+	purgeIdleCatalogRows({ scope });
 	return catalog;
 };

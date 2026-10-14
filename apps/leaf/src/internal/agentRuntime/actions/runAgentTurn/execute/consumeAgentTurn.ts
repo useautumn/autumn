@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { type AppEnv, ms } from "@autumn/shared";
+import { differenceInMilliseconds, isPast } from "date-fns";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
@@ -50,12 +51,19 @@ const idleWindowFor = ({
 	activity: TurnActivity;
 	deadlineAt?: number;
 }) => {
-	if (deadlineAt === undefined || activity.activeChildren() > 0) {
+	if (
+		deadlineAt === undefined ||
+		activity.activeChildren() > 0 ||
+		isPast(deadlineAt)
+	) {
 		return STREAM_IDLE_TIMEOUT_MS;
 	}
 	return Math.max(
 		MIN_IDLE_WINDOW_MS,
-		Math.min(STREAM_IDLE_TIMEOUT_MS, deadlineAt - Date.now()),
+		Math.min(
+			STREAM_IDLE_TIMEOUT_MS,
+			differenceInMilliseconds(deadlineAt, Date.now()),
+		),
 	);
 };
 
@@ -144,6 +152,9 @@ const streamPassEvents = async ({
 		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
+			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS) {
+				return { progress, sawEvent };
+			}
 			activity.touch();
 			advanceStreamCursor(session);
 
@@ -369,13 +380,16 @@ export const consumeAgentTurn = async ({
 
 			// A quiet parent is not a done turn — children stream on their own
 			// sessions; MAX_TURN_DURATION_MS still bounds a runaway turn.
-			const childIsWorking = activity.activeChildren() > 0;
+			const turnIsWorking =
+				activity.activeChildren() > 0 ||
+				(turn.progress.turnStarted &&
+					activity.msSinceActivity() < STREAM_IDLE_TIMEOUT_MS);
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
 			const deadlineReached =
 				deadlineAt !== undefined && Date.now() >= deadlineAt;
 			if (
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
-				(!childIsWorking && (quietTooLong || deadlineReached))
+				(!turnIsWorking && (quietTooLong || deadlineReached))
 			) {
 				return settleExhaustedTurn({
 					activity,

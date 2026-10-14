@@ -55,7 +55,11 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="finalize" type="boolean">
-      If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+      Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.
+    </DynamicParamField>
+
+    <DynamicParamField body="issue_method" type="'draft' | 'finalize' | 'send'">
+      How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
     </DynamicParamField>
 
     <DynamicParamField body="invoice_template_id" type="string">
@@ -293,7 +297,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicParamField>
 
-                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                   Billing interval. For consumable features, should match reset.interval.
@@ -575,7 +581,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicParamField>
 
-                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                   Billing interval. For consumable features, should match reset.interval.
@@ -1093,7 +1101,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           </Expandable>
                         </DynamicParamField>
 
-                        <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                        <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                          How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                        </DynamicParamField>
 
                         <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                           Billing interval. For consumable features, should match reset.interval.
@@ -1529,7 +1539,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicParamField>
 
-                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                      How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                    </DynamicParamField>
 
                     <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                       Billing interval. For consumable features, should match reset.interval.
@@ -1811,7 +1823,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicParamField>
 
-                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                      How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                    </DynamicParamField>
 
                     <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                       Billing interval. For consumable features, should match reset.interval.
@@ -2329,7 +2343,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               </Expandable>
                             </DynamicParamField>
 
-                            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                              How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                            </DynamicParamField>
 
                             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                               Billing interval. For consumable features, should match reset.interval.

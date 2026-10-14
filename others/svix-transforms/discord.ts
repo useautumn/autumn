@@ -21,70 +21,91 @@ function handler(webhook) {
   var payload = webhook.payload || {};
   var data = payload.data || payload;
 
-  // ============ customer.products.updated ============
-  if (webhook.eventType === "customer.products.updated") {
-    var scenario = data.scenario || "updated";
-    var customer = data.customer || {};
-    var entity = data.entity || null;
-    var product = data.updated_product || {};
+  // ============ billing.updated ============
+  if (webhook.eventType === "billing.updated") {
+    var customerId = data.customer_id || "";
+    var entityId = data.entity_id || null;
+    var planChanges = data.plan_changes || [];
+    var reasonTags = data.tags || [];
 
-    var customerName = customer.name || customer.email || customer.id || "Customer";
-    var customerEmail = customer.email || null;
-    var customerId = customer.id || "";
-
-    var productName = product.name || "their plan";
-    if (product.version && product.version !== 1) {
-      productName = productName + " V" + product.version;
+    // Tag-only events (no plan changed) have nothing worth posting.
+    if (planChanges.length === 0) {
+      webhook.cancel = true;
+      return webhook;
     }
 
-    var entityLabel = null;
-    if (entity) {
-      entityLabel = entity.name || entity.id || null;
+    // "updated" covers several in-place changes; previous_attributes tells them apart.
+    function classifyPlanChange(change) {
+      var previous = change.previous_attributes || {};
+      if (change.action !== "updated") return change.action;
+      if (previous.canceled_at === null) return "cancelled";
+      if (typeof previous.canceled_at === "number") return "uncancelled";
+      if (previous.past_due === false) return "past_due";
+      return "updated";
+    }
+
+    var changeMeta = {
+      "activated":   { emoji: "🎉", verb: "activated" },
+      "scheduled":   { emoji: "📅", verb: "scheduled" },
+      "expired":     { emoji: "💀", verb: "expired" },
+      "cancelled":   { emoji: "⚠️",  verb: "cancelled" },
+      "uncancelled": { emoji: "🔄", verb: "uncancelled" },
+      "past_due":    { emoji: "💳", verb: "is past due" },
+      "updated":     { emoji: "🔔", verb: "updated" }
+    };
+
+    var kinds = {};
+    var changeLines = [];
+    for (var i = 0; i < planChanges.length; i++) {
+      var change = planChanges[i];
+      var kind = classifyPlanChange(change);
+      var changeInfo = changeMeta[kind] || changeMeta.updated;
+      var snapshot = change.subscription || change.purchase || {};
+      var line = changeInfo.emoji + " **" + (snapshot.plan_id || "plan") + "** " + changeInfo.verb;
+      if (change.entity_id && change.entity_id !== entityId) {
+        line += " (entity `" + change.entity_id + "`)";
+      }
+      kinds[kind] = true;
+      changeLines.push(line);
     }
 
     var emoji = "🔔";
-    var header = "Subscription Updated";
-    var verb = "updated";
+    var header = "Plans Updated";
     var color = COLOR_NEUTRAL;
 
-    if (scenario === "new") {
-      emoji = "🎉"; header = "New Subscription"; verb = "subscribed to"; color = COLOR_SUCCESS;
-    } else if (scenario === "upgrade") {
-      emoji = "🚀"; header = "Customer Upgraded"; verb = "upgraded to"; color = COLOR_SUCCESS;
-    } else if (scenario === "downgrade") {
-      emoji = "📉"; header = "Customer Downgraded"; verb = "downgraded to"; color = COLOR_WARNING;
-    } else if (scenario === "cancel") {
-      emoji = "⚠️"; header = "Subscription Cancelled"; verb = "cancelled"; color = COLOR_WARNING;
-    } else if (scenario === "renew") {
-      emoji = "🔄"; header = "Subscription Uncancelled"; verb = "uncancelled"; color = COLOR_SUCCESS;
-    } else if (scenario === "expired") {
-      emoji = "💀"; header = "Subscription Expired"; verb = "expired on"; color = COLOR_DANGER;
-    } else if (scenario === "scheduled") {
-      emoji = "📅"; header = "Change Scheduled"; verb = "scheduled a change to"; color = COLOR_INFO;
+    if (kinds.activated && kinds.expired) {
+      emoji = "🔀"; header = "Plan Changed"; color = COLOR_INFO;
+    } else if (kinds.activated) {
+      emoji = "🎉"; header = "New Subscription"; color = COLOR_SUCCESS;
+    } else if (kinds.scheduled) {
+      emoji = "📅"; header = "Change Scheduled"; color = COLOR_INFO;
+    } else if (kinds.cancelled) {
+      emoji = "⚠️"; header = "Subscription Cancelled"; color = COLOR_WARNING;
+    } else if (kinds.uncancelled) {
+      emoji = "🔄"; header = "Subscription Uncancelled"; color = COLOR_SUCCESS;
+    } else if (kinds.expired) {
+      emoji = "💀"; header = "Subscription Expired"; color = COLOR_DANGER;
+    } else if (kinds.past_due) {
+      emoji = "💳"; header = "Payment Past Due"; color = COLOR_DANGER;
     }
 
-    var sentence;
-    if (scenario === "expired") {
-      sentence = "**" + customerName + "**'s **" + productName + "** expired";
-    } else {
-      sentence = "**" + customerName + "** " + verb + " **" + productName + "**";
-    }
-
-    var description = sentence;
+    var description = changeLines.join("\n");
     if (customerId) {
       description += "\n\n[View in Autumn](" + AUTUMN_BASE + customerId + ")";
     }
 
     var fields = [
-      { name: "Customer", value: customerName, inline: true }
+      {
+        name: "Customer",
+        value: customerId ? "`" + customerId + "`" : "—",
+        inline: true
+      }
     ];
-    if (customerEmail) {
-      fields.push({ name: "Email", value: customerEmail, inline: true });
+    if (entityId) {
+      fields.push({ name: "Entity", value: "`" + entityId + "`", inline: true });
     }
-    fields.push({ name: "Product", value: productName, inline: true });
-    fields.push({ name: "Scenario", value: "`" + scenario + "`", inline: true });
-    if (entityLabel) {
-      fields.push({ name: "Entity", value: entityLabel, inline: true });
+    if (reasonTags.length > 0) {
+      fields.push({ name: "Tags", value: "`" + reasonTags.join("`, `") + "`", inline: true });
     }
 
     var embed = {
@@ -98,7 +119,7 @@ function handler(webhook) {
     }
     var footerParts = [];
     if (customerId) footerParts.push("Customer ID: " + customerId);
-    if (entity && entity.id) footerParts.push("Entity: " + entity.id);
+    if (entityId) footerParts.push("Entity: " + entityId);
     if (footerParts.length > 0) {
       embed.footer = { text: footerParts.join(" | ") };
     }
