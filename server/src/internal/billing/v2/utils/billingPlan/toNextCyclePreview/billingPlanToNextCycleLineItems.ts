@@ -17,6 +17,7 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+import { customerProductToRenewalCustomerProduct } from "./customerProductToRenewalCustomerProduct";
 
 export type NextCycleLineItemOptions = {
 	/**
@@ -52,7 +53,11 @@ const buildLineItemsForSpec = ({
 	const lineItems = spec.customerProducts.flatMap((customerProduct) =>
 		getLineItemsForDirection({
 			ctx,
-			customerProduct,
+			// Refunds credit what was held this cycle; charges bill what renews.
+			customerProduct:
+				spec.direction === "charge"
+					? customerProductToRenewalCustomerProduct({ customerProduct })
+					: customerProduct,
 			billingContext: {
 				...billingContext,
 				...spec.billingContext,
