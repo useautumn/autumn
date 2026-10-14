@@ -38,7 +38,7 @@
 				"kubernetesSecretMounts": [],
 				"links": [{ "type": "queue", "id": "pushes" }],
 				"permissions": "atom",
-				"persistentStorage": { "mountPath": "/data", "size": "20Gi" },
+				"persistentStorage": { "mountPath": "/data", "size": "100Gi" },
 				"ports": [{ "port": 8080 }, { "port": 8081 }],
 				"publicEndpoints": [
 					{
