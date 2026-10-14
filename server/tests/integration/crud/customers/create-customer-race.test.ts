@@ -10,7 +10,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService.js";
+import { timeout } from "@/utils/genUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RACE CONDITION TESTS
@@ -326,4 +328,51 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 
 	// Name should be preserved - not overwritten with empty string
 	expect(finalCustomer.name).toBe(customerName);
+});
+
+test.concurrent(`${chalk.yellowBright("race: concurrent create_in_stripe with vs without email shares one Stripe customer")}`, async () => {
+	const customerId = "race-stripe-email-mismatch-test";
+	const email = `${customerId}@example.com`;
+
+	const { autumnV1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	const createAfter = ({
+		delayMs,
+		requestEmail,
+	}: {
+		delayMs: number;
+		requestEmail?: string;
+	}) =>
+		timeout(delayMs).then(() =>
+			autumnV1.customers.create({
+				id: customerId,
+				email: requestEmail,
+				withAutumnId: true,
+				create_in_stripe: true,
+			}),
+		);
+
+	const results = await Promise.all([
+		createAfter({ delayMs: 0 }),
+		...[25, 50, 100, 150, 200, 300].map((delayMs) =>
+			createAfter({ delayMs, requestEmail: email }),
+		),
+	]);
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const stripeCustomerId = fullCustomer.processor?.id;
+	expect(new Set(results.map((r) => r.stripe_id))).toEqual(
+		new Set([stripeCustomerId]),
+	);
+
+	const stripeCustomer = await ctx.stripeCli.customers.retrieve(
+		stripeCustomerId!,
+	);
+	expect((stripeCustomer as Stripe.Customer).email).toBe(email);
 });
