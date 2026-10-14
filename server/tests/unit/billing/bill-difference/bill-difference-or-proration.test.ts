@@ -39,6 +39,18 @@ const halfOffCoupon: StripeDiscountWithCoupon = {
 	},
 };
 
+const fiftyOffCoupon: StripeDiscountWithCoupon = {
+	id: "di_fifty_off",
+	start: (PERIOD_START_MS - ms.days(60)) / 1000,
+	source: {
+		coupon: {
+			id: "fifty_off",
+			amount_off: 5000,
+			currency: "usd",
+		} as Stripe.Coupon,
+	},
+};
+
 const line = ({
 	direction,
 	amount,
@@ -165,6 +177,24 @@ describe(chalk.yellowBright("billDifferenceOrProration"), () => {
 		});
 
 		expect(amounts(result)).toEqual([-25, 40]);
+	});
+
+	test("a fixed-amount coupon doesn't change which side each slot bills", () => {
+		const addOnSwap = planSwitch({ from: 100, to: 100 }).map((lineItem) => {
+			const product = lineItem.context.customerProduct?.product;
+			if (product) Object.assign(product, { id: "add_on", is_add_on: true });
+			lineItem.context.billingPeriod = {
+				start: HALFWAY_MS - ms.days(3),
+				end: HALFWAY_MS + ms.days(27),
+			};
+			return lineItem;
+		});
+		const result = billDifferenceOrProration({
+			billingContext: { ...billingContext, stripeDiscounts: [fiftyOffCoupon] },
+			lineItems: [...planSwitch({ from: 100, to: 100 }), ...addOnSwap],
+		});
+
+		expect(amounts(result)).toEqual([-100, 100, -100, 100]);
 	});
 
 	test("a removal with nothing replacing it is prorated", () => {

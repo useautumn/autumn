@@ -47,7 +47,8 @@ const prorateToNow = ({
 	};
 };
 
-/** Amounts as the customer will be billed them, so coupons count in the comparison. */
+/** Percent-off coupons scale each line, so they count in the comparison. A fixed-amount
+ * coupon comes off the invoice whichever side wins, so it can't change the choice. */
 const amountsAfterCoupons = ({
 	lineItems,
 	billingContext,
@@ -55,10 +56,13 @@ const amountsAfterCoupons = ({
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 }): number[] => {
-	const discounted = billingContext.stripeDiscounts?.length
+	const percentOffDiscounts = (billingContext.stripeDiscounts ?? []).filter(
+		(discount) => discount.source.coupon.percent_off,
+	);
+	const discounted = percentOffDiscounts.length
 		? applyStripeDiscountsToLineItems({
 				lineItems,
-				discounts: billingContext.stripeDiscounts,
+				discounts: percentOffDiscounts,
 				options: { disableDiscountableForFreshDiscounts: true },
 			})
 		: lineItems;
