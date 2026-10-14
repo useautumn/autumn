@@ -35,7 +35,10 @@ const configureDatabase = ({ database }: { database: Database }) => {
 	database.run("PRAGMA auto_vacuum = INCREMENTAL");
 	switchToWal({ database });
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
-	database.run("PRAGMA synchronous = NORMAL");
+	// BENCH ONLY (rig disk arm, never merged): RIG_SQLITE_SYNCHRONOUS overrides the level.
+	database.run(
+		`PRAGMA synchronous = ${process.env.RIG_SQLITE_SYNCHRONOUS ?? "NORMAL"}`,
+	);
 	// The main thread checkpoints every file (startWalCheckpointer), so a commit never copies the log back itself.
 	database.run("PRAGMA wal_autocheckpoint = 0");
 	database.run(`PRAGMA journal_size_limit = ${JOURNAL_SIZE_LIMIT_BYTES}`);
