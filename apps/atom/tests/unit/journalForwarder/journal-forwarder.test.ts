@@ -321,9 +321,9 @@ describe("a deduction sent again after a restart", () => {
 			const forwarding = createJournalForwarder({
 				ctx: {
 					autumnClient: {
-						appendTracks: async ({ writer, tracks }) => {
+						appendTracks: async ({ tracks }) => {
 							for (const track of tracks)
-								sent.push({ writer: track.writer ?? writer, ...track });
+								sent.push({ writer: track.writerId, ...track });
 						},
 					},
 					logger: { info() {}, warn() {} },
