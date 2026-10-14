@@ -108,6 +108,7 @@ const syncManualPastDue = async ({
 			insertedCustomerProducts: [],
 			oneOffPrepaidCarryOvers: [],
 			billingChangeTags: new Set<string>(),
+			pooledTransitionedCustomerProductIds: new Set<string>(),
 		},
 	});
 
