@@ -17,10 +17,14 @@ export const customerEntitlementCompetes = ({
 	customerProduct: FullCusProduct;
 }): boolean => {
 	const { entitlement } = customerEntitlement;
-	if (!isCompetingCombineFeature({ feature: entitlement.feature })) return false;
+	if (!isCompetingCombineFeature({ feature: entitlement.feature }))
+		return false;
 	if (isBooleanEntitlement({ entitlement })) return false;
 	if (isEntityScopedEntitlement({ entitlement })) return false;
-	if (customerProduct.internal_entity_id || customerEntitlement.internal_entity_id)
+	if (
+		customerProduct.internal_entity_id ||
+		customerEntitlement.internal_entity_id
+	)
 		return false;
 	if (customerProduct.customer_license_link_id) return false;
 

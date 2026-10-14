@@ -1,5 +1,5 @@
 {
-  "id": "71bb78de-c325-444f-98ef-c5b8161b3358",
+  "id": "17ddd572-871c-42a6-b986-4380877927a3",
   "prevId": "ad871073-15b6-4bae-9884-db53e2e10be8",
   "version": "7",
   "dialect": "postgresql",
@@ -9245,7 +9245,6 @@
             "stripe_subscription_id",
             "customer_license_link_id",
             "rollover_signature",
-            "feature_override_signature",
             "expires_at"
           ]
         },

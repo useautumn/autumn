@@ -9,6 +9,10 @@ import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceS
 import { applyLicensePooledBalances } from "./applyLicensePooledBalances/applyLicensePooledBalances";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
+import {
+	competingFeatureIdsOf,
+	unpooledCompetingCustomerProducts,
+} from "./competing/unpooledCompetingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
 
@@ -70,6 +74,28 @@ export const computePooledBalanceTransitionPlan = ({
 				stripeSubscriptionId ??
 				customerProduct.subscription_ids?.[0] ??
 				pendingSubscriptionId,
+			customerCreatedAt: fullCustomer.created_at,
+			now,
+		});
+	}
+
+	for (const customerProduct of unpooledCompetingCustomerProducts({
+		fullCustomer,
+		featureIds: competingFeatureIdsOf({
+			incomingCustomerProducts,
+			outgoingCustomerProducts,
+		}),
+		excludedCustomerProductIds: new Set([
+			...incomingCustomerProductIds,
+			...outgoingCustomerProductIds,
+		]),
+	})) {
+		applyIncomingPooledBalanceSources({
+			ctx,
+			computeContext,
+			customerProduct,
+			stripeSubscriptionId:
+				customerProduct.subscription_ids?.[0] ?? customerProduct.id,
 			customerCreatedAt: fullCustomer.created_at,
 			now,
 		});

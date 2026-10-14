@@ -3,8 +3,10 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	isBooleanEntitlement,
+	isUnlimitedEntitlement,
 	type PooledBalanceIdentity,
 	pooledBalanceIdentityToKey,
+	subtractSafe,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
@@ -90,8 +92,25 @@ export const upsertPooledBalance = ({
 				? contributionAmounts.currentContribution -
 					(existingContribution.current_contribution ?? 0)
 				: contributionAmounts.currentContribution;
-	if (alreadyCountedByPool || isLicenseKeyed || competes) {
+	if (alreadyCountedByPool || isLicenseKeyed) {
 		balanceDelta = 0;
+	}
+	// A competing grant's amount enters in finalize; only usage it already holds moves the pool now.
+	if (competes) {
+		const holdsOwnUsage =
+			tracksBalance &&
+			!isUnlimitedEntitlement({
+				entitlement: contributionCustomerEntitlement.entitlement,
+			}) &&
+			!existingContribution &&
+			!contributionCustomerEntitlement.pooled_contribution_id &&
+			!replacesRemovedContribution;
+		balanceDelta = holdsOwnUsage
+			? subtractSafe({
+					left: contributionCustomerEntitlement.balance ?? 0,
+					right: contributionAmounts.currentContribution,
+				})
+			: 0;
 	}
 
 	if (!existingPooledCustomerEntitlement) {
