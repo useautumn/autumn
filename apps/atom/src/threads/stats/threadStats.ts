@@ -24,6 +24,9 @@ export const THREAD_STAT_FIELDS = [
 	/** Deductions journaled; commits that failed, left to the API; batches Autumn did not take, sent again. */
 	"tracksAppended",
 	"appendFailed",
+	/** Writes this thread's SQLite writer thread committed and answered since boot, and the p99 of their wait (post to reply) over the last tick. */
+	"sqliteWriterRoundTrips",
+	"sqliteWriterWaitP99Us",
 	"journalForwardFailed",
 	/** Pushes that replaced the copy of a customer still owing deductions: its view's fold continued, or replayed from the push. */
 	"viewFoldKept",
