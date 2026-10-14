@@ -7,10 +7,7 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import {
-	PRUNE_CHUNK,
-	readJournalKeysSince,
-} from "../repos/journalKeys.js";
+import { PRUNE_CHUNK, readJournalKeysSince } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { callerKeyOf } from "./callerKeyOf.js";
 import { createGroupCommit } from "./createGroupCommit.js";
@@ -185,6 +182,7 @@ export const openJournal = ({
 		since: now() - KEY_ROW_TTL_MS,
 	}))
 		recentKeys.add({
+			customerId: row.customerId,
 			fingerprint: keyFingerprint(row),
 			at: row.appendedAt,
 			now: now(),
@@ -199,6 +197,7 @@ export const openJournal = ({
 				const key = callerKeyOf({ command: entry.command });
 				if (key)
 					recentKeys.add({
+						customerId: entry.customerId,
 						fingerprint: fingerprintOf({ customerId: entry.customerId, key }),
 						at: entry.appendedAt,
 						now: now(),
@@ -312,6 +311,7 @@ export const openJournal = ({
 			() =>
 				inFlightKeys.get(customerId)?.has(key) === true ||
 				recentKeys.has({
+					customerId,
 					fingerprint: fingerprintOf({ customerId, key }),
 					since: now() - KEY_ROW_TTL_MS,
 				}),

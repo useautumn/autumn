@@ -1,5 +1,7 @@
-/** 64-bit fingerprints of the keys taken in the read window, in an open-addressed table: 16 bytes a slot, half full at most. */
+/** A slab's first size; it doubles once half full, so a slot holds 12 bytes and a key 24–48. */
 const INITIAL_SLOTS = 1 << 12;
+/** Keys are held in slabs this long, so a slab past the window is dropped whole, never swept key by key. */
+const SLABS_PER_WINDOW = 3;
 
 /** A customer's key as one fingerprint: the customer's hash xor the key hash's first 8 bytes, as journal_key_log stores them. */
 export const keyFingerprint = ({
@@ -16,91 +18,122 @@ export const keyFingerprint = ({
 	return fingerprint === 0n ? 1n : fingerprint;
 };
 
-/** The keys taken since the window's start, held in memory: a key check reads no SQLite page. */
-export const createRecentKeys = ({ windowMs }: { windowMs: number }) => {
+/** Fingerprints and the second each was taken, open-addressed. */
+const createSlab = ({ startsAt }: { startsAt: number }) => {
 	let fingerprints = new BigUint64Array(INITIAL_SLOTS);
-	let takenAt = new Float64Array(INITIAL_SLOTS);
+	let takenAtSec = new Uint32Array(INITIAL_SLOTS);
 	let used = 0;
 
-	const slotOf = (fingerprint: bigint, size: number) =>
+	const firstSlot = (fingerprint: bigint, size: number) =>
 		Number(fingerprint & BigInt(size - 1));
 
-	function place(fingerprint: bigint, at: number, oldest: number): boolean {
+	function place(fingerprint: bigint, atSec: number): void {
 		const size = fingerprints.length;
 		for (
-			let slot = slotOf(fingerprint, size);
+			let slot = firstSlot(fingerprint, size);
 			;
 			slot = (slot + 1) & (size - 1)
 		) {
 			const held = fingerprints[slot] as bigint;
-			if (held === 0n) {
+			if (held === 0n) used++;
+			if (held === 0n || held === fingerprint) {
 				fingerprints[slot] = fingerprint;
-				takenAt[slot] = at;
-				return true;
-			}
-			if (held === fingerprint || (takenAt[slot] as number) < oldest) {
-				fingerprints[slot] = fingerprint;
-				takenAt[slot] = at;
-				return false;
+				takenAtSec[slot] = Math.max(takenAtSec[slot] as number, atSec);
+				return;
 			}
 		}
 	}
 
-	/** Rebuilt with only the live keys, at twice the size when they still fill a quarter of it. */
-	function rebuild({ now }: { now: number }): void {
-		const oldest = now - windowMs;
-		const live: [bigint, number][] = [];
-		fingerprints.forEach((fingerprint, slot) => {
-			const at = takenAt[slot] as number;
-			if (fingerprint !== 0n && at >= oldest) live.push([fingerprint, at]);
-		});
-		const size =
-			live.length > fingerprints.length / 4
-				? fingerprints.length * 2
-				: fingerprints.length;
-		fingerprints = new BigUint64Array(size);
-		takenAt = new Float64Array(size);
+	function grow(): void {
+		const [oldFingerprints, oldTakenAt] = [fingerprints, takenAtSec];
+		fingerprints = new BigUint64Array(oldFingerprints.length * 2);
+		takenAtSec = new Uint32Array(oldFingerprints.length * 2);
 		used = 0;
-		for (const [fingerprint, at] of live)
-			if (place(fingerprint, at, oldest)) used++;
+		oldFingerprints.forEach((fingerprint, slot) => {
+			if (fingerprint !== 0n) place(fingerprint, oldTakenAt[slot] as number);
+		});
+	}
+
+	return {
+		startsAt,
+		add: ({ fingerprint, atSec }: { fingerprint: bigint; atSec: number }) => {
+			place(fingerprint, atSec);
+			if (used > fingerprints.length / 2) grow();
+		},
+		takenAtSecOf: (fingerprint: bigint): number | null => {
+			const size = fingerprints.length;
+			for (
+				let slot = firstSlot(fingerprint, size);
+				;
+				slot = (slot + 1) & (size - 1)
+			) {
+				const held = fingerprints[slot] as bigint;
+				if (held === 0n) return null;
+				if (held === fingerprint) return takenAtSec[slot] as number;
+			}
+		},
+		keys: () => used,
+		bytes: () => fingerprints.byteLength + takenAtSec.byteLength,
+	};
+};
+
+/**
+ * The keys taken in the last `windowMs`, in memory: a key check reads no SQLite page. Times are whole seconds, rounded
+ * up, so a key is held at least the window.
+ */
+export const createRecentKeys = ({ windowMs }: { windowMs: number }) => {
+	const slabMs = windowMs / SLABS_PER_WINDOW;
+	let slabs: ReturnType<typeof createSlab>[] = [];
+	const toSec = (ms: number) => Math.ceil(ms / 1000);
+
+	/** Drops every slab whose last key is past the window. */
+	function age({ now }: { now: number }): void {
+		const oldest = now - windowMs;
+		slabs = slabs.filter(({ startsAt }) => startsAt + slabMs > oldest);
 	}
 
 	function add({
+		customerId,
 		fingerprint,
 		at,
 		now,
 	}: {
+		customerId: string;
 		fingerprint: bigint;
 		at: number;
 		now: number;
 	}): void {
-		if (place(fingerprint, at, now - windowMs)) used++;
-		if (used > fingerprints.length / 2) rebuild({ now });
+		age({ now });
+		let slab = slabs.find(
+			({ startsAt }) => at >= startsAt && at < startsAt + slabMs,
+		);
+		if (!slab) {
+			slab = createSlab({ startsAt: at - (at % slabMs) });
+			slabs.push(slab);
+		}
+		slab.add({ fingerprint, atSec: toSec(at) });
 	}
 
 	function has({
+		customerId,
 		fingerprint,
 		since,
 	}: {
+		customerId: string;
 		fingerprint: bigint;
 		since: number;
 	}): boolean {
-		const size = fingerprints.length;
-		for (
-			let slot = slotOf(fingerprint, size);
-			;
-			slot = (slot + 1) & (size - 1)
-		) {
-			const held = fingerprints[slot] as bigint;
-			if (held === 0n) return false;
-			if (held === fingerprint && (takenAt[slot] as number) >= since)
-				return true;
-		}
+		const floorSec = toSec(since);
+		return slabs.some(
+			(slab) => (slab.takenAtSecOf(fingerprint) ?? -1) >= floorSec,
+		);
 	}
+
 
 	return {
 		add,
 		has,
-		bytes: () => fingerprints.byteLength + takenAt.byteLength,
+		keys: () => slabs.reduce((sum, slab) => sum + slab.keys(), 0),
+		bytes: () => slabs.reduce((sum, slab) => sum + slab.bytes(), 0),
 	};
 };
