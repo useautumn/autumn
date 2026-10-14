@@ -18,6 +18,7 @@ import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflow
 import { checkoutActions, checkoutRepo } from "@/internal/checkouts";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
+import { workflows } from "@/queue/workflows";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const executeDeferredBillingPlan = async ({
@@ -59,6 +60,18 @@ export const executeDeferredBillingPlan = async ({
 
 	// A later stage deferred again (e.g. the new subscription's draft invoice): its deferral carries the plan from here.
 	if (stripeBillingResult.deferred && stripeBillingResult.deferredMetadataId) {
+		if (
+			stripeBillingResult.autumnInvoice &&
+			stripeBillingResult.stripeInvoice
+		) {
+			await workflows.triggerStoreInvoiceLineItems({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				stripeInvoiceId: stripeBillingResult.stripeInvoice.id,
+				autumnInvoiceId: stripeBillingResult.autumnInvoice.id,
+				billingLineItems: billingPlan.autumn.lineItems,
+			});
+		}
 		await movePendingCustomerProducts({
 			ctx,
 			fromMetadataId: metadata.id,

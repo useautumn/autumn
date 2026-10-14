@@ -9,15 +9,17 @@
  *   $5 usage invoice was created.
  *   The first resume also activated the plan while the subscription's invoice was still a draft,
  *   so the replay inserted the customer_product again and the webhook failed.
- * Green (after): a resume that defers again hands the pending plan to the new deferral, and
- *   resuming after the subscription stage skips the invoice stage, so the usage is billed once and
- *   the plan stays pending until the second finalize activates it.
+ * Green (after): a resume that defers again stores the subscription draft's lines and hands the
+ *   pending plan to the new deferral, and resuming after the subscription stage skips the invoice
+ *   stage, so the usage is billed once and the plan stays pending until the second finalize
+ *   activates it. The second finalize still activates the plan when the hand-off hasn't landed.
  */
 
 import { expect, test } from "bun:test";
 import {
 	type ApiListInvoiceV1,
 	CusProductStatus,
+	customerProducts,
 	MetadataType,
 	type SetPlansParamsV0Input,
 } from "@autumn/shared";
@@ -31,6 +33,8 @@ import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, eq } from "drizzle-orm";
+import { CusService } from "@/internal/customers/CusService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 const OVERAGE_TOTAL = 5;
@@ -74,8 +78,12 @@ const finalizeAndSettle = async ({
 	});
 };
 
-test(`${chalk.yellowBright("set_plans draft with accrued usage: each draft finalized in turn bills the usage once")}`, async () => {
-	const customerId = "set-plans-draft-usage-replay";
+/** Re-lists an unbilled pro in overage as a set_plans draft, and finalizes the accrued-usage draft. */
+const draftUsageThenFinalize = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
 	const pro = products.pro({
 		id: "pro",
 		items: [items.consumableMessages({ includedUsage: 100 })],
@@ -112,18 +120,24 @@ test(`${chalk.yellowBright("set_plans draft with accrued usage: each draft final
 	const [usageDraft] = await listInvoices({ autumnV2_3, customerId });
 	expect(usageDraft).toMatchObject({ status: "draft", total: OVERAGE_TOTAL });
 	await finalizeAndSettle({ autumnV2_3, invoice: usageDraft });
-	await expectPlanStatus({
-		customerId,
-		planId: pro.id,
-		status: CusProductStatus.Pending,
-		statuses: [CusProductStatus.Active, CusProductStatus.Pending],
-	});
 
 	const [subscriptionDraft] = await listInvoices({ autumnV2_3, customerId });
 	expect(subscriptionDraft).toMatchObject({
 		status: "draft",
 		total: BASE_PRICE,
 	});
+	return { autumnV2_3, planId: pro.id, subscriptionDraft };
+};
+
+/** Finalizes the subscription draft and checks the usage was billed once and the plan is active. */
+const finalizeSubscriptionDraftAndExpectBilledOnce = async ({
+	autumnV2_3,
+	customerId,
+	planId,
+	subscriptionDraft,
+}: Awaited<ReturnType<typeof draftUsageThenFinalize>> & {
+	customerId: string;
+}) => {
 	await finalizeAndSettle({ autumnV2_3, invoice: subscriptionDraft });
 
 	const invoices = await listInvoices({ autumnV2_3, customerId });
@@ -135,8 +149,61 @@ test(`${chalk.yellowBright("set_plans draft with accrued usage: each draft final
 	// The unbilled pro that set_plans replaced expires; the re-listed one is active.
 	await expectPlanStatus({
 		customerId,
-		planId: pro.id,
+		planId,
 		status: CusProductStatus.Active,
 		statuses: [CusProductStatus.Active, CusProductStatus.Expired],
 	});
-});
+};
+
+test.concurrent(
+	`${chalk.yellowBright("set_plans draft with accrued usage: each draft finalized in turn bills the usage once")}`,
+	async () => {
+		const customerId = "set-plans-draft-usage-replay";
+		const scenario = await draftUsageThenFinalize({ customerId });
+
+		expect(scenario.subscriptionDraft.items?.length).toBeGreaterThan(0);
+		await expectPlanStatus({
+			customerId,
+			planId: scenario.planId,
+			status: CusProductStatus.Pending,
+			statuses: [CusProductStatus.Active, CusProductStatus.Pending],
+		});
+
+		await finalizeSubscriptionDraftAndExpectBilledOnce({
+			...scenario,
+			customerId,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set_plans draft with accrued usage: finalizing the subscription draft before the hand-off lands still activates once")}`,
+	async () => {
+		const customerId = "set-plans-draft-usage-replay-race";
+		const scenario = await draftUsageThenFinalize({ customerId });
+
+		// The pending row still points at the deferral it is being handed from.
+		const customer = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const moved = await ctx.db
+			.update(customerProducts)
+			.set({ metadata_id: "meta_handoff_not_landed" })
+			.where(
+				and(
+					eq(customerProducts.internal_customer_id, customer!.internal_id),
+					eq(customerProducts.status, CusProductStatus.Pending),
+				),
+			)
+			.returning();
+		expect(moved).toHaveLength(1);
+
+		await finalizeSubscriptionDraftAndExpectBilledOnce({
+			...scenario,
+			customerId,
+		});
+	},
+);
