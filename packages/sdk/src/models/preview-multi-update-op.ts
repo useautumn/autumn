@@ -45,7 +45,7 @@ export type PreviewMultiUpdateCancelAction = ClosedEnum<
 >;
 
 /**
- * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export const PreviewMultiUpdateProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -53,7 +53,7 @@ export const PreviewMultiUpdateProrationBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export type PreviewMultiUpdateProrationBehavior = ClosedEnum<
   typeof PreviewMultiUpdateProrationBehavior
@@ -77,7 +77,7 @@ export type PreviewMultiUpdateUpdate = {
    */
   cancelAction: PreviewMultiUpdateCancelAction;
   /**
-   * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+   * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
    */
   prorationBehavior?: PreviewMultiUpdateProrationBehavior | undefined;
 };

@@ -51,7 +51,11 @@ export const toCatalogParams = (
 	})),
 });
 
-export const useRCMappings = () => {
+export const useRCMappings = ({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
@@ -64,6 +68,7 @@ export const useRCMappings = () => {
 			);
 			return data.mappings;
 		},
+		enabled,
 	});
 
 	const saveMutation = useMutation({

@@ -1053,7 +1053,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1316,7 +1316,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
+					"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).",
 			},
 			{
 				name: "no_billing_changes",
@@ -1426,7 +1426,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1546,7 +1546,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1802,7 +1802,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1923,7 +1923,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -2097,7 +2097,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -2380,7 +2380,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "subscription_id",

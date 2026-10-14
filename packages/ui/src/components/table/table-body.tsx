@@ -24,6 +24,7 @@ export function TableBody() {
 		getRowHref,
 		onRowClick,
 		onRowDoubleClick,
+		onRowIntent,
 		rowClassName,
 		emptyStateChildren,
 		emptyStateText,
@@ -119,6 +120,10 @@ export function TableBody() {
 								? () => onRowDoubleClick(row.original)
 								: undefined
 						}
+						onPointerEnter={
+							onRowIntent ? () => onRowIntent(row.original) : undefined
+						}
+						onFocus={onRowIntent ? () => onRowIntent(row.original) : undefined}
 					>
 						<TableRowCells
 							row={row}

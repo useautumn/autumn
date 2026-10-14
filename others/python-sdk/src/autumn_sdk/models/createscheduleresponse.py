@@ -2451,7 +2451,7 @@ class CreateScheduleParamsTypedDict(TypedDict):
     redirect_mode: NotRequired[CreateScheduleRedirectMode]
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
     billing_behavior: NotRequired[CreateScheduleBillingBehavior]
-    r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference."""
+    r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades)."""
     no_billing_changes: NotRequired[bool]
     r"""If true, skips any billing changes for the schedule."""
     billing_cycle_anchor: Literal["now"]
@@ -2496,7 +2496,7 @@ class CreateScheduleParams(BaseModel):
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
     billing_behavior: Optional[CreateScheduleBillingBehavior] = None
-    r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference."""
+    r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades)."""
 
     no_billing_changes: Optional[bool] = None
     r"""If true, skips any billing changes for the schedule."""

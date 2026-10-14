@@ -85,6 +85,14 @@ export const stripeConnectSeederMiddleware = async (
 		typeof event.livemode === "boolean" &&
 		event.livemode !== (env === AppEnv.Live)
 	) {
+		logger.warn(`Skipping Stripe webhook ${event.id}: livemode mismatch`, {
+			data: {
+				eventId: event.id,
+				eventType: event.type,
+				accountId: event.account,
+				env,
+			},
+		});
 		return c.json(
 			{
 				message: `Skipping livemode=${event.livemode} event on ${env} endpoint`,

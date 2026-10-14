@@ -152,7 +152,7 @@ export type CreateScheduleRedirectMode = ClosedEnum<
 >;
 
 /**
- * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
+ * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).
  */
 export const CreateScheduleBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -160,7 +160,7 @@ export const CreateScheduleBillingBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
+ * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).
  */
 export type CreateScheduleBillingBehavior = ClosedEnum<
   typeof CreateScheduleBillingBehavior

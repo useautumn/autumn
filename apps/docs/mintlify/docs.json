@@ -141,6 +141,7 @@
 							"documentation/webhooks",
 							"documentation/slack-discord-notifications",
 							"documentation/fail-open",
+							"documentation/edge-cache",
 							"documentation/rate-limits",
 							"documentation/external-providers/ai-sdk",
 							"documentation/external-providers/openrouter",
