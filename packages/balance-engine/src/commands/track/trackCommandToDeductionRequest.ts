@@ -18,6 +18,13 @@ export const trackCommandToDeductionRequest = ({
 		org: command.org,
 		enforceOverdueBlock: command.enforceOverdueBlock ?? false,
 	}),
-	terms: { overageBehavior: command.overageBehavior, enforcesSpendLimit: true },
+	// An Atom's track deducts units it already granted, so Autumn mirrors its answer; cap still caps (the Atom held only what fit).
+	terms: {
+		overageBehavior:
+			command.source && command.overageBehavior !== "cap"
+				? "overflow"
+				: command.overageBehavior,
+		enforcesSpendLimit: true,
+	},
 	value: command.value,
 });
