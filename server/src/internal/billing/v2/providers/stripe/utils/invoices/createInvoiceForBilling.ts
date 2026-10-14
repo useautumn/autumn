@@ -18,6 +18,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
+import { invoiceModeToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 import {
 	AUTUMN_ACTION_CUSTOMER_PRODUCT_METADATA_KEY,
 	AUTUMN_ACTION_SOURCE_METADATA_KEY,
@@ -145,8 +146,10 @@ export const createInvoiceForBilling = async ({
 	const finalizedInvoice = await finalizeStripeInvoice({
 		stripeCli,
 		invoiceId: invoiceWithLines.id,
-		// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
-		autoAdvance: isInvoiceMode,
+		// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent), unless issued silently.
+		autoAdvance: invoiceMode
+			? invoiceModeToIssueMethod({ invoiceMode }) === "send"
+			: isInvoiceMode,
 	});
 
 	if (finalizedInvoice.status === "paid") {
