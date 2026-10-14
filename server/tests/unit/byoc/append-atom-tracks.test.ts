@@ -3,7 +3,9 @@
  *
  *  each journaled track is queued as the Atom journaled it, and each finalize naming its lock, in request order, stamped
  *  with the Atom, its journal's writer id and its seq → 204;
- *  an unreadable body, a command off the Atom's own org and env, or a finalize of an unknown feature → 400; no or unknown hash → 401.
+ *  an unreadable body, a command off the Atom's own org and env, or a finalize of an unknown feature → 400; no or unknown hash → 401;
+ *  a queued lock with a caller-set expiry arms an expiry timer named for that lock instance (its row id), once across
+ *  resends; a confirm lock, or a hand-in never queued, arms none.
  */
 
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
@@ -15,12 +17,15 @@ import {
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
 import { AppEnv, OrgConfigSchema } from "@autumn/shared";
+import { ConflictException } from "@aws-sdk/client-scheduler";
 import { Hono } from "hono";
 import * as balanceWorkerClient from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
 import { atomRouter } from "@/internal/byoc/atomRouter.js";
 import { cacheDeploymentRepo } from "@/internal/byoc/repos/cacheDeploymentRepo.js";
 import * as orgCache from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
+import { workflows } from "@/queue/workflows.js";
 import { createTrackCommand } from "../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 
 const TOKEN_HASH = "a".repeat(64);
@@ -49,11 +54,27 @@ const release = ({ featureId = "messages" }: { featureId?: string } = {}) => ({
 
 let queued: (TrackCommand | AtomFinalizeCommand)[][];
 let orgLookups: number;
+/** EventBridge schedules by name; creating a name that exists fails, as EventBridge's CreateSchedule does. */
+let schedules: Map<string, { payload: unknown; scheduleAt: Date }>;
+let errorsLogged: string[];
 const spies: { mockRestore(): void }[] = [];
 beforeEach(() => {
 	queued = [];
 	orgLookups = 0;
+	schedules = new Map();
+	errorsLogged = [];
 	spies.push(
+		spyOn(workflows, "triggerExpireLockReceipt").mockImplementation(
+			async (payload, { scheduleAt, scheduleName }) => {
+				if (schedules.has(scheduleName))
+					throw new ConflictException({
+						message: `Schedule ${scheduleName} already exists`,
+						Message: `Schedule ${scheduleName} already exists`,
+						$metadata: {},
+					});
+				schedules.set(scheduleName, { payload, scheduleAt });
+			},
+		),
 		spyOn(orgCache, "getOrgWithFeaturesCached").mockImplementation(async () => {
 			orgLookups++;
 			return {
@@ -81,7 +102,11 @@ afterEach(() => {
 
 const app = new Hono<HonoEnv>();
 app.use("*", async (c, next) => {
-	c.set("ctx", { db: {}, id: "req_append" } as never);
+	c.set("ctx", {
+		db: {},
+		id: "req_append",
+		logger: { error: (message: string) => errorsLogged.push(message) },
+	} as never);
 	await next();
 });
 app.route("/atom", atomRouter);
@@ -278,4 +303,141 @@ test("an Atom whose org is gone is 401 atom_unknown on every Atom route, before 
 	}
 	expect(orgLookups).toBe(2);
 	expect(queued).toEqual([]);
+});
+
+const lockedWith = ({
+	commandId,
+	rowId = `lck_${commandId}`,
+	expiresAt = 1_700_000_060_000,
+	expiryAction = "release",
+}: {
+	commandId: string;
+	rowId?: string;
+	expiresAt?: number;
+	expiryAction?: "release" | "confirm";
+}): TrackCommand => ({
+	...journaled(commandId),
+	lock: { id: rowId, lockId: "L1", expiresAt, expiryAction },
+});
+
+const timerOf = ({
+	rowId,
+	expiresAt,
+}: {
+	rowId: string;
+	expiresAt: number;
+}): [string, { payload: unknown; scheduleAt: Date }] => {
+	const hashedKey = Bun.hash(rowId).toString();
+	return [
+		buildLockScheduleName({ orgId: "org_1", env: AppEnv.Sandbox, hashedKey }),
+		{
+			payload: {
+				orgId: "org_1",
+				env: AppEnv.Sandbox,
+				customerId: "cus_1",
+				lockId: "L1",
+				hashedKey,
+				lockRowId: rowId,
+			},
+			scheduleAt: new Date(expiresAt),
+		},
+	];
+};
+
+test("a lock with a caller-set expiry arms a timer named for its row; a resend finds it armed and logs nothing", async () => {
+	const body = {
+		tracks: [
+			{
+				writerId: "w_1",
+				seq: 1,
+				command: lockedWith({ commandId: "atom_req_1" }),
+			},
+		],
+	};
+
+	expect((await append({ body })).status).toBe(204);
+	expect((await append({ body })).status).toBe(204);
+
+	expect([...schedules]).toEqual([
+		timerOf({ rowId: "lck_atom_req_1", expiresAt: 1_700_000_060_000 }),
+	]);
+	expect(errorsLogged).toEqual([]);
+});
+
+test("a lock id taken again after its lock settled gets its own timer, beside the first", async () => {
+	await append({
+		body: {
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					command: lockedWith({ commandId: "atom_req_1" }),
+				},
+			],
+		},
+	});
+	await append({
+		body: {
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 3,
+					command: lockedWith({
+						commandId: "atom_req_2",
+						expiresAt: 1_700_000_120_000,
+					}),
+				},
+			],
+		},
+	});
+
+	expect([...schedules]).toEqual([
+		timerOf({ rowId: "lck_atom_req_1", expiresAt: 1_700_000_060_000 }),
+		timerOf({ rowId: "lck_atom_req_2", expiresAt: 1_700_000_120_000 }),
+	]);
+});
+
+test("a lock confirmed on expiry arms no timer: the sweep settles it", async () => {
+	const reply = await append({
+		body: {
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					command: lockedWith({
+						commandId: "atom_req_1",
+						expiryAction: "confirm",
+					}),
+				},
+			],
+		},
+	});
+
+	expect(reply.status).toBe(204);
+	expect(queued).toHaveLength(1);
+	expect(schedules.size).toBe(0);
+});
+
+test("a hand-in the worker never queued arms no timer: the Atom resends it whole", async () => {
+	spies.push(
+		spyOn(balanceWorkerClient, "getBalanceWorkerClient").mockReturnValue({
+			enqueue: async () => {
+				throw new Error("kafka away");
+			},
+		} as never),
+	);
+	const reply = await append({
+		body: {
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					command: lockedWith({ commandId: "atom_req_1" }),
+				},
+			],
+		},
+	});
+
+	expect(reply.status).not.toBe(204);
+	expect(schedules.size).toBe(0);
 });
