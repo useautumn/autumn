@@ -5,7 +5,7 @@ type ParsedCatalogImport =
 	| { error: string }
 	| { empty: true };
 
-/** Deletion flags are dropped so an import never removes what the JSON leaves out. */
+/** Removal arrays and deletion flags are dropped: an import only creates and updates. */
 export const parseCatalogImportJson = ({
 	text,
 }: {
@@ -23,6 +23,8 @@ export const parseCatalogImportJson = ({
 	const {
 		skip_deletions: _skipDeletions,
 		skip_version_deletions: _skipVersionDeletions,
+		remove_plans: _removePlans,
+		remove_features: _removeFeatures,
 		...params
 	} = parsed as UpdateCatalogParamsInput;
 	return { params };

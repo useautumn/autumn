@@ -14,14 +14,12 @@ import {
 	LockSimpleIcon,
 	ShieldCheckIcon,
 } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
-import { CatalogV2Service } from "@/services/CatalogV2Service";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCatalogExportQuery } from "../hooks/useCatalogExportQuery";
 import type { CatalogExportSections } from "../types/catalogExportSections";
 import { catalogToUpdateParams } from "../utils/catalogToUpdateParams";
 import { CatalogJsonEditor } from "./CatalogJsonEditor";
@@ -90,7 +88,6 @@ export function ExportCatalogDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const axiosInstance = useAxiosInstance();
 	const env = useEnv();
 	const { org } = useOrg();
 	const [sections, setSections] = useState(DEFAULT_SECTIONS);
@@ -99,14 +96,7 @@ export function ExportCatalogDialog({
 		data: catalog,
 		error,
 		isLoading,
-	} = useQuery({
-		queryKey: ["catalog-v2-export", env],
-		queryFn: () =>
-			CatalogV2Service.get(axiosInstance, { include_versions: true }),
-		enabled: open,
-		staleTime: 0,
-		retry: false,
-	});
+	} = useCatalogExportQuery({ enabled: open });
 
 	const json = useMemo(
 		() =>

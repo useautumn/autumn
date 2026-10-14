@@ -55,12 +55,14 @@ describe("catalog import prod gate", () => {
 });
 
 describe("parseCatalogImportJson", () => {
-	test("never forwards deletion flags", () => {
+	test("never forwards deletion flags or removal arrays", () => {
 		const result = parseCatalogImportJson({
 			text: JSON.stringify({
 				plans: [{ plan_id: "pro" }],
 				skip_deletions: false,
 				skip_version_deletions: false,
+				remove_plans: [{ plan_id: "legacy" }],
+				remove_features: [{ feature_id: "old_feature" }],
 			}),
 		});
 		expect(result).toEqual({ params: { plans: [{ plan_id: "pro" }] } });

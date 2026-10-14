@@ -10,8 +10,7 @@ import {
 	DialogTitle,
 } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
-import { useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
@@ -25,6 +24,7 @@ import { featuresForImportPreview } from "../utils/featuresForImportPreview";
 import { buildImportPreviewRows } from "../utils/importPreviewRows";
 import { isCatalogImportBlocked } from "../utils/isCatalogImportBlocked";
 import { parseCatalogImportJson } from "../utils/parseCatalogImportJson";
+import { createRequestGate } from "../utils/requestGate";
 import { CatalogJsonEditor } from "./CatalogJsonEditor";
 import { CatalogOrgRow } from "./CatalogOrgRow";
 import {
@@ -107,16 +107,10 @@ export function ImportCatalogDialog({
 	const [text, setText] = useState("");
 	const [preview, setPreview] = useState<CatalogImportPreview | null>(null);
 	const [jsonOpen, setJsonOpen] = useState(false);
+	const [isPreviewing, setIsPreviewing] = useState(false);
+	const [previewError, setPreviewError] = useState<string | null>(null);
+	const previewGate = useRef(createRequestGate()).current;
 	const parsed = useMemo(() => parseCatalogImportJson({ text }), [text]);
-
-	const previewMutation = useMutation({
-		mutationFn: (params: UpdateCatalogParamsInput) =>
-			CatalogV2Service.previewUpdate(axiosInstance, params),
-		onSuccess: (result, params) => {
-			setPreview({ params, result });
-			setJsonOpen(false);
-		},
-	});
 
 	const rows = useMemo(
 		() =>
@@ -140,11 +134,17 @@ export function ImportCatalogDialog({
 		[features, preview],
 	);
 
-	const reset = () => {
-		setText("");
+	const clearPreview = () => {
+		previewGate.invalidate();
 		setPreview(null);
+		setIsPreviewing(false);
+		setPreviewError(null);
+	};
+
+	const reset = () => {
+		clearPreview();
+		setText("");
 		setJsonOpen(false);
-		previewMutation.reset();
 		updateCatalog.reset();
 	};
 
@@ -155,12 +155,25 @@ export function ImportCatalogDialog({
 
 	const editText = (next: string) => {
 		setText(next);
-		setPreview(null);
-		previewMutation.reset();
+		clearPreview();
 	};
 
-	const runPreview = () => {
-		if ("params" in parsed) previewMutation.mutate(parsed.params);
+	const runPreview = async () => {
+		if (!("params" in parsed)) return;
+		const { params } = parsed;
+		setIsPreviewing(true);
+		setPreviewError(null);
+		const outcome = await previewGate.run(() =>
+			CatalogV2Service.previewUpdate(axiosInstance, params),
+		);
+		if (outcome.status === "stale") return;
+		setIsPreviewing(false);
+		if (outcome.status === "failed") {
+			setPreviewError(getBackendErr(outcome.error, "Preview failed"));
+			return;
+		}
+		setPreview({ params, result: outcome.value });
+		setJsonOpen(false);
 	};
 
 	const apply = async () => {
@@ -174,12 +187,7 @@ export function ImportCatalogDialog({
 		}
 	};
 
-	const error =
-		"error" in parsed
-			? parsed.error
-			: previewMutation.error
-				? getBackendErr(previewMutation.error, "Preview failed")
-				: null;
+	const error = "error" in parsed ? parsed.error : previewError;
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -235,7 +243,7 @@ export function ImportCatalogDialog({
 					error={error}
 					hasPreview={preview !== null}
 					canPreview={"params" in parsed}
-					isPreviewing={previewMutation.isPending}
+					isPreviewing={isPreviewing}
 					isApplying={updateCatalog.isPending}
 					onCancel={() => handleOpenChange(false)}
 					onPreview={runPreview}
