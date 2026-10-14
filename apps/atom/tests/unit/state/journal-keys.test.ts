@@ -10,6 +10,7 @@ import {
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 const MINUTE_MS = 60_000;
 
@@ -131,6 +132,8 @@ describe("journal keys", () => {
 		open({ databasePath, now: () => clock });
 
 		jest.advanceTimersByTime(MINUTE_MS);
+		jest.useRealTimers();
+		await settleSqliteWrites();
 
 		expect(keyRowsIn({ databasePath })).toEqual([
 			{ customerId: "cus_2", appendedAt: 30 * MINUTE_MS },
@@ -171,7 +174,7 @@ describe("journal keys", () => {
 			command: trackClaiming({ commandId: "b", key: "k", customerId: "cus_2" }),
 		});
 
-		journal.forget({ customerId: "cus_1" });
+		await journal.forget({ customerId: "cus_1" });
 
 		expect(keyRowsIn({ databasePath })).toEqual([
 			{ customerId: "cus_2", appendedAt: 1_000 },

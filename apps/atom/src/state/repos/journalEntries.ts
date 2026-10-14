@@ -1,5 +1,7 @@
 import type { Database } from "bun:sqlite";
+import { callerKeyOf } from "@autumn/balance-engine";
 import type { JournalEntry } from "../journal/types/journal.js";
+import { insertJournalKey } from "./journalKeys.js";
 
 type JournalContext = { sqliteDb: Database };
 
@@ -10,7 +12,9 @@ type JournalEntryRow = {
 	commandJson: string;
 };
 
-/** One string for the writer thread: each entry's fields and command JSON, NUL-separated (JSON escapes any NUL it holds). */
+const FIELDS_PER_ENTRY = 5;
+
+/** One string for the writer thread: each entry's fields, command JSON and caller key ("" for none), NUL-separated. */
 export const encodeJournalEntries = ({
 	entries,
 }: {
@@ -19,11 +23,11 @@ export const encodeJournalEntries = ({
 	entries
 		.map(
 			({ customerId, seq, appendedAt, command }) =>
-				`${customerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}`,
+				`${customerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}\u0000${(command.type === "track" && callerKeyOf({ command })) || ""}`,
 		)
 		.join("\u0000");
 
-/** Every entry or none, with each customer's highest seq raised in the same transaction. */
+/** Every entry or none, with each customer's highest seq raised and each caller's key taken in the same transaction. */
 export const insertJournalEntries = ({
 	ctx,
 	payload,
@@ -41,16 +45,19 @@ export const insertJournalEntries = ({
 		ON CONFLICT (customer_id) DO UPDATE SET last_seq = max(last_seq, excluded.last_seq)`,
 	);
 	ctx.sqliteDb.transaction(() => {
-		for (let at = 0; at < fields.length; at += 4) {
+		for (let at = 0; at < fields.length; at += FIELDS_PER_ENTRY) {
 			const customerId = fields[at] as string;
 			const seq = Number(fields[at + 1]);
+			const appendedAt = Number(fields[at + 2]);
 			insertEntry.run({
 				customerId,
 				seq,
-				appendedAt: Number(fields[at + 2]),
+				appendedAt,
 				commandJson: fields[at + 3] as string,
 			});
 			raiseLastSeq.run({ customerId, seq });
+			const key = fields[at + 4];
+			if (key) insertJournalKey({ ctx, customerId, key, appendedAt });
 		}
 	})();
 	return "";
