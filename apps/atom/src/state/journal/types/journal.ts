@@ -7,7 +7,9 @@ export type JournaledCommand = TrackCommand | FinalizeCommand;
 export type JournalEntry = {
 	/** The customer as the Atom routes it: the command identity's customer id. */
 	customerId: string;
-	/** Per customer, strictly increasing; never reused, even once older entries are dropped. */
+	/** The journal that minted it: this file's, or another replica's once an entry is handed over with its customer. */
+	writerId: string;
+	/** Per customer and writer, strictly increasing; never reused, even once older entries are dropped. */
 	seq: number;
 	/** When the Atom granted it, by the journal's clock. */
 	appendedAt: number;
@@ -46,9 +48,9 @@ export type Journal = {
 	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */
 	isBackedUp(params: { customerId: string }): boolean;
 	/**
-	 * After a push is stored: every entry at or below the seq its customer row holds for this journal's writer leaves the
+	 * After a push is stored: every entry at or below the seq its customer row holds for that entry's writer leaves the
 	 * journal. `atomSeqs` is that row's, by atom id then writer id; a writer id is unique, so any atom id may hold it.
-	 * They leave what is owed at once; the promise settles once the file's delete has committed.
+	 * They leave what is owed at once; the promise settles once the file's deletes have committed.
 	 */
 	reconcile(params: {
 		customerId: string;

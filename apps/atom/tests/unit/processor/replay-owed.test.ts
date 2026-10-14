@@ -137,6 +137,7 @@ const generateOwed = ({ random }: { random: () => number }): JournalEntry[] =>
 		};
 		return {
 			customerId: "cus_1",
+			writerId: "writer_1",
 			seq: index + 1,
 			appendedAt: occurredAt,
 			command,
