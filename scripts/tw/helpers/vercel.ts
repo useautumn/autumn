@@ -478,13 +478,11 @@ const isAlreadyGone = (error: unknown): boolean => {
 	return typeof code === "string" && code.endsWith("not_found");
 };
 
-// ---------------------------------------------------------------------------
 // Provider adapter — conforms the wrappers above to the `ProviderImpl` seam
 // (helpers/provider.ts) so the orchestrator can swap Vercel ↔ Modal. The
 // `ProviderSandbox.handle` is the `@vercel/sandbox` `Sandbox`; this layer only
 // wraps/unwraps it and routes the two direct-SDK spots (ingress create, detached
 // boot) through the same surface.
-// ---------------------------------------------------------------------------
 const wrap = (s: Sandbox): ProviderSandbox => ({ name: s.name, handle: s });
 const unwrap = (s: ProviderSandbox): Sandbox => s.handle as Sandbox;
 

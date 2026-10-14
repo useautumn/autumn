@@ -17,9 +17,7 @@ import { ACTIVE_STATUSES, RELEVANT_STATUSES } from "..";
 import { cusProductToPrices } from "../convertCusProduct";
 import { customerProductToEffectivePrices } from "../convertCusProduct/customerProductToEffectivePrices";
 
-// ============================================================================
 // PRODUCT TYPE CHECKS
-// ============================================================================
 
 export const isCustomerProductMain = (customerProduct?: {
 	product: Pick<Product, "is_add_on">;
@@ -79,9 +77,7 @@ export const isCustomerProductPaidRecurring = (
 	return !freeProduct && !oneOffProduct;
 };
 
-// ============================================================================
 // STATUS CHECKS
-// ============================================================================
 
 export const isCustomerProductScheduled = (cp?: FullCusProduct) => {
 	if (!cp) return false;
@@ -195,9 +191,7 @@ export const isCustomerProductLicenseAssignment = (
 	);
 };
 
-// ============================================================================
 // ENTITY CHECKS
-// ============================================================================
 
 /**
  * Returns true if the customer product is assigned to the given entity,
@@ -215,9 +209,7 @@ export const isCusProductOnEntity = ({
 		: nullish(cusProduct.internal_entity_id);
 };
 
-// ============================================================================
 // STRIPE SUBSCRIPTION CHECKS
-// ============================================================================
 
 export const isCustomerProductOnStripeSubscription = ({
 	customerProduct,
@@ -356,9 +348,7 @@ export const customerProductHasPrepaidPrice = (
 	return prices.some((price) => isPrepaidPrice(price));
 };
 
-// ============================================================================
 // AGGREGATE CHECKS
-// ============================================================================
 
 /** Returns true if any customer product is active (or trialing), has a subscription, and is paid recurring. */
 export const hasActivePaidSubscription = ({

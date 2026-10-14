@@ -22,9 +22,7 @@ import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/str
 import { getPatchCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SchedulePhaseProration } from "../setup/resolveSchedulePhaseProrations";
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
 
 type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
@@ -48,9 +46,7 @@ type ScheduleScenario =
 	| "future_standalone"
 	| "multi_phase";
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const phaseHasItems = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
@@ -255,9 +251,7 @@ const shouldCreateFutureSchedule = ({
 	);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN FUNCTION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Builds the subscription schedule action based on customer products.

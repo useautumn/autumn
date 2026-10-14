@@ -49,7 +49,6 @@ export const formatSeconds = (
 	);
 };
 
-// Format seconds to date
 export const formatSecondsToDate = (
 	unixSeconds?: number | null,
 	options?: { withTimezone?: boolean },

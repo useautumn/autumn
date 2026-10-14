@@ -24,7 +24,6 @@ const VERIFY_PAGE_SIZE = 250;
 const REPEATS = 10;
 const BURST_SIZE = 8;
 const POOL_SIZE = 4;
-// ═════════════════════════════════════════════════════════════════════
 
 const p50 = (xs: number[]): number =>
 	[...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];

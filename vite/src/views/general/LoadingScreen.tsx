@@ -31,12 +31,6 @@ function LoadingScreen({ fullPage = false }: { fullPage?: boolean }) {
 		return () => clearInterval(interval);
 	}, []);
 
-	// return (
-	// 	<div className="flex h-full overflow-hidden w-full items-center justify-center flex-col gap-4">
-	// 		<LoaderCircle className="animate-spin text-primary" size={30} />
-	// 		<p className="text-muted-foreground font-mono text-xs font-medium">{loadingText}</p>
-	// 	</div>
-	// );
 	return (
 		<div
 			className={cn(

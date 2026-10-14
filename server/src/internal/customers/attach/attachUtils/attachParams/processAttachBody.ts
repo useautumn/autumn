@@ -55,13 +55,6 @@ const getRewards = async ({
 	}
 
 	return rewards;
-
-	// const stripeCoupon = await stripeCli.coupons.retrieve(reward.id);
-
-	// return {
-	//   reward,
-	//   stripeCoupon,
-	// };
 };
 
 export const processAttachBody = async ({

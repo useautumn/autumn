@@ -24,9 +24,7 @@ import {
 } from "./productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { notNullish, nullish } from "./utils.js";
 
-// ============================================================================
 // Types
-// ============================================================================
 
 interface DisplayResult {
 	primary_text: string;
@@ -40,9 +38,7 @@ interface FormatTiersParams {
 	useFlatAmount?: boolean;
 }
 
-// ============================================================================
 // Helpers
-// ============================================================================
 
 const getResetIntervalDisplay = (item: ProductItem): string | undefined => {
 	if (!item.interval) return undefined;
@@ -110,9 +106,7 @@ const withVolumeTierRule = ({
 	return `${text} (${rule})`;
 };
 
-// ============================================================================
 // Tier Formatting
-// ============================================================================
 
 export const formatTiers = ({
 	item,
@@ -139,9 +133,7 @@ export const formatTiers = ({
 	return `${format(firstPrice)} - ${format(lastPrice)}`;
 };
 
-// ============================================================================
 // Feature Item Display (no pricing, just entitlement)
-// ============================================================================
 
 export const getFeatureItemDisplay = ({
 	item,
@@ -203,9 +195,7 @@ export const getFeatureItemDisplay = ({
 	};
 };
 
-// ============================================================================
 // Price Item Display (flat price, no feature)
-// ============================================================================
 
 export const getPriceItemDisplay = ({
 	item,
@@ -227,9 +217,7 @@ export const getPriceItemDisplay = ({
 	};
 };
 
-// ============================================================================
 // Feature + Price Item Display (usage-based pricing)
-// ============================================================================
 
 export const getFeaturePriceItemDisplay = ({
 	feature,
@@ -367,9 +355,7 @@ export const getFeaturePriceItemDisplay = ({
 	};
 };
 
-// ============================================================================
 // Main Entry Point
-// ============================================================================
 
 export const getProductItemDisplay = ({
 	item,

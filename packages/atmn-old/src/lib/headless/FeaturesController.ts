@@ -58,9 +58,7 @@ export class FeaturesController
 		this.page = options.initialPage ?? 1;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Data Fetching (internal)
-	// ─────────────────────────────────────────────────────────────────
 
 	/**
 	 * Fetch all features from the API once
@@ -107,9 +105,7 @@ export class FeaturesController
 		return this.filteredFeatures.slice(start, end);
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// State Queries
-	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiFeature[] {
 		return this.getCurrentPageItems();
@@ -161,9 +157,7 @@ export class FeaturesController
 		return Math.ceil(this.filteredFeatures.length / this.pageSize);
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Navigation Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	selectByIndex(index: number): ApiFeature | null {
 		const items = this.getCurrentPageItems();
@@ -201,9 +195,7 @@ export class FeaturesController
 		return null;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Data Actions (Local Pagination)
-	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasNextPage()) {
@@ -245,9 +237,7 @@ export class FeaturesController
 		await this.fetchAllFeatures();
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Detail Data
-	// ─────────────────────────────────────────────────────────────────
 
 	/**
 	 * Get expanded details for a feature.
@@ -258,9 +248,7 @@ export class FeaturesController
 		return feature ?? null;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Output Formats
-	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiFeature> {
 		return {

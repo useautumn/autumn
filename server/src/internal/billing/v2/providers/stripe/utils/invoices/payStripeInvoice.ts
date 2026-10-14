@@ -3,9 +3,7 @@ import type Stripe from "stripe";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { handleInvoicePaymentFailure } from "./handleInvoicePaymentFailure";
 
-// ============================================
 // Types
-// ============================================
 
 export type PayInvoiceResult = {
 	paid: boolean;
@@ -23,9 +21,7 @@ type PayStripeInvoiceParams = {
 	paymentMethod?: Stripe.PaymentMethod | null;
 };
 
-// ============================================
 // Pay Invoice
-// ============================================
 
 export const payStripeInvoice = async ({
 	stripeCli,

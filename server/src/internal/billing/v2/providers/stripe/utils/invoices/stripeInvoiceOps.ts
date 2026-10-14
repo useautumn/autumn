@@ -4,9 +4,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-// ============================================
 // Create Invoice
-// ============================================
 
 type CreateInvoiceParams = {
 	stripeCli: Stripe;
@@ -78,9 +76,7 @@ export const createStripeInvoice = async ({
 	return invoice;
 };
 
-// ============================================
 // Add Invoice Lines
-// ============================================
 
 type AddInvoiceLinesParams = {
 	stripeCli: Stripe;
@@ -104,9 +100,7 @@ export const addStripeInvoiceLines = async ({
 	return invoice;
 };
 
-// ============================================
 // Update Invoice Line
-// ============================================
 
 export const updateStripeInvoiceLine = async ({
 	stripeCli,
@@ -126,9 +120,7 @@ export const updateStripeInvoiceLine = async ({
 		autumnStripeRequestOptions({ source: "invoice.updateLineItem" }),
 	);
 
-// ============================================
 // Update Pending Invoice Item
-// ============================================
 
 export const updateStripeInvoiceItem = async ({
 	stripeCli,
@@ -145,9 +137,7 @@ export const updateStripeInvoiceItem = async ({
 		autumnStripeRequestOptions({ source: "invoiceItems.update" }),
 	);
 
-// ============================================
 // Update Invoice
-// ============================================
 
 type UpdateInvoiceParams = {
 	stripeCli: Stripe;
@@ -169,9 +159,7 @@ export const updateStripeInvoice = async ({
 	return invoice;
 };
 
-// ============================================
 // Finalize Invoice
-// ============================================
 
 type FinalizeInvoiceParams = {
 	stripeCli: Stripe;
@@ -195,9 +183,7 @@ export const finalizeStripeInvoice = async ({
 	return invoice;
 };
 
-// ============================================
 // Create Invoice Items
-// ============================================
 
 type CreateStripeInvoiceItemsParams = {
 	ctx: AutumnContext;

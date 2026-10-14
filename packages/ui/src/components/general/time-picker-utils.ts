@@ -10,9 +10,7 @@ function assertUnreachable(value: never): never {
 	throw new Error(`Unhandled TimePickerType: ${value}`);
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 function isValidHour(value: string) {
 	return /^(0[0-9]|1[0-9]|2[0-3])$/.test(value);
@@ -26,9 +24,7 @@ function isValidMinuteOrSecond(value: string) {
 	return /^[0-5][0-9]$/.test(value);
 }
 
-// ---------------------------------------------------------------------------
 // Clamping
-// ---------------------------------------------------------------------------
 
 function getValidNumber({
 	value,
@@ -69,9 +65,7 @@ function getValidMinuteOrSecond(value: string) {
 	return getValidNumber({ value, max: 59 });
 }
 
-// ---------------------------------------------------------------------------
 // Arrow-key stepping (with wrap-around)
-// ---------------------------------------------------------------------------
 
 function getValidArrowNumber({
 	value,
@@ -108,9 +102,7 @@ function getValidArrowMinuteOrSecond({
 	return getValidArrowNumber({ value, min: 0, max: 59, step });
 }
 
-// ---------------------------------------------------------------------------
 // Date setters
-// ---------------------------------------------------------------------------
 
 function setMinutes({ date, value }: { date: Date; value: string }) {
 	const m = getValidMinuteOrSecond(value);
@@ -145,9 +137,7 @@ function set12Hours({
 	return date;
 }
 
-// ---------------------------------------------------------------------------
 // Generic getter / setter by type
-// ---------------------------------------------------------------------------
 
 export function setDateByType({
 	date,
@@ -219,9 +209,7 @@ export function getArrowByType({
 	return assertUnreachable(type);
 }
 
-// ---------------------------------------------------------------------------
 // 12h ↔ 24h conversion
-// ---------------------------------------------------------------------------
 
 function convert12HourTo24Hour({
 	hour,

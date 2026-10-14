@@ -33,7 +33,6 @@ const STATEMENT_TIMEOUT_MS = 30_000;
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 30;
 const CUS_PRODUCT_LIMIT = 3; // matches DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT
-// ═════════════════════════════════════════════════════════════════════
 
 type DB = ReturnType<typeof initDrizzle>["db"];
 

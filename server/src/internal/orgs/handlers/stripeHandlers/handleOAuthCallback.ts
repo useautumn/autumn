@@ -121,7 +121,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		}
 		if (!code) return fail("missing_parameters");
 
-		// Fetch the organization by slug
 		const org = await OrgService.getBySlug({ db, slug: organization_slug });
 
 		// Platform state may only connect orgs its master still owns

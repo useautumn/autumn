@@ -4,9 +4,7 @@ import {
 	type RouteDefinition,
 } from "./core";
 
-// ─────────────────────────────────────────────────────────────
 // General Handler (framework-agnostic)
-// ─────────────────────────────────────────────────────────────
 
 export type AutumnHandlerOptions = {
 	request: {
@@ -73,9 +71,7 @@ export async function autumnHandler(
 	};
 }
 
-// ─────────────────────────────────────────────────────────────
 // Core exports
-// ─────────────────────────────────────────────────────────────
 
 export {
 	type AuthResult,

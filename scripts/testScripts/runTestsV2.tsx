@@ -132,9 +132,7 @@ interface TestFileResult {
 	crashError?: string;
 }
 
-// ============================================================================
 // Test Output Parsing
-// ============================================================================
 
 function parseTestOutput(output: string, filePath: string): IndividualTest[] {
 	const tests: IndividualTest[] = [];
@@ -271,9 +269,7 @@ function extractCurrentTest(output: string): string | null {
 	return null;
 }
 
-// ============================================================================
 // Test Runner Logic
-// ============================================================================
 
 async function collectTestFiles(paths: string[]): Promise<string[]> {
 	const testFiles: string[] = [];
@@ -423,9 +419,7 @@ async function runTestFile({
 	}
 }
 
-// ============================================================================
 // Ink Components
-// ============================================================================
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -1156,9 +1150,7 @@ function SwarmLogHint({ logFile }: { logFile: string }) {
 	return <Text dimColor>full run log: {logFile}</Text>;
 }
 
-// ============================================================================
 // Reusable entrypoint (the §8 seam)
-// ============================================================================
 
 const formatDuration = (ms: number) =>
 	ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -1360,9 +1352,7 @@ export function runWithExecutor(
 	);
 }
 
-// ============================================================================
 // CLI Entry Point
-// ============================================================================
 
 async function main() {
 	const args = process.argv.slice(2);

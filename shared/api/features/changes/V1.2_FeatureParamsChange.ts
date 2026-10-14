@@ -30,7 +30,6 @@ import { CreateFeatureV0ParamsSchema } from "../prevVersions/featureV0OpModels.j
  *    - V0 static (legacy) → V1 boolean
  */
 
-// Create Feature Change
 export const V1_2_CreateFeatureChange = defineVersionChange({
 	name: "V1_2 Create Feature Change",
 	newVersion: ApiVersion.V2_0,

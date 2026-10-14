@@ -26,9 +26,7 @@
 
 import { execSync } from "child_process";
 
-// ============================================================================
 // CONFIGURATION
-// ============================================================================
 
 const COPY_PIPE = "events_deductions_hourly_mv_backfill";
 const DATASOURCE = "events_deductions_hourly_mv";
@@ -46,9 +44,7 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 const DELAY_BETWEEN_CHUNKS_MS = 2000;
 
-// ============================================================================
 // TYPES / ARGS
-// ============================================================================
 
 interface Args {
 	chunkHours: number;
@@ -112,9 +108,7 @@ Safe to re-run at any time, safe to change chunk size between runs.
 	return args;
 }
 
-// ============================================================================
 // UTILITIES
-// ============================================================================
 
 // stdin is ALWAYS ignored: with it piped, any interactive tb prompt (workspace,
 // auth, region) renders invisibly and the script hangs forever. Ignored, the
@@ -216,9 +210,7 @@ function extractCount(result: string): number {
 	return 0;
 }
 
-// ============================================================================
 // TINYBIRD QUERIES
-// ============================================================================
 
 /** Seam on the first run, resume point on every later one. */
 function getMinHour(): string | null {
@@ -299,9 +291,7 @@ function getRowCount(): number {
 	return extractCount(tbSql(`SELECT count() FROM ${DATASOURCE}`));
 }
 
-// ============================================================================
 // COPY EXECUTION
-// ============================================================================
 
 async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -357,9 +347,7 @@ async function runCopyJob(
 	return false;
 }
 
-// ============================================================================
 // CHUNKS
-// ============================================================================
 
 function generateChunksDownward(
 	resumePoint: string,
@@ -390,9 +378,7 @@ function generateChunksDownward(
 	return chunks;
 }
 
-// ============================================================================
 // MAIN
-// ============================================================================
 
 async function main() {
 	console.log(`=== ${DATASOURCE} Backfill (Downward Fill) ===\n`);

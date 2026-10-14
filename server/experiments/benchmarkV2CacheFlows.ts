@@ -78,10 +78,8 @@ const { rehydrateWithLiveBalances } = await import(
 	"../src/internal/customers/cache/fullSubject/actions/rehydrateWithLiveBalances"
 );
 
-// ---------------------------------------------------------------------------
 // Sample collection — every timed phase is recorded with (flow, iter, phase).
 // Phases are ordered per-flow by first-seen so the waterfall reads top-down.
-// ---------------------------------------------------------------------------
 
 type Sample = { flow: string; iter: number; phase: string; ms: number };
 const samples: Sample[] = [];
@@ -127,12 +125,10 @@ const makeCtx = ({ redisV2, db }: { redisV2: Redis; db: unknown }) =>
 		logger: quietLogger,
 	}) as unknown as Parameters<typeof getCachedFullSubject>[0]["ctx"];
 
-// ---------------------------------------------------------------------------
 // Flow: /check — HIT path
 //
 // Inlined to mirror exactly what getOrSetCachedFullSubject → getCachedFullSubject
 // does in prod, so each sub-phase is a real slice of the request.
-// ---------------------------------------------------------------------------
 
 const runCheckHit = async ({
 	ctx,
@@ -200,9 +196,7 @@ const runCheckHit = async ({
 	});
 };
 
-// ---------------------------------------------------------------------------
 // Flow: /check — MISS path
-// ---------------------------------------------------------------------------
 
 const runCheckMiss = async ({
 	ctx,
@@ -261,14 +255,12 @@ const runCheckMiss = async ({
 	);
 };
 
-// ---------------------------------------------------------------------------
 // Flow: POST /customers V2 — HIT and MISS
 //
 // getOrCreateCachedFullSubject delegates to getCachedFullSubject on hit, so the
 // hit waterfall is the same as /check. On miss it additionally calls
 // updateCustomerData and (sometimes) autoCreateEntity — we time it as E2E
 // since those branches are customer-data dependent.
-// ---------------------------------------------------------------------------
 
 const { getOrCreateCachedFullSubject } = await import(
 	"../src/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject"
@@ -324,9 +316,7 @@ const runCreateCustomerMiss = async ({
 	);
 };
 
-// ---------------------------------------------------------------------------
 // Reporting — waterfall per flow
-// ---------------------------------------------------------------------------
 
 const pct = (sorted: number[], p: number) =>
 	sorted.length === 0
@@ -409,9 +399,7 @@ const printFlowWaterfall = ({ flow }: { flow: string }) => {
 	);
 };
 
-// ---------------------------------------------------------------------------
 // Main
-// ---------------------------------------------------------------------------
 
 const main = async () => {
 	console.log("=== V2 cache flows benchmark ===");

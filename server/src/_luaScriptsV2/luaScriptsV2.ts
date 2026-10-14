@@ -1,7 +1,5 @@
 import { USAGE_WINDOW_BOUND_TOLERANCE_MS } from "@autumn/shared";
-// ============================================================================
 // HELPER MODULES (imported as text — works with both Bun and esbuild)
-// ============================================================================
 
 import GET_TOTAL_BALANCE from "./deductFromCustomerEntitlements/getTotalBalance.lua";
 import MUTATION_ITEM_UTILS from "./deduction/mutationItemUtils.lua";
@@ -9,9 +7,7 @@ import LOCK_RECEIPT_UTILS_V2 from "./fullSubjectDeduction/lock/lockReceiptV2.lua
 import LOCK_UNWIND_UTILS_V2 from "./fullSubjectDeduction/lock/unwindLockV2.lua";
 import LUA_UTILS from "./luaUtils.lua";
 
-// ============================================================================
 // FULL SUBJECT HELPERS (V2 cache scripts)
-// ============================================================================
 
 import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
 import getDelSharedBalanceFieldsScript from "./fullSubject/getDelSharedBalanceFields.lua";
@@ -23,9 +19,7 @@ import updateCustomerProductOptionsScript from "./fullSubject/updateCustomerProd
 import updateCustomerProductV2MainScript from "./fullSubject/updateCustomerProduct/updateCustomerProductV2.lua";
 import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 
-// ============================================================================
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
-// ============================================================================
 
 import ALLOCATION_GATE_V2 from "./fullSubjectDeduction/allocations/allocationGateV2.lua";
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
@@ -40,9 +34,7 @@ import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedB
 import READ_USAGE_WINDOWS from "./fullSubjectDeduction/usageWindows/readUsageWindows.lua";
 import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/usageWindowContextUtilsV2.lua";
 
-// ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
-// ============================================================================
 
 import PATCH_ALLOCATION_COUNTER_MAIN from "./fullSubject/patchAllocationCounter/patchAllocationCounter.lua";
 import ROLL_USAGE_WINDOWS_MAIN from "./fullSubject/rollUsageWindows/rollUsageWindows.lua";
@@ -72,9 +64,7 @@ export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${updateCachedInvoiceV2Script}`;
 export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${updateCustomerProductOptionsScript}
 ${updateCustomerProductV2MainScript}`;
 
-// ============================================================================
 // FULL SUBJECT DEDUCTION SCRIPT (V2 cache — per-feature hash balances)
-// ============================================================================
 
 /**
  * Lua script for deducting from subject balances in Redis (V2 cache).
@@ -100,9 +90,7 @@ ${LOCK_UNWIND_UTILS_V2}
 ${UPDATE_AGGREGATED_BALANCES}
 ${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
 
-// ============================================================================
 // UPDATE SUBJECT BALANCES SCRIPT (V2 cache — per-feature hash updates)
-// ============================================================================
 
 /**
  * Lua script for atomically adjusting one SubjectBalance.balance entry in a

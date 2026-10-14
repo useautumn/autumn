@@ -110,10 +110,8 @@ export const sortCusEntsForDeduction = <
 		if (aEnt.interval && bEnt.interval && !aVal.eq(bVal)) {
 			if (reverseOrder) {
 				return bVal.sub(aVal).toNumber();
-				// return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
 			} else {
 				return aVal.sub(bVal).toNumber();
-				// return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
 			}
 		}
 
@@ -162,11 +160,4 @@ export const sortCusEntsForDeduction = <
 		// 4. Sort by created_at
 		return a.created_at - b.created_at;
 	});
-
-	// console.log(
-	//   `Cus ents after (${reverseOrder ? "reversed" : "normal"})`,
-	//   cusEnts.map(
-	//     (ce) => `${ce.entitlement.feature_id} - ${ce.entitlement.interval}`
-	//   )
-	// );
 };

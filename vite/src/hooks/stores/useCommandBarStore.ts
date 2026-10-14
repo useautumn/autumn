@@ -20,12 +20,10 @@ export const useCommandBarStore = create<CommandBarState>((set) => ({
 		set({ open });
 	},
 
-	// Open the command bar
 	openCommandBar: () => {
 		set({ open: true });
 	},
 
-	// Close the command bar
 	closeCommandBar: () => {
 		set({ open: false });
 	},

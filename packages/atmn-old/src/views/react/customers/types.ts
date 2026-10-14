@@ -2,9 +2,7 @@ import type { ApiCustomer } from "../../../lib/api/endpoints/customers.js";
 import type { AppEnv } from "../../../lib/env/detect.js";
 import type { FocusTarget } from "../../../lib/hooks/useCustomerNavigation.js";
 
-// ========================================
 // Expanded Customer Types
-// ========================================
 
 /**
  * Feature types

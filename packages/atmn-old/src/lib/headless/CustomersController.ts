@@ -66,9 +66,7 @@ export class CustomersController
 		this.secretKey = getKey(environment);
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Data Fetching (internal)
-	// ─────────────────────────────────────────────────────────────────
 
 	private async fetchCustomers(): Promise<void> {
 		const offset = (this.page - 1) * this.pageSize;
@@ -98,9 +96,7 @@ export class CustomersController
 		}
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// State Queries
-	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiCustomer[] {
 		return this.items;
@@ -135,9 +131,7 @@ export class CustomersController
 		return this.searchQuery;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Navigation Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	selectByIndex(index: number): ApiCustomer | null {
 		if (index >= 0 && index < this.items.length) {
@@ -172,9 +166,7 @@ export class CustomersController
 		return null;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Data Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasMore) {
@@ -218,9 +210,7 @@ export class CustomersController
 		await this.fetchCustomers();
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Detail Data
-	// ─────────────────────────────────────────────────────────────────
 
 	async getExpandedItem(id: string): Promise<ApiCustomerExpanded | null> {
 		try {
@@ -238,9 +228,7 @@ export class CustomersController
 		}
 	}
 
-	// ─────────────────────────────────────────────────────────────────
 	// Output Formats
-	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiCustomer> {
 		return {

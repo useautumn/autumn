@@ -78,7 +78,6 @@ const getContUseNewItems = async ({
 			- When allowance increases though, how do we handle it? Don't allow negative overage.
 		*/
 
-		// let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
 		let overage = Math.max(
 			new Decimal(usage).sub(ent.allowance!).toNumber(),
 			0,
@@ -173,10 +172,6 @@ export const getContUseInvoiceItems = async ({
 				prevCusEnt,
 			});
 
-			// const prevItem = curItems.find(
-			// 	(item) => item.price_id === prevCusPrice?.price.id,
-			// );
-
 			newItems.push(newItem);
 
 			if (curItem) {
@@ -207,8 +202,6 @@ export const getContUseInvoiceItems = async ({
 		newItems.push(...newItems_.filter((item) => item.amount !== 0));
 		replaceables.push(...replaceables_);
 	}
-
-	// console.log("Replaceables:", replaceables);
 
 	return {
 		oldItems,

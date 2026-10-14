@@ -194,7 +194,6 @@ export class AutumnInt {
 		/** Sent on every request, e.g. a test-only `x-*` toggle. */
 		headers?: Record<string, string>;
 	} = {}) {
-		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
 			apiKey || secretKey || process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 
@@ -781,7 +780,6 @@ export class AutumnInt {
 			customerId: string,
 			entity: CreateEntityParams | CreateEntityParams[],
 		) => {
-			// let entities = Array.isArray(entity) ? entity : [entity];
 			const data = await this.post(
 				`/customers/${customerId}/entities?with_autumn_id=true`,
 				entity,

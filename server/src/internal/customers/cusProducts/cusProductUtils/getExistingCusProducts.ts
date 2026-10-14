@@ -11,7 +11,6 @@ export const getExistingCusProducts = ({
 	product,
 	cusProducts,
 	internalEntityId,
-	// processorType = ProcessorType.Stripe,
 }: {
 	product: Product;
 	cusProducts: FullCusProduct[];
@@ -27,9 +26,6 @@ export const getExistingCusProducts = ({
 	}
 
 	const curMainProduct = cusProducts.find((cp: FullCusProduct) => {
-		// const sameProcessor = cp.processor?.type
-		// 	? cp.processor.type === processorType
-		// 	: true;
 		const sameGroup = cp.product.group === product.group;
 		const isMain = !cp.product.is_add_on;
 		const isActive =

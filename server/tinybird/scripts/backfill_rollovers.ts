@@ -25,17 +25,13 @@ import {
 	waitForCopyJobs,
 } from "./backfill_base.js";
 
-// ============================================================================
 // CONFIGURATION
-// ============================================================================
 
 const DATASOURCE = "rollovers";
 const COPY_PIPE = "rollovers_backfill";
 const DEFAULT_PAGE_SIZE = 5000;
 
-// ============================================================================
 // ARGUMENT PARSING
-// ============================================================================
 
 function parseArgs(): { pageSize: number; offsetOverride?: number; dryRun: boolean } {
 	const args = { pageSize: DEFAULT_PAGE_SIZE, offsetOverride: undefined as number | undefined, dryRun: false };
@@ -67,9 +63,7 @@ Options:
 	return args;
 }
 
-// ============================================================================
 // HELPERS
-// ============================================================================
 
 async function getRowCount(): Promise<number> {
 	const rows = await tbSql({
@@ -110,9 +104,7 @@ async function runPage({
 	return false;
 }
 
-// ============================================================================
 // MAIN
-// ============================================================================
 
 async function main() {
 	console.log("=== Rollovers Backfill (Offset-based) ===\n");

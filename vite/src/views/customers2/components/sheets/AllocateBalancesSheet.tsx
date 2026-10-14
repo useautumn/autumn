@@ -42,10 +42,8 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerAllocationControls } from "../../hooks/useCustomerAllocationControls";
 import { getAllocatableSharedBalanceInterval } from "../table/customer-balance/customerBalanceUtils";
 import {
-	// AllocationUsageWindows,
 	allocationStateQueryKey,
 } from "./AllocationUsageWindows";
-// import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { sharedIntervalBalanceTotals } from "./sharedIntervalBalanceTotals";
 
 type AmountInputs = Record<string, string>;
@@ -100,7 +98,6 @@ export function AllocateBalancesSheet() {
 	const { customer, features } = useCusQuery();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
-	// const { isAdmin } = useAdmin();
 
 	const fullCustomer = customer;
 	const entities = (fullCustomer?.entities ?? []).filter(

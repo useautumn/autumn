@@ -40,7 +40,6 @@ const getIntervalToPrices = (prices: Price[]) => {
 	const intervalToPrices: Record<string, Price[]> = {};
 
 	for (const price of prices) {
-		// const interval = price.config.interval;
 		const key = priceToIntervalKey(price);
 		if (!intervalToPrices[key]) {
 			intervalToPrices[key] = [];
@@ -166,7 +165,6 @@ export const getStripeSubItems = async ({
 				existingUsage,
 				withEntity: notNullish(attachParams.internalEntityId),
 				apiVersion: attachParams.apiVersion,
-				// productOptions: prodOptions,
 			});
 
 			if (!stripeItem) {
@@ -288,7 +286,6 @@ export const getStripeSubItems2 = async ({
 			existingUsage,
 			withEntity: notNullish(internalEntityId),
 			apiVersion: attachParams.apiVersion,
-			// productOptions: prodOptions,
 			fromVercel: attachParams.paymentMethod?.type === "custom",
 		});
 
@@ -301,8 +298,6 @@ export const getStripeSubItems2 = async ({
 		}
 
 		const { lineItem } = stripeItem;
-
-		// subItems.push(lineItem);
 
 		if (price.config.interval === BillingInterval.OneOff) {
 			invoiceItems.push(lineItem);

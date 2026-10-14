@@ -20,11 +20,9 @@ import {
 	runTableBackfill,
 } from "./backfill_base.js";
 
-// ============================================================================
 // TABLE REGISTRY
 // NOTE: rollovers is NOT listed here — it uses cursor-based pagination.
 //       Run: bun scripts/backfill_rollovers.ts
-// ============================================================================
 
 const TABLE_CONFIGS: TableConfig[] = [
 	{
@@ -114,9 +112,7 @@ const TABLE_CONFIGS: TableConfig[] = [
 	// rollovers intentionally excluded — use backfill_rollovers.ts instead
 ];
 
-// ============================================================================
 // ARGUMENT PARSING
-// ============================================================================
 
 interface Args {
 	chunkDays: number;
@@ -164,9 +160,7 @@ Note: rollovers uses cursor-based pagination — run separately:
 	return args;
 }
 
-// ============================================================================
 // MULTI-SELECT PROMPT
-// ============================================================================
 
 async function multiSelect({
 	items,
@@ -259,9 +253,7 @@ async function multiSelect({
 	});
 }
 
-// ============================================================================
 // MAIN
-// ============================================================================
 
 async function main() {
 	const args = parseArgs();

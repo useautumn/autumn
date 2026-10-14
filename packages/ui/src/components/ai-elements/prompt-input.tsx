@@ -63,9 +63,7 @@ import {
 	useState,
 } from "react";
 
-// ============================================================================
 // Provider Context & Types
-// ============================================================================
 
 export type AttachmentsContext = {
 	files: (FileUIPart & { id: string })[];
@@ -250,9 +248,7 @@ export function PromptInputProvider({
 	);
 }
 
-// ============================================================================
 // Component Context & Hooks
-// ============================================================================
 
 const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
 

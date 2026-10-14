@@ -6,18 +6,14 @@
 
 import { execSync } from "child_process";
 
-// ============================================================================
 // CONSTANTS
-// ============================================================================
 
 export const MAX_RETRIES = 3;
 export const RETRY_DELAY_MS = 5000;
 export const DELAY_BETWEEN_CHUNKS_MS = 2000;
 export const DEFAULT_CHUNK_DAYS = 30;
 
-// ============================================================================
 // TYPES
-// ============================================================================
 
 export interface Chunk {
 	startEpochMs: number;
@@ -35,9 +31,7 @@ export interface TableConfig {
 	startEpochMs: number;
 }
 
-// ============================================================================
 // UTILITIES
-// ============================================================================
 
 export function execCapture({ cmd }: { cmd: string }): string {
 	try {
@@ -95,9 +89,7 @@ export function formatEpochMs({ epochMs }: { epochMs: number }): string {
 	return new Date(epochMs).toISOString();
 }
 
-// ============================================================================
 // TINYBIRD HELPERS
-// ============================================================================
 
 /** Returns the MAX created_at among backfill ('read') rows, or null if none. */
 export async function getMaxCreatedAt({ datasource }: { datasource: string }): Promise<number | null> {
@@ -116,9 +108,7 @@ export async function getRowCount({ datasource }: { datasource: string }): Promi
 	return extractNumber({ rows, col: "val" }) ?? 0;
 }
 
-// ============================================================================
 // CHUNK GENERATION (FORWARD — oldest → newest)
-// ============================================================================
 
 export function generateChunksForward({
 	startEpochMs,
@@ -142,9 +132,7 @@ export function generateChunksForward({
 	return chunks;
 }
 
-// ============================================================================
 // COPY JOB EXECUTION
-// ============================================================================
 
 export async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -201,9 +189,7 @@ export async function runCopyJob({
 	return false;
 }
 
-// ============================================================================
 // CORE BACKFILL RUNNER
-// ============================================================================
 
 /**
  * Runs a complete forward (oldest → newest) backfill for a single table config.

@@ -56,7 +56,6 @@ export function MainLayout() {
 	return (
 		<AutumnProvider
 			backendUrl={import.meta.env.VITE_BACKEND_URL}
-			// backendUrl="http://localhost:8080"
 			includeCredentials={true}
 		>
 			<NuqsAdapter>

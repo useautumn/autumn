@@ -51,7 +51,6 @@ export const applyUncancelToPlan = ({
 
 	return {
 		...plan,
-		// insertCustomerProducts,
 		updateCustomerProduct,
 		// Use the plan's deleteCustomerProduct if already set, otherwise use ours
 		deleteCustomerProduct: plan.deleteCustomerProduct ?? deleteCustomerProduct,

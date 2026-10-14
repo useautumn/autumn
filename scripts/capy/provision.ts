@@ -68,9 +68,7 @@ import {
 	parseLogEndOffsets,
 } from "./staleKafkaBookmarks.ts";
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 const SCRIPT_DIR = new URL(".", import.meta.url).pathname;
 const PROJECT_ROOT = join(SCRIPT_DIR, "..", "..");
@@ -89,11 +87,9 @@ const TRIGGER_IMAGE_TAG = `v${
 	).devDependencies["trigger.dev"]
 }`;
 
-// ---------------------------------------------------------------------------
 // Tiny logging / shell helpers (we don't reuse dw's helpers because they tag
 // every log line with `[dw]` and shell to neon by name, which is what we want
 // here too, but the wrapper API is small).
-// ---------------------------------------------------------------------------
 
 function log(msg: string): void {
 	console.log(`[capy] ${msg}`);
@@ -104,9 +100,7 @@ function fatal(msg: string): never {
 	process.exit(1);
 }
 
-// ---------------------------------------------------------------------------
 // Machine identity
-// ---------------------------------------------------------------------------
 
 function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 7);
@@ -116,11 +110,9 @@ function deriveBranchName(machineId: string): string {
 	return `capy-${shortHash(machineId)}`;
 }
 
-// ---------------------------------------------------------------------------
 // State file — tracks branch id + creation timestamp so we don't recreate
 // or re-migrate on every startup. Lives in $CAPY_PREFIX so it persists for
 // the lifetime of the sandbox filesystem.
-// ---------------------------------------------------------------------------
 
 type State = {
 	machineId: string;
@@ -199,10 +191,8 @@ function saveState(state: State): void {
 	chmodSync(CAPY_STATE, 0o600);
 }
 
-// ---------------------------------------------------------------------------
 // Service readiness. capy-startup.sh owns Docker Compose; this script waits
 // for published ports before writing env files that point at them.
-// ---------------------------------------------------------------------------
 
 function isDragonflyUp(): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -264,12 +254,10 @@ async function waitForHttpService(
 	);
 }
 
-// ---------------------------------------------------------------------------
 // Env file writer — localhost equivalent of
 // scripts/dw/helpers/env-files.ts::writeEnvLocalFiles. Capy v2's desktop and
 // browser run inside the VM, and listening services are discovered
 // automatically. preload-env.ts loads these into every bun invocation.
-// ---------------------------------------------------------------------------
 
 function parseEnvFile(contents: string): { raw: string[] } {
 	return { raw: contents.split(/\r?\n/) };
@@ -509,11 +497,9 @@ function ensureTriggerProject(): {
 	return { secretKey: key, accessToken };
 }
 
-// ---------------------------------------------------------------------------
 // Neon branch provisioning. First run: create branch off dw-template, run
 // migrations, load functions. Subsequent runs: read connection string,
 // no DDL. Matches scripts/dw/helpers/setup.ts::setupAgentWorktree behavior.
-// ---------------------------------------------------------------------------
 
 function ensureNeonAuth(): void {
 	if (!process.env.NEON_API_KEY) {
@@ -669,9 +655,7 @@ function clearStaleKafkaBookmarks(directUrl: string): void {
 	);
 }
 
-// ---------------------------------------------------------------------------
 // Entry point
-// ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
 	if (process.env.NODE_ENV === "production") {

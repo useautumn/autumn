@@ -68,7 +68,6 @@ export const handleStripeInvoiceDiscounts = async ({
 
 			if (!shouldRollover) continue;
 
-			// Get ID of coupon
 			const originalCoupon = await stripeCli.coupons.retrieve(couponId, {
 				expand: ["applies_to"],
 			});
