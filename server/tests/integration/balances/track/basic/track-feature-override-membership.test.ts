@@ -1,9 +1,9 @@
 /**
- * Contract: a plan item's feature_override fully replaces its credit system's
- * schema — including MEMBERSHIP. An override can add a metered feature the
- * catalog schema lacks (its balance funds tracks/checks of that feature) or
- * remove one it has (its balance stays untouched and the track still succeeds
- * against the feature's own balance).
+ * Contract: a plan item's feature_override changes its credit system's
+ * MEMBERSHIP. An override can add a metered feature the catalog schema lacks
+ * (its balance funds tracks/checks of that feature) or exclude one it has (its
+ * balance stays untouched and the track still succeeds against the feature's
+ * own balance).
  */
 
 import { expect, test } from "bun:test";
@@ -92,7 +92,7 @@ test.concurrent(
 	`${chalk.yellowBright("feature-override membership: override removes a feature the catalog schema has")}`,
 	async () => {
 		// Catalog: Credits contains Action1 (0.2) and Action2 (0.6). Override
-		// keeps only Action2 — Action1 must NOT touch this Credits balance.
+		// excludes Action1 — Action1 must NOT touch this Credits balance.
 		const action1Item = items.free({
 			featureId: TestFeature.Action1,
 			includedUsage: 50,
@@ -102,6 +102,7 @@ test.concurrent(
 			{
 				schema: [
 					{ metered_feature_id: TestFeature.Action2, credit_amount: 0.6 },
+					{ metered_feature_id: TestFeature.Action1, excluded: true },
 				],
 			},
 		);
@@ -132,7 +133,7 @@ test.concurrent(
 			balance: 0,
 			usage: 50,
 		});
-		// Credits untouched: the override removed Action1 from its schema.
+		// Credits untouched: the override excluded Action1.
 		expect(customer.features[TestFeature.Credits]).toMatchObject({
 			balance: 100,
 			usage: 0,

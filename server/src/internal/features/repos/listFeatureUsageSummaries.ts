@@ -97,11 +97,18 @@ export const buildFeatureUsageSummariesQuery = ({
 				UNION ALL
 				(
 					-- Override rate cards can reference features the catalog does not.
+					-- An excluded row removes the feature, so it is not usage.
 					SELECT 'override' AS arm, entitlement.internal_product_id
 					FROM entitlements entitlement
 					WHERE entitlement.feature_override -> 'schema' @> json_build_array(
 						json_build_object('metered_feature_id', candidate.feature_id)
 					)::jsonb
+						AND NOT entitlement.feature_override -> 'schema' @> json_build_array(
+							json_build_object(
+								'metered_feature_id', candidate.feature_id,
+								'excluded', true
+							)
+						)::jsonb
 						AND entitlement.internal_product_id IN (
 							SELECT internal_id FROM products
 							WHERE org_id = ${orgId} AND env = ${env}
