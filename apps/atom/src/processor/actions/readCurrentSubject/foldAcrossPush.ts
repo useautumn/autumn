@@ -9,6 +9,10 @@ import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import { replayOwed } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
+/** The entries a fold applied: the journal may have grown its array since. */
+export const appliedOf = ({ fold }: { fold: ViewFold }) =>
+	fold.owed.slice(0, fold.applied);
+
 /** How many of the fold's entries the push trimmed from the front, when what remains still leads `owed`; null otherwise. */
 const trimmedCountOf = ({
 	fold,
@@ -17,10 +21,11 @@ const trimmedCountOf = ({
 	fold: ViewFold;
 	owed: readonly JournalEntry[];
 }): number | null => {
+	const applied = appliedOf({ fold });
 	const [first] = owed;
-	const trimmed = first ? fold.owed.indexOf(first) : -1;
+	const trimmed = first ? applied.indexOf(first) : -1;
 	if (trimmed < 0) return null;
-	const kept = fold.owed.slice(trimmed);
+	const kept = applied.slice(trimmed);
 	return kept.every((entry, index) => owed[index] === entry) ? trimmed : null;
 };
 
@@ -80,7 +85,7 @@ export const foldAcrossPush = ({
 					atom_seqs: customer.state.customer.atom_seqs,
 				},
 			},
-			applied: fold.owed.slice(trimmed),
+			applied: fold.applied - trimmed,
 			fullSubject: null,
 		},
 	};
