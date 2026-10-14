@@ -107,20 +107,36 @@ describe("a locked track", () => {
 	});
 
 	test.concurrent(
-		"a lock naming its caller's overage behaviour is held on the track's terms, and its row keeps the caller's",
+		"a sourced lock track draws overflow but its row records the caller's behaviour, and a cap lock stays cap",
 		() => {
-			const mutation = track({
+			const source = { atomId: "atom_1", writerId: "writer_1", seq: 1 };
+			const granted = track({
+				state: createState(),
+				command: { ...lockedTrack({ value: 11 }), source },
+			});
+			expect(granted.result).toMatchObject({ status: "applied" });
+			expect(
+				granted.changes.find((change) => change.table === "locks"),
+			).toMatchObject({
+				row: {
+					overage_behavior: "reject",
+					deltas: [{ balanceDelta: -11 }],
+				},
+			});
+
+			const capped = track({
 				state: createState(),
 				command: {
 					...lockedTrack({ value: 11 }),
-					overageBehavior: "overflow",
-					lock: { ...lock, callerOverageBehavior: "reject" },
+					overageBehavior: "cap",
+					source,
 				},
 			});
-			expect(mutation.result).toMatchObject({ status: "applied" });
 			expect(
-				mutation.changes.find((change) => change.table === "locks"),
-			).toMatchObject({ row: { overage_behavior: "reject" } });
+				capped.changes.find((change) => change.table === "locks"),
+			).toMatchObject({
+				row: { overage_behavior: "cap", deltas: [{ balanceDelta: -10 }] },
+			});
 		},
 	);
 
