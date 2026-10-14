@@ -25,7 +25,7 @@ export async function evict({
 		identity: customerIdentity,
 	});
 	// A load still in flight started before this evict, so it must not put its rows back afterwards.
-	await dropStaleSubject({ scope, identity });
+	await dropStaleSubject({ scope, identity, reason: "evict" });
 	if (waitsForSnapshotDelete || refreshSnapshots) {
 		const deleted = await awaitSnapshotDeleteLanded({ scope, identity });
 		// Exactly the rows the DELETE removed are rebuilt: a subject never read stays a miss.

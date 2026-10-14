@@ -162,7 +162,7 @@ describe("an evict while the customer's write is unapplied", () => {
 		applyGate.held = held.promise;
 		await track("t1").waitForCommit();
 
-		const evicted = writer.evict({ customerKey });
+		const evicted = writer.evict({ customerKey, reason: "evict" });
 
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		// The next command finds no rows to decide on; the processor would load them afresh.
@@ -177,7 +177,7 @@ describe("an evict while the customer's write is unapplied", () => {
 		const held = Promise.withResolvers<void>();
 		applyGate.held = held.promise;
 		await track("t1").waitForCommit();
-		void writer.evict({ customerKey });
+		void writer.evict({ customerKey, reason: "evict" });
 
 		let stored = false;
 		const eviction = writer.waitForEvicted({ customerKey })?.then(() => {

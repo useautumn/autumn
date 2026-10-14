@@ -467,6 +467,7 @@ async function applyBatch({
 			if (result.kind === "rejected") {
 				scope.state.subjects.evictCustomer({
 					customerKey: pending.customerKey,
+					reason: "storeRejected",
 				});
 				if (waiting) {
 					removePendingMutation({ state: scope.state, pending });

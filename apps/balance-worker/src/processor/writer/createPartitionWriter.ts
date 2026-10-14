@@ -162,8 +162,15 @@ export function createPartitionWriter({
 		return scope.state.appendedThrough;
 	}
 
-	function evict({ customerKey }: Parameters<PartitionWriter["evict"]>[0]) {
-		return evictCustomer({ scope, customerKey });
+	function evict({
+		customerKey,
+		reason,
+	}: Parameters<PartitionWriter["evict"]>[0]) {
+		return evictCustomer({ scope, customerKey, reason });
+	}
+
+	function readSubjectMapUsage() {
+		return scope.state.subjects.readUsage();
 	}
 
 	function evictResident({
@@ -220,6 +227,7 @@ export function createPartitionWriter({
 		readAppendedThrough,
 		evict,
 		evictResident,
+		readSubjectMapUsage,
 		adopt,
 		dispose,
 	};

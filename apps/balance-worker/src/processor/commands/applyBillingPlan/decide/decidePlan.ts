@@ -91,7 +91,11 @@ export const decidePlan = async ({
 		});
 	} catch (cause) {
 		if (!(cause instanceof StaleMutationError)) throw cause;
-		await dropStaleSubject({ scope, identity: command.identity });
+		await dropStaleSubject({
+			scope,
+			identity: command.identity,
+			reason: "stale",
+		});
 		throw new SubjectStaleError({ identity: command.identity, cause });
 	}
 };

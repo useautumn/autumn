@@ -138,7 +138,10 @@ describe("an evict's snapshot DELETE", () => {
 		adopt("cus_1");
 		await track({ customerId: "cus_1", commandId: "t1" }).waitForCommit();
 
-		const evicted = writer.evict({ customerKey: keyOf("cus_1") });
+		const evicted = writer.evict({
+			customerKey: keyOf("cus_1"),
+			reason: "evict",
+		});
 		await evicted;
 
 		expect(events).toEqual(["apply", `enqueue ${keyOf("cus_1")}`]);
@@ -154,7 +157,10 @@ describe("an evict's snapshot DELETE", () => {
 		applyGate.held = held.promise;
 		const before = track({ customerId: "cus_1", commandId: "t1" });
 		await before.waitForCommit();
-		const evicted = writer.evict({ customerKey: keyOf("cus_1") });
+		const evicted = writer.evict({
+			customerKey: keyOf("cus_1"),
+			reason: "evict",
+		});
 		expect(
 			writer.readFreshestState({ identity: identityOf("cus_1") }),
 		).toBeNull();
@@ -184,7 +190,7 @@ describe("an evict's snapshot DELETE", () => {
 	test("an evict of a customer with nothing resident still enqueues: its rows may have outlived a drop for space", async () => {
 		const { writer, events } = createWriter();
 
-		await writer.evict({ customerKey: keyOf("cus_1") });
+		await writer.evict({ customerKey: keyOf("cus_1"), reason: "evict" });
 
 		expect(events).toEqual([`enqueue ${keyOf("cus_1")}`]);
 	});
@@ -219,7 +225,7 @@ describe("an evict's snapshot DELETE", () => {
 		bare.adopt({
 			state: createState({ identity: identityOf("cus_1"), balance: 1 }),
 		});
-		await bare.evict({ customerKey: keyOf("cus_1") });
+		await bare.evict({ customerKey: keyOf("cus_1"), reason: "evict" });
 		expect(
 			bare.readFreshestState({ identity: identityOf("cus_1") }),
 		).toBeNull();
@@ -317,7 +323,7 @@ describe("evicts never touch the hot path", () => {
 				baselineAt: 1,
 			});
 
-		await writer.evict({ customerKey: keyOf("cus_evicted") });
+		await writer.evict({ customerKey: keyOf("cus_evicted"), reason: "evict" });
 		await Bun.sleep(5);
 		expect(flushes()).toBe(1);
 

@@ -1,3 +1,4 @@
+import type { SubjectMapUsage } from "../processor/writer/subjectMap/types/subjectMapUsage.js";
 import type { PartitionRuntimeStatus } from "../runtime/types/partitionRuntimeState.js";
 import type { PartitionCheckpointHealth } from "./partitionCheckpointHealth.js";
 
@@ -11,6 +12,7 @@ export type OwnedPartitionHealth = {
 	lag: bigint | null;
 	failureReason: string | null;
 	checkpoint?: PartitionCheckpointHealth;
+	subjectMap?: SubjectMapUsage;
 	/** The partition's queued commands: how far the decided bookmark trails the topic. */
 	commands?: {
 		consumedNextOffset: bigint | null;

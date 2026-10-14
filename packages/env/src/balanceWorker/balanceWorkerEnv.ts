@@ -51,6 +51,7 @@ const listener = z.object({
 		.min(0)
 		.max(1)
 		.default(BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE),
+	BALANCE_WORKER_LOCAL_TELEMETRY: booleanFlag,
 });
 
 const state = z.object({
