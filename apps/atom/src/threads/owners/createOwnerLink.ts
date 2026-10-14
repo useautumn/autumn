@@ -1,5 +1,6 @@
 import type {
 	CheckAnswer,
+	PushedSubject,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
 import type {
@@ -83,7 +84,11 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	async function call(
 		body: OwnerCallBody,
 	): Promise<
-		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
+		| CheckAnswer
+		| PushedSubject
+		| boolean
+		| AppliedSubjectOnWire[]
+		| SubjectDigestOnWire[]
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
@@ -118,7 +123,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					customerId,
 					body,
-				})) as boolean,
+				})) as PushedSubject,
 		};
 	}
 

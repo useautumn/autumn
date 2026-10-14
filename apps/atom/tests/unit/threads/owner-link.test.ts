@@ -53,7 +53,7 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 			}),
 			setSubject: async ({ customerId }: { customerId: string }) => {
 				applied.push(customerId);
-				return true;
+				return { stored: true, entityId: null };
 			},
 		}),
 		listSince: async () => [],
@@ -88,9 +88,9 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 		OwnerUnavailableError,
 	);
 	await expect(listSince()).rejects.toBeInstanceOf(OwnerUnavailableError);
-	expect(await processor.setSubject({ customerId: "cus_1", body: "{}" })).toBe(
-		true,
-	);
+	expect(
+		await processor.setSubject({ customerId: "cus_1", body: "{}" }),
+	).toEqual({ stored: true, entityId: null });
 	expect(applied).toEqual(["cus_1"]);
 
 	Atomics.store(threadsReady, 1, 1);
