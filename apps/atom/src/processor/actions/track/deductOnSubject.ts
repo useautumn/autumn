@@ -15,8 +15,8 @@ import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**
- * A lock is decided by its track on the caller's overage behaviour, as the worker decides it: what applies is held, and a
- * lock_id already open is refused with LockAlreadyExistsError (worker parity, D2).
+ * A lock is decided by its track, as the worker decides it: what applies is held, and a lock_id already open is
+ * refused with LockAlreadyExistsError (worker parity, D2).
  */
 const decideLockedTrack = ({
 	subject,
@@ -30,10 +30,7 @@ const decideLockedTrack = ({
 	try {
 		const { mutation } = computeTrackDecision({
 			fullSubject: subject.fullSubject,
-			command: {
-				...track,
-				overageBehavior: track.lock?.overageBehavior ?? track.overageBehavior,
-			},
+			command: track,
 		});
 		if (mutation.result.type !== "track")
 			throw new Error(`Track ${track.commandId} decided a non-track result`);
