@@ -58,8 +58,12 @@ const waitForConcurrentlyLinkedStripeCustomer = ({
 				orgId: ctx.org.id,
 				env: ctx.env,
 			});
-			if (!latest?.processor?.id) throw error;
-			customer.processor = latest.processor;
+			const linkedStripeCustomer = await getExpandedStripeCustomer({
+				ctx,
+				stripeCustomerId: latest?.processor?.id,
+			});
+			if (!linkedStripeCustomer) throw error;
+			customer.processor = latest?.processor;
 			return getOrCreateStripeCustomer({ ctx, customer, options });
 		},
 	});

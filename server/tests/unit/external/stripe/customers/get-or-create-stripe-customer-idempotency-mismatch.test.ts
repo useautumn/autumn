@@ -17,7 +17,9 @@ const idempotencyMismatch = new Stripe.errors.StripeIdempotencyError({
 const mockState = {
 	createError: idempotencyMismatch as Error,
 	linkAfterLookups: 0,
+	staleProcessorId: null as string | null,
 	lookups: 0,
+	creates: 0,
 	emailUpdates: [] as { id: string; email: string }[],
 };
 
@@ -40,9 +42,13 @@ mock.module("@/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		customers: {
 			create: async () => {
+				mockState.creates++;
 				throw mockState.createError;
 			},
-			retrieve: async (id: string) => ({ id, object: "customer", email: null }),
+			retrieve: async (id: string) =>
+				id === mockState.staleProcessorId
+					? { id, object: "customer", deleted: true }
+					: { id, object: "customer", email: null },
 			update: async (id: string, { email }: { email: string }) => {
 				mockState.emailUpdates.push({ id, email });
 				return { id, email };
@@ -55,11 +61,14 @@ mock.module("@/internal/customers/CusService", () => ({
 	CusService: {
 		get: async () => {
 			mockState.lookups++;
-			const linked = mockState.lookups > mockState.linkAfterLookups;
+			const linkedId =
+				mockState.lookups > mockState.linkAfterLookups
+					? "cus_stripe_linked"
+					: mockState.staleProcessorId;
 			return {
 				email: "customer@example.com",
-				processor: linked
-					? { id: "cus_stripe_linked", type: ProcessorType.Stripe }
+				processor: linkedId
+					? { id: linkedId, type: ProcessorType.Stripe }
 					: null,
 			};
 		},
@@ -92,7 +101,9 @@ describe("getOrCreateStripeCustomer idempotency mismatch", () => {
 	beforeEach(() => {
 		mockState.createError = idempotencyMismatch;
 		mockState.linkAfterLookups = 1;
+		mockState.staleProcessorId = null;
 		mockState.lookups = 0;
+		mockState.creates = 0;
 		mockState.emailUpdates = [];
 	});
 
@@ -106,6 +117,19 @@ describe("getOrCreateStripeCustomer idempotency mismatch", () => {
 		expect(mockState.emailUpdates).toEqual([
 			{ id: "cus_stripe_linked", email: "customer@example.com" },
 		]);
+	});
+
+	test("waits past a stale link to a deleted Stripe customer without creating again", async () => {
+		mockState.staleProcessorId = "cus_stripe_deleted";
+		mockState.linkAfterLookups = 2;
+
+		const stripeCustomer = await getOrCreateStripeCustomer({
+			ctx,
+			customer: buildCustomer(),
+		});
+
+		expect(stripeCustomer.id).toBe("cus_stripe_linked");
+		expect(mockState.creates).toBe(1);
 	});
 
 	test("rethrows the idempotency error when no Stripe customer gets linked", async () => {
