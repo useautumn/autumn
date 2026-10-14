@@ -15,6 +15,7 @@ export {
 } from "./atomPushes/atomPushMessage.js";
 export {
 	ATOM_TRACKS_APPEND_PATH,
+	type AtomFinalize,
 	AtomTracksAppendErrorCode,
 	type AtomTracksAppendRequest,
 	AtomTracksAppendRequestSchema,

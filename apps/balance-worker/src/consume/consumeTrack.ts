@@ -31,7 +31,7 @@ const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
 /** An Atom's command that will never deduct still lands its seq, so the Atom can clear it from its journal. */
-async function landAtomSeqOnly({
+export async function landAtomSeqOnly({
 	ctx,
 	command,
 }: {
