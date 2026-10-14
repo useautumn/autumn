@@ -2,30 +2,18 @@ import {
 	type ApiPlanItemV1,
 	type CustomerPlanChange,
 	type Feature,
+	findFeatureById,
+	intervalSuffix,
+	isAbbreviatedInterval,
 	numberWithCommas,
 	type PlanItemChangeV0,
 	type PlanPriceChangeV0,
+	type SetPlansReviewChangeLine,
 } from "@autumn/shared";
-import {
-	intervalSuffix,
-	isAbbreviatedInterval,
-} from "@/utils/formatUtils/intervalSuffix";
-import { formatPhaseDate } from "../schedulePhaseTiming";
-import { formatMoney } from "./formatMoney";
-
-/** One change on an updated plan: what changed, and its value before and after. */
-export type ReviewChangeLineState = "new" | "updated" | "removed";
-
-export type ReviewChangeLine = {
-	state: ReviewChangeLineState;
-	label: string;
-	before?: string;
-	after?: string;
-};
+import { formatReviewMoney } from "./formatReviewMoney";
+import { dateText } from "./reviewText";
 
 type PriceValue = { amount: string; suffix?: string };
-
-const formatDate = (ms: number) => formatPhaseDate({ startsAt: ms });
 
 const suffixFor = ({
 	interval,
@@ -47,21 +35,24 @@ const changeLine = ({
 	label: string;
 	before: PriceValue;
 	after: PriceValue;
-}): ReviewChangeLine => ({
+}): SetPlansReviewChangeLine => ({
 	state: "updated",
 	label,
-	before:
+	before: [
 		before.suffix === after.suffix
 			? before.amount
 			: `${before.amount}${before.suffix ?? ""}`,
-	after: `${after.amount}${after.suffix ?? ""}`,
+	],
+	after: [`${after.amount}${after.suffix ?? ""}`],
 });
 
-const lifecycleLines = (change: CustomerPlanChange): ReviewChangeLine[] => {
+const lifecycleLines = (
+	change: CustomerPlanChange,
+): SetPlansReviewChangeLine[] => {
 	const previous = change.previous_attributes;
 	if (!previous) return [];
 	const subscription = change.subscription;
-	const lines: ReviewChangeLine[] = [];
+	const lines: SetPlansReviewChangeLine[] = [];
 
 	if ("expires_at" in previous) {
 		const expiresAt =
@@ -69,8 +60,8 @@ const lifecycleLines = (change: CustomerPlanChange): ReviewChangeLine[] => {
 		lines.push({
 			state: "updated",
 			label: "Ends",
-			...(previous.expires_at && { before: formatDate(previous.expires_at) }),
-			after: expiresAt === null ? "Never" : formatDate(expiresAt),
+			...(previous.expires_at && { before: dateText(previous.expires_at) }),
+			after: expiresAt === null ? ["Never"] : dateText(expiresAt),
 		});
 	}
 	if ("trial_ends_at" in previous) {
@@ -79,20 +70,20 @@ const lifecycleLines = (change: CustomerPlanChange): ReviewChangeLine[] => {
 			state: "updated",
 			label: "Trial ends",
 			...(previous.trial_ends_at && {
-				before: formatDate(previous.trial_ends_at),
+				before: dateText(previous.trial_ends_at),
 			}),
-			after: trialEndsAt === null ? "Ended" : formatDate(trialEndsAt),
+			after: trialEndsAt === null ? ["Ended"] : dateText(trialEndsAt),
 		});
 	}
 	if ("canceled_at" in previous) {
 		lines.push({
 			state: "updated",
 			label: "Cancellation",
-			after: subscription?.canceled_at ? "Canceled" : "Removed",
+			after: [subscription?.canceled_at ? "Canceled" : "Removed"],
 		});
 	}
 	if (previous.past_due && !subscription?.past_due) {
-		lines.push({ state: "updated", label: "Past due", after: "Resolved" });
+		lines.push({ state: "updated", label: "Past due", after: ["Resolved"] });
 	}
 	return lines;
 };
@@ -104,7 +95,7 @@ const planPriceValue = ({
 	price: NonNullable<PlanPriceChangeV0["current"]>;
 	currency: string;
 }): PriceValue => ({
-	amount: formatMoney({ amount: price.amount, currency }),
+	amount: formatReviewMoney({ amount: price.amount, currency }),
 	suffix: suffixFor({
 		interval: price.interval,
 		intervalCount: price.interval_count,
@@ -117,11 +108,11 @@ const priceLines = ({
 }: {
 	priceChange?: PlanPriceChangeV0;
 	currency: string;
-}): ReviewChangeLine[] => {
+}): SetPlansReviewChangeLine[] => {
 	if (!priceChange?.current) return [];
 	const after = planPriceValue({ price: priceChange.current, currency });
 	if (!priceChange.previous) {
-		return [{ state: "new", label: "Price", after: after.amount }];
+		return [{ state: "new", label: "Price", after: [after.amount] }];
 	}
 	return [
 		changeLine({
@@ -152,7 +143,11 @@ const unitPriceValue = ({
 	if (price?.amount === undefined) return undefined;
 	const billingUnits = price.billing_units ?? 1;
 	return {
-		amount: formatMoney({ amount: price.amount, currency, showCents: true }),
+		amount: formatReviewMoney({
+			amount: price.amount,
+			currency,
+			showCents: true,
+		}),
 		suffix:
 			billingUnits > 1 ? ` /${numberWithCommas(billingUnits)} units` : " /unit",
 	};
@@ -219,21 +214,23 @@ const itemLines = ({
 	itemChanges: PlanItemChangeV0[];
 	features: Feature[];
 	currency: string;
-}): ReviewChangeLine[] =>
-	featureIdsInOrder(itemChanges).flatMap((featureId): ReviewChangeLine[] => {
-		const label =
-			features.find((feature) => feature.id === featureId)?.name ?? featureId;
-		const removed = itemsFor({ itemChanges, featureId, action: "deleted" });
-		const added = itemsFor({ itemChanges, featureId, action: "created" });
+}): SetPlansReviewChangeLine[] =>
+	featureIdsInOrder(itemChanges).flatMap(
+		(featureId): SetPlansReviewChangeLine[] => {
+			const label = findFeatureById({ features, featureId })?.name ?? featureId;
+			const removed = itemsFor({ itemChanges, featureId, action: "deleted" });
+			const added = itemsFor({ itemChanges, featureId, action: "created" });
 
-		if (removed.length === 0) return [{ state: "new", label, after: "Added" }];
-		if (added.length === 0) {
-			return [{ state: "removed", label, after: "Removed" }];
-		}
+			if (removed.length === 0)
+				return [{ state: "new", label, after: ["Added"] }];
+			if (added.length === 0) {
+				return [{ state: "removed", label, after: ["Removed"] }];
+			}
 
-		const values = itemValues({ before: removed, after: added, currency });
-		return values ? [changeLine({ label, ...values })] : [];
-	});
+			const values = itemValues({ before: removed, after: added, currency });
+			return values ? [changeLine({ label, ...values })] : [];
+		},
+	);
 
 /** What changed on an updated plan, read from the preview's plan_changes. */
 export const planChangeLines = ({
@@ -244,7 +241,7 @@ export const planChangeLines = ({
 	change: CustomerPlanChange;
 	features: Feature[];
 	currency: string;
-}): ReviewChangeLine[] => [
+}): SetPlansReviewChangeLine[] => [
 	...lifecycleLines(change),
 	...priceLines({
 		priceChange: change.plan_change?.price_change,
@@ -256,18 +253,3 @@ export const planChangeLines = ({
 		currency,
 	}),
 ];
-
-export const findPlanChange = ({
-	planChanges,
-	planId,
-	entityId,
-}: {
-	planChanges: CustomerPlanChange[];
-	planId: string;
-	entityId: string | null;
-}) =>
-	planChanges.find(
-		(change) =>
-			(change.subscription?.plan_id ?? change.purchase?.plan_id) === planId &&
-			(change.entity_id ?? null) === entityId,
-	);

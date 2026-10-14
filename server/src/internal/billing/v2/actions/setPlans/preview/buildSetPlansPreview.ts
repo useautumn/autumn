@@ -15,6 +15,7 @@ import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripeP
 import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
 import { stripeSubscriptionToProcessorItems } from "./processorItems/stripeSubscriptionToProcessorItems";
 import type { ProcessorItemContext } from "./processorItems/types/processorItemContext";
+import { setPlansPreviewToReview } from "./reviewSections/setPlansPreviewToReview";
 import { setPlansPreviewToWarnings } from "./setPlansPreviewToWarnings";
 import { stripeBillingPlanToProcessorChanges } from "./stripeBillingPlanToProcessorChanges";
 
@@ -88,7 +89,7 @@ export const buildSetPlansPreview = async ({
 		stripeSubscriptionSchedule: billingContext.stripeSubscriptionSchedule,
 	});
 
-	return {
+	const preview = {
 		...attachPreview,
 		...subscriptionTerms,
 		phases: previewPhases,
@@ -125,6 +126,16 @@ export const buildSetPlansPreview = async ({
 						stripeSubscriptionId: billingContext.stripeSubscription.id,
 					}).filter(customerProductHasActiveStatus)
 				: [],
+		}),
+	};
+
+	return {
+		...preview,
+		review: setPlansPreviewToReview({
+			preview,
+			features: ctx.features,
+			currentEpochMs: billingContext.currentEpochMs,
+			endsAt: billingContext.endsAt,
 		}),
 	};
 };

@@ -70,6 +70,18 @@ const continuesOngoing = ({
 	"after" in row &&
 	isOngoingReviewSegment({ reviewSegment: row.after, ongoingContext });
 
+/** A phase repeating the one before it has no changes of its own, so it lists what it keeps. */
+const keptRowsAt = ({
+	diff,
+	at,
+}: {
+	diff: TimelineDiff;
+	at: number;
+}): ReviewPlanRow[] =>
+	[...resolvedContentsAt({ timeline: diff.timeline, at }).values()].map(
+		(segment) => ({ status: "kept", before: segment, after: segment }),
+	);
+
 /** Each request phase against its matched saved self, or the phase before it when it is new. */
 export const timelineToReviewRows = ({
 	saved,
@@ -104,6 +116,10 @@ export const timelineToReviewRows = ({
 						phaseIndex === 0 || !continuesOngoing({ row, ongoingContext }),
 				),
 			})),
+		).map((phase, phaseIndex) =>
+			phaseIndex > 0 && phase.rows.length === 0
+				? { ...phase, rows: keptRowsAt({ diff, at: phase.at }) }
+				: phase,
 		),
 		removedPhases: matches.removedPhaseStarts.map((at) => ({
 			at,
