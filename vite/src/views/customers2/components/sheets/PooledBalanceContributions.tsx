@@ -79,16 +79,7 @@ export function PooledBalanceContributions({
 			<SheetSection withSeparator={false}>
 				<h3 className="text-sub mb-3">Pooling</h3>
 				<div className="flex flex-col gap-4">
-					<PoolingCriteria pooledBalance={pooledBalance} />
-
-					{combine !== FeatureCombine.Sum && (
-						<div className="flex items-center justify-between text-sm gap-2">
-							<span className="text-tertiary-foreground">Combine</span>
-							<span className="text-foreground font-medium">
-								{combine === FeatureCombine.Min ? "Min" : "Max"}
-							</span>
-						</div>
-					)}
+					<PoolingCriteria pooledBalance={pooledBalance} combine={combine} />
 
 					<div className="flex flex-col gap-1.5">
 						<Subheading>Contributions</Subheading>
@@ -115,7 +106,7 @@ export function PooledBalanceContributions({
 								No contributions match your search
 							</p>
 						) : (
-							<div className="flex flex-col">
+							<div className="flex flex-col gap-1.5">
 								{contributions.map((contribution) => {
 									const entityId = contribution.entity_id;
 									const outcompeted =
@@ -123,20 +114,20 @@ export function PooledBalanceContributions({
 									return (
 										<div
 											key={contribution.id}
-											className="flex items-center justify-between h-9 gap-2 text-sm"
+											className="flex items-center justify-between gap-2 text-sm"
 										>
 											{entityId ? (
 												<Button
 													variant="skeleton"
 													onClick={() => goToEntity(entityId)}
-													className="font-medium hover:text-purple-600 cursor-pointer min-w-0 px-0! hover:bg-transparent active:bg-transparent active:border-none"
+													className="h-auto text-tertiary-foreground font-normal hover:text-purple-600 cursor-pointer min-w-0 px-0! hover:bg-transparent active:bg-transparent active:border-none"
 												>
 													<span className="truncate">
 														{sourceLabel(contribution)}
 													</span>
 												</Button>
 											) : (
-												<span className="font-medium truncate">
+												<span className="text-tertiary-foreground truncate">
 													{sourceLabel(contribution)}
 												</span>
 											)}
@@ -146,7 +137,7 @@ export function PooledBalanceContributions({
 												</span>
 												<span
 													className={cn(
-														"font-medium tabular-nums",
+														"tabular-nums",
 														outcompeted
 															? "text-tertiary-foreground line-through"
 															: "text-foreground",
@@ -207,7 +198,7 @@ function winningContributionId({
 
 function Subheading({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex items-center gap-1.5 text-tertiary-foreground text-sm font-medium">
+		<div className="flex items-center gap-1.5 text-foreground text-sm font-medium">
 			{children}
 		</div>
 	);
@@ -217,8 +208,10 @@ function Subheading({ children }: { children: ReactNode }) {
  * so surface this pool's actual values as the match criteria. */
 function PoolingCriteria({
 	pooledBalance,
+	combine,
 }: {
 	pooledBalance: DbPooledBalance;
+	combine: FeatureCombine;
 }) {
 	const criteria: { label: string; value: string }[] = [
 		{ label: "Reset", value: resetLabel(pooledBalance) },
@@ -228,6 +221,13 @@ function PoolingCriteria({
 		criteria.push({
 			label: "Rollover",
 			value: rolloverSignatureToLabel(pooledBalance.rollover_signature),
+		});
+	}
+
+	if (combine !== FeatureCombine.Sum) {
+		criteria.push({
+			label: "Combine",
+			value: combine === FeatureCombine.Min ? "Min" : "Max",
 		});
 	}
 
@@ -251,7 +251,7 @@ function PoolingCriteria({
 					className="flex items-center justify-between text-sm gap-2"
 				>
 					<span className="text-tertiary-foreground">{row.label}</span>
-					<span className="text-foreground font-medium text-right truncate">
+					<span className="text-foreground text-right truncate">
 						{row.value}
 					</span>
 				</div>
