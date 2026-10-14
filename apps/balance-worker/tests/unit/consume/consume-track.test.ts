@@ -5,7 +5,10 @@ import {
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import { buildIdempotencyStorageKey } from "@autumn/dynamodb";
-import { consumeTrack } from "../../../src/consume/consumeTrack.js";
+import {
+	claimTrackBatch,
+	consumeTrack,
+} from "../../../src/consume/consumeTrack.js";
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
 import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
@@ -221,5 +224,102 @@ describe("consumeTrack", () => {
 		expect(queued).not.toBeNull();
 		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
 		expect(keys.released).toEqual([storageKey]);
+	});
+
+	describe("a Kafka batch's claims, sent together", () => {
+		const keyed = ({
+			commandId,
+			requestId,
+			key,
+		}: {
+			commandId: string;
+			requestId: string;
+			key: string;
+		}) =>
+			parseTrackCommand({
+				input: {
+					...commandOf({ commandId, requestId }),
+					idempotency: { key, ttlMs: 60_000 },
+					source: { ...source, seq: Number(commandId.slice(1)) },
+				},
+			});
+		const storageKeyOf = (key: string) =>
+			buildIdempotencyStorageKey({
+				orgId: testIdentity.orgId,
+				env: testIdentity.env,
+				idempotencyKey: key,
+			}).storageKey;
+
+		test("every key is claimed before the first track decides; each track then decides in order with today's outcome", async () => {
+			const { ctx, decided, keys } = createFixture({
+				refuses: (command) => command.commandId === "c3" && command.value > 0,
+			});
+			keys.owners.set(storageKeyOf("k2"), "someone_else");
+			const claimsIssued: string[] = [];
+			const claim = ctx.idempotencyKeys.claim;
+			ctx.idempotencyKeys = {
+				...ctx.idempotencyKeys,
+				claim: (params) => {
+					claimsIssued.push(params.storageKey);
+					return claim(params);
+				},
+			};
+			const commands = ["1", "2", "3"].map((n) =>
+				keyed({ commandId: `c${n}`, requestId: `r${n}`, key: `k${n}` }),
+			);
+
+			const claims = claimTrackBatch({ ctx, commands });
+			expect(claimsIssued).toHaveLength(3);
+			expect(decided).toEqual([]);
+			for (const command of commands)
+				await consumeTrack({ ctx, command, claims });
+
+			expect(claimsIssued).toHaveLength(3);
+			expect(
+				decided.map(({ commandId, value }) => `${commandId}:${value}`),
+			).toEqual(["c1:1", "c2:0", "c3:1", "c3:0"]);
+			expect(keys.owners.get(storageKeyOf("k1"))).toBe("r1");
+			expect(keys.released).toEqual([storageKeyOf("k3")]);
+		});
+
+		test("a key the batch repeats is claimed in arrival order: the earlier item deducts, the later lands its seq only", async () => {
+			const { ctx, decided } = createFixture();
+			const first = keyed({ commandId: "c1", requestId: "r1", key: "k" });
+			const second = keyed({ commandId: "c2", requestId: "r2", key: "k" });
+			const claims = claimTrackBatch({
+				ctx,
+				commands: [first, second],
+			});
+			await consumeTrack({ ctx, command: first, claims });
+			await consumeTrack({ ctx, command: second, claims });
+
+			expect(
+				decided.map(({ commandId, value }) => `${commandId}:${value}`),
+			).toEqual(["c1:1", "c2:0"]);
+		});
+
+		test("one key's failed claim fails only its own track; the others still decide", async () => {
+			const { ctx, decided } = createFixture();
+			const claim = ctx.idempotencyKeys.claim;
+			ctx.idempotencyKeys = {
+				...ctx.idempotencyKeys,
+				claim: async (params) => {
+					if (params.storageKey === storageKeyOf("k2"))
+						throw new Error("dynamo away");
+					return claim(params);
+				},
+			};
+			const commands = ["1", "2", "3"].map((n) =>
+				keyed({ commandId: `c${n}`, requestId: `r${n}`, key: `k${n}` }),
+			);
+			const claims = claimTrackBatch({ ctx, commands });
+			await consumeTrack({ ctx, command: commands[0] as TrackCommand, claims });
+			await expect(
+				consumeTrack({ ctx, command: commands[1] as TrackCommand, claims }),
+			).rejects.toThrow("dynamo away");
+			await consumeTrack({ ctx, command: commands[2] as TrackCommand, claims });
+
+			expect(decided.map(({ commandId }) => commandId)).toEqual(["c1", "c3"]);
+		});
 	});
 });

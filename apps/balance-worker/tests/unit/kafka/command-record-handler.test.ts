@@ -433,4 +433,42 @@ describe("command record handler", () => {
 		expect(fixture.tracked).toEqual([command]);
 		await fixture.handler.settleBatch?.({ topic, partition });
 	});
+
+	test("a batch's track keys are claimed together before its first record applies; the records then apply in order, the bookmark's skips unclaimed", async () => {
+		const fixture = createFixture({ commandNextOffset: 8n });
+		const claimed: string[] = [];
+		const claim = fixture.keys.keys.claim;
+		fixture.keys.keys.claim = (params) => {
+			claimed.push(params.owner ?? "");
+			return claim(params);
+		};
+		const messages = ["7", "8", "9"].map((offset) => ({
+			offset,
+			...serializeCommandRecord({
+				record: parseTrackCommand({
+					input: {
+						...createTrackCommand({
+							identity: testIdentity,
+							commandId: `cmd_${offset}`,
+							value: 1,
+						}),
+						idempotency: { key: `track:item_${offset}`, ttlMs: 60_000 },
+					},
+				}),
+			}),
+		}));
+
+		await fixture.handler.beginBatch?.({ topic, partition, messages });
+		expect(claimed).toEqual(["req_cmd_8", "req_cmd_9"]);
+		expect(fixture.tracked).toEqual([]);
+		for (const message of messages)
+			await fixture.handler.applyRecord({ topic, partition, message });
+		await fixture.handler.settleBatch?.({ topic, partition });
+
+		expect(claimed).toEqual(["req_cmd_8", "req_cmd_9"]);
+		expect(fixture.tracked.map(({ commandId }) => commandId)).toEqual([
+			"cmd_8",
+			"cmd_9",
+		]);
+	});
 });
