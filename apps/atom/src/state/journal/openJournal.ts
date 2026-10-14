@@ -127,16 +127,16 @@ export const openJournal = ({
 		return owedByCustomer.get(customerId) ?? NOTHING_OWED;
 	}
 
+	/** What callers read: timed, unlike the journal's own lookups. */
+	const owedTimed = (params: { customerId: string }) =>
+		timeStage("journalOwed", () => owed(params));
+
 	/** O(1): the customer's array grows, never copied, however much it owes. */
 	function owe({ entry }: { entry: JournalEntry }): void {
 		const entries = owedByCustomer.get(entry.customerId);
 		if (entries) entries.push(entry);
 		else owedByCustomer.set(entry.customerId, [entry]);
 	}
-
-	/** What callers read: timed, unlike the journal's own lookups. */
-	const owedTimed = (params: { customerId: string }) =>
-		timeStage("journalOwed", () => owed(params));
 
 	function setOwed({
 		customerId,

@@ -33,6 +33,9 @@ export const THREAD_STAT_FIELDS = [
 	"viewFoldRebuiltTrim",
 	"viewFoldRebuiltCatalog",
 	"viewFoldRebuiltState",
+	/** Deductions replayed to check a push's acknowledged entries on a kept fold, and to rebuild one from the stored copy. */
+	"viewFoldReplayedKept",
+	"viewFoldReplayedRebuilt",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
@@ -61,6 +64,7 @@ export const THREAD_STAT_FIELDS = [
 	"stageEngineDecisionUs",
 	"stageEngineFoldStepUs",
 	"stageEngineFoldCheckUs",
+	"stageEngineFoldRebuildUs",
 	"stageViewRenderUs",
 	"stageJournalAppendUs",
 	"stageJournalOwedUs",

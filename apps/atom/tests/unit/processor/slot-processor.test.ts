@@ -23,6 +23,7 @@ import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
+import { readStageClock } from "../../../src/threads/stats/stageClock.js";
 import {
 	checkRequestFor,
 	checkResponseOf,
@@ -568,7 +569,10 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		replayed.mockRestore();
 
 		expect(replayed).not.toHaveBeenCalled();
-		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(foldStatsDelta(before)).toEqual({
+			viewFoldKept: 1,
+			viewFoldReplayedKept: 3,
+		});
 		expect(JSON.stringify(view.fullSubject)).toBe(
 			JSON.stringify(
 				rebuiltView({ journal: slot.journal, state, catalog: view.catalog }),
@@ -595,7 +599,10 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 				})
 			).balance?.remaining,
 		).toBe(940);
-		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(foldStatsDelta(before)).toEqual({
+			viewFoldKept: 1,
+			viewFoldReplayedKept: 2,
+		});
 	});
 
 	test("a push with the rows the deductions leave but another revision keeps the fold, counting on from Autumn's revision", async () => {
@@ -608,7 +615,10 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		});
 		const view = slot.read();
 
-		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(foldStatsDelta(before)).toEqual({
+			viewFoldKept: 1,
+			viewFoldReplayedKept: 3,
+		});
 		expect(JSON.stringify(view.fullSubject)).toBe(
 			JSON.stringify(
 				rebuiltView({ journal: slot.journal, state, catalog: view.catalog }),
@@ -649,7 +659,36 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 			expect(foldStatsDelta(before)).toEqual({
 				viewFoldRebuilt: 1,
 				[reason]: 1,
+				viewFoldReplayedRebuilt: 2,
 			});
 		},
 	);
+
+	test("a kept fold's check of the acknowledged deductions counts to engineFoldCheck, and a rebuild's replay of those still owed to engineFoldRebuild", async () => {
+		const kept = await openDeducting({ deductions: 5 });
+		const beforeKept = readStageClock({ aliveUs: 0 });
+		await kept.push({ acknowledged: 3 });
+		kept.read();
+		const afterKept = readStageClock({ aliveUs: 0 });
+
+		const rebuilt = await openDeducting({ deductions: 5 });
+		const beforeRebuilt = readStageClock({ aliveUs: 0 });
+		await rebuilt.push({
+			acknowledged: 3,
+			edit: (state) => ({ ...state, customerEntitlements: [] }),
+		});
+		rebuilt.read();
+		const afterRebuilt = readStageClock({ aliveUs: 0 });
+
+		const grew = (
+			before: Record<string, number>,
+			after: Record<string, number>,
+			field: string,
+		) => (after[field] ?? 0) > (before[field] ?? 0);
+		expect(grew(beforeKept, afterKept, "stageEngineFoldCheckUs")).toBe(true);
+		expect(grew(beforeKept, afterKept, "stageEngineFoldRebuildUs")).toBe(false);
+		expect(grew(beforeRebuilt, afterRebuilt, "stageEngineFoldRebuildUs")).toBe(
+			true,
+		);
+	});
 });

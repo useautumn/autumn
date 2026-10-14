@@ -109,6 +109,8 @@ type RebuildReason = FoldRebuilt["rebuiltFor"] | "noFold";
 
 /** Pushes that replaced a customer's copy while it owed: the fold continued, or replayed from the push, by why. Module state is the thread's own. */
 let viewFoldKept = 0;
+let viewFoldReplayedKept = 0;
+let viewFoldReplayedRebuilt = 0;
 const viewFoldRebuilt: Record<RebuildReason, number> = {
 	noFold: 0,
 	trim: 0,
@@ -127,6 +129,8 @@ export const readViewFoldThreadStats = () => ({
 	viewFoldRebuiltTrim: viewFoldRebuilt.trim,
 	viewFoldRebuiltCatalog: viewFoldRebuilt.catalog,
 	viewFoldRebuiltState: viewFoldRebuilt.state,
+	viewFoldReplayedKept,
+	viewFoldReplayedRebuilt,
 });
 
 const loggedValueOf = (
@@ -248,15 +252,20 @@ const joinCurrentSubject = ({
 			owed,
 		});
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
-	const base: ReplayBase =
-		carriedBase ??
-		(isSameCopy && isAppendedTo({ owed, fold: joined })
+	const continued: ReplayBase | null =
+		isSameCopy && isAppendedTo({ owed, fold: joined })
 			? {
 					state: joined.customerState,
 					applied: joined.applied,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
-			: { state: customer.state, applied: 0, fullSubject: null });
+			: null;
+	const isRebuild = !carriedBase && !continued;
+	if (carried && carriedBase)
+		viewFoldReplayedKept += carried.applied - carriedBase.applied;
+	if (isRebuild) viewFoldReplayedRebuilt += owed.length;
+	const base: ReplayBase = carriedBase ??
+		continued ?? { state: customer.state, applied: 0, fullSubject: null };
 	const { current, customerState } = joinSubject({
 		customer,
 		entity,
@@ -265,6 +274,7 @@ const joinCurrentSubject = ({
 		base,
 		catalog,
 		entityId,
+		replayStage: isRebuild ? "engineFoldRebuild" : "engineFoldStep",
 	});
 	// Every check until the next push or append shares it.
 	deepFreeze(current);
@@ -310,6 +320,7 @@ const joinSubject = ({
 	base,
 	catalog,
 	entityId,
+	replayStage,
 }: {
 	customer: StoredSubject;
 	entity: StoredSubject | null;
@@ -318,6 +329,7 @@ const joinSubject = ({
 	base: ReplayBase;
 	catalog: Catalog;
 	entityId: string | null;
+	replayStage: "engineFoldStep" | "engineFoldRebuild";
 }): { current: CurrentSubject; customerState: SubjectState } => {
 	// Only a customer's own deductions are owed, and they move only the customer's own rows.
 	const unapplied = owed.slice(base.applied);
@@ -329,6 +341,7 @@ const joinSubject = ({
 					state: base.state,
 					catalog,
 					fullSubject: base.fullSubject,
+					stage: replayStage,
 				});
 
 	const current: CurrentSubject = {
