@@ -149,7 +149,7 @@ const remainingOf = async ({
 		?.remaining;
 
 const nothingUnsent = ({ journal }: { journal: Journal }) =>
-	journal.unsent({ limit: 1 }).length === 0;
+	journal.countUnsent() === 0;
 
 describe("handing the journal to Autumn", () => {
 	test("2xx: the batch is marked sent, and stays in the view until a push shows it", async () => {
@@ -303,6 +303,143 @@ describe("handing the journal to Autumn", () => {
 					.filter((track) => track.customerId === customerId)
 					.map(({ seq }) => seq),
 			).toEqual(Array.from({ length: 600 }, (_, index) => index + 1));
+	});
+});
+
+describe("a track Autumn refuses on its own", () => {
+	/** Each `[customerId, commandId]` appended at once, so they commit and go to Autumn as one batch. */
+	const appendTogether = ({
+		journal,
+		commands,
+	}: {
+		journal: Journal;
+		commands: [customerId: string, commandId: string][];
+	}) =>
+		Promise.all(
+			commands.map(([customerId, commandId]) =>
+				journal.append({
+					customerId,
+					command: owedCommand({ commandId, value: 1, customerId }),
+				}),
+			),
+		);
+	const appliedTo = (customerId: string) =>
+		autumn.applied
+			.filter((track) => track.customerId === customerId)
+			.map(({ seq }) => seq);
+
+	test("one refused track parks its customer: that customer's later entries wait, the other customers' 7 go, with one warn line", async () => {
+		const { journal, warnings } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+
+		const appended = await appendTogether({
+			journal,
+			commands: [
+				["cus_2", "x1"],
+				["cus_2", "x2"],
+				["cus_2", "x3"],
+				["cus_1", "bad"],
+				["cus_2", "x4"],
+				["cus_2", "x5"],
+				["cus_1", "later"],
+				["cus_2", "x6"],
+				["cus_2", "x7"],
+			],
+		});
+
+		await until(() => journal.parked().length === 1);
+		expect(autumn.applied).toHaveLength(7);
+		expect(appliedTo("cus_2")).toEqual([1, 2, 3, 4, 5, 6, 7]);
+		expect(journal.unsent({ limit: 10 })).toEqual([]);
+		expect(appliedTo("cus_1")).toEqual([]);
+		expect(journal.parked()).toEqual([appended[3]]);
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([
+			appended[3],
+			appended[6],
+		]);
+		expect(warnings).toEqual([
+			expect.objectContaining({
+				type: "atom_journal_track_parked",
+				customerId: "cus_1",
+				seq: 1,
+			}),
+		]);
+	});
+
+	test("a parked customer's refused track is retried alone, backing off 1 s to 30 s, while other customers still go; once Autumn takes it, the customer's remaining entries follow in order", async () => {
+		const { journal, sleeps, warnings } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+		await appendTogether({
+			journal,
+			commands: [
+				["cus_1", "bad"],
+				["cus_2", "other_0"],
+			],
+		});
+		await until(() => journal.parked().length === 1);
+
+		for (const [index, delay] of [...RETRY_DELAYS_MS, 30_000].entries()) {
+			const retry = await sleeps.next({ ms: delay });
+			await appendTogether({
+				journal,
+				commands: [
+					["cus_1", `waiting_${index}`],
+					["cus_2", `other_${index + 1}`],
+				],
+			});
+			await until(() => appliedTo("cus_2").length === index + 2);
+			retry.wake();
+		}
+		const accepted = await sleeps.next({ ms: 30_000 });
+		autumn.switches.refuseCommandIds.clear();
+		accepted.wake();
+
+		await until(() => nothingUnsent({ journal }));
+		expect(journal.parked()).toEqual([]);
+		expect(appliedTo("cus_1")).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+		expect(
+			warnings.filter(
+				(fields) =>
+					(fields as { type: string }).type === "atom_journal_track_parked",
+			),
+		).toHaveLength(1);
+	});
+
+	test("an Autumn refusing every request parks nothing, and the whole batch backs off as before", async () => {
+		const { journal, sleeps, warnings } = await openForwardedSlot();
+		autumn.switches.refuseWith = 400;
+
+		await appendTogether({
+			journal,
+			commands: [
+				["cus_1", "a"],
+				["cus_2", "b"],
+				["cus_1", "c"],
+				["cus_2", "d"],
+			],
+		});
+		const retry = await sleeps.next({ ms: 1000 });
+
+		expect(journal.parked()).toEqual([]);
+		expect(journal.unsent({ limit: 10 })).toHaveLength(4);
+		expect(warnings).toEqual([
+			expect.objectContaining({ type: "atom_journal_forward_failed" }),
+		]);
+		autumn.switches.refuseWith = null;
+		retry.wake();
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied).toHaveLength(4);
+	});
+
+	test("a refused batch of one, with nothing beside it to show Autumn reads the rest, is not parked", async () => {
+		const { journal, sleeps } = await openForwardedSlot();
+		autumn.switches.refuseCommandIds.add("bad");
+
+		await appendTogether({ journal, commands: [["cus_1", "bad"]] });
+		await sleeps.next({ ms: 1000 });
+
+		expect(journal.parked()).toEqual([]);
+		expect(journal.unsent({ limit: 10 })).toHaveLength(1);
 	});
 });
 
