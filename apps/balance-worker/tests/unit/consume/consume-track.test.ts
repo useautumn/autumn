@@ -223,3 +223,73 @@ describe("consumeTrack", () => {
 		expect(keys.released).toEqual([storageKey]);
 	});
 });
+
+describe("consumeTrack: an Atom's lock that lands after its expiry", () => {
+	const source = { atomId: "atom_1", writerId: "w_1", seq: 7 };
+	const lockedAtom = ({
+		expiryAction,
+		expiresAt,
+	}: {
+		expiryAction: "release" | "confirm";
+		expiresAt: number;
+	}) =>
+		parseTrackCommand({
+			input: {
+				...commandOf({ commandId: "c1", requestId: "r1" }),
+				lock: { id: "lck_1", lockId: "L1", expiresAt, expiryAction },
+				source,
+			},
+		});
+
+	test("a release lock already past its expiry holds nothing: only its seq lands, and no key is claimed", async () => {
+		const { ctx, decided, keys } = createFixture();
+		const queued = await consumeTrack({
+			ctx,
+			command: lockedAtom({
+				expiryAction: "release",
+				expiresAt: Date.now() - 1_000,
+			}),
+		});
+
+		expect(queued).not.toBeNull();
+		expect(decided).toHaveLength(1);
+		expect(decided[0]).toMatchObject({
+			commandId: "c1",
+			value: 0,
+			lock: undefined,
+			usageEvent: null,
+			source,
+		});
+		expect(keys.owners.size).toBe(0);
+	});
+
+	test("a confirm lock past its expiry is taken as sent; the sweep confirms it, being due", async () => {
+		const { ctx, decided } = createFixture();
+		const expiresAt = Date.now() - 1_000;
+		await consumeTrack({
+			ctx,
+			command: lockedAtom({ expiryAction: "confirm", expiresAt }),
+		});
+
+		expect(decided[0]).toMatchObject({
+			value: 1,
+			lock: { lockId: "L1", expiresAt, expiryAction: "confirm" },
+		});
+	});
+
+	test("a release lock still before its expiry is taken as sent", async () => {
+		const { ctx, decided } = createFixture();
+		await consumeTrack({
+			ctx,
+			command: lockedAtom({
+				expiryAction: "release",
+				expiresAt: Date.now() + 60_000,
+			}),
+		});
+
+		expect(decided[0]).toMatchObject({
+			value: 1,
+			lock: { lockId: "L1", expiryAction: "release" },
+		});
+	});
+});
