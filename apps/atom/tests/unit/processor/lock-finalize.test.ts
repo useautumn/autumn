@@ -4,6 +4,7 @@ import {
 	type FinalizeLockParamsV1,
 	InsufficientBalanceError,
 } from "@autumn/shared";
+import { occurredAt as lockedAt } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
 import type { FinalizeRequest } from "../../../src/processor/types/finalize.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
@@ -76,7 +77,8 @@ const finalizeRequestFor = (
 	params: Partial<FinalizeLockParamsV1>,
 ): FinalizeRequest => ({
 	requestId: `req_finalize_${++requests}`,
-	occurredAt: Date.now(),
+	// A minute after the fixture's locks were taken, inside their 24-hour expiry.
+	occurredAt: lockedAt + 60_000,
 	params: {
 		customer_id: "cus_1",
 		lock_id: "lock_1",
@@ -189,6 +191,32 @@ describe("a finalize on the Atom", () => {
 				}),
 			),
 		).toBe("lock_not_held");
+	});
+
+	test("B2: a finalize sent after its lock's expiry goes to the API, which settled it at expiry: nothing is settled or journaled here", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		const expiresAt = lockedAt + 60_000;
+		await checkResponseOf({
+			processor,
+			request: checkRequestFor({
+				params: {
+					required_balance: 30,
+					lock: { enabled: true, lock_id: "lock_1", expires_at: expiresAt },
+				},
+			}),
+		});
+
+		expect(
+			await forwardReasonOf(() =>
+				processor.finalize({
+					request: {
+						...finalizeRequestFor({ action: "confirm" }),
+						occurredAt: expiresAt + 1,
+					},
+				}),
+			),
+		).toBe("lock_expired");
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
 	test("parked D1: a miss goes to the API", async () => {
