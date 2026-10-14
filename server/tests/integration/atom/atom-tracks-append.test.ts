@@ -11,12 +11,15 @@
  *  5. a lock's track and its release in one request settle in order: the lock is taken, then given back;
  *  6. a release of a lock Autumn already settled, or named under another customer, moves nothing; its seq still lands;
  *  7. a confirm above the lock that leaves the balance under its auto top-up threshold tops it up, as the API's would;
+ *  8. a lock with a caller-set expiry is released when its timer fires, and the balance returns;
+ *  9. a lock handed in after its expiry holds nothing; its seq still lands;
+ * 10. a timer fired after its lock settled moves nothing, even once the lock id is taken again; that lock's own timer releases it;
  *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
  *     once: a seq the customer already holds from that journal deducts nothing again.
  */
 
 import { afterAll, expect, test } from "bun:test";
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { TrackCommand, TrackLock } from "@autumn/balance-engine";
 import {
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TRACKS_APPEND_PATH,
@@ -24,7 +27,7 @@ import {
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
 import type { AtomSubjectBody } from "@autumn/byoc/subjects";
-import { type ApiCustomerV5, customers } from "@autumn/shared";
+import { type ApiCustomerV5, balanceLocks, customers } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -34,6 +37,7 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
+import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { expectBalanceCorrect } from "../utils/expectBalanceCorrect.js";
 import { atomFinalizeOf, atomTrack, postAsAtom } from "./utils/atomHandIn.js";
@@ -521,6 +525,162 @@ test.skipIf(!isBalanceWorkerRoute())(
 				expect(customer.balances[TestFeature.Messages]?.remaining).toBe(115),
 			timeoutMs: 30_000,
 		});
+	},
+	120_000,
+);
+
+/** A lock the caller set to release at `expiresAt`, under a fresh row id. */
+const releaseLockOf = ({
+	customerId,
+	expiresAt,
+}: {
+	customerId: string;
+	expiresAt: number;
+}): TrackLock => ({
+	id: `lck_${crypto.randomUUID()}`,
+	lockId: customerId,
+	expiresAt,
+	expiryAction: "release",
+});
+
+/** What the hand-in's timer for this lock delivers when it fires. */
+const fireTimerOf = ({
+	customerId,
+	lock,
+}: {
+	customerId: string;
+	lock: TrackLock;
+}) =>
+	expireLock({
+		// A real job's ctx is stamped when the job starts; the shared test ctx predates the lock.
+		ctx: { ...defaultCtx, timestamp: Date.now() },
+		payload: {
+			orgId: defaultCtx.org.id,
+			env: defaultCtx.env,
+			customerId,
+			lockId: lock.lockId,
+			hashedKey: Bun.hash(lock.id).toString(),
+			lockRowId: lock.id,
+		},
+	});
+
+const expectNoLockRow = async ({ customerId }: { customerId: string }) =>
+	expect(
+		await defaultCtx.db
+			.select({ id: balanceLocks.id })
+			.from(balanceLocks)
+			.where(
+				and(
+					eq(balanceLocks.org_id, defaultCtx.org.id),
+					eq(balanceLocks.env, defaultCtx.env),
+					eq(balanceLocks.customer_id, customerId),
+					eq(balanceLocks.lock_id, customerId),
+				),
+			),
+	).toEqual([]);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks8: a lock with a caller-set expiry is released when its timer fires")}`,
+	async () => {
+		const customerId = "atom-tracks8";
+		const { append, expectSeq } = await initLockHandIn({ customerId });
+		const lock = releaseLockOf({
+			customerId,
+			expiresAt: Date.now() + 3_600_000,
+		});
+
+		await append([{ command: atomTrack({ customerId, value: 8, lock }) }], 1);
+		await expectSeq(1);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
+
+		await fireTimerOf({ customerId, lock });
+
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
+		});
+		await expectNoLockRow({ customerId });
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks9: a lock handed in after its expiry holds nothing; its seq lands")}`,
+	async () => {
+		const customerId = "atom-tracks9";
+		const { append, expectSeq } = await initLockHandIn({ customerId });
+
+		await append(
+			[
+				{
+					command: atomTrack({
+						customerId,
+						value: 8,
+						lock: releaseLockOf({ customerId, expiresAt: Date.now() - 1_000 }),
+					}),
+				},
+			],
+			1,
+		);
+
+		await expectSeq(1);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
+		});
+		await expectNoLockRow({ customerId });
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks10: a timer fired after its lock settled moves nothing, even once the lock id is taken again; that lock's own timer releases it")}`,
+	async () => {
+		const customerId = "atom-tracks10";
+		const { append, expectSeq } = await initLockHandIn({ customerId });
+		const first = releaseLockOf({
+			customerId,
+			expiresAt: Date.now() + 3_600_000,
+		});
+		const second = releaseLockOf({
+			customerId,
+			expiresAt: Date.now() + 7_200_000,
+		});
+		const expectRemaining = (remaining: number) =>
+			expectBalanceCorrect({
+				customerId,
+				featureId: TestFeature.Messages,
+				remaining,
+			});
+
+		await append(
+			[
+				{ command: atomTrack({ customerId, value: 8, lock: first }) },
+				{ finalize: atomFinalizeOf({ customerId, lockId: customerId }) },
+			],
+			1,
+		);
+		await expectSeq(2);
+		await fireTimerOf({ customerId, lock: first });
+		await expectRemaining(10);
+
+		await append(
+			[{ command: atomTrack({ customerId, value: 8, lock: second }) }],
+			3,
+		);
+		await expectSeq(3);
+		await fireTimerOf({ customerId, lock: first });
+		await expectRemaining(2);
+
+		await fireTimerOf({ customerId, lock: second });
+		await expectRemaining(10);
+		await expectNoLockRow({ customerId });
 	},
 	120_000,
 );
