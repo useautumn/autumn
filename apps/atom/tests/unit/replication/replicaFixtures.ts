@@ -2,11 +2,7 @@ import { spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	parseFinalizeCommand,
-	parseTrackCommand,
-	type TrackCommand,
-} from "@autumn/balance-engine";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
