@@ -1,7 +1,7 @@
 import type { FrontendOrg } from "@autumn/shared";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { orgAvatarFallbackClassName } from "./orgAvatarFallbackClassName";
+import { orgAvatarKeycap } from "./orgAvatarKeycap";
 
 export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
@@ -14,10 +14,9 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	return (
 		<div
 			className={cn(
-				"flex size-5 min-h-5 min-w-5 items-center justify-center overflow-hidden rounded-md",
-				showLogo
-					? "ring-1 ring-black/10 dark:ring-[#2A2A2A]"
-					: orgAvatarFallbackClassName,
+				"relative flex size-5 min-h-5 min-w-5 items-center justify-center overflow-hidden rounded-md",
+				orgAvatarKeycap.drop,
+				!showLogo && orgAvatarKeycap.surface,
 			)}
 		>
 			{showLogo ? (
@@ -32,6 +31,7 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 					{firstLetter}
 				</span>
 			)}
+			<span aria-hidden className={orgAvatarKeycap.edge} />
 		</div>
 	);
 };

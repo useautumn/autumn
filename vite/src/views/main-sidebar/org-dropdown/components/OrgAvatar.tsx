@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { orgAvatarFallbackClassName } from "./orgAvatarFallbackClassName";
+import { orgAvatarKeycap } from "./orgAvatarKeycap";
 
 export const OrgAvatar = ({
 	name,
@@ -15,8 +15,9 @@ export const OrgAvatar = ({
 	return (
 		<span
 			className={cn(
-				"flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[3px] text-[9.5px] font-semibold",
-				!showLogo && orgAvatarFallbackClassName,
+				"relative flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[3px] text-[9.5px] font-semibold",
+				orgAvatarKeycap.drop,
+				!showLogo && orgAvatarKeycap.surface,
 			)}
 		>
 			{showLogo ? (
@@ -29,6 +30,7 @@ export const OrgAvatar = ({
 			) : (
 				name.charAt(0).toUpperCase()
 			)}
+			<span aria-hidden className={orgAvatarKeycap.edge} />
 		</span>
 	);
 };
