@@ -8,6 +8,8 @@ export type Feature = {
 	type: "boolean" | "metered" | "credit_system" | "ai_credit_system";
 	/** Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. */
 	consumable?: boolean;
+	/** How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only. */
+	combine?: "sum" | "max" | "min";
 	/** A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. */
 	creditSchema?: Array<
 		| {

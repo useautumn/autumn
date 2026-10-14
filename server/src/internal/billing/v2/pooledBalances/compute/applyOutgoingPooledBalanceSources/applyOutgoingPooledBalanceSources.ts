@@ -41,22 +41,24 @@ export const applyOutgoingPooledBalanceSources = ({
 
 		const isLicenseKeyed =
 			pooledCustomerEntitlement.pooled_balance.customer_license_link_id != null;
-		addToUpdatePoolBalances({
-			pooledBalancePlan: computeContext.plan,
-			pooledCustomerEntitlement,
-			balance: isLicenseKeyed
-				? (pooledCustomerEntitlement.balance ?? 0)
-				: subtractSafe({
-						left: pooledCustomerEntitlement.balance,
-						right: contribution.current_contribution,
-					}),
-			granted: isLicenseKeyed
-				? pooledCustomerEntitlement.pooled_balance.granted
-				: subtractSafe({
-						left: pooledCustomerEntitlement.pooled_balance.granted,
-						right: contribution.current_contribution,
-					}),
-		});
+		// A competing share moves the pool in finalize, from the shares that remain.
+		if (!contribution.competes)
+			addToUpdatePoolBalances({
+				pooledBalancePlan: computeContext.plan,
+				pooledCustomerEntitlement,
+				balance: isLicenseKeyed
+					? (pooledCustomerEntitlement.balance ?? 0)
+					: subtractSafe({
+							left: pooledCustomerEntitlement.balance,
+							right: contribution.current_contribution,
+						}),
+				granted: isLicenseKeyed
+					? pooledCustomerEntitlement.pooled_balance.granted
+					: subtractSafe({
+							left: pooledCustomerEntitlement.pooled_balance.granted,
+							right: contribution.current_contribution,
+						}),
+			});
 
 		computeContext.pooledBalanceIdsWithRemovedContributions.add(
 			contribution.pooled_balance_id,

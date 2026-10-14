@@ -393,7 +393,7 @@ export class CusEntService {
 			);
 
 		const isNotPooledBalanceSource = () =>
-			sql`${entitlements.pooled} IS NOT TRUE`;
+			sql`${entitlements.pooled} IS NOT TRUE AND ${customerEntitlements.pooled_contribution_id} IS NULL`;
 
 		// Branch 1: cusEnts with no customer_product. Left-join to
 		// customer_products on a false predicate so the row shape matches

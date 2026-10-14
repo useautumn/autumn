@@ -41,6 +41,7 @@ export const computePooledBalanceTransitionPlan = ({
 	}
 	const computeContext = setupPooledBalanceComputeContext({
 		pooledCustomerEntitlements: fullCustomer.pooled_customer_entitlements ?? [],
+		customerProducts: fullCustomer.customer_products,
 	});
 
 	const outgoingCustomerProductIds = new Set<string>();

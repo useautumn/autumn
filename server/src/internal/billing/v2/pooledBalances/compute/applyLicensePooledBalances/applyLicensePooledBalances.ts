@@ -77,7 +77,9 @@ const findExistingLicensePool = ({
 			pooled_balance.reset_mode === resetMode &&
 			pooled_balance.stripe_subscription_id === null &&
 			pooled_balance.customer_license_link_id === customerLicense.link_id &&
-			pooled_balance.rollover_signature === entIdentity.rolloverSignature,
+			pooled_balance.rollover_signature === entIdentity.rolloverSignature &&
+			pooled_balance.feature_override_signature ===
+				entIdentity.featureOverrideSignature,
 	);
 };
 

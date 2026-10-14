@@ -1,4 +1,5 @@
 import type {
+	DbPooledBalanceContribution,
 	FullCustomerEntitlement,
 	PooledBalanceIdentity,
 	PooledBalancePlan,
@@ -20,6 +21,8 @@ export type PooledBalanceComputeContext = {
 		MutablePooledCustomerEntitlement
 	>;
 	pooledBalanceIdsWithRemovedContributions: Set<string>;
+	/** Competing shares as the customer held them before this transition, by source customer entitlement. */
+	competingContributionsBySourceId: Map<string, DbPooledBalanceContribution>;
 };
 
 export type PooledBalanceLifecycle = Pick<

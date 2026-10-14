@@ -27,6 +27,7 @@ export const upsertPooledBalance = ({
 	identity,
 	contributionAmounts,
 	nextResetAt,
+	competes,
 	now,
 }: {
 	ctx: AutumnContext;
@@ -36,6 +37,8 @@ export const upsertPooledBalance = ({
 	identity: PooledBalanceIdentity;
 	contributionAmounts: PooledBalanceContributionAmounts;
 	nextResetAt: number | null;
+	/** A competing share moves the pool once every share is known, in finalize. */
+	competes: boolean;
 	now: number;
 }): MutablePooledCustomerEntitlement => {
 	const existingPooledCustomerEntitlement =
@@ -80,13 +83,14 @@ export const upsertPooledBalance = ({
 			existingContribution.pooled_balance_id,
 		);
 	const isLicenseKeyed = identity.customerLicenseLinkId != null;
-	const grantedDelta = isLicenseKeyed
-		? 0
-		: alreadyCountedByPool
-			? contributionAmounts.currentContribution -
-				(existingContribution.current_contribution ?? 0)
-			: contributionAmounts.currentContribution;
-	if (alreadyCountedByPool || isLicenseKeyed) {
+	const grantedDelta =
+		isLicenseKeyed || competes
+			? 0
+			: alreadyCountedByPool
+				? contributionAmounts.currentContribution -
+					(existingContribution.current_contribution ?? 0)
+				: contributionAmounts.currentContribution;
+	if (alreadyCountedByPool || isLicenseKeyed || competes) {
 		balanceDelta = 0;
 	}
 
@@ -97,10 +101,14 @@ export const upsertPooledBalance = ({
 			customerProduct,
 			identity,
 			balanceDelta,
-			granted: isLicenseKeyed ? 0 : contributionAmounts.currentContribution,
+			granted:
+				isLicenseKeyed || competes
+					? 0
+					: contributionAmounts.currentContribution,
 			nextResetAt,
 			now,
 		});
+		if (competes) insertedPooledCustomerEntitlement.unlimited = false;
 
 		addInsertedPooledBalanceToComputeContext({
 			computeContext,

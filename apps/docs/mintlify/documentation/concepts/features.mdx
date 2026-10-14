@@ -22,6 +22,34 @@ Under the "advanced" section of the feature creation sheet, you can also define 
 
 Metered features can each act as their own, standlone balance, or be added to a [credit system](/documentation/modelling-pricing/credit-systems). This lets you define credit costs per feature, and let many features draw from a common credit balance. 
 
+### Combining grants from several plans
+
+When a customer has several plans that grant the same feature, the grants add up by default. For feature values that work like settings (a refresh interval, a fee in basis points, a seat cap) you can set `combine` on the feature instead:
+
+- `sum` (default): every plan's grant adds up.
+- `max`: only the highest grant counts.
+- `min`: only the lowest grant counts.
+
+`max` and `min` only apply to plan items with **no price**. Items with a price (prepaid or usage-based) always add on top. With `max`, a 2-seat plan and a 5-seat add-on give 5 seats, and 3 extra seats bought on a prepaid item make it 8.
+
+Some details to be aware of:
+
+- Usage stays with the feature, not the plan. If a higher grant arrives, the customer keeps what they already used. If it goes away mid-cycle and usage is above the new grant, the balance goes negative until the next reset.
+- Under `max`, an unlimited grant wins. Under `min`, any limited grant beats an unlimited one.
+- Grants that reset on different cycles (for example a free monthly plan and a paid monthly plan) are kept apart and still add up. Features that never reset always combine.
+- Plans attached to entities keep adding up. Only plans attached directly to the customer compete.
+- For credit systems, only plans charging the same credit rates combine. A plan with its own credit rates keeps its grant separate and adds on top.
+
+```typescript
+export const refreshHours = feature({
+  featureId: "refresh_hours",
+  name: "Refresh hours",
+  type: "metered",
+  consumable: false,
+  combine: "min",
+});
+```
+
 ## Boolean features
 
 Boolean features are for your features that can be either enabled or disabled. Think of them like feature flags to gate specific parts of your application based on what product a user has (eg, access to a premium analytics dashboard).
