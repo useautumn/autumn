@@ -18,6 +18,7 @@ const mockState = {
 	releaseClaimCalls: [] as Record<string, unknown>[],
 	queueCalls: [] as Record<string, unknown>[],
 	queueResponse: { success: true } as { success: true } | null,
+	lockLookups: [] as Record<string, unknown>[],
 };
 
 await mockModuleWithRestore(
@@ -29,7 +30,12 @@ await mockModuleWithRestore(
 
 await mockModuleWithRestore(
 	"@/internal/balances/finalizeLock/balanceWorker/getBalanceLock.js",
-	() => ({ getBalanceLock: async () => null }),
+	() => ({
+		getBalanceLock: async (args: Record<string, unknown>) => {
+			mockState.lockLookups.push(args);
+			return null;
+		},
+	}),
 );
 await mockModuleWithRestore(
 	"@/internal/balances/utils/lock/fetchLockReceipt.js",
@@ -91,6 +97,7 @@ const resetMockState = () => {
 	mockState.releaseClaimCalls = [];
 	mockState.queueCalls = [];
 	mockState.queueResponse = { success: true };
+	mockState.lockLookups = [];
 };
 
 beforeEach(resetMockState);
@@ -174,6 +181,32 @@ describe("runFinalizeLock", () => {
 
 		await expect(runFinalizeLock({ ctx, params })).rejects.toBe(error);
 		expect(mockState.queueCalls).toHaveLength(0);
+	});
+});
+
+describe("runFinalizeLock with a customer_id (API 2.6)", () => {
+	test("looks the lock up only among the customer's own; without one, the lookup names no customer", async () => {
+		await runFinalizeLock({ ctx, params });
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "cus_123" } as never,
+		});
+
+		expect(mockState.lockLookups).toEqual([
+			{ ctx, lockId: "lock_123", customerId: undefined },
+			{ ctx, lockId: "lock_123", customerId: "cus_123" },
+		]);
+	});
+
+	test("a legacy lock of another customer is not found, its claim is released, and nothing is finalized", async () => {
+		await expect(
+			runFinalizeLock({
+				ctx,
+				params: { ...(params as object), customer_id: "cus_other" } as never,
+			}),
+		).rejects.toMatchObject({ message: "Lock not found for ID: lock_123" });
+		expect(mockState.finalizeV2Calls).toHaveLength(0);
+		expect(mockState.releaseClaimCalls).toEqual([{ ctx, lockId: "lock_123" }]);
 	});
 });
 
