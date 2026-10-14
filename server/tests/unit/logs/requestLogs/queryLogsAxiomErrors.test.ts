@@ -1,9 +1,14 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 
+const realQueryAxiom = { ...(await import("@/external/axiom/queryAxiom.js")) };
 const queryAxiom = mock(async () => ({ matches: [] }) as unknown);
 
 mock.module("@/external/axiom/queryAxiom.js", () => ({ queryAxiom }));
+
+afterAll(() => {
+	mock.module("@/external/axiom/queryAxiom.js", () => realQueryAxiom);
+});
 
 const { queryLogs } = await import(
 	"@/internal/logs/actions/queryLogs/queryLogs.js"
