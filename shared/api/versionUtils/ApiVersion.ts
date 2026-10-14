@@ -4,6 +4,7 @@
  * Internally we use SemVer for comparison (e.g., "1.1.0")
  */
 export enum ApiVersion {
+	V2_6 = "2.6.0",
 	V2_5 = "2.5.0",
 	V2_4 = "2.4.0",
 	V2_3 = "2.3.0",
@@ -21,4 +22,4 @@ export type ApiVersionString = `${ApiVersion}`;
 
 export const API_VERSIONS = Object.values(ApiVersion);
 
-export const LATEST_VERSION = ApiVersion.V2_5;
+export const LATEST_VERSION = ApiVersion.V2_6;
