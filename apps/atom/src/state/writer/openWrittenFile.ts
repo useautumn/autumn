@@ -7,10 +7,6 @@ import {
 } from "./sqliteWrites.js";
 import type { SqliteFile } from "./types/sqliteFile.js";
 
-// BENCH ONLY (writer-thread spike, never merged): ATOM_SQLITE_WRITER_THREAD=0 writes on the serving thread as before.
-const writesOnWriterThread = () =>
-	process.env.ATOM_SQLITE_WRITER_THREAD !== "0";
-
 /** A file held in memory has no second connection to share it, so its writes run on the thread that reads it. */
 const openInline = ({
 	databasePath,
@@ -43,8 +39,7 @@ export const openWrittenFile = ({
 	databasePath: string;
 	kind: SqliteFileKind;
 }): SqliteFile => {
-	if (databasePath === ":memory:" || !writesOnWriterThread())
-		return openInline({ databasePath, kind });
+	if (databasePath === ":memory:") return openInline({ databasePath, kind });
 	const writer = getSqliteWriter();
 	const fileId = writer.open({ path: databasePath, kind });
 	let sqliteDb: ReturnType<typeof openSqliteReader>;

@@ -110,7 +110,7 @@ const startSqliteWriter = (): SqliteWriter => {
 		} satisfies WriterInit,
 		[port2],
 	);
-	// Kept alive only while a write waits on it, so a test or bench process still exits.
+	// Holds the process open only while a write waits on it, so a process with nothing to write can exit.
 	worker.unref();
 	const pending = new Map<number, Pending>();
 	let nextId = 1;
