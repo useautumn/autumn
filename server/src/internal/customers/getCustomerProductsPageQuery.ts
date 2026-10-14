@@ -142,6 +142,25 @@ export const freeTrialLateral = sql`
 		WHERE ft.id = cp.free_trial_id
 	) ft_data ON true`;
 
+// Identical consecutive phases share one row, so every phase running it after
+// the one it started in is a repeat the row alone can't show.
+export const repeatedPhaseStartsLateral = sql`
+	LEFT JOIN LATERAL (
+		SELECT COALESCE(
+			json_agg(later.starts_at ORDER BY later.starts_at),
+			'[]'::json
+		) AS repeated_phase_starts
+		FROM (
+			SELECT ph.starts_at
+			FROM schedules sch
+			JOIN phases ph ON ph.schedule_id = sch.id
+			WHERE sch.internal_customer_id = cp.internal_customer_id
+				AND cp.id = ANY(ph.customer_product_ids)
+			ORDER BY ph.starts_at
+			OFFSET 1
+		) later
+	) rp_data ON true`;
+
 const statusFilterSql = (status: CustomerProductsStatusFilter) => {
 	switch (status) {
 		case "expired":
@@ -206,12 +225,14 @@ export const getCustomerProductsPageQuery = ({
 			row_to_json(prod) AS product,
 			cpr_data.customer_prices,
 			ce_data.customer_entitlements,
-			ft_data.free_trial
+			ft_data.free_trial,
+			rp_data.repeated_phase_starts
 		FROM customer_products cp
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		${customerPricesLateral}
 		${customerEntitlementsLateral}
 		${freeTrialLateral}
+		${repeatedPhaseStartsLateral}
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
 		${cursorPredicate}
@@ -285,13 +306,15 @@ export const customerProductsSeedCte = ({
 				row_to_json(prod) AS product,
 				cpr_data.customer_prices,
 				ce_data.customer_entitlements,
-				ft_data.free_trial
+				ft_data.free_trial,
+				rp_data.repeated_phase_starts
 			FROM products_seed_ranked ranked
 			JOIN customer_products cp ON cp.id = ranked.id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			${customerPricesLateral}
 			${customerEntitlementsLateral}
 			${freeTrialLateral}
+			${repeatedPhaseStartsLateral}
 			WHERE ranked.rn <= ${fetchLimit}
 		)`;
 };

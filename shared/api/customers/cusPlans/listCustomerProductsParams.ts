@@ -40,9 +40,15 @@ export type ListCustomerProductsParams = z.infer<
 	typeof ListCustomerProductsParamsSchema
 >;
 
-export type CustomerProductsPage = CursorPaginatedResponse<FullCusProduct> & {
-	total_count: number;
+/** Later schedule phases that keep this row running carry no row of their own. */
+export type CustomerProductsPageItem = FullCusProduct & {
+	repeated_phase_starts: number[];
 };
+
+export type CustomerProductsPage =
+	CursorPaginatedResponse<CustomerProductsPageItem> & {
+		total_count: number;
+	};
 
 const CustomerProductsCursorFieldsSchema = z.object({
 	v: z.literal(0),

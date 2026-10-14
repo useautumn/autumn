@@ -1,4 +1,8 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	type CustomerProductsPageItem,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import {
 	StatusChip,
 	Tooltip,
@@ -14,6 +18,9 @@ import { type PlanStatus, resolvePlanStatus } from "./resolvePlanStatus";
 const SHORT_DATE = "d MMM";
 const LONG_DATE = "d MMM yyyy";
 
+type ChipCustomerProduct = FullCusProduct &
+	Partial<Pick<CustomerProductsPageItem, "repeated_phase_starts">>;
+
 type StatusDetail = {
 	shortText: string | null;
 	tooltipText: string;
@@ -21,7 +28,7 @@ type StatusDetail = {
 };
 
 /** Short text sits inside the chip; the tooltip carries the full date. */
-function getStatusDetail({
+function getBaseStatusDetail({
 	planStatus,
 	customerProduct,
 	nowMs,
@@ -82,6 +89,31 @@ function getStatusDetail({
 	return { shortText: showsLabel ? label : null, tooltipText: label };
 }
 
+/** A repeated schedule phase keeps this row running, so its renewals ride on the row. */
+function getStatusDetail({
+	planStatus,
+	customerProduct,
+	nowMs,
+}: {
+	planStatus: PlanStatus;
+	customerProduct: ChipCustomerProduct;
+	nowMs: number;
+}): StatusDetail {
+	const detail = getBaseStatusDetail({ planStatus, customerProduct, nowMs });
+	const renewals = customerProduct.repeated_phase_starts ?? [];
+	if (renewals.length === 0) return detail;
+	if (planStatus !== "active" && planStatus !== "scheduled") return detail;
+
+	const renewalText = `+${renewals.length} renewal${renewals.length === 1 ? "" : "s"}`;
+	return {
+		shortText: detail.shortText
+			? `${detail.shortText} · ${renewalText}`
+			: renewalText,
+		tooltipText: detail.tooltipText,
+		tooltipSubtext: `Renews ${renewals.map((startsAt) => format(startsAt, LONG_DATE)).join(", ")}`,
+	};
+}
+
 /** "icon" hides the status text; "status" drops the plan name for tables that show it elsewhere. */
 type ChipDisplay = "full" | "icon" | "status";
 
@@ -91,7 +123,7 @@ export function PlanStatusChip({
 	display = "full",
 	className,
 }: {
-	customerProduct: FullCusProduct;
+	customerProduct: ChipCustomerProduct;
 	nowMs?: number;
 	display?: ChipDisplay;
 	className?: string;

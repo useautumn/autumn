@@ -149,7 +149,7 @@ export function CustomerProductsTable() {
 		setSheet({ type: "subscription-detail", itemId: cusProduct.id });
 	};
 
-	const productsTable = useCustomerTable({
+	const productsTable = useCustomerTable<FullCusProduct>({
 		data: products,
 		columns,
 		options: {

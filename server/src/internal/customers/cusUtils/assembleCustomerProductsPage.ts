@@ -1,11 +1,11 @@
 import {
 	CustomerProductsCursor,
 	type CustomerProductsPage,
-	type FullCusProduct,
+	type CustomerProductsPageItem,
 } from "@autumn/shared";
 import { normalizeCustomerProductTimeFields } from "../reassembleFlattenedCustomer/normalizeFields.js";
 
-export type RankedCustomerProductRow = FullCusProduct & {
+export type RankedCustomerProductRow = CustomerProductsPageItem & {
 	status_rank: number;
 	scheduled_start: number | string | null;
 	entity_rank: number;
@@ -40,7 +40,7 @@ export const assembleCustomerProductsPage = ({
 
 	const lastRow = hasMore ? pageRows[pageRows.length - 1] : undefined;
 	return {
-		list: pageRows as FullCusProduct[],
+		list: pageRows,
 		next_cursor: lastRow ? encodeProductsCursor(lastRow) : null,
 		total_count: totalCount,
 	};
