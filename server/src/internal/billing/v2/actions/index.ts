@@ -19,6 +19,7 @@ import { sync } from "@/internal/billing/v2/actions/sync/sync";
 import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
 import { syncV2 } from "@/internal/billing/v2/actions/sync/syncV2";
+import { previewUpdateSubscription } from "@/internal/billing/v2/actions/updateSubscription/previewUpdateSubscription";
 import { updateSubscription } from "@/internal/billing/v2/actions/updateSubscription/updateSubscription";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 
@@ -30,6 +31,7 @@ export const billingActions = {
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,
 	updateSubscription: updateSubscription,
+	previewUpdateSubscription: previewUpdateSubscription,
 	switchCollectionMethod: switchCollectionMethod,
 	releaseLicense: releaseLicense,
 	rollback: rollback,

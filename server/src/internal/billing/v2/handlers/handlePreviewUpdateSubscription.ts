@@ -1,7 +1,6 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	InternalError,
 	isCollectionMethodSwitch,
 	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
@@ -11,8 +10,6 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
 import { previewPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingPlanIfAny";
-import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
-import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewUpdateSubscription = createRoute({
@@ -47,25 +44,9 @@ export const handlePreviewUpdateSubscription = createRoute({
 			...unchangedPlanParams
 		} = body;
 
-		const { billingContext, billingPlan } =
-			await billingActions.updateSubscription({
-				ctx,
-				params: isSwitch ? unchangedPlanParams : body,
-				preview: true,
-			});
-
-		if (!billingPlan) {
-			throw new InternalError({
-				message: "billingPlan not returned from updateSubscription preview",
-			});
-		}
-
-		// 7. Format response
-		const previewResponse = await billingPlanToUpdateSubscriptionPreview({
+		const previewResponse = await billingActions.previewUpdateSubscription({
 			ctx,
-			billingContext,
-			billingPlan,
-			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
+			params: isSwitch ? unchangedPlanParams : body,
 		});
 
 		return c.json(previewResponse, 200);

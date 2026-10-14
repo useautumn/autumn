@@ -1,5 +1,4 @@
 import {
-	InternalError,
 	UpdateSubscriptionPreviewIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -10,7 +9,6 @@ import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendin
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
-import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
 
 /** Previews an edit or cancel of a pending plan, mirroring updatePendingPlanIfAny. */
 export const previewPendingPlanIfAny = async ({
@@ -43,23 +41,10 @@ export const previewPendingPlanIfAny = async ({
 		deferredData,
 	});
 	if (liveUpdate) {
-		const { billingContext, billingPlan } =
-			await billingActions.updateSubscription({
-				ctx,
-				params: liveUpdate,
-				preview: true,
-				contextOverride: { supersededPendingCustomerProduct: customerProduct },
-			});
-		if (!billingPlan) {
-			throw new InternalError({
-				message: "billingPlan not returned from updateSubscription preview",
-			});
-		}
-		return billingPlanToUpdateSubscriptionPreview({
+		return billingActions.previewUpdateSubscription({
 			ctx,
-			billingContext,
-			billingPlan,
-			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
+			params: liveUpdate,
+			contextOverride: { supersededPendingCustomerProduct: customerProduct },
 		});
 	}
 	if (params.cancel_action) return;
