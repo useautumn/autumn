@@ -168,10 +168,7 @@ export type { WorkerCustomerLicense } from "./models/subject/rows/workerCustomer
 export type { WorkerCustomerPrice } from "./models/subject/rows/workerCustomerPrice.js";
 export type { WorkerCustomerProduct } from "./models/subject/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/subject/rows/workerEntity.js";
-export type {
-	OpenLock,
-	WorkerLock,
-} from "./models/subject/rows/workerLock.js";
+export type { WorkerLock } from "./models/subject/rows/workerLock.js";
 export type { WorkerPooledBalance } from "./models/subject/rows/workerPooledBalance.js";
 export type { WorkerPooledContribution } from "./models/subject/rows/workerPooledContribution.js";
 export type { WorkerReplaceable } from "./models/subject/rows/workerReplaceable.js";

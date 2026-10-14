@@ -20,7 +20,7 @@ import {
 	type WorkerEntity,
 	workerEntitySchema,
 } from "../../models/subject/rows/workerEntity.js";
-import type { OpenLock } from "../../models/subject/rows/workerLock.js";
+import { workerLockSchema } from "../../models/subject/rows/workerLock.js";
 import { workerPooledBalanceSchema } from "../../models/subject/rows/workerPooledBalance.js";
 import {
 	type WorkerReplaceableInput,
@@ -83,7 +83,7 @@ export const customerRowsToSubjectState = ({
 	replaceables?: WorkerReplaceableInput[];
 	usageWindows: UsageWindow[];
 	/** Absent when the rows come from the server's FullSubject, which does not carry locks. */
-	openLocks?: OpenLock[];
+	openLocks?: object[];
 	/** The pools behind the customer's pooled rows, as Postgres returns them. */
 	pooledBalances?: PooledBalance[];
 	/** The license pools on the customer's products; absent from a FullSubject built without them. */
@@ -111,7 +111,9 @@ export const customerRowsToSubjectState = ({
 		usageWindows: usageWindows.map((row) =>
 			pickColumns({ schema: workerUsageWindowSchema, row }),
 		),
-		openLocks,
+		openLocks: openLocks.map((row) =>
+			pickColumns({ schema: workerLockSchema, row }),
+		),
 		pooledBalances: pooledBalances.map((row) =>
 			pickColumns({ schema: workerPooledBalanceSchema, row }),
 		),
