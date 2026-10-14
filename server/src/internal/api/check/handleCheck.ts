@@ -114,14 +114,13 @@ export const handleCheck = createRoute({
 		) {
 			const search = new URL(c.req.url).search;
 			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
-			// A lock must settle its reservation, so a lock check never answers without the worker.
-			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
+			const isLock = Boolean(rawBody.lock?.enabled);
 			// The middleware already claimed a client's key, so a hand-in under it would be skipped: those stay on the API.
 			const hasClientKey = Boolean(c.req.header("idempotency-key"));
 			const { body, status } = await withAtomShadowDeduction({
 				ctx,
 				call:
-					rawBody.send_event === true && !hasClientKey
+					(rawBody.send_event === true || isLock) && !hasClientKey
 						? { route: "check", params: rawBody }
 						: null,
 				search,
@@ -133,6 +132,8 @@ export const handleCheck = createRoute({
 						idempotencyKey,
 						routeGroup: RouteGroup.Balances,
 						run: async () => {
+							// A lock must settle its reservation, so a lock check never answers without the worker.
+							if (isLock) return { body: await runOnWorker(), status: 200 };
 							const { result, failedOpen } =
 								await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
 									ctx,

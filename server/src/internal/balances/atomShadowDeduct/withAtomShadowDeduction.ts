@@ -7,10 +7,22 @@ import type {
 	DeductionResponse,
 } from "./types/atomDeductReply.js";
 
-const deductionValueOf = ({ call }: { call: AtomDeductCall }): number =>
-	call.route === "track"
+/** A finalize settles a value already held, so it deducts nothing new. */
+const deductionValueOf = ({
+	call,
+}: {
+	call: AtomDeductCall;
+}): number | null => {
+	if (call.route === "finalize") return null;
+	return call.route === "track"
 		? (call.params.value ?? 1)
 		: (call.params.required_balance ?? call.params.required_quantity ?? 1);
+};
+
+const lockIdOf = ({ call }: { call: AtomDeductCall }): string | null => {
+	if (call.route === "finalize") return call.params.lock_id;
+	return call.route === "check" ? (call.params.lock?.lock_id ?? null) : null;
+};
 
 const errorToCode = (error: unknown): string => {
 	if (error instanceof RecaseError) return error.code;
@@ -72,7 +84,9 @@ export const withAtomShadowDeduction = async ({
 			env: ctx.env,
 			route: call.route,
 			customer_id: call.params.customer_id,
-			feature_id: call.params.feature_id ?? null,
+			feature_id:
+				call.route === "finalize" ? null : (call.params.feature_id ?? null),
+			lock_id: lockIdOf({ call }),
 			// What this call deducts once acked; P1 sums it per customer against the balance moved.
 			value: deductionValueOf({ call }),
 			atom_reply: reply.kind,

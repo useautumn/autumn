@@ -8,6 +8,7 @@ import {
 	test,
 } from "bun:test";
 import {
+	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
 	ErrCode,
@@ -21,6 +22,8 @@ import type { CheckResponseWithPreview } from "@/internal/api/check/getCheckPrev
 import { handleCheck } from "@/internal/api/check/handleCheck.js";
 import { atomShadowDeductOrgIds } from "@/internal/balances/atomShadowDeduct/atomShadowDeductGuards.js";
 import * as balanceWorkerCheck from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
+import * as finalizeLock from "@/internal/balances/finalizeLock/runFinalizeLock.js";
+import { handleFinalizeLock } from "@/internal/balances/handlers/handleFinalizeLock.js";
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
 import * as balanceWorkerTrack from "@/internal/balances/track/balanceWorker/trackOnBalanceWorker.js";
 import * as idempotencyClaim from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
@@ -60,6 +63,7 @@ const workerAnswer = {
 } as unknown as CheckResponseWithPreview;
 const atomAnswer = { allowed: true, customer_id: "cus_1", from: "atom" };
 const atomTrackAnswer = { customer_id: "cus_1", value: 2, balance: null };
+const apiFinalizeAnswer = { success: true, from: "api" };
 
 const workerCheckSpy = spyOn(
 	balanceWorkerCheck,
@@ -73,6 +77,10 @@ const workerTrackSpy = spyOn(
 	status: 202,
 }));
 
+const finalizeSpy = spyOn(finalizeLock, "runFinalizeLock").mockImplementation(
+	async () => apiFinalizeAnswer as never,
+);
+
 /** Every key the API claimed, as its idempotency store would see it. */
 const claimedKeys: string[] = [];
 const claimSpy = spyOn(
@@ -83,10 +91,12 @@ const claimSpy = spyOn(
 });
 
 /** A fake shadow Atom: answers with `reply`, and records what it was sent. */
-const answerAsAtom = (path: string): Response =>
-	path === "/v1/track"
-		? Response.json(atomTrackAnswer, { status: 202 })
-		: Response.json(atomAnswer);
+const answerAsAtom = (path: string): Response => {
+	if (path === "/v1/track")
+		return Response.json(atomTrackAnswer, { status: 202 });
+	if (path === "/v1/balances.finalize") return Response.json({ success: true });
+	return Response.json(atomAnswer);
+};
 const atom = {
 	reply: answerAsAtom,
 	calls: [] as {
@@ -136,6 +146,7 @@ afterEach(() => {
 	atom.calls = [];
 	workerCheckSpy.mockClear();
 	workerTrackSpy.mockClear();
+	finalizeSpy.mockClear();
 	claimedKeys.length = 0;
 	setEnv(TEST_ENV);
 });
@@ -144,12 +155,19 @@ afterAll(() => {
 	server.stop(true);
 	workerCheckSpy.mockRestore();
 	workerTrackSpy.mockRestore();
+	finalizeSpy.mockRestore();
 	claimSpy.mockRestore();
 	setEnv(previousEnv);
 	_setShadowAtomConfigForTesting({ config: {} });
 });
 
-const createCtx = ({ orgId = ORG_ID }: { orgId?: string } = {}) => {
+const createCtx = ({
+	orgId = ORG_ID,
+	apiVersion = LATEST_VERSION,
+}: {
+	orgId?: string;
+	apiVersion?: ApiVersion;
+} = {}) => {
 	const deductLogs: Record<string, unknown>[] = [];
 	const ignore = () => {};
 	const ctx = {
@@ -157,7 +175,7 @@ const createCtx = ({ orgId = ORG_ID }: { orgId?: string } = {}) => {
 		timestamp: Date.now(),
 		org: { id: orgId, slug: "deduct", config: {} },
 		env: AppEnv.Sandbox,
-		apiVersion: new ApiVersionClass(LATEST_VERSION),
+		apiVersion: new ApiVersionClass(apiVersion),
 		features: [
 			{ id: "emails", internal_id: "fe_emails", type: FeatureType.Metered },
 		],
@@ -184,7 +202,7 @@ const post = async ({
 	headers = {},
 }: {
 	ctx: AutumnContext;
-	route: "check" | "track";
+	route: "check" | "track" | "finalize";
 	body: Record<string, unknown>;
 	headers?: Record<string, string>;
 }) => {
@@ -200,6 +218,7 @@ const post = async ({
 	});
 	app.post("/check", ...handleCheck);
 	app.post("/track", ...handleTrack);
+	app.post("/finalize", ...handleFinalizeLock);
 	return app.request(`/${route}`, {
 		method: "POST",
 		headers: { "content-type": "application/json", ...headers },
@@ -213,6 +232,20 @@ const deductingCheck = {
 	send_event: true,
 };
 const queuedTrack = { customer_id: "cus_1", feature_id: "emails", value: 2 };
+const lockCheck = {
+	customer_id: "cus_1",
+	feature_id: "emails",
+	required_balance: 30,
+	lock: { enabled: true, lock_id: "lock_1" },
+};
+const finalize = { customer_id: "cus_1", lock_id: "lock_1", action: "release" };
+
+/** Atom's keyless handback for a call it leaves to the API, with the reason it names. */
+const handBack = (reason: string) => () =>
+	Response.json(
+		{ code: "atom_not_forwarded" },
+		{ status: 401, headers: { "x-atom-forwarded": reason } },
+	);
 
 describe("the flag", () => {
 	test("names its orgs on staging", () => {
@@ -477,5 +510,139 @@ describe("a track", () => {
 		expect(
 			workerTrackSpy.mock.calls[0][0].body.idempotency_key,
 		).toBeUndefined();
+	});
+});
+
+describe("a lock check", () => {
+	test("from an allowlisted org is Atom's to answer, with no lock taken on the API", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "check", body: lockCheck });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(atomAnswer);
+		expect(workerCheckSpy).not.toHaveBeenCalled();
+		const [{ path, headers, body }] = atom.calls;
+		expect(path).toBe("/v1/balances.check");
+		expect(headers.get("idempotency-key")).toBe("atom_shadow_req_1");
+		expect(body).toEqual(lockCheck);
+		expect(deductLogs).toEqual([
+			expect.objectContaining({
+				route: "check",
+				lock_id: "lock_1",
+				value: 30,
+				answered_by: "atom",
+				allowed: true,
+			}),
+		]);
+	});
+
+	test("Atom hands back (an entity lock, or below 2.6) takes the lock on the API under the key Atom was sent", async () => {
+		atom.reply = handBack("lock");
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "check", body: lockCheck });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(workerAnswer);
+		expect(workerCheckSpy).toHaveBeenCalledTimes(1);
+		expect(claimedKeys).toEqual(["atom_shadow_req_1"]);
+		expect(deductLogs[0]).toMatchObject({
+			atom_reply: "forwarded",
+			atom_reason: "lock",
+			answered_by: "api",
+			lock_id: "lock_1",
+		});
+	});
+
+	test("Atom down takes the lock on the API", async () => {
+		atom.reply = () =>
+			Response.json({ code: "atom_unavailable" }, { status: 503 });
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "check", body: lockCheck });
+
+		expect(await response.json()).toEqual(workerAnswer);
+		expect(workerCheckSpy).toHaveBeenCalledTimes(1);
+		expect(deductLogs[0]).toMatchObject({ atom_reply: "down" });
+	});
+
+	test("from an org not allowlisted is unchanged", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx({ orgId: "org_unlisted" });
+		const response = await post({ ctx, route: "check", body: lockCheck });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(workerAnswer);
+		expect(atom.calls).toHaveLength(0);
+		expect(deductLogs).toHaveLength(0);
+		expect(claimedKeys).toEqual([]);
+	});
+});
+
+describe("a finalize", () => {
+	test("at 2.6 from an allowlisted org is Atom's to settle, with nothing settled on the API", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "finalize", body: finalize });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true });
+		expect(finalizeSpy).not.toHaveBeenCalled();
+		const [{ path, headers, body }] = atom.calls;
+		expect(path).toBe("/v1/balances.finalize");
+		expect(headers.get("x-api-version")).toBe(LATEST_VERSION);
+		expect(body).toEqual(finalize);
+		expect(deductLogs).toEqual([
+			expect.objectContaining({
+				route: "finalize",
+				lock_id: "lock_1",
+				feature_id: null,
+				value: null,
+				answered_by: "atom",
+			}),
+		]);
+	});
+
+	test("Atom hands back a lock it does not hold, and the API settles it", async () => {
+		atom.reply = handBack("lock_not_held");
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx();
+		const response = await post({ ctx, route: "finalize", body: finalize });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(apiFinalizeAnswer);
+		expect(finalizeSpy).toHaveBeenCalledTimes(1);
+		expect(deductLogs[0]).toMatchObject({
+			route: "finalize",
+			atom_reply: "forwarded",
+			atom_reason: "lock_not_held",
+			answered_by: "api",
+		});
+	});
+
+	test("below 2.6 names no customer, so it stays on the API", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx({ apiVersion: ApiVersion.V2_5 });
+		const response = await post({
+			ctx,
+			route: "finalize",
+			body: { lock_id: "lock_1", action: "release" },
+		});
+
+		expect(await response.json()).toEqual(apiFinalizeAnswer);
+		expect(finalizeSpy).toHaveBeenCalledTimes(1);
+		expect(atom.calls).toHaveLength(0);
+		expect(deductLogs).toHaveLength(0);
+	});
+
+	test("from an org not allowlisted is unchanged", async () => {
+		useShadowAtom();
+		const { ctx, deductLogs } = createCtx({ orgId: "org_unlisted" });
+		const response = await post({ ctx, route: "finalize", body: finalize });
+
+		expect(await response.json()).toEqual(apiFinalizeAnswer);
+		expect(atom.calls).toHaveLength(0);
+		expect(deductLogs).toHaveLength(0);
 	});
 });

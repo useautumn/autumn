@@ -7,6 +7,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { withAtomShadowDeduction } from "../atomShadowDeduct/withAtomShadowDeduction.js";
 import { runFinalizeLock } from "../finalizeLock/runFinalizeLock.js";
 
 export const handleFinalizeLock = createRoute({
@@ -21,9 +22,17 @@ export const handleFinalizeLock = createRoute({
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
 
-		const response = await runFinalizeLock({ ctx, params });
-		const status = ctx.extraLogs.finalizeLockQueuedForReplay ? 202 : 200;
+		const { body, status } = await withAtomShadowDeduction({
+			ctx,
+			// Before 2.6 a finalize names no customer, so only the API can find its lock.
+			call: params.customer_id ? { route: "finalize", params } : null,
+			idempotencyKey: undefined,
+			runOnApi: async () => ({
+				body: await runFinalizeLock({ ctx, params }),
+				status: ctx.extraLogs.finalizeLockQueuedForReplay ? 202 : 200,
+			}),
+		});
 
-		return c.json(response, status);
+		return c.json(body, status);
 	},
 });

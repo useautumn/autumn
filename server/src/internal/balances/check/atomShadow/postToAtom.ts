@@ -18,7 +18,7 @@ export const postToAtom = ({
 	signal,
 }: {
 	target: AtomShadowTarget;
-	path: "/v1/balances.check" | "/v1/track";
+	path: "/v1/balances.check" | "/v1/track" | "/v1/balances.finalize";
 	search: string;
 	apiVersion: ApiVersionClass;
 	body: unknown;

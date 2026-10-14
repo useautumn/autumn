@@ -24,6 +24,7 @@ const isNotForwarded = ({ body }: { body: unknown }): boolean =>
 const ATOM_PATHS = {
 	check: "/v1/balances.check",
 	track: "/v1/track",
+	finalize: "/v1/balances.finalize",
 } as const;
 
 /** A check names its key in the Idempotency-Key header, a track in its body, as the API reads each. */

@@ -1,10 +1,15 @@
-import type { CheckParams, TrackParams } from "@autumn/shared";
+import type {
+	CheckParams,
+	FinalizeLockParamsV1,
+	TrackParams,
+} from "@autumn/shared";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 /** A deduction the shadow Atom is asked first, as the caller sent it. */
 export type AtomDeductCall =
 	| { route: "check"; params: CheckParams }
-	| { route: "track"; params: TrackParams };
+	| { route: "track"; params: TrackParams }
+	| { route: "finalize"; params: FinalizeLockParamsV1 };
 
 /** How the shadow Atom met a deduction, by the SDK edge's rules: only `down` means the API never saw it from Atom. */
 export type AtomDeductReply =
