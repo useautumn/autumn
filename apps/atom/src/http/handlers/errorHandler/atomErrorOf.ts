@@ -1,7 +1,9 @@
+import { ErrCode } from "@autumn/shared";
 import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
+import { DuplicateIdempotencyKeyError } from "../../../processor/actions/track/duplicateIdempotencyKeyError.js";
 import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
 
-export type AtomErrorStatus = 400 | 500 | 503;
+export type AtomErrorStatus = 400 | 409 | 500 | 503;
 
 /** How a failure Atom answers itself is told to the caller: the status and error body, in the API's own shape. */
 export const atomErrorOf = ({
@@ -12,6 +14,12 @@ export const atomErrorOf = ({
 	// A push Atom cannot read is the sender's to fix.
 	if (isUnreadableRequest(cause))
 		return { status: 400, code: "invalid_request", message: cause.message };
+	if (cause instanceof DuplicateIdempotencyKeyError)
+		return {
+			status: 409,
+			code: ErrCode.DuplicateIdempotencyKey,
+			message: cause.message,
+		};
 	// Passes once the thread is back: Autumn's server asks its API meanwhile, and a push is sent again.
 	if (cause instanceof OwnerUnavailableError)
 		return { status: 503, code: "atom_unavailable", message: cause.message };

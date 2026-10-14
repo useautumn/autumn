@@ -6,6 +6,7 @@ import {
 	deleteJournalEntriesUpTo,
 	insertJournalEntries,
 } from "../repos/journalEntries.js";
+import { pruneJournalKeys } from "../repos/journalKeys.js";
 import {
 	deleteCustomersWrittenBefore,
 	upsertSubjects,
@@ -16,6 +17,7 @@ export const SQLITE_WRITES = {
 	insertJournalEntries,
 	deleteJournalEntriesUpTo,
 	deleteCustomerJournalEntries,
+	pruneJournalKeys,
 	upsertSubjects,
 	deleteCustomersWrittenBefore,
 } satisfies Record<

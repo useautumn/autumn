@@ -92,5 +92,7 @@ export type OwnerReply =
 			invalid: boolean;
 			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
 			unavailable: boolean;
+			/** The caller's key the owner's journal already holds: thrown again as DuplicateIdempotencyKeyError, a 409. */
+			duplicateKey: string | null;
 			message: string;
 	  };

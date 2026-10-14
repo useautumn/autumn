@@ -20,6 +20,10 @@ export type Journal = {
 		customerId: string;
 		command: TrackCommand;
 	}): Promise<JournalEntry>;
+	/** Whether the customer's caller key (the claim key) was appended within KEY_ROW_TTL_MS, or is in flight. */
+	holdsKey(params: { customerId: string; key: string }): boolean;
+	/** Drops key rows past KEY_ROW_TTL_MS; run each minute, and by a test. */
+	pruneKeys(): Promise<{ rows: number; ms: number }>;
 	/**
 	 * What the customer's view replays, oldest first: every entry no push has shown applied. An append grows this very
 	 * array; anything else that changes it (a push's trim, a forget, a failed commit) gives a new one.

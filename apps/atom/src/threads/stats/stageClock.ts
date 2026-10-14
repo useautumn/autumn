@@ -22,6 +22,8 @@ export const STAGES = [
 	"viewRender",
 	/** The journal's group commit, its fsync included. */
 	"journalAppend",
+	/** Whether a caller's idempotency key was already taken: the in-flight set, then a journal_keys read. */
+	"journalKeyCheck",
 	/** What the journal owes a customer, and whether it is backed up. */
 	"journalOwed",
 	/** A pushed, relayed or pulled subject parsed, stored and reconciled. */

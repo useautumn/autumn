@@ -4,6 +4,7 @@ import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
+import { DuplicateIdempotencyKeyError } from "../../processor/actions/track/duplicateIdempotencyKeyError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
 import type { TrackRequest } from "../../processor/types/track.js";
 import type {
@@ -78,6 +79,8 @@ export const errorToReply = ({
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
 	invalid: error instanceof InvalidPushError,
 	unavailable: error instanceof OwnerUnavailableError,
+	duplicateKey:
+		error instanceof DuplicateIdempotencyKeyError ? error.key : null,
 	message: error instanceof Error ? error.message : String(error),
 });
 
@@ -86,18 +89,22 @@ export const replyToError = ({
 	cannotAnswer,
 	invalid,
 	unavailable,
+	duplicateKey,
 	message,
 	thread,
 }: {
 	cannotAnswer: ForwardReason | null;
 	invalid: boolean;
 	unavailable: boolean;
+	duplicateKey: string | null;
 	message: string;
 	thread: number;
 }): Error => {
 	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
 	if (invalid) return new InvalidPushError(message);
 	if (unavailable) return new OwnerUnavailableError({ thread });
+	if (duplicateKey !== null)
+		return new DuplicateIdempotencyKeyError({ key: duplicateKey });
 	return new Error(message);
 };
 

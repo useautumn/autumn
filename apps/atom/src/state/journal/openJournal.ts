@@ -1,4 +1,5 @@
 import type { TrackCommand } from "@autumn/balance-engine";
+import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import { timeStage } from "../../threads/stats/stageClock.js";
 import {
 	encodeJournalEntries,
@@ -6,7 +7,9 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
+import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
+import { callerKeyOf } from "./callerKeyOf.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type { Journal, JournalEntry } from "./types/journal.js";
 
@@ -24,6 +27,58 @@ let unsentOnThread = 0;
 const unsentByJournal = new Set<Set<JournalEntry>>();
 let appendedOnThread = 0;
 let appendFailedOnThread = 0;
+
+/** A caller key is a duplicate this long after its append, by the read's bound; the prune only reclaims the rows. */
+export const KEY_ROW_TTL_MS = 90 * 60_000;
+const PRUNE_EVERY_MS = 60_000;
+/** Key checks kept for the next stats read's exact percentiles; past it the oldest are overwritten. */
+const KEY_CHECK_SAMPLES = 8_192;
+const keyCheckUs = new Float64Array(KEY_CHECK_SAMPLES);
+let keyChecksSinceRead = 0;
+let keyChecksOnThread = 0;
+let keyDuplicatesOnThread = 0;
+let keyPruneRunsOnThread = 0;
+let lastKeyPrune = { rows: 0, ms: 0 };
+
+const recordKeyCheck = ({ us, held }: { us: number; held: boolean }) => {
+	keyCheckUs[keyChecksSinceRead++ % KEY_CHECK_SAMPLES] = us;
+	keyChecksOnThread++;
+	if (held) keyDuplicatesOnThread++;
+};
+
+const percentileOf = ({
+	sorted,
+	share,
+}: {
+	sorted: Float64Array;
+	share: number;
+}) =>
+	sorted.length === 0
+		? 0
+		: Number(
+				(
+					sorted[
+						Math.min(sorted.length - 1, Math.floor(sorted.length * share))
+					] ?? 0
+				).toFixed(2),
+			);
+
+/** Key checks and duplicates since boot, the p50/p99 µs of the checks since the last read, and the last prune's rows and writer ms. */
+export const readJournalKeyThreadStats = () => {
+	const sorted = keyCheckUs
+		.slice(0, Math.min(keyChecksSinceRead, KEY_CHECK_SAMPLES))
+		.sort();
+	keyChecksSinceRead = 0;
+	return {
+		keyChecks: keyChecksOnThread,
+		keyCheckP50Us: percentileOf({ sorted, share: 0.5 }),
+		keyCheckP99Us: percentileOf({ sorted, share: 0.99 }),
+		keyDuplicates: keyDuplicatesOnThread,
+		keyPruneRuns: keyPruneRunsOnThread,
+		keyPruneRows: lastKeyPrune.rows,
+		keyPruneMs: Number(lastKeyPrune.ms.toFixed(2)),
+	};
+};
 
 /** What this thread's journals hold that Autumn does not, and what they took and failed to take since boot. */
 export const readJournalThreadStats = ({ now }: { now: number }) => {
@@ -69,6 +124,9 @@ export const openJournal = ({
 		{ entries: JournalEntry[]; head: number }
 	>();
 	let notifyCommitted = () => {};
+	/** By customer, the caller keys appended whose commit has not settled: their rows are not on disk yet. */
+	const inFlightKeys = new Map<string, Set<string>>();
+	let closed = false;
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
@@ -164,6 +222,8 @@ export const openJournal = ({
 		lastSeqs.set(customerId, seq);
 		const entry = { customerId, seq, appendedAt: now(), command };
 		owe({ entry });
+		const key = callerKeyOf({ command });
+		if (key) holdInFlight({ customerId, key });
 		try {
 			await groupCommit.add(entry);
 			return entry;
@@ -174,8 +234,88 @@ export const openJournal = ({
 				entries: owed({ customerId }).filter((held) => held !== entry),
 			});
 			throw error;
+		} finally {
+			if (key) releaseInFlight({ customerId, key });
 		}
 	}
+
+	function holdInFlight({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): void {
+		const keys = inFlightKeys.get(customerId);
+		if (keys) keys.add(key);
+		else inFlightKeys.set(customerId, new Set([key]));
+	}
+
+	function releaseInFlight({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): void {
+		const keys = inFlightKeys.get(customerId);
+		keys?.delete(key);
+		if (keys?.size === 0) inFlightKeys.delete(customerId);
+	}
+
+	/** Synchronous: an append in flight holds its key, a committed one its row, until KEY_ROW_TTL_MS. */
+	function holdsKey({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): boolean {
+		const startedAt = performance.now();
+		const held = timeStage(
+			"journalKeyCheck",
+			() =>
+				inFlightKeys.get(customerId)?.has(key) === true ||
+				readJournalKey({ ctx, customerId, key, since: now() - KEY_ROW_TTL_MS }),
+		);
+		recordKeyCheck({ us: (performance.now() - startedAt) * 1000, held });
+		return held;
+	}
+
+	/** On the writer thread, a chunk per transaction until a chunk comes back short. */
+	async function pruneKeys(): Promise<{ rows: number; ms: number }> {
+		const cutoff = String(now() - KEY_ROW_TTL_MS);
+		const pruned = { rows: 0, ms: 0 };
+		for (;;) {
+			const [rows, ms] = (await file.write("pruneJournalKeys", cutoff))
+				.split(":")
+				.map(Number);
+			pruned.rows += rows ?? 0;
+			pruned.ms += ms ?? 0;
+			if ((rows ?? 0) < PRUNE_CHUNK || closed) break;
+		}
+		keyPruneRunsOnThread++;
+		lastKeyPrune = pruned;
+		return pruned;
+	}
+
+	let pruning = false;
+	const pruneTimer = setInterval(() => {
+		if (pruning) return;
+		pruning = true;
+		pruneKeys()
+			.catch((error) => {
+				if (!closed)
+					getAtomLogger().warn(
+						{ type: "atom_journal_key_prune_failed", error },
+						"Could not prune journal keys",
+					);
+			})
+			.finally(() => {
+				pruning = false;
+			});
+	}, PRUNE_EVERY_MS);
+	pruneTimer.unref?.();
 
 	function takeUnsent({ limit }: { limit: number }): JournalEntry[] {
 		const taken: JournalEntry[] = [];
@@ -241,6 +381,8 @@ export const openJournal = ({
 	}
 
 	function close(): void {
+		closed = true;
+		clearInterval(pruneTimer);
 		for (const entry of [...unsent]) releaseUnsent(entry);
 		unsentByJournal.delete(unsent);
 		file.close();
@@ -249,6 +391,8 @@ export const openJournal = ({
 	return {
 		writerId,
 		append,
+		holdsKey,
+		pruneKeys,
 		owed: owedTimed,
 		unsent: takeUnsent,
 		countUnsent: () => unsent.size,

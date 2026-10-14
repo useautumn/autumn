@@ -1,6 +1,6 @@
 /**
  * One customer deducting at a fixed rate on one owner thread, its journal forwarded to a worker-faithful Autumn in another
- * process that pushes the subject back after the push lag. `bun run bench:hot [rate] [seconds] [pushLagMs]`.
+ * process that pushes the subject back after the push lag. `bun run bench:hot [rate] [seconds] [pushLagMs] [keyedPercent]`.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,6 +30,8 @@ import { WORKER_AUTUMN_PATH } from "./workerAutumn.js";
 const rate = Number(process.argv[2] ?? 100);
 const seconds = Number(process.argv[3] ?? 20);
 const pushLagMs = Number(process.argv[4] ?? 1_500);
+/** The share of calls sent with a unique Idempotency-Key, as the staging shadow mints one per call. */
+const keyedPercent = Number(process.argv[5] ?? 0);
 /** A resend-like customer: one balance per feature it is billed on. */
 const BALANCES = 40;
 const AUTUMN_PORT = 18_778;
@@ -89,6 +91,18 @@ journal.append = (params) => {
 	if (measuring) appendUs += (performance.now() - startedAt) * 1000;
 	return appended;
 };
+/** Every measured key check's µs, for exact percentiles. */
+const keyCheckUs: number[] = [];
+// Absent on a base without keys, so the same bench runs there.
+const holdsKey = journal.holdsKey?.bind(journal);
+if (holdsKey)
+	journal.holdsKey = (params) => {
+		const startedAt = performance.now();
+		const held = holdsKey(params);
+		if (measuring) keyCheckUs.push((performance.now() - startedAt) * 1000);
+		return held;
+	};
+let duplicates409 = 0;
 const processor = createSlotProcessor({
 	ctx: {
 		sqliteStore,
@@ -158,11 +172,19 @@ for (let sent = 0; sent < total; ) {
 							},
 						}),
 						requestId: `atom_req_${sent}`,
+						idempotencyKey:
+							sent % 100 < keyedPercent ? `bench_key_${sent}` : null,
 					},
 				})
-				.then(() => {
-					if (measured) latenciesMs.push(performance.now() - intendedAt);
-				}),
+				.then(
+					() => {
+						if (measured) latenciesMs.push(performance.now() - intendedAt);
+					},
+					(error) => {
+						if (error?.name !== "DuplicateIdempotencyKeyError") throw error;
+						duplicates409++;
+					},
+				),
 		);
 	}
 	await Bun.sleep(1);
@@ -179,6 +201,15 @@ const percentile = (share: number) =>
 			] ?? 0
 		).toFixed(2),
 	);
+keyCheckUs.sort((a, b) => a - b);
+const keyPercentile = (share: number) =>
+	Number(
+		(
+			keyCheckUs[
+				Math.min(keyCheckUs.length - 1, Math.floor(keyCheckUs.length * share))
+			] ?? 0
+		).toFixed(2),
+	);
 console.log(
 	JSON.stringify({
 		rate,
@@ -191,6 +222,11 @@ console.log(
 		maxMs: percentile(1),
 		pushes,
 		appendUsPerDeduction: Number((appendUs / measuredCalls).toFixed(2)),
+		keyedPercent,
+		keyChecks: keyCheckUs.length,
+		keyCheckP50Us: keyPercentile(0.5),
+		keyCheckP99Us: keyPercentile(0.99),
+		duplicates409,
 		...readViewFoldThreadStats(),
 		owedAtEnd: journal.owed({ customerId: "cus_1" }).length,
 	}),

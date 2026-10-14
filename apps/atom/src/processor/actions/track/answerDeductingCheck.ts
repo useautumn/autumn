@@ -25,6 +25,7 @@ export const answerDeductingCheck = async ({
 		ctx,
 		subject,
 		command,
+		idempotencyKey,
 		track: checkToTrackCommand({ command, subject, skipEvent, idempotencyKey }),
 	});
 	// Read before the commit lands: this deduction and those before it, not one appended while it was in flight.
