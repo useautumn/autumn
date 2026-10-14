@@ -120,7 +120,7 @@ describe("a locked track", () => {
 			).toMatchObject({
 				row: {
 					overage_behavior: "reject",
-					deltas: [{ balanceDelta: -11 }],
+					deltas: [{ balanceDelta: -10 }, { balanceDelta: -1 }],
 				},
 			});
 
