@@ -6,7 +6,11 @@ import {
 	PEER_SIGNATURE_HEADER,
 	peerSignatureMatches,
 } from "../../replication/transport/peerSignature.js";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
+
+/** The routes a check another replica handed on arrives at; every other peer request relays an operation or a read. */
+const HOP_PATHS = new Set(["/v1/balances.check", "/v1/track"]);
 
 /**
  * Every request on the peer port is from another replica, signed with the deployment's own secret over its method,
@@ -19,15 +23,20 @@ export function peerRequestMiddleware({
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function authorizePeer(context: Context<AtomHttpEnv>, next: Next) {
 		const signature = context.req.header(PEER_SIGNATURE_HEADER) ?? "";
-		const verified = peerSignatureMatches({
-			secret,
-			signature,
-			method: context.req.method,
-			path: context.req.path,
-			customerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
-			atomId: context.req.header(PEER_FOLDER_HEADER) ?? null,
-			body: await context.req.text(),
-		});
+		const body = await context.req.text();
+		const verified = timeStage(
+			HOP_PATHS.has(context.req.path) ? "hopServe" : "relayReceive",
+			() =>
+				peerSignatureMatches({
+					secret,
+					signature,
+					method: context.req.method,
+					path: context.req.path,
+					customerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
+					atomId: context.req.header(PEER_FOLDER_HEADER) ?? null,
+					body,
+				}),
+		);
 		if (!verified)
 			return context.json(
 				{ message: "Peer signature rejected", code: "atom_peer_rejected" },

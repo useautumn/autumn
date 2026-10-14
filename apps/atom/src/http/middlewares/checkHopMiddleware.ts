@@ -7,6 +7,7 @@ import {
 	PeerTimeout,
 	peerTimeoutReply,
 } from "../forward/hopToPeer.js";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 const customerIdOf = (body: unknown): string | null => {
@@ -97,7 +98,9 @@ export function checkHopMiddleware({
 		if (!hop) return next();
 		let reply: Response | null;
 		try {
-			reply = await hopToPeer({ ctx, context, hop });
+			reply = await timeStage("hopForward", () =>
+				hopToPeer({ ctx, context, hop }),
+			);
 			if (!reply) return unavailable(hop, next);
 			if (reply.status !== 503) {
 				counters.add("checksProxied");

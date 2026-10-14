@@ -2,6 +2,7 @@ import { AtomSubjectReadErrorCode } from "@autumn/byoc";
 import type { AutumnLogger } from "@autumn/logging";
 import { AutumnClientError } from "../autumnClient/autumnClientError.js";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import type {
 	ApplyPulled,
@@ -96,11 +97,13 @@ export const createSubjectPulls = ({
 			entityId: string | null;
 		}): Promise<void> {
 			try {
-				const body = await ctx.autumnClient.readSubject({
-					tokenHash: tokenHash(),
-					customerId,
-					entityId,
-				});
+				const body = await timeStage("settlePull", () =>
+					ctx.autumnClient.readSubject({
+						tokenHash: tokenHash(),
+						customerId,
+						entityId,
+					}),
+				);
 				if (stopped) return;
 				if (await applyPulled({ customerId, body }))
 					ctx.counters.add("subjectFills");

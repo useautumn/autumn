@@ -55,6 +55,19 @@ export const THREAD_STAT_FIELDS = [
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
+	/** Thread time since boot by stage, in µs (stageClock): each stage's own, busy time no stage holds, and idle. */
+	"stageHttpParseRespondUs",
+	"stageHopForwardUs",
+	"stageHopServeUs",
+	"stageEngineStepUs",
+	"stageViewRenderUs",
+	"stageJournalAppendUs",
+	"stagePushApplyUs",
+	"stageRelaySendUs",
+	"stageRelayReceiveUs",
+	"stageSettlePullUs",
+	"stageOtherBusyUs",
+	"stageIdleUs",
 ] as const;
 
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];

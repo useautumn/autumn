@@ -15,6 +15,7 @@ import type {
 	JournalEntry,
 	JournaledCommand,
 } from "../../../state/journal/types/journal.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 
 const computeOwed = ({
 	fullSubject,
@@ -62,9 +63,11 @@ export const replayOwed = ({
 						entityId: command.identity.entityId,
 					});
 		try {
-			const mutation = computeOwed({ fullSubject, command });
-			onApplied?.(mutation);
-			return applyMutation({ state: current, mutation });
+			return timeStage("engineStep", () => {
+				const mutation = computeOwed({ fullSubject, command });
+				onApplied?.(mutation);
+				return applyMutation({ state: current, mutation });
+			});
 		} catch (error) {
 			if (isRefusedForGood(error)) return current;
 			throw error;

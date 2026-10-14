@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 /** A subject push is passed on as text, to be parsed on its customer's owner thread. */
@@ -11,7 +12,10 @@ export async function requestBodyMiddleware(
 ): Promise<void> {
 	const text = await context.req.text();
 	if (context.req.path === SUBJECT_PUSH_PATH) return next();
-	context.set("body", parseJson(text));
+	context.set(
+		"body",
+		timeStage("httpParseRespond", () => parseJson(text)),
+	);
 	await next();
 }
 

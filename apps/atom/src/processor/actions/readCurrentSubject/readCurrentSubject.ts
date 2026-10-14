@@ -15,6 +15,7 @@ import {
 	isDeletedSubject,
 	type StoredSubject,
 } from "../../../state/types/storedSubject.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import {
@@ -232,12 +233,7 @@ const keepFold = ({
 	if (last) foldByLastEntry.set(last, fold);
 };
 
-/**
- * The subject a request is decided on: as Autumn last sent it, with what the Atom owes Autumn for the customer replayed
- * on top; for an entity, the customer's rows and its own as one. Joined once per change to its parts, not per check.
- * A customer or entity Atom does not hold is left to the API.
- */
-export const readCurrentSubject = ({
+const joinCurrentSubject = ({
 	ctx,
 	customerId,
 	entityId,
@@ -374,3 +370,12 @@ const joinSubject = ({
 	};
 	return { current, customerState };
 };
+
+/**
+ * The subject a request is decided on: as Autumn last sent it, with what the Atom owes Autumn for the customer replayed
+ * on top; for an entity, the customer's rows and its own as one. Joined once per change to its parts, not per check.
+ * A customer or entity Atom does not hold is left to the API.
+ */
+export const readCurrentSubject = (
+	params: Parameters<typeof joinCurrentSubject>[0],
+): CurrentSubject => timeStage("viewRender", () => joinCurrentSubject(params));

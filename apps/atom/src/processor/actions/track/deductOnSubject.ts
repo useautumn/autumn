@@ -10,8 +10,10 @@ import {
 	type WorkerLock,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**
@@ -90,12 +92,14 @@ export const deductOnSubject = ({
 			committed: Promise.resolve(),
 		};
 	}
-	const { result, lockRow } = track.lock
-		? decideLockedTrack({ subject, command, track })
-		: {
-				result: computeCheck({ fullSubject: subject.fullSubject, command }),
-				lockRow: null,
-			};
+	const { result, lockRow } = timeStage("engineStep", () =>
+		track.lock
+			? decideLockedTrack({ subject, command, track })
+			: {
+					result: computeCheck({ fullSubject: subject.fullSubject, command }),
+					lockRow: null,
+				},
+	);
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });

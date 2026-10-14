@@ -1,6 +1,7 @@
 import { callerKeyOf } from "@autumn/balance-engine";
 import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import {
 	encodeJournalEntries,
 	readJournalWriterId,
@@ -166,7 +167,7 @@ export const openJournal = ({
 			try {
 				await file.write(
 					"insertJournalEntries",
-					encodeJournalEntries({ entries }),
+					timeStage("journalAppend", () => encodeJournalEntries({ entries })),
 				);
 			} catch (error) {
 				logFailedCommit({ error, entries: entries.length, at: now() });

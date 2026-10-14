@@ -1,6 +1,7 @@
 import { deletePushToDeletedSubject } from "../lib/contracts/deleteSubjectContract.js";
 import { subjectPushToStoredSubject } from "../lib/contracts/subjectContract.js";
 import { CannotAnswerError } from "../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { deleteSubject } from "./actions/deleteSubject/deleteSubject.js";
@@ -109,7 +110,9 @@ export const createSlotProcessor = ({
 						run: async () => {
 							const { response, result } = await check({ ctx, request });
 							return {
-								json: checkResponseToJson({ response }),
+								json: timeStage("httpParseRespond", () =>
+									checkResponseToJson({ response }),
+								),
 								allowed: response.allowed,
 								denial: response.allowed
 									? null
@@ -143,9 +146,10 @@ export const createSlotProcessor = ({
 			});
 		},
 		setSubject: async (params) => {
-			const subject = subjectPushToStoredSubject(params);
 			try {
-				const stored = await setSubject({ ctx, subject });
+				const stored = await timeStage("pushApply", () =>
+					setSubject({ ctx, subject }),
+				);
 				unwritten.delete(params.customerId);
 				return { stored, entityId: subject.state.identity.entityId ?? null };
 			} catch (error) {
