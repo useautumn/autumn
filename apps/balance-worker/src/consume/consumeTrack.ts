@@ -2,8 +2,11 @@ import { type TrackCommand, trackOfNothing } from "@autumn/balance-engine";
 import {
 	buildIdempotencyStorageKey,
 	type IdempotencyClaim,
+	type IdempotencyClaimResult,
+	type IdempotencyKeyStore,
 	withIdempotencyKey,
 } from "@autumn/dynamodb";
+import type { CommandRecord } from "@autumn/kafka";
 import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
@@ -25,6 +28,50 @@ const claimOf = ({
 		ttlMs: command.idempotency.ttlMs,
 		owner: command.requestId,
 	};
+};
+
+/** A Kafka batch's claims in flight, by storage key: each track takes its own as it decides. */
+export type TrackClaims = Map<
+	string,
+	{ owner?: string; outcome: Promise<IdempotencyClaimResult> }
+>;
+
+/** Sends every key's claim at once, so a batch waits one store round trip instead of one per track.
+ *  A key the batch repeats is left to its turn, so the earlier item still wins it. */
+export async function prepareTrackBatch({
+	commands,
+	idempotencyKeys,
+}: {
+	commands: CommandRecord[];
+	idempotencyKeys: IdempotencyKeyStore;
+}): Promise<TrackClaims> {
+	const claims: TrackClaims = new Map();
+	for (const command of commands) {
+		if (command.type !== "track") continue;
+		const claim = claimOf({ command });
+		if (!claim || claims.has(claim.storageKey)) continue;
+		const outcome = idempotencyKeys.claim(claim);
+		// A batch cut short never takes its later claims; their owner resumes them on redelivery.
+		outcome.catch(() => undefined);
+		claims.set(claim.storageKey, { owner: claim.owner, outcome });
+	}
+	return claims;
+}
+
+/** The key store, answering this track's claim from the batch's when the batch sent it. */
+const storeFor = ({
+	ctx,
+	claim,
+	batch,
+}: {
+	ctx: ConsumeContext;
+	claim: IdempotencyClaim | undefined;
+	batch: TrackClaims | undefined;
+}): IdempotencyKeyStore => {
+	const sent = claim && batch?.get(claim.storageKey);
+	if (!sent || sent.owner !== claim.owner) return ctx.idempotencyKeys;
+	batch?.delete(claim.storageKey);
+	return { ...ctx.idempotencyKeys, claim: () => sent.outcome };
 };
 
 const isRefusal = (cause: unknown): boolean =>
@@ -54,9 +101,12 @@ const isReleaseLockPastExpiry = ({ command }: { command: TrackCommand }) =>
 export async function consumeTrack({
 	ctx,
 	command,
+	batch,
 }: {
 	ctx: ConsumeContext;
 	command: TrackCommand;
+	/** Absent for a track applied outside a batch the handler began. */
+	batch?: TrackClaims;
 }): Promise<QueuedCommand | null> {
 	if (command.source && isReleaseLockPastExpiry({ command }))
 		return landAtomSeqOnly({ ctx, command });
@@ -64,7 +114,7 @@ export async function consumeTrack({
 	let decided: QueuedCommand["decided"] | null;
 	try {
 		decided = await withIdempotencyKey({
-			store: ctx.idempotencyKeys,
+			store: storeFor({ ctx, claim, batch }),
 			claim,
 			run: () => ctx.processor.decideTrack({ command }),
 			onDuplicate: () => null,

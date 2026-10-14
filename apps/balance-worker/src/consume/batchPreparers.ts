@@ -1,15 +1,19 @@
+import type { IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { CommandRecord } from "@autumn/kafka";
 import type { PartitionRuntimePort } from "../partitions/types/partitions.js";
 import { prepareAtomFinalizeBatch } from "./consumeAtomFinalize.js";
+import { prepareTrackBatch } from "./consumeTrack.js";
 
 type PrepareParams = {
 	commands: CommandRecord[];
 	process: PartitionRuntimePort["process"];
+	idempotencyKeys: IdempotencyKeyStore;
 };
 
 /** What a command type reads once per Kafka batch, before any of its records applies. */
 const batchPreparers = {
 	atomFinalize: prepareAtomFinalizeBatch,
+	track: prepareTrackBatch,
 } satisfies Partial<
 	Record<CommandRecord["type"], (params: PrepareParams) => Promise<unknown>>
 >;
