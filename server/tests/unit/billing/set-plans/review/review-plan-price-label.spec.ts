@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Feature, ProcessorItemPrice } from "@autumn/shared";
-import { reviewPlanPrice } from "@/components/forms/create-schedule/utils/review/reviewPlanPrice";
+import { reviewPlanPrice } from "@/internal/billing/v2/actions/setPlans/preview/reviewSections/reviewPlanPrice";
 import { monthlyPrice } from "./reviewFixtures";
 
 const features = [

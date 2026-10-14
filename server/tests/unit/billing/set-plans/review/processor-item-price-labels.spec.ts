@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	pricingTableTotal,
 	pricingTableUnitPrice,
-} from "@/components/forms/create-schedule/utils/review/processorItemPriceLabels";
+} from "@/internal/billing/v2/actions/setPlans/preview/reviewSections/processorItemPriceLabels";
 import { monthlyPrice, processorItem } from "./reviewFixtures";
 
 test("amounts keep the currency's own decimal places", () => {

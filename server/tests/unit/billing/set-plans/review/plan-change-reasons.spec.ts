@@ -4,7 +4,7 @@ import type {
 	CustomerPlanChange,
 	Feature,
 } from "@autumn/shared";
-import { planChangeLines } from "@/components/forms/create-schedule/utils/review/planChangeLines";
+import { renderedChangeLines as planChangeLines } from "./renderedReviewSections";
 
 const JUL_31_2027 = Date.UTC(2027, 6, 31);
 const NOW = Date.UTC(2026, 8, 30);
