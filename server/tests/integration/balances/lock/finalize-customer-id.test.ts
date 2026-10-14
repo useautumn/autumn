@@ -86,3 +86,27 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("finalize-customer-id3: at 2.6 a finalize that names no customer, or an empty one, is refused by the schema")}`,
+	async () => {
+		const customerId = "finalize-customer-id3";
+		const { autumnV2_6 } = await initLocked({ customerId });
+
+		for (const unnamed of [{}, { customer_id: "" }])
+			await expectAutumnError({
+				errCode: ErrCode.InvalidInputs,
+				func: () =>
+					autumnV2_6.balances.finalize({
+						lock_id: customerId,
+						action: "release",
+						...unnamed,
+					} as never),
+			});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
+	},
+);

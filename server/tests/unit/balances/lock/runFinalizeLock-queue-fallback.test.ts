@@ -119,6 +119,7 @@ import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueue
 
 const params = {
 	lock_id: "lock_abc",
+	customer_id: "",
 	action: "confirm" as const,
 	override_value: 5,
 };
