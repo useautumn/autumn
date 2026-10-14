@@ -274,6 +274,17 @@ describe("a replica leaving the ring", () => {
 		expect(autumn.calls).toEqual(["/v1/balances.check"]);
 	});
 
+	test("names, before it leaves, the member that takes each of its customers, and nobody when it is alone", async () => {
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		expect(await a.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
+		expect(await a.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(B);
+
+		const alone = createReplica({ address: A, peers: [], ringPeers: [] });
+		expect(await alone.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(
+			null,
+		);
+	});
+
 	test("stays out of the ring while the service name drops and relists it, and is counted again once its leave has aged out", async () => {
 		let clock = 1_000_000;
 		const listed = [A];

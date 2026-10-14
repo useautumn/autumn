@@ -30,9 +30,24 @@ export const createSlotProcessor = ({
 		throw new CannotAnswerError({ reason: "subject_not_written" });
 	};
 
+	const awaitHandoff = async ({
+		customerId,
+		movedFrom,
+	}: {
+		customerId: string;
+		movedFrom: string | null;
+	}) => {
+		if (movedFrom && ctx.barrier)
+			await ctx.barrier.wait({ customerId, from: movedFrom });
+	};
+
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
+			await awaitHandoff({
+				customerId: request.params.customer_id,
+				movedFrom: request.movedFrom,
+			});
 			const { response, result } = await check({ ctx, request });
 			return {
 				json: checkResponseToJson({ response }),
@@ -44,6 +59,10 @@ export const createSlotProcessor = ({
 		},
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
+			await awaitHandoff({
+				customerId: request.params.customer_id,
+				movedFrom: request.movedFrom,
+			});
 			return track({ ctx, request });
 		},
 		finalize: async ({ request }) => {
@@ -61,10 +80,13 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
-		receiveHandoff: async ({ handoffs }) => ({
-			held: await ctx.journal.appendForeign({
+		receiveHandoff: async ({ handoffs }) => {
+			const held = await ctx.journal.appendForeign({
 				entries: handoffs.flatMap(({ entries }) => entries),
-			}),
-		}),
+			});
+			for (const { customerId } of handoffs)
+				ctx.barrier?.arrived({ customerId });
+			return { held };
+		},
 	};
 };
