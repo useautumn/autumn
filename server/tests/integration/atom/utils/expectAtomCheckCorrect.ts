@@ -20,6 +20,7 @@ export const checkOnAtom = async ({
 	requiredBalance = 1,
 	sendEvent,
 	lock,
+	idempotencyKey,
 }: {
 	atom: TestAtom;
 	token?: string | null;
@@ -30,6 +31,7 @@ export const checkOnAtom = async ({
 	requiredBalance?: number;
 	sendEvent?: boolean;
 	lock?: CheckLockParams;
+	idempotencyKey?: string;
 }): Promise<{
 	status: number;
 	forwarded: string | null;
@@ -43,6 +45,7 @@ export const checkOnAtom = async ({
 			Authorization: `Bearer ${secretKey}`,
 			"x-api-version": LATEST_VERSION,
 			...(token && { "x-atom-token": token }),
+			...(idempotencyKey && { "Idempotency-Key": idempotencyKey }),
 		},
 		body: JSON.stringify({
 			customer_id: customerId,

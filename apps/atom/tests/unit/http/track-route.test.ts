@@ -178,6 +178,44 @@ describe("a track the balance covers", () => {
 	});
 });
 
+describe("a keyed track sent again", () => {
+	test("at a replica that does not own the customer is 409 from the owner, in the API's words, and journals once", async () => {
+		const journals = recordJournals();
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			journalForwarder: journals.forwarder,
+		});
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		for (const replica of [a, b])
+			await storeOnly({
+				replica,
+				customerId: CUSTOMER,
+				readAt: 1700,
+				balance: 100,
+			});
+		connect({ replicas: [a, b] });
+		const send = (replica: Replica) =>
+			replica.app.request(
+				"/v1/track",
+				trackOf({ body: { value: 10, idempotency_key: "evt_1" } }),
+			);
+
+		expect((await send(a)).status).toBe(202);
+		const retried = await send(b);
+
+		expect(retried.status).toBe(409);
+		expect(await retried.json()).toEqual({
+			code: "duplicate_idempotency_key",
+			message:
+				"Another request with idempotency key evt_1 has already been received",
+		});
+		await settle();
+		expect(journals.appended).toHaveLength(1);
+	});
+});
+
 describe("a track the Atom leaves to the API", () => {
 	test("that the balance does not cover is forwarded, and nothing is deducted here", async () => {
 		const { replica, appended, autumn } = await replicaAt100();
