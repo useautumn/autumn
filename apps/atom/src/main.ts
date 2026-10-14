@@ -1,8 +1,9 @@
-import { isMainThread } from "node:worker_threads";
+import { isMainThread, workerData } from "node:worker_threads";
 import { getAtomEnv } from "@autumn/env/atom";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
 import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
+import { runSqliteWriterThread } from "./state/writer/runSqliteWriterThread.js";
 import { createAtomThreads } from "./threads/createAtomThreads.js";
 import { runAtomThread } from "./threads/runAtomThread.js";
 
@@ -65,6 +66,8 @@ function reportError({ cause }: { cause: unknown }): void {
 	getAtomLogger().error({ error: cause, type: "atom_failed" }, "Atom failed");
 }
 
-// One program for every thread: a compiled Atom is a single file, so a serving thread is the program started again.
+// One program for every thread: a compiled Atom is a single file, so a serving thread is the program started again,
+// and so is each serving thread's SQLite writer.
 if (isMainThread) void main();
+else if (workerData?.atomSqliteWriter) runSqliteWriterThread();
 else runAtomThread();
