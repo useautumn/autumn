@@ -104,6 +104,7 @@ function createFixture({
 					return lockRows;
 				},
 				pendingLockRow: () => null,
+				readSubjectState: async () => ({ state: { customer: {} } }),
 				decideFinalize: async (params: { command: FinalizeCommand }) => {
 					finalized.push(params.command);
 					return {
