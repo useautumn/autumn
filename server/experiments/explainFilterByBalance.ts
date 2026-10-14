@@ -38,6 +38,7 @@ const MATCH_COUNT_CAP = 100_000;
 const ROW_BOUND = Number(process.env.PREFILTER_ROW_BOUND ?? 4);
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 30;
+// ═════════════════════════════════════════════════════════════════════
 
 type DB = ReturnType<typeof initDrizzle>["db"];
 

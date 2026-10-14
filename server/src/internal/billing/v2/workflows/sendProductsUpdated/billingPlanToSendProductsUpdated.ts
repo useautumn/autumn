@@ -24,7 +24,9 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { workflows } from "@/queue/workflows.js";
 
+// ============================================================================
 // HELPERS
+// ============================================================================
 
 type UpdateCustomerProductUpdates = NonNullable<
 	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
@@ -120,7 +122,9 @@ const getInsertScenario = ({
  * Get the expired product from the billing plan's updateCustomerProduct.
  * Returns the customer product if it's being set to "expired" status.
  */
+// ============================================================================
 // MAIN FUNCTION
+// ============================================================================
 
 export const billingPlanToSendProductsUpdated = async ({
 	ctx,

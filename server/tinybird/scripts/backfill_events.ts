@@ -19,7 +19,9 @@
 
 import { execSync } from "child_process";
 
+// ============================================================================
 // CONFIGURATION
+// ============================================================================
 
 // CUTOFF: The earliest event timestamp in Tinybird from dual-write.
 // We backfill everything BEFORE this date. Do not modify unless you know what you're doing.
@@ -33,7 +35,9 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 const DELAY_BETWEEN_CHUNKS_MS = 3000;
 
+// ============================================================================
 // TYPES
+// ============================================================================
 
 interface Args {
 	chunkHours: number;
@@ -46,7 +50,9 @@ interface Chunk {
 	end: string;
 }
 
+// ============================================================================
 // ARGUMENT PARSING
+// ============================================================================
 
 function parseArgs(): Args {
 	const args: Args = {
@@ -97,7 +103,9 @@ Examples:
 	return args;
 }
 
+// ============================================================================
 // UTILITY FUNCTIONS
+// ============================================================================
 
 function exec(cmd: string, silent = false): string {
 	try {
@@ -179,7 +187,9 @@ function extractTimestamp(result: string): string | null {
 	return null;
 }
 
+// ============================================================================
 // TINYBIRD QUERIES
+// ============================================================================
 
 function getMinTimestampInTinybird(): string | null {
 	console.log("Querying Tinybird for backfill progress...");
@@ -223,7 +233,9 @@ function getBackfilledEventCount(): number {
 	return 0;
 }
 
+// ============================================================================
 // CHUNK GENERATION (DOWNWARD)
+// ============================================================================
 
 function generateChunksDownward(
 	resumePoint: string,
@@ -249,7 +261,9 @@ function generateChunksDownward(
 	return chunks;
 }
 
+// ============================================================================
 // COPY JOB EXECUTION
+// ============================================================================
 
 async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -314,7 +328,9 @@ async function runCopyJob(
 	return false;
 }
 
+// ============================================================================
 // MAIN
+// ============================================================================
 
 async function main() {
 	console.log("=== Events Backfill Script (Downward Fill) ===\n");

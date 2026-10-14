@@ -472,7 +472,9 @@ const timeBoxed = async (
 	}
 };
 
+// ============================================================================
 // Phase 1 — resolve test files (reuse `bun t`'s `_groups` resolution)
+// ============================================================================
 
 const TESTS_DIR = join(PROJECT_ROOT, "server", "tests");
 
@@ -518,7 +520,9 @@ const resolveTestFiles = async (
 	return [...files].sort();
 };
 
+// ============================================================================
 // Phase 2 — warm-up
+// ============================================================================
 
 type WarmUpResult = {
 	warmSnapshotId: string;
@@ -894,7 +898,9 @@ export const getOrBuildWarmParent = async ({
 	return warmName;
 };
 
+// ============================================================================
 // Phase 3 — fan-out + per-worker boot
+// ============================================================================
 
 type ProvisionedWorker = {
 	handle: WorkerHandle;
@@ -1225,7 +1231,9 @@ const claimAndRecordPoolAccounts = async ({
 	return claim.byWorker;
 };
 
+// ============================================================================
 // Teardown (§9a — idempotent, orchestrator-driven from the registry)
+// ============================================================================
 
 /**
  * Persistent Stripe sub-account pool: claim clean accounts at fan-out, async-
@@ -1464,7 +1472,9 @@ const reportFanoutBenchmark = ({
 	}
 };
 
+// ============================================================================
 // Main run
+// ============================================================================
 
 export const run = async (args: TwRunArgs): Promise<void> => {
 	// Select the cloud backend (Vercel default; Modal via --provider=modal). The

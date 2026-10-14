@@ -14,7 +14,9 @@ import chalk from "chalk";
 // Load environment variables from server/.env
 loadLocalEnv();
 
+// ============================================================================
 // CONFIGURATION - Edit these values to customize seed behavior
+// ============================================================================
 
 const CONFIG = {
 	// Default number of events to generate
@@ -34,7 +36,9 @@ const CONFIG = {
 	},
 } as const;
 
+// ============================================================================
 // TYPES
+// ============================================================================
 
 interface CliArgs {
 	customer_id: string;
@@ -44,7 +48,9 @@ interface CliArgs {
 	feature_ids: string;
 }
 
+// ============================================================================
 // CLI ARGUMENT PARSING
+// ============================================================================
 
 function parseArgs(): CliArgs {
 	const args = process.argv.slice(2);
@@ -118,7 +124,9 @@ function parseArgs(): CliArgs {
 	return parsed as CliArgs;
 }
 
+// ============================================================================
 // VALIDATION
+// ============================================================================
 
 async function validateOrg({
 	db,
@@ -174,7 +182,9 @@ async function validateCustomer({
 	return customer;
 }
 
+// ============================================================================
 // EVENT GENERATION
+// ============================================================================
 
 function generateRandomTimestamp({ daysBack }: { daysBack: number }): Date {
 	const now = Date.now();
@@ -240,7 +250,9 @@ function generateEvents({
 	return events;
 }
 
+// ============================================================================
 // MAIN EXECUTION
+// ============================================================================
 
 async function main() {
 	console.log(

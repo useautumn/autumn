@@ -55,7 +55,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		this.page = options.initialPage ?? 1;
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// Data Fetching (internal)
+	// ─────────────────────────────────────────────────────────────────
 
 	/**
 	 * Fetch all plans from the API once
@@ -102,7 +104,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		return this.filteredPlans.slice(start, end);
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// State Queries
+	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiPlan[] {
 		return this.getCurrentPageItems();
@@ -154,7 +158,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		return Math.ceil(this.filteredPlans.length / this.pageSize);
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// Navigation Actions
+	// ─────────────────────────────────────────────────────────────────
 
 	selectByIndex(index: number): ApiPlan | null {
 		const items = this.getCurrentPageItems();
@@ -192,7 +198,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		return null;
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// Data Actions (Local Pagination)
+	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasNextPage()) {
@@ -234,7 +242,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		await this.fetchAllPlans();
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// Detail Data
+	// ─────────────────────────────────────────────────────────────────
 
 	/**
 	 * Get expanded details for a plan.
@@ -245,7 +255,9 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		return plan ?? null;
 	}
 
+	// ─────────────────────────────────────────────────────────────────
 	// Output Formats
+	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiPlan> {
 		return {

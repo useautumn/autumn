@@ -16,7 +16,9 @@
  * `LEGACY_SCOPE_ALIASES` and should not be used in new code.
  */
 
+// ---------------------------------------------------------------------------
 // Resources & actions
+// ---------------------------------------------------------------------------
 
 /**
  * Canonical list of resources protected by scopes.
@@ -43,7 +45,9 @@ export type ResourceType = (typeof RESOURCES)[number];
 /** Modern scope actions. */
 export type ScopeActionType = "read" | "write";
 
+// ---------------------------------------------------------------------------
 // Scope strings (type-level)
+// ---------------------------------------------------------------------------
 
 /**
  * All resources that support writing — i.e. every resource except analytics.
@@ -104,7 +108,9 @@ export type ScopeString =
 	| `${WritableResource}:write`
 	| MetaScope;
 
+// ---------------------------------------------------------------------------
 // Scopes namespace (mirrors the AffectedResource enum pattern)
+// ---------------------------------------------------------------------------
 
 /**
  * Namespaced constants for every modern scope string.
@@ -185,7 +191,9 @@ export const Scopes = {
 	Public: "public",
 } as const;
 
+// ---------------------------------------------------------------------------
 // Scope lists
+// ---------------------------------------------------------------------------
 
 /**
  * Flat list of every modern R/W scope derived from {@link Scopes}.
@@ -329,7 +337,9 @@ export const ALL_SCOPES = [
 	...LEGACY_SCOPES,
 ] as const;
 
+// ---------------------------------------------------------------------------
 // Route requirements
+// ---------------------------------------------------------------------------
 
 /**
  * Describes the scope(s) a route requires.
@@ -345,7 +355,9 @@ export type RouteScopeRequirement =
 	| { ALL: readonly ScopeString[] }
 	| { ANY: readonly ScopeString[]; ALL: readonly ScopeString[] };
 
+// ---------------------------------------------------------------------------
 // Roles
+// ---------------------------------------------------------------------------
 
 export type Role = "owner" | "admin" | "developer" | "sales" | "member";
 
@@ -398,7 +410,9 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 	],
 };
 
+// ---------------------------------------------------------------------------
 // Metadata
+// ---------------------------------------------------------------------------
 
 /**
  * Resource metadata for display purposes.
@@ -492,7 +506,9 @@ export const ACTION_METADATA: Record<
 	},
 };
 
+// ---------------------------------------------------------------------------
 // Predicates
+// ---------------------------------------------------------------------------
 
 /**
  * Check if a scope is an OpenID Connect scope (not a resource scope).
@@ -524,7 +540,9 @@ export function isValidScope(scope: string): scope is ScopeString {
 	return (ALL_SCOPES as readonly string[]).includes(scope);
 }
 
+// ---------------------------------------------------------------------------
 // Parsing
+// ---------------------------------------------------------------------------
 
 /**
  * Parse a modern R/W scope string into its resource and action parts.
@@ -550,7 +568,9 @@ export function parseScope(scope: string): {
 	return { resource, action };
 }
 
+// ---------------------------------------------------------------------------
 // Expansion & checking
+// ---------------------------------------------------------------------------
 
 /**
  * Check if a scope is a meta-scope.
@@ -809,7 +829,9 @@ export function makeScopeChecker(granted: readonly string[]) {
 	};
 }
 
+// ---------------------------------------------------------------------------
 // Display helpers
+// ---------------------------------------------------------------------------
 
 /**
  * Group scopes by resource. Filters out OpenID scopes and normalises any

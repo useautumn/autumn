@@ -7,7 +7,9 @@ import {
     prodTestOrgId,
 } from "./experimentEnv";
 
+// ---------------------------------------------------------------------------
 // EDIT ME — hardcode the customer / feature you want to diagnose
+// ---------------------------------------------------------------------------
 const CONFIG = {
 	orgId: prodTestOrgId as string,
 	env: AppEnv.Live as AppEnv,
@@ -18,6 +20,7 @@ const CONFIG = {
 	runLua: true, // lua writes back entitlement hashes even for amount=0 — disable if paranoid
 	forceRepopulate: true, // DEL the cached subject before priming, so it's rebuilt from the DB
 };
+// ---------------------------------------------------------------------------
 
 const { resolveRedisV2 } = await import("../src/external/redis/resolveRedisV2");
 const { warmupRedisV2 } = await import("../src/external/redis/initRedisV2");

@@ -61,6 +61,8 @@ const FILTER: CustomerFilter = {
 	plan: { plan_id: "free" },
 };
 
+// ═════════════════════════════════════════════════════════════════════
+
 const truncateExplainText = (text: string, maxLines: number): string => {
 	const lines = text.split("\n");
 	if (lines.length <= maxLines) return text;

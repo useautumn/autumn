@@ -17,7 +17,9 @@ export interface PaginationState {
  * Provides a programmatic API for AI agents to interact with list views.
  */
 export interface ListController<T, TExpanded = T> {
+	// ─────────────────────────────────────────────────────────────────
 	// State Queries
+	// ─────────────────────────────────────────────────────────────────
 
 	/** Get all currently loaded items */
 	getItems(): T[];
@@ -40,7 +42,9 @@ export interface ListController<T, TExpanded = T> {
 	/** Get current search query (if any) */
 	getSearchQuery(): string;
 
+	// ─────────────────────────────────────────────────────────────────
 	// Navigation Actions
+	// ─────────────────────────────────────────────────────────────────
 
 	/** Select item by index */
 	selectByIndex(index: number): T | null;
@@ -54,7 +58,9 @@ export interface ListController<T, TExpanded = T> {
 	/** Move selection down */
 	selectNext(): T | null;
 
+	// ─────────────────────────────────────────────────────────────────
 	// Data Actions
+	// ─────────────────────────────────────────────────────────────────
 
 	/** Go to next page */
 	nextPage(): Promise<void>;
@@ -74,12 +80,16 @@ export interface ListController<T, TExpanded = T> {
 	/** Refresh current data */
 	refresh(): Promise<void>;
 
+	// ─────────────────────────────────────────────────────────────────
 	// Detail Data
+	// ─────────────────────────────────────────────────────────────────
 
 	/** Get expanded details for an item (lazy loaded) */
 	getExpandedItem(id: string): Promise<TExpanded | null>;
 
+	// ─────────────────────────────────────────────────────────────────
 	// Output Formats (for AI consumption)
+	// ─────────────────────────────────────────────────────────────────
 
 	/** Export current state as JSON */
 	toJSON(): ListControllerState<T>;

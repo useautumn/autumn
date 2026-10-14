@@ -1,7 +1,9 @@
 import type Stripe from "stripe";
 import type { PayInvoiceResult } from "./payStripeInvoice";
 
+// ============================================
 // Helpers
+// ============================================
 
 /**
  * Maps Stripe error codes/messages to payment failure codes.
@@ -35,7 +37,9 @@ const getFailureCodeFromStripeError = ({
 	return "payment_failed";
 };
 
+// ============================================
 // Handle Payment Failure
+// ============================================
 
 /**
  * Builds a failed PayInvoiceResult from an invoice and error.

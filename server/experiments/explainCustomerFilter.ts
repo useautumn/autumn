@@ -48,6 +48,8 @@ const MIGRATION_PLAN = {
 	}
 };
 
+// ═════════════════════════════════════════════════════════════════════
+
 const truncateExplainText = (text: string, maxLines: number): string => {
 	const lines = text.split("\n");
 	if (lines.length <= maxLines) return text;

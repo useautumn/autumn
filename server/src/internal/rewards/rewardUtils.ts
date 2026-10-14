@@ -382,7 +382,9 @@ export const constructRewardProgram = ({
 	return rewardProgram;
 };
 
+// ═══════════════════════════════════════════════════════════════════
 // Referral helpers (moved from referralUtils.ts)
+// ═══════════════════════════════════════════════════════════════════
 
 export const ReferralResponseCodes = {
 	OwnsProduct: "has_product_already",
