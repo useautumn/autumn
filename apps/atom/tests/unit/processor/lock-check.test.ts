@@ -59,7 +59,7 @@ const lockCheck = ({
 	});
 
 describe("a lock on the Atom", () => {
-	test("holds what it reserves: the view shows the units held, and the journal owes one locked track", async () => {
+	test("holds what it reserves: the view shows the units held, and the journal owes one locked track of all it granted (overflow), its row keeping the caller's overage behaviour", async () => {
 		const { processor, journal } = await openHolding({ balance: 1000 });
 		const request = lockCheck({ requiredBalance: 30, lock: {} });
 
@@ -74,19 +74,20 @@ describe("a lock on the Atom", () => {
 			expect.objectContaining({
 				command: expect.objectContaining({
 					value: 30,
-					overageBehavior: "reject",
+					overageBehavior: "overflow",
 					lock: {
 						id: expect.stringMatching(/^lck/),
 						lockId: "lock_1",
 						expiresAt: request.occurredAt + DAY_MS,
 						expiryAction: "confirm",
+						overageBehavior: "reject",
 					},
 				}),
 			}),
 		]);
 	});
 
-	test("one that does not fit is refused and journals nothing; one that caps reserves only what fits", async () => {
+	test("one that does not fit is refused and journals nothing; one that caps reserves only what fits, and is handed in capped", async () => {
 		const { processor, journal } = await openHolding({ balance: 10 });
 
 		const refused = await checkResponseOf({
@@ -108,6 +109,14 @@ describe("a lock on the Atom", () => {
 			(await checkResponseOf({ processor, request: checkRequestFor() })).balance
 				?.remaining,
 		).toBe(0);
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([
+			expect.objectContaining({
+				command: expect.objectContaining({
+					overageBehavior: "cap",
+					lock: expect.objectContaining({ overageBehavior: "cap" }),
+				}),
+			}),
+		]);
 	});
 
 	test("D2: a lock_id retried on the terms it was taken with is the same lock: the reply a fresh lock gets, nothing deducted or journaled again", async () => {

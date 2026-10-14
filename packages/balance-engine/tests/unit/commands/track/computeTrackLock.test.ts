@@ -106,6 +106,24 @@ describe("a locked track", () => {
 		expect(mutation.changes).toEqual([]);
 	});
 
+	test.concurrent(
+		"a lock naming its caller's overage behaviour is held on the track's terms, and its row keeps the caller's",
+		() => {
+			const mutation = track({
+				state: createState(),
+				command: {
+					...lockedTrack({ value: 11 }),
+					overageBehavior: "overflow",
+					lock: { ...lock, overageBehavior: "reject" },
+				},
+			});
+			expect(mutation.result).toMatchObject({ status: "applied" });
+			expect(
+				mutation.changes.find((change) => change.table === "locks"),
+			).toMatchObject({ row: { overage_behavior: "reject" } });
+		},
+	);
+
 	test.concurrent("a track without a lock is untouched", () => {
 		const mutation = track({
 			state: createState(),
