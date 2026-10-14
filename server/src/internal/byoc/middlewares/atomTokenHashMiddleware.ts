@@ -1,5 +1,7 @@
 import { ATOM_TOKEN_HASH_HEADER, AtomSubjectReadErrorCode } from "@autumn/byoc";
 import type { MiddlewareHandler } from "hono";
+import { findShadowAtomByTokenHash } from "@/internal/misc/shadowAtom/actions/findShadowAtomByTokenHash.js";
+import { isShadowAtomCutOff } from "@/internal/misc/shadowAtom/shadowAtomCutOffStore.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { cacheDeploymentRepo } from "../repos/cacheDeploymentRepo.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
@@ -10,12 +12,23 @@ export const atomTokenHashMiddleware: MiddlewareHandler<AtomHonoEnv> = async (
 	next,
 ) => {
 	const tokenHash = c.req.header(ATOM_TOKEN_HASH_HEADER);
-	const atom = tokenHash
+	const orgAtom = tokenHash
 		? await cacheDeploymentRepo.findByTokenHash({
 				db: c.get("ctx").db,
 				tokenHash,
 			})
 		: null;
+	const shadowAtom =
+		tokenHash && !orgAtom ? findShadowAtomByTokenHash({ tokenHash }) : null;
+	if (shadowAtom && isShadowAtomCutOff())
+		return c.json(
+			{
+				code: "atom_shadow_cut_off",
+				message: "Autumn is cut off from the shadow Atom",
+			},
+			503,
+		);
+	const atom = orgAtom ?? shadowAtom;
 	const orgWithFeatures = atom
 		? await getOrgWithFeaturesCached({
 				db: c.get("ctx").db,

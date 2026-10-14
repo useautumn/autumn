@@ -98,15 +98,19 @@ beforeEach(() => {
 });
 afterEach(() => {
 	for (const spy of spies.splice(0)) spy.mockRestore();
+	appendLogs.length = 0;
 });
 
+const appendLogs: Record<string, unknown>[] = [];
+const logger = {
+	info: (_message: string, meta: Record<string, unknown>) => {
+		if (meta?.type === "atom_tracks_append") appendLogs.push(meta);
+	},
+	error: (message: string) => errorsLogged.push(message),
+};
 const app = new Hono<HonoEnv>();
 app.use("*", async (c, next) => {
-	c.set("ctx", {
-		db: {},
-		id: "req_append",
-		logger: { error: (message: string) => errorsLogged.push(message) },
-	} as never);
+	c.set("ctx", { db: {}, id: "req_append", logger } as never);
 	await next();
 });
 app.route("/atom", atomRouter);
@@ -156,6 +160,17 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 			{ ...second, source: { atomId: "atom_1", writerId: "w_1", seq: 4 } },
 		],
 	]);
+	expect(appendLogs).toEqual([
+		expect.objectContaining({
+			atom_id: "atom_1",
+			writer: "w_1",
+			tracks: 2,
+			first_seq: 3,
+			last_seq: 4,
+			queued: true,
+		}),
+	]);
+	expect(appendLogs[0].lag_ms).toBeGreaterThanOrEqual(0);
 });
 
 test("a lock's track and its finalize in one request are queued in order; the finalize is the Atom's own command, naming its lock and never a row", async () => {
