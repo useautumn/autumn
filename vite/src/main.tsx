@@ -7,6 +7,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./contexts/ThemeProvider";
+import { reloadOnStaleChunk } from "./utils/staleChunkReload";
 
 declare const __APP_ENV__: string;
 
@@ -37,6 +38,8 @@ if (__APP_ENV__ === "prod") {
 } else if (__APP_ENV__ === "dev") {
 	document.title = `Autumn (wt${__WORKTREE_NUM__})`;
 }
+
+window.addEventListener("vite:preloadError", reloadOnStaleChunk);
 
 const queryClient = new QueryClient({
 	defaultOptions: {
