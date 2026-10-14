@@ -7,7 +7,7 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 /** An attached clock never detaches, so a clock id is safe to keep for long. */
 const ATTACHED_CLOCK_TTL_SECONDS = 7 * 24 * 3600;
-/** "No clock" can change (attach), so it is short-lived and cleared on attach. */
+/** "No clock" can change on attach, so it is short-lived and never overwrites a clock id. */
 const NO_CLOCK_TTL_SECONDS = 600;
 const NO_CLOCK = "none";
 
@@ -43,35 +43,38 @@ export const setCachedStripeTestClockId = async ({
 	requestId?: string;
 }) => {
 	const miscRedis = resolveMiscRedis({ requestId });
+	const cacheKey = buildStripeTestClockCacheKey(stripeCustomerId);
 	await tryRedisOp({
 		operation: () =>
-			miscRedis.set(
-				buildStripeTestClockCacheKey(stripeCustomerId),
-				testClockId ?? NO_CLOCK,
-				"EX",
-				testClockId ? ATTACHED_CLOCK_TTL_SECONDS : NO_CLOCK_TTL_SECONDS,
-			),
+			testClockId
+				? miscRedis.set(cacheKey, testClockId, "EX", ATTACHED_CLOCK_TTL_SECONDS)
+				: // NX: a lookup that read Stripe before an attach must not hide the new clock.
+					miscRedis.set(cacheKey, NO_CLOCK, "EX", NO_CLOCK_TTL_SECONDS, "NX"),
 		source: "stripe-test-clock-cache:set",
 		redisInstance: miscRedis,
 	});
 };
 
-export const clearStripeTestClockCache = async ({
+/** Records a newly attached clock on every instance, replacing any cached "no clock". */
+export const setAttachedStripeTestClock = async ({
 	stripeCustomerId,
+	testClockId,
 }: {
 	stripeCustomerId: string;
+	testClockId: string;
 }) => {
 	const cacheKey = buildStripeTestClockCacheKey(stripeCustomerId);
 	await forEachMiscRedisTarget({
 		operation: ({ redis }) =>
 			tryRedisOp({
-				operation: () => redis.del(cacheKey),
-				source: "stripe-test-clock-cache:clear",
+				operation: () =>
+					redis.set(cacheKey, testClockId, "EX", ATTACHED_CLOCK_TTL_SECONDS),
+				source: "stripe-test-clock-cache:attach",
 				redisInstance: redis,
 			}),
 		onError: ({ target }) => {
 			logger.warn(
-				`[stripeTestClockCache] clear failed on "${target.instanceName}"`,
+				`[stripeTestClockCache] attach write failed on "${target.instanceName}"`,
 			);
 		},
 	});

@@ -45,6 +45,17 @@ export const buildOrgWithFeaturesCacheKey = ({
 	env: AppEnv;
 }) => `org_with_features:${orgId}:${env}`;
 
+/** Rewritten by every clear, so a lookup that straddles a clear can tell its load is stale. */
+export const buildOrgWithFeaturesClearTokenKey = ({
+	orgId,
+	env,
+}: {
+	orgId: string;
+	env: AppEnv;
+}) => `org_with_features_cleared:${orgId}:${env}`;
+
+const CLEAR_TOKEN_TTL_SECONDS = 3600;
+
 export const getCachedOrgWithFeatures = async <T>({
 	ctx,
 	orgId,
@@ -141,17 +152,41 @@ export const readThroughOrgWithFeatures = <T>({
 		});
 		if (cached) return cached;
 
-		const fresh = await load();
-		if (fresh)
-			await setCachedOrgWithFeatures({
-				ctx,
-				orgId,
-				env,
-				data: fresh,
-				requestId,
+		const redis = ctx.miscCache.resolve({ requestId });
+		const tokenKey = buildOrgWithFeaturesClearTokenKey({ orgId, env });
+		const readClearToken = () =>
+			tryRedisOp({
+				operation: () => redis.get(tokenKey),
+				source: "org-features-cache:clear-token",
+				redisInstance: redis,
+				timeoutMs: REDIS_OP_TIMEOUT_MS.orgFeaturesGet,
 			});
+
+		const tokenBeforeLoad = await readClearToken();
+		const fresh = await load();
+		if (!fresh) return fresh;
+
+		await setCachedOrgWithFeatures({
+			ctx,
+			orgId,
+			env,
+			data: fresh,
+			requestId,
+		});
+		// A clear landed mid-lookup: this load may predate the write it was clearing for.
+		if ((await readClearToken()) !== tokenBeforeLoad) {
+			getOrgWithFeaturesL1().delete(cacheKey);
+			await tryRedisOp({
+				operation: () => redis.del(cacheKey),
+				source: "org-features-cache:discard-stale",
+				redisInstance: redis,
+			});
+		}
 		return fresh;
-	})().finally(() => inFlightLookups.delete(cacheKey));
+	})().finally(() => {
+		if (inFlightLookups.get(cacheKey) === lookup)
+			inFlightLookups.delete(cacheKey);
+	});
 	inFlightLookups.set(cacheKey, lookup);
 	return lookup;
 };
@@ -172,20 +207,40 @@ export const clearOrgWithFeaturesCache = async ({
 		buildOrgWithFeaturesCacheKey({ orgId, env: targetEnv }),
 	);
 
-	for (const cacheKey of cacheKeys) getOrgWithFeaturesL1().delete(cacheKey);
+	for (const cacheKey of cacheKeys) {
+		getOrgWithFeaturesL1().delete(cacheKey);
+		// Callers after a clear must not join a lookup that started before it.
+		inFlightLookups.delete(cacheKey);
+	}
 
+	const clearToken = crypto.randomUUID();
 	await ctx.miscCache.forEachTarget({
 		// One DEL per key: these keys have no hash tag, so a multi-key DEL is
 		// rejected with CROSSSLOT on a clustered instance and nothing is deleted.
+		// The token is written first, so a lookup whose write lands after the DEL sees it.
 		operation: ({ redis }) =>
 			Promise.all(
-				cacheKeys.map((cacheKey) =>
-					runRedisOp({
-						operation: () => redis.del(cacheKey),
+				envs.map(async (targetEnv) => {
+					await runRedisOp({
+						operation: () =>
+							redis.set(
+								buildOrgWithFeaturesClearTokenKey({ orgId, env: targetEnv }),
+								clearToken,
+								"EX",
+								CLEAR_TOKEN_TTL_SECONDS,
+							),
+						source: "org-features-cache:clear-token",
+						redisInstance: redis,
+					});
+					await runRedisOp({
+						operation: () =>
+							redis.del(
+								buildOrgWithFeaturesCacheKey({ orgId, env: targetEnv }),
+							),
 						source: "org-features-cache:clear",
 						redisInstance: redis,
-					}),
-				),
+					});
+				}),
 			),
 		onError: ({ target }) =>
 			ctx.logger.warn(

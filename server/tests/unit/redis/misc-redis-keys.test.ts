@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildCustomerInvoicesCacheKey,
 	buildOrgWithFeaturesCacheKey,
+	buildOrgWithFeaturesClearTokenKey,
 	buildSubscriptionCacheKey,
 	CUSTOMER_INVOICES_CACHE_TTL_SECONDS,
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
@@ -59,6 +60,9 @@ describe("misc redis key formats", () => {
 		expect(
 			buildOrgWithFeaturesCacheKey({ orgId: "org_1", env: AppEnv.Live }),
 		).toBe("org_with_features:org_1:live");
+		expect(
+			buildOrgWithFeaturesClearTokenKey({ orgId: "org_1", env: AppEnv.Live }),
+		).toBe("org_with_features_cleared:org_1:live");
 		expect(ORG_WITH_FEATURES_CACHE_TTL_SECONDS).toBe(60);
 	});
 
