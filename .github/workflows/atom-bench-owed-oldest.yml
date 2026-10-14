@@ -1,0 +1,48 @@
+name: Atom bench:stages owed-oldest arm64 vs x86 (throwaway)
+
+on:
+  push:
+    branches: [bench/atom-owed-oldest-bench]
+
+jobs:
+  bench:
+    name: stages ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [blacksmith-4vcpu-ubuntu-2404-arm, blacksmith-4vcpu-ubuntu-2404]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Machine
+        run: |
+          uname -a
+          bun --version
+          bun --revision
+          nproc
+          lscpu | head -20
+
+      - run: bun install --frozen-lockfile
+
+      - name: bench:stages {simple,complex} × {1000,1500} × 20 s, 3 rounds
+        working-directory: apps/atom
+        run: |
+          for round in 1 2 3; do
+            for shape in simple complex; do
+              for rate in 1000 1500; do
+                echo "== round=$round shape=$shape rate=$rate"
+                bun run bench:stages "$rate" 20 "$shape" 1500 0.2 | tee -a "$RUNNER_TEMP/stages.jsonl"
+              done
+            done
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stages-${{ matrix.runner }}
+          path: ${{ runner.temp }}/stages.jsonl
