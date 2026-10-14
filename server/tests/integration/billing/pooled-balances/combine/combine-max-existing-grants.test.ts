@@ -53,6 +53,8 @@ test(
 	async () => {
 		const customerId = "combine-heal-existing-grants";
 		const autumn = new AutumnInt({ version: ApiVersion.V2_1 });
+		// Leaving max is blocked while a customer holds the feature, so drop the customer first.
+		await autumn.customers.delete(customerId).catch(() => undefined);
 		await setFeatureCombine({ autumn, combine: FeatureCombine.Sum });
 
 		const pro = products.base({
@@ -109,6 +111,7 @@ test(
 				usage: 800,
 			});
 		} finally {
+			await autumn.customers.delete(customerId).catch(() => undefined);
 			await setFeatureCombine({ autumn, combine: FeatureCombine.Sum });
 		}
 	},
