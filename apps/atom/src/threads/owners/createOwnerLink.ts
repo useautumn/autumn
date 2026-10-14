@@ -1,4 +1,5 @@
 import type { TrackResponseV3 } from "@autumn/shared";
+import type { FinalizeResponse } from "../../processor/types/finalize.js";
 import type {
 	CheckAnswer,
 	PushedSubject,
@@ -11,6 +12,7 @@ import type {
 } from "../../state/repos/subjectStates.js";
 import {
 	checkRequestToWire,
+	finalizeRequestToWire,
 	replyToError,
 	trackRequestToWire,
 	wireToAppliedSubject,
@@ -88,6 +90,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	): Promise<
 		| CheckAnswer
 		| TrackResponseV3
+		| FinalizeResponse
 		| PushedSubject
 		| boolean
 		| AppliedSubjectOnWire[]
@@ -126,6 +129,12 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					request: trackRequestToWire({ request }),
 				})) as TrackResponseV3,
+			finalize: async ({ request }) =>
+				(await call({
+					type: "finalize",
+					atomId,
+					request: finalizeRequestToWire({ request }),
+				})) as FinalizeResponse,
 			setSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "setSubject",

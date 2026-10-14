@@ -24,7 +24,10 @@ import {
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
 import { replayOwed } from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
-import type { JournalEntry } from "../../../src/state/journal/types/journal.js";
+import type {
+	JournalEntry,
+	JournaledCommand,
+} from "../../../src/state/journal/types/journal.js";
 import { atomOrg } from "../utils/atomFixtures.js";
 import { openSlotProcessor } from "../utils/journalFixtures.js";
 
@@ -148,10 +151,12 @@ const applyTheWorkersWay = ({
 }: {
 	state: SubjectState;
 	catalog: Catalog;
-	commands: TrackCommand[];
+	commands: JournaledCommand[];
 }): SubjectState => {
 	let current = state;
 	for (const command of commands) {
+		if (command.type !== "track")
+			throw new Error("these seeds journal tracks only");
 		const fullSubject = subjectStateToFullSubject({
 			state: current,
 			catalog,

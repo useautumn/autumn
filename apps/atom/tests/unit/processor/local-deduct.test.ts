@@ -92,7 +92,7 @@ describe("a send_event check the Atom deducts itself", () => {
 		await processor.check({ request: sendEvent({ requiredBalance: 7 }) });
 
 		const [entry] = journal.owed({ customerId: "cus_1" });
-		expect(parseTrackCommand({ input: entry?.command })).toEqual(
+		expect<unknown>(parseTrackCommand({ input: entry?.command })).toEqual(
 			entry?.command,
 		);
 		expect(entry?.command).toMatchObject({
@@ -209,7 +209,7 @@ describe("a track the Atom deducts itself", () => {
 
 		expect(answer).toEqual({ customer_id: "cus_1", value: 7, balance: null });
 		const [entry] = journal.owed({ customerId: "cus_1" });
-		expect(parseTrackCommand({ input: entry?.command })).toEqual(
+		expect<unknown>(parseTrackCommand({ input: entry?.command })).toEqual(
 			entry?.command,
 		);
 		expect(entry?.command).toMatchObject({

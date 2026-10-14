@@ -256,6 +256,7 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { findLockInsertInMutation } from "./utils/mutationUtils/findMutationUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,

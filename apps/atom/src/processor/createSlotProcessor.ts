@@ -4,6 +4,7 @@ import { CannotAnswerError } from "../lib/forward/cannotAnswerError.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { deleteSubject } from "./actions/deleteSubject/deleteSubject.js";
+import { finalize } from "./actions/finalize/finalize.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
 import { track } from "./actions/track/track.js";
 import type {
@@ -46,6 +47,10 @@ export const createSlotProcessor = ({
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
 			return track({ ctx, request });
+		},
+		finalize: async ({ request }) => {
+			refuseUnwritten(request.params);
+			return finalize({ ctx, request });
 		},
 		setSubject: async (params) => {
 			const subject = subjectPushToStoredSubject(params);

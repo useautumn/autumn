@@ -3,6 +3,7 @@ import { mountMultiTenantRoutes } from "../multiTenant/mountMultiTenantRoutes.js
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
+import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
@@ -23,6 +24,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
 	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use("/v1/track", admissionMiddleware({ ctx }));
+	app.use("/v1/balances.finalize", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
@@ -45,6 +47,12 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 		checkHopMiddleware({ ctx }),
 		clientAuthMiddleware({ ctx }),
 		receiveTrack,
+	);
+	authorized.post(
+		"/balances.finalize",
+		checkHopMiddleware({ ctx }),
+		clientAuthMiddleware({ ctx }),
+		receiveFinalize,
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/subjects.delete", pushAuth, receiveDeleteSubject({ ctx }));

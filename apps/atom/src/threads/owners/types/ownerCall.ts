@@ -3,6 +3,10 @@ import type { ApiVersion, TrackResponseV3 } from "@autumn/shared";
 import type { AtomError } from "../../../http/handlers/errorHandler/atomErrorOf.js";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
+import type {
+	FinalizeRequest,
+	FinalizeResponse,
+} from "../../../processor/types/finalize.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
 import type {
@@ -21,6 +25,11 @@ export type TrackRequestOnWire = Omit<TrackRequest, "apiVersion"> & {
 	apiVersion: ApiVersion;
 };
 
+/** A finalize as it crosses threads: plain data, with the API version by name. */
+export type FinalizeRequestOnWire = Omit<FinalizeRequest, "apiVersion"> & {
+	apiVersion: ApiVersion;
+};
+
 /** The whole shared catalog, as Autumn sent it. */
 export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 
@@ -28,6 +37,7 @@ export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "track"; request: TrackRequestOnWire }
+	| { type: "finalize"; request: FinalizeRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "deleteSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
@@ -87,6 +97,7 @@ export type OwnerReply =
 			value:
 				| CheckAnswer
 				| TrackResponseV3
+				| FinalizeResponse
 				| boolean
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[];

@@ -3,6 +3,7 @@ import { AutumnClientError } from "../autumnClient/autumnClientError.js";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
 import type { Journal, JournalEntry } from "../state/journal/types/journal.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
+import { journalEntryToHandIn } from "./journalEntryToHandIn.js";
 import type {
 	ForwardedJournal,
 	JournalForwarder,
@@ -94,11 +95,9 @@ export const createJournalForwarder = ({
 		if (!first) return;
 		await ctx.autumnClient.appendTracks({
 			tokenHash: first.forwarded.tokenHash(),
-			tracks: batch.map(({ forwarded, entry }) => ({
-				writerId: forwarded.journal.writerId,
-				seq: entry.seq,
-				command: entry.command,
-			})),
+			tracks: batch.map(({ forwarded, entry }) =>
+				journalEntryToHandIn({ writerId: forwarded.journal.writerId, entry }),
+			),
 		});
 	}
 
