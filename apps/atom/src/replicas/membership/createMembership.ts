@@ -1,20 +1,26 @@
-import type { Membership } from "./types/membership.js";
+import type { MemberState, Membership } from "./types/membership.js";
 
 /** Peers a deployment can hold at once; the table is fixed-size so threads can share it. */
 const MAX_PEERS = 8;
-const INTS_PER_PEER = 4;
+const INTS_PER_PEER = 5;
 /** After the peer's address, in each row. */
 const STATE = 1;
-const LEFT_AT_S = 2;
+/** Which of this replica's threads have handed the peer its entries since it was marked ready, as a bitmask. */
+const HANDED_OFF = 2;
 /** The leaver's threads that have handed everything; HANDOFF_COMPLETE once all of them have. */
 const HANDOFF_DONE = 3;
-const LEAVING = 1;
+/** A hash of the boot the peer was marked ready from. */
+const BOOT = 4;
 const HANDOFF_COMPLETE = 1 << 30;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
 export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
-/** A leave holds this long whatever the service name lists: the container back under the address is counted after it.
- * Alien's measured roll has the new container ready 25 to 72 s after the SIGTERM; 45 s sits inside the swap. */
-export const LEAVING_TTL_MS = 45_000;
+/** The bitmask's width. */
+export const MAX_THREADS = 31;
+
+const STATES: Record<MemberState, number> = { ready: 1, joined: 2, leaving: 3 };
+const STATE_NAMES = Object.fromEntries(
+	Object.entries(STATES).map(([name, code]) => [code, name]),
+) as Record<number, MemberState>;
 
 /** An address as an Int32, so a row needs no strings: IPv4 octets, or a hash of anything else. */
 const codeOf = (address: string): number => {
@@ -32,16 +38,20 @@ const codeOf = (address: string): number => {
 	return Bun.hash.xxHash32(address) | 0;
 };
 
+/** A boot as an Int32: never 0, so a row holding one is told from a row holding none. */
+const bootCodeOf = (boot: string): number => Bun.hash.xxHash32(boot) | 0 || 1;
+
 /** Backed by `table`, a SharedArrayBuffer's Int32Array on a deployed replica, so every thread reads one view. */
 export const createMembership = ({
 	self,
 	table = new Int32Array(MEMBERSHIP_INTS),
-	now = Date.now,
 }: {
 	self: string;
 	table?: Int32Array;
-	now?: () => number;
 }): Membership => {
+	/** The boot names seen, by code; a thread that only read the code from the table reports the code. */
+	const boots = new Map<number, string>();
+
 	const rowOf = (address: string): number => {
 		const code = codeOf(address);
 		for (let row = 0; row < MAX_PEERS; row++)
@@ -62,24 +72,66 @@ export const createMembership = ({
 		throw new Error(`The membership table holds ${MAX_PEERS} peers already`);
 	};
 
-	const leavingAt = (at: number): boolean =>
-		Atomics.load(table, at + STATE) === LEAVING &&
-		now() - Atomics.load(table, at + LEFT_AT_S) * 1000 < LEAVING_TTL_MS;
-
-	const isLeaving = (address: string): boolean => {
+	const stateOf = (address: string): MemberState | null => {
 		const at = rowOf(address);
-		return at >= 0 && leavingAt(at);
+		return at < 0
+			? null
+			: (STATE_NAMES[Atomics.load(table, at + STATE)] ?? null);
+	};
+
+	const clearRow = (at: number): void => {
+		Atomics.store(table, at + STATE, 0);
+		Atomics.store(table, at + HANDED_OFF, 0);
+		Atomics.store(table, at + HANDOFF_DONE, 0);
+		Atomics.store(table, at + BOOT, 0);
 	};
 
 	return {
 		self,
-		isMember: (address) => !isLeaving(address),
-		isLeaving,
+		stateOf,
+		isMember: (address) => stateOf(address) === "joined",
+		isLeaving: (address) => stateOf(address) === "leaving",
+		markReady: ({ address, boot }) => {
+			const at = rowFor(address);
+			const code = bootCodeOf(boot);
+			boots.set(code, boot);
+			// Back after leaving, from a new boot: its customers' entries are handed to it again before it owns them.
+			clearRow(at);
+			Atomics.store(table, at + BOOT, code);
+			Atomics.store(table, at + STATE, STATES.ready);
+		},
+		bootOf: (address) => {
+			const at = rowOf(address);
+			if (at < 0) return null;
+			const code = Atomics.load(table, at + BOOT);
+			return code === 0 ? null : (boots.get(code) ?? String(code));
+		},
+		markJoined: (address) =>
+			Atomics.store(table, rowFor(address) + STATE, STATES.joined),
+		hasHandedOff: ({ address, thread }) => {
+			const at = rowOf(address);
+			return (
+				at >= 0 && (Atomics.load(table, at + HANDED_OFF) & (1 << thread)) !== 0
+			);
+		},
+		handedOff: ({ address, thread, threads }) => {
+			if (thread >= MAX_THREADS || threads > MAX_THREADS)
+				throw new Error(
+					`The membership table counts up to ${MAX_THREADS} threads`,
+				);
+			const at = rowFor(address);
+			const mask =
+				Atomics.or(table, at + HANDED_OFF, 1 << thread) | (1 << thread);
+			const everyThread = (1 << threads) - 1;
+			const done = (mask & everyThread) === everyThread;
+			if (done) Atomics.store(table, at + STATE, STATES.joined);
+			return done;
+		},
 		markLeaving: (address) => {
 			const at = rowFor(address);
-			if (!leavingAt(at)) Atomics.store(table, at + HANDOFF_DONE, 0);
-			Atomics.store(table, at + LEFT_AT_S, Math.floor(now() / 1000));
-			Atomics.store(table, at + STATE, LEAVING);
+			if (Atomics.load(table, at + STATE) !== STATES.leaving)
+				Atomics.store(table, at + HANDOFF_DONE, 0);
+			Atomics.store(table, at + STATE, STATES.leaving);
 		},
 		handoffCompleted: ({ address, threads }) => {
 			const at = rowFor(address);
@@ -95,17 +147,11 @@ export const createMembership = ({
 				(Atomics.load(table, at + HANDOFF_DONE) & HANDOFF_COMPLETE) !== 0
 			);
 		},
-		keepOnly: (addresses) => {
-			const kept = new Set(addresses.map(codeOf));
-			for (let row = 0; row < MAX_PEERS; row++) {
-				const at = row * INTS_PER_PEER;
-				const code = Atomics.load(table, at);
-				if (code === 0 || kept.has(code) || leavingAt(at)) continue;
-				Atomics.store(table, at + STATE, 0);
-				Atomics.store(table, at + LEFT_AT_S, 0);
-				Atomics.store(table, at + HANDOFF_DONE, 0);
-				Atomics.store(table, at, 0);
-			}
+		forget: (address) => {
+			const at = rowOf(address);
+			if (at < 0) return;
+			clearRow(at);
+			Atomics.store(table, at, 0);
 		},
 		leaveSelf: () => Atomics.store(table, SELF_LEAVING_INDEX, 1),
 		isSelfLeaving: () => Atomics.load(table, SELF_LEAVING_INDEX) === 1,

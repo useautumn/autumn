@@ -14,6 +14,8 @@ import type { ThreadHealthSource } from "../atomHealth.js";
 export type AtomServer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	/** One look at the listed peers before this thread answers, so a ready peer is counted from its first check on. */
+	probePeers?(): Promise<void>;
 };
 
 export type AtomServerDependencies = {
