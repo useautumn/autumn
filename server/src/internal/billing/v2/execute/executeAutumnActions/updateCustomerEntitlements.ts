@@ -1,4 +1,5 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import { type AutumnBillingPlan, customerEntitlements } from "@autumn/shared";
+import { inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -14,7 +15,19 @@ export const updateCustomerEntitlements = async ({
 	customerId: string;
 	updates: AutumnBillingPlan["updateCustomerEntitlements"];
 }) => {
-	const { logger } = ctx;
+	const { db, logger } = ctx;
+
+	const customerEntitlementIds = (updates ?? []).map(
+		({ customerEntitlement }) => customerEntitlement.id,
+	);
+	if (customerEntitlementIds.length > 0) {
+		await db
+			.select({ id: customerEntitlements.id })
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.id, customerEntitlementIds))
+			.orderBy(customerEntitlements.id)
+			.for("update");
+	}
 
 	for (const updateDetail of updates ?? []) {
 		const {
