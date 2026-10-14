@@ -20,8 +20,8 @@ export const check = async ({
 		customerId: answerableCheck.customerId,
 		entityId: answerableCheck.entityId,
 	});
-	// Past the forward rules, a send_event is the customer's own.
-	if (request.params.send_event === true)
+	// Past the forward rules, a send_event or a lock is the customer's own, and deducts as the API's does.
+	if (request.params.send_event === true || answerableCheck.lock)
 		return answerDeductingCheck({
 			ctx,
 			check: answerableCheck,

@@ -1,6 +1,7 @@
 import type { CheckCommand, CheckResult } from "@autumn/balance-engine";
 import type {
 	ApiVersionClass,
+	CheckLockParams,
 	CheckParams,
 	CheckQuery,
 	CheckResponseV3,
@@ -31,6 +32,8 @@ export type AnswerableCheck = {
 	featureId: string;
 	requiredBalance: number;
 	properties: CheckCommand["properties"];
+	/** A lock to hold what the check deducts until a finalize settles it; null for none. */
+	lock: CheckLockParams | null;
 	query: CheckQuery;
 	apiVersion: ApiVersionClass;
 };

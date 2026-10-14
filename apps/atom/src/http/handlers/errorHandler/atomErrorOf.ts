@@ -1,7 +1,9 @@
+import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { ErrCode } from "@autumn/shared";
 import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
 import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
 
-export type AtomErrorStatus = 400 | 500 | 503;
+export type AtomErrorStatus = 400 | 409 | 500 | 503;
 
 /** How a failure Atom answers itself is told to the caller: the status and error body, in the API's own shape. */
 export const atomErrorOf = ({
@@ -12,6 +14,13 @@ export const atomErrorOf = ({
 	// A push Atom cannot read is the sender's to fix.
 	if (isUnreadableRequest(cause))
 		return { status: 400, code: "invalid_request", message: cause.message };
+	// D2, worker parity: a lock_id retried while its lock is open is refused as the API refuses it.
+	if (cause instanceof LockAlreadyExistsError)
+		return {
+			status: 409,
+			code: ErrCode.LockAlreadyExists,
+			message: "A lock with this ID already exists",
+		};
 	// Passes once the thread is back: Autumn's server asks its API meanwhile, and a push is sent again.
 	if (cause instanceof OwnerUnavailableError)
 		return { status: 503, code: "atom_unavailable", message: cause.message };

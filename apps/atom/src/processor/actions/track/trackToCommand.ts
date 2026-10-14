@@ -1,5 +1,14 @@
-import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
-import { FeatureType, findFeatureById } from "@autumn/shared";
+import {
+	type CheckCommand,
+	lockParamsToTrackLock,
+	type TrackCommand,
+} from "@autumn/balance-engine";
+import {
+	type CheckLockParams,
+	FeatureType,
+	featureUtils,
+	findFeatureById,
+} from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 
@@ -50,24 +59,49 @@ export const trackToCommand = ({
 	};
 };
 
+/** A lock keeps its overage behaviour for a finalize above it, as the API's does; the API refuses one on an allocated feature. */
+const lockedTrackOf = ({
+	lock,
+	command,
+	subject,
+}: {
+	lock: CheckLockParams;
+	command: CheckCommand;
+	subject: CurrentSubject;
+}): Pick<TrackCommand, "overageBehavior" | "lock"> => {
+	const feature = findFeatureById({
+		features: subject.features,
+		featureId: command.featureId,
+	});
+	if (feature && featureUtils.isAllocated(feature))
+		throw new CannotAnswerError({ reason: "lock_unsupported" });
+	return {
+		overageBehavior: lock.overage_behavior ?? "reject",
+		lock: lockParamsToTrackLock({ lock, occurredAt: command.occurredAt }),
+	};
+};
+
 /**
  * A deducting check's track, as the API builds it: all it granted (`overflow`), honouring the overdue block, with no event
- * key. The API's middleware claims a check's Idempotency-Key raw.
+ * key; a lock's own overage behaviour instead. The API's middleware claims a check's Idempotency-Key raw.
  */
 export const checkToTrackCommand = ({
 	command,
 	subject,
 	skipEvent,
 	idempotencyKey,
+	lock,
 }: {
 	command: CheckCommand;
 	subject: CurrentSubject;
 	skipEvent: boolean;
 	/** The caller's Idempotency-Key header. */
 	idempotencyKey: string | null;
+	lock: CheckLockParams | null;
 }): TrackCommand => ({
 	...trackToCommand({ command, subject, skipEvent, idempotencyKey: null }),
 	overageBehavior: "overflow",
 	enforceOverdueBlock: true,
 	idempotency: claimOf({ key: idempotencyKey ?? `track:${command.requestId}` }),
+	...(lock && lockedTrackOf({ lock, command, subject })),
 });

@@ -2,6 +2,7 @@ import {
 	applyMutation,
 	type Catalog,
 	computeTrack,
+	LockAlreadyExistsError,
 	type SubjectState,
 	subjectStateToFullSubject,
 	UnsupportedCommandError,
@@ -40,7 +41,11 @@ export const replayOwed = ({
 				mutation: computeTrack({ fullSubject, command }),
 			});
 		} catch (error) {
-			if (error instanceof UnsupportedCommandError) return current;
+			if (
+				error instanceof UnsupportedCommandError ||
+				error instanceof LockAlreadyExistsError
+			)
+				return current;
 			throw error;
 		}
 	}, state);

@@ -25,7 +25,13 @@ export const answerDeductingCheck = async ({
 		ctx,
 		subject,
 		command,
-		track: checkToTrackCommand({ command, subject, skipEvent, idempotencyKey }),
+		track: checkToTrackCommand({
+			command,
+			subject,
+			skipEvent,
+			idempotencyKey,
+			lock: check.lock,
+		}),
 	});
 	// Read before the commit lands: this deduction and those before it, not one appended while it was in flight.
 	const deducted = result.allowed
