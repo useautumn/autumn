@@ -51,6 +51,8 @@ const defaults = {
 	deductionRoute: "check" as "check" | "track",
 	/** Share of deductions (0–100) sent with a unique key, as the staging shadow mints one per call: the header, and a track's body too. */
 	keyedPercent: 0,
+	/** Share of keyed deductions (0–100) that resend the customer's previous key, as a caller's retry: 409 once keys are held. */
+	replayPercent: 0,
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,
 	/** Load generator processes on the driver box; the generator must never be the bottleneck. */

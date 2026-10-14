@@ -61,6 +61,15 @@ const headers = {
 let keysMinted = 0;
 /** Unique across the driver's processes and runs, as the shadow's `atom_shadow_<request id>`. */
 const mintKey = () => `rig_${process.pid}_${Date.now()}_${keysMinted++}`;
+const lastKeyOf = new Map<string, string>();
+/** A fresh key, or now and then the customer's previous one sent again. */
+const keyFor = ({ customerId }: { customerId: string }): string => {
+	const previous = lastKeyOf.get(customerId);
+	if (previous && Math.random() * 100 < config.replayPercent) return previous;
+	const key = mintKey();
+	lastKeyOf.set(customerId, key);
+	return key;
+};
 
 const send = async ({
 	customerId,
@@ -79,7 +88,9 @@ const send = async ({
 		plan.replicaUrls[Math.floor(Math.random() * plan.replicaUrls.length)];
 	const asTrack = deducts && config.deductionRoute === "track";
 	const key =
-		deducts && Math.random() * 100 < config.keyedPercent ? mintKey() : null;
+		deducts && Math.random() * 100 < config.keyedPercent
+			? keyFor({ customerId })
+			: null;
 	const body = asTrack
 		? {
 				customer_id: customerId,
@@ -115,7 +126,12 @@ const send = async ({
 				(into.forwardReasons[forwarded] ?? 0) + 1;
 		} else if (reply.ok) into.answered++;
 		else if (reply.status === 503) into.shed++;
-		else into.failed++;
+		else {
+			into.failed++;
+			// Read beside the forward reasons: a 409 is a replayed key the Atom held.
+			into.forwardReasons[`http_${reply.status}`] =
+				(into.forwardReasons[`http_${reply.status}`] ?? 0) + 1;
+		}
 	} catch {
 		if (into) into.failed++;
 	}
