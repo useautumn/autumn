@@ -1,6 +1,7 @@
 import type { FrontendOrg } from "@autumn/shared";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { orgAvatarFallbackClassName } from "./orgAvatarFallbackClassName";
 
 export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
@@ -13,7 +14,10 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	return (
 		<div
 			className={cn(
-				"flex size-5 min-h-5 min-w-5 items-center justify-center overflow-hidden rounded-md ring-1 ring-black/10 dark:ring-[#2A2A2A]",
+				"flex size-5 min-h-5 min-w-5 items-center justify-center overflow-hidden rounded-md",
+				showLogo
+					? "ring-1 ring-black/10 dark:ring-[#2A2A2A]"
+					: orgAvatarFallbackClassName,
 			)}
 		>
 			{showLogo ? (
@@ -24,7 +28,7 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 					src={org.logo}
 				/>
 			) : (
-				<span className="w-full h-full flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-gradient text-white text-[11px]">
+				<span className="flex size-full items-center justify-center text-[11px]">
 					{firstLetter}
 				</span>
 			)}
