@@ -1,5 +1,4 @@
 import type { Database } from "bun:sqlite";
-import type { HeldSubject } from "../types/heldSubject.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
@@ -27,9 +26,32 @@ export type SubjectSlice = {
 /** One subject to write; `sliceStored` when its slice row already holds this slice, so only the state row is written. */
 export type SubjectWrite = {
 	subject: StoredSubject;
+	/** The state's row text, stringified once for the file and the held copy alike. */
+	stateJson: string;
 	slice: SubjectSlice;
 	sliceStored: boolean;
 };
+
+/** A subject's row as text, held in place of its parsed objects: what a thread keeps for the customers it is not deciding for. */
+export type SubjectRowText = {
+	stateJson: string;
+	sliceHash: string;
+	logOffset: bigint;
+	readAt: number;
+	customerVersion: bigint;
+};
+
+export const subjectRowTextFromRow = ({
+	row,
+}: {
+	row: SubjectStateRow;
+}): SubjectRowText => ({
+	stateJson: row.stateJson,
+	sliceHash: row.sliceHash,
+	logOffset: row.logOffset,
+	readAt: Number(row.readAt),
+	customerVersion: row.customerVersion,
+});
 
 const textBytes = (texts: string[]): number =>
 	texts.reduce((bytes, text) => bytes + text.length, 0);
@@ -53,17 +75,13 @@ const storedSubjectFromRow = ({
 	row,
 }: {
 	row: SubjectStateRow;
-}): HeldSubject => ({
-	subject: {
-		state: JSON.parse(row.stateJson),
-		catalog: JSON.parse(row.catalogJson),
-		org: JSON.parse(row.orgJson),
-		logOffset: row.logOffset,
-		readAt: Number(row.readAt),
-		customerVersion: row.customerVersion,
-	},
-	bytes: textBytes([row.stateJson, row.catalogJson, row.orgJson]),
-	sliceHash: row.sliceHash,
+}): StoredSubject => ({
+	state: JSON.parse(row.stateJson),
+	catalog: JSON.parse(row.catalogJson),
+	org: JSON.parse(row.orgJson),
+	logOffset: row.logOffset,
+	readAt: Number(row.readAt),
+	customerVersion: row.customerVersion,
 });
 
 /** The version a row holds, read without parsing it; null when the file has no such row. */
@@ -97,7 +115,7 @@ export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(row?.count ?? 0);
 };
 
-export const readSubject = ({
+export const readSubjectRowText = ({
 	ctx,
 	customerId,
 	entityId,
@@ -105,7 +123,25 @@ export const readSubject = ({
 	ctx: SlotContext;
 	customerId: string;
 	entityId: string | null;
-}): HeldSubject | null => {
+}): { text: SubjectRowText; slice: Omit<SubjectSlice, "hash"> } | null => {
+	const row = readSubjectStateRow({ ctx, customerId, entityId });
+	return row
+		? {
+				text: subjectRowTextFromRow({ row }),
+				slice: { catalogJson: row.catalogJson, orgJson: row.orgJson },
+			}
+		: null;
+};
+
+const readSubjectStateRow = ({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+	entityId: string | null;
+}): SubjectStateRow | null => {
 	const row = ctx.sqliteDb
 		.query<SubjectStateRow, { customerId: string; entityId: string }>(`
 			SELECT
@@ -121,7 +157,7 @@ export const readSubject = ({
 			WHERE states.customer_id = $customerId AND states.entity_id = $entityId
 		`)
 		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
-	return row ? storedSubjectFromRow({ row }) : null;
+	return row ?? null;
 };
 
 /** Where a page of applied subjects ends, so the next page starts right after it whatever ties on `applied_at`. */
@@ -186,7 +222,7 @@ export const listSubjectsAppliedAfter = ({
 			limit,
 		})
 		.map((row) => ({
-			subject: storedSubjectFromRow({ row }).subject,
+			subject: storedSubjectFromRow({ row }),
 			appliedAt: Number(row.appliedAt),
 		}));
 
@@ -278,7 +314,7 @@ export const readSubjectsByKey = ({
 		return row
 			? [
 					{
-						subject: storedSubjectFromRow({ row }).subject,
+						subject: storedSubjectFromRow({ row }),
 						appliedAt: Number(row.appliedAt),
 					},
 				]
@@ -327,7 +363,7 @@ const IS_NEWER = `(excluded.read_at > subject_states.read_at
  */
 const upsertSubject = ({
 	ctx,
-	write: { subject, slice, sliceStored },
+	write: { subject, stateJson, slice, sliceStored },
 	appliedAt,
 }: {
 	ctx: SlotContext;
@@ -336,7 +372,6 @@ const upsertSubject = ({
 }): SubjectWriteResult => {
 	const { customerId, entityId } = subject.state.identity;
 	const key = { customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID };
-	const stateJson = JSON.stringify(subject.state);
 	const written = ctx.sqliteDb
 		.query<
 			{ readAt: bigint; logOffset: bigint; customerVersion: bigint },

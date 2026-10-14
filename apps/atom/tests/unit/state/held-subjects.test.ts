@@ -18,15 +18,26 @@ const subjectOf = (customerId: string): StoredSubject => ({
 	customerVersion: 0n,
 });
 
+const textOf = (customerId: string) => ({
+	stateJson: `{"customer":"${customerId}"}`,
+	sliceHash: "slice",
+	logOffset: 1n,
+	readAt: 1,
+	customerVersion: 0n,
+});
+
 const hold = (
 	held: ReturnType<typeof createHeldSubjects>,
 	key: string,
 	bytes: number,
-) => held.hold({ key, subject: subjectOf(key), bytes, sliceHash: "slice" });
+) => held.hold({ key, text: textOf(key), subject: subjectOf(key), bytes });
 
 describe("held subjects", () => {
 	test("past the byte budget, the least recently read subjects are dropped until it fits", () => {
-		const held = createHeldSubjects({ budgetBytes: 100 });
+		const held = createHeldSubjects({
+			budgetBytes: 100,
+			parsedBudgetBytes: 100,
+		});
 		hold(held, "a", 40);
 		hold(held, "b", 40);
 		held.get("a");
@@ -34,8 +45,8 @@ describe("held subjects", () => {
 		hold(held, "c", 40);
 
 		expect(held.get("b")).toBeUndefined();
-		expect(held.get("a")?.subject.state.identity.customerId).toBe("a");
-		expect(held.get("c")?.subject.state.identity.customerId).toBe("c");
+		expect(held.get("a")?.subject?.state.identity.customerId).toBe("a");
+		expect(held.get("c")?.subject?.state.identity.customerId).toBe("c");
 		expect(held.bytes).toBe(80);
 	});
 
@@ -72,6 +83,55 @@ describe("held subjects", () => {
 
 		expect(held.evicted).toBe(2);
 		expect(held.expired).toBe(0);
+	});
+});
+
+describe("held subjects parsed tier", () => {
+	test("past the parsed budget, the coldest parsed copies are let go and their text stays", () => {
+		const held = createHeldSubjects({
+			budgetBytes: 1_000,
+			parsedBudgetBytes: 100,
+		});
+		hold(held, "a", 40);
+		hold(held, "b", 40);
+		held.get("a");
+
+		hold(held, "c", 40);
+
+		expect(held.get("b")?.subject).toBeNull();
+		expect(held.get("b")?.text.stateJson).toContain("b");
+		expect(held.get("a")?.subject?.state.identity.customerId).toBe("a");
+		expect(held.get("c")?.subject).not.toBeNull();
+		expect(held.size).toBe(3);
+		expect(held.parsedSize).toBe(2);
+		expect(held.parsedBytes).toBe(80);
+	});
+
+	test("a text parsed again rejoins the parsed tier, counted as a parse", () => {
+		const held = createHeldSubjects({
+			budgetBytes: 1_000,
+			parsedBudgetBytes: 50,
+		});
+		hold(held, "a", 40);
+		hold(held, "b", 40);
+		expect(held.get("a")?.subject).toBeNull();
+
+		held.keepParsed({ key: "a", subject: subjectOf("a") });
+
+		expect(held.get("a")?.subject).not.toBeNull();
+		expect(held.get("b")?.subject).toBeNull();
+		expect(held.parses).toBe(1);
+	});
+
+	test("a dropped subject leaves the parsed tier with it", () => {
+		const held = createHeldSubjects({
+			budgetBytes: 1_000,
+			parsedBudgetBytes: 1_000,
+		});
+		hold(held, "a", 40);
+		held.drop("a");
+		expect(held.parsedSize).toBe(0);
+		expect(held.parsedBytes).toBe(0);
 	});
 });
 

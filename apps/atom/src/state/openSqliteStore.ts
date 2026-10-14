@@ -7,9 +7,10 @@ import {
 	listDigestsAppliedAfter,
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
-	readSubject as readSubjectRow,
+	readSubjectRowText,
 	readSubjectsByKey,
 	readSubjectVersion,
+	type SubjectRowText,
 	type SubjectWrite,
 	type SubjectWriteResult,
 	subjectToSlice,
@@ -66,8 +67,9 @@ const keyOf = ({ state }: StoredSubject): string =>
 	});
 
 /**
- * One slot's file and the subjects held from it. Only the slot's owner thread opens the file, so what it holds is
- * the file: a subject is parsed once, on its first read or as it is written, and served from memory after.
+ * One slot's file and the subjects held from it. Only the slot's owner thread opens the file, so what it holds is the
+ * file: a subject's row text is read once and held; it is parsed on its first read or as it is written, and the parsed
+ * copy kept beside the text while the thread keeps deciding on it, else parsed again from the text, never read again.
  */
 export const openSqliteStore = ({
 	databasePath,
@@ -82,21 +84,50 @@ export const openSqliteStore = ({
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
 	const storePrefix = `${storesOpened++}\u0000`;
 
+	/** The held text's parsed copy, its slice shared with every customer holding the same; frozen, as every check shares it. */
+	function parseHeld({
+		key,
+		text,
+	}: {
+		key: string;
+		text: SubjectRowText;
+	}): StoredSubject {
+		const sliceText = held.sliceOf(text.sliceHash);
+		if (!sliceText) throw new Error(`Slice ${text.sliceHash} is not held`);
+		const subject = {
+			state: JSON.parse(text.stateJson),
+			...sharedSlice({
+				hash: text.sliceHash,
+				slice: {
+					catalog: JSON.parse(sliceText.catalogJson),
+					org: JSON.parse(sliceText.orgJson),
+				},
+			}),
+			logOffset: text.logOffset,
+			readAt: text.readAt,
+			customerVersion: text.customerVersion,
+		};
+		held.keepParsed({ key, subject });
+		return subject;
+	}
+
 	function readSubject(params: {
 		customerId: string;
 		entityId: string | null;
 	}): StoredSubject | null {
 		const key = storePrefix + subjectKey(params);
 		const found = held.get(key);
-		if (found) return found.subject;
-		const read = readSubjectRow({ ctx, ...params });
+		if (found) return found.subject ?? parseHeld({ key, text: found.text });
+		const read = readSubjectRowText({ ctx, ...params });
 		if (read === null) return null;
-		const subject = {
-			...read.subject,
-			...sharedSlice({ hash: read.sliceHash, slice: read.subject }),
-		};
-		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
-		return subject;
+		held.holdSlice({ hash: read.text.sliceHash, ...read.slice });
+		held.hold({
+			key,
+			text: read.text,
+			subject: null,
+			bytes: read.text.stateJson.length,
+		});
+		return parseHeld({ key, text: read.text });
 	}
 
 	function readVersion(params: {
@@ -105,14 +136,11 @@ export const openSqliteStore = ({
 	}) {
 		const found = held.get(storePrefix + subjectKey(params));
 		if (found)
-			return {
-				readAt: found.subject.readAt,
-				logOffset: found.subject.logOffset,
-			};
+			return { readAt: found.text.readAt, logOffset: found.text.logOffset };
 		return readSubjectVersion({ ctx, ...params });
 	}
 
-	/** A slice any held copy already has is reused; its row is rewritten only when this customer's held a different one. */
+	/** A slice any held copy already has is reused, frozen; its row is rewritten only when this customer's held a different one. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
@@ -121,14 +149,15 @@ export const openSqliteStore = ({
 				...subject,
 				...sharedSlice({ hash: slice.hash, slice: subject }),
 			},
+			stateJson: JSON.stringify(subject.state),
 			slice,
-			sliceStored: heldCopy?.sliceHash === slice.hash,
+			sliceStored: heldCopy?.text.sliceHash === slice.hash,
 		};
 	}
 
-	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
+	/** A stored subject is held as written, text and parsed copy; one ignored as older keeps the newer copy, carrying a version the push raised. */
 	function holdWritten({
-		write: { subject, slice },
+		write: { subject, stateJson, slice },
 		result: { bytes, customerVersion },
 	}: {
 		write: SubjectWrite;
@@ -136,14 +165,23 @@ export const openSqliteStore = ({
 	}): void {
 		const key = storePrefix + keyOf(subject);
 		if (bytes !== null) {
+			const version = customerVersion ?? subject.customerVersion;
+			held.holdSlice({
+				hash: slice.hash,
+				catalogJson: slice.catalogJson,
+				orgJson: slice.orgJson,
+			});
 			held.hold({
 				key,
-				subject: {
-					...subject,
-					customerVersion: customerVersion ?? subject.customerVersion,
+				text: {
+					stateJson,
+					sliceHash: slice.hash,
+					logOffset: subject.logOffset,
+					readAt: subject.readAt,
+					customerVersion: version,
 				},
-				bytes,
-				sliceHash: slice.hash,
+				subject: { ...subject, customerVersion: version },
+				bytes: stateJson.length,
 			});
 			return;
 		}
@@ -151,14 +189,14 @@ export const openSqliteStore = ({
 		if (
 			customerVersion === null ||
 			!heldCopy ||
-			heldCopy.subject.customerVersion >= customerVersion
+			heldCopy.text.customerVersion >= customerVersion
 		)
 			return;
 		held.hold({
 			key,
-			subject: { ...heldCopy.subject, customerVersion },
+			text: { ...heldCopy.text, customerVersion },
+			subject: heldCopy.subject && { ...heldCopy.subject, customerVersion },
 			bytes: heldCopy.bytes,
-			sliceHash: heldCopy.sliceHash,
 		});
 	}
 
