@@ -1,5 +1,8 @@
-import { LockAlreadyExistsError } from "@autumn/balance-engine";
-import { ErrCode } from "@autumn/shared";
+import {
+	LockAlreadyExistsError,
+	LockNotFoundError,
+} from "@autumn/balance-engine";
+import { ErrCode, InsufficientBalanceError } from "@autumn/shared";
 import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
 import { LockTermsConflictError } from "../../../processor/actions/track/lockTerms.js";
 import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
@@ -32,6 +35,15 @@ export const atomErrorOf = ({ cause }: { cause: Error }): AtomError => {
 			code: ErrCode.LockAlreadyExists,
 			message: "lock_id already used with different terms",
 		};
+	// A lock no longer open, as the API answers one it no longer holds a row for.
+	if (cause instanceof LockNotFoundError)
+		return {
+			status: 400,
+			code: ErrCode.InvalidRequest,
+			message: `Lock not found for ID: ${cause.lockId}`,
+		};
+	if (cause instanceof InsufficientBalanceError)
+		return { status: 400, code: cause.code, message: cause.message };
 	// Passes once the thread is back: Autumn's server asks its API meanwhile, and a push is sent again.
 	if (cause instanceof OwnerUnavailableError)
 		return { status: 503, code: "atom_unavailable", message: cause.message };

@@ -21,6 +21,7 @@ import * as replay from "../../../src/processor/actions/readCurrentSubject/repla
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
+import type { JournalEntry } from "../../../src/state/journal/types/journal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
@@ -462,19 +463,19 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		state: SubjectState;
 		catalog: Catalog;
 		writerId: string;
-		entries: { seq: number; command: ReturnType<typeof owedCommand> }[];
+		entries: readonly JournalEntry[];
 	}): SubjectState =>
-		entries.reduce(
-			(current, { seq, command }) =>
-				applyMutation({
-					state: current,
-					mutation: computeTrack({
-						fullSubject: subjectStateToFullSubject({ state: current, catalog }),
-						command: { ...command, source: { atomId: ATOM_ID, writerId, seq } },
-					}),
+		entries.reduce((current, { seq, command }) => {
+			if (command.type !== "track")
+				throw new Error("these slots journal tracks only");
+			return applyMutation({
+				state: current,
+				mutation: computeTrack({
+					fullSubject: subjectStateToFullSubject({ state: current, catalog }),
+					command: { ...command, source: { atomId: ATOM_ID, writerId, seq } },
 				}),
-			state,
-		);
+			});
+		}, state);
 
 	/** `cus_1` holding 1,000 messages, then `deductions` journaled and its view read after each, as checks do. */
 	const openDeducting = async ({ deductions }: { deductions: number }) => {

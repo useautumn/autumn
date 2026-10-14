@@ -10,6 +10,7 @@ import {
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
+import type { FinalizeRequest } from "../../processor/types/finalize.js";
 import type { TrackRequest } from "../../processor/types/track.js";
 import type {
 	AppliedSubject,
@@ -19,6 +20,7 @@ import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type {
 	AppliedSubjectOnWire,
 	CheckRequestOnWire,
+	FinalizeRequestOnWire,
 	OwnerReply,
 	SubjectDigestOnWire,
 	TrackRequestOnWire,
@@ -77,6 +79,24 @@ const apiErrorOf = (error: unknown): AtomError | null => {
 	const answer = atomErrorOf({ cause: error });
 	return answer.status === 500 ? null : answer;
 };
+
+export const finalizeRequestToWire = ({
+	request,
+}: {
+	request: FinalizeRequest;
+}): FinalizeRequestOnWire => ({
+	...request,
+	apiVersion: request.apiVersion.value,
+});
+
+export const wireToFinalizeRequest = ({
+	request,
+}: {
+	request: FinalizeRequestOnWire;
+}): FinalizeRequest => ({
+	...request,
+	apiVersion: apiVersionOf(request.apiVersion),
+});
 
 export const errorToReply = ({
 	id,

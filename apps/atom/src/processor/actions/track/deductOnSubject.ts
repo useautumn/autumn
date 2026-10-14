@@ -3,9 +3,11 @@ import {
 	type CheckResult,
 	computeCheck,
 	computeTrackDecision,
+	findLockInsertInMutation,
 	type TrackCommand,
 	trackResultToCheckResult,
 	UnsupportedCommandError,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
@@ -24,18 +26,21 @@ const decideLockedTrack = ({
 	subject: CurrentSubject;
 	command: CheckCommand;
 	track: TrackCommand;
-}): CheckResult => {
+}): { result: CheckResult; lockRow: WorkerLock | null } => {
 	try {
-		const { result } = computeTrackDecision({
+		const { mutation } = computeTrackDecision({
 			fullSubject: subject.fullSubject,
 			command: track,
-		}).mutation;
-		if (result.type !== "track")
-			throw new Error(`Track ${track.commandId} decided a non-track result`);
-		return trackResultToCheckResult({
-			result,
-			requiredBalance: command.requiredBalance,
 		});
+		if (mutation.result.type !== "track")
+			throw new Error(`Track ${track.commandId} decided a non-track result`);
+		return {
+			result: trackResultToCheckResult({
+				result: mutation.result,
+				requiredBalance: command.requiredBalance,
+			}),
+			lockRow: findLockInsertInMutation({ mutation }),
+		};
 	} catch (error) {
 		if (error instanceof UnsupportedCommandError)
 			throw new CannotAnswerError({ reason: "lock_unsupported" });
@@ -80,13 +85,17 @@ export const deductOnSubject = ({
 			committed: Promise.resolve(),
 		};
 	}
-	const result = track.lock
+	const { result, lockRow } = track.lock
 		? decideLockedTrack({ subject, command, track })
-		: computeCheck({ fullSubject: subject.fullSubject, command });
+		: {
+				result: computeCheck({ fullSubject: subject.fullSubject, command }),
+				lockRow: null,
+			};
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });
-	ctx.openLocks.hold({ track });
+	// Held from the append: a retry or a finalize may arrive before the commit lands, and the journal orders a finalize after it.
+	if (lockRow) ctx.openLocks.hold({ track, row: lockRow });
 	return {
 		result,
 		committed: committed.catch(() => {
