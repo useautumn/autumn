@@ -14,6 +14,7 @@ import {
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripeCli } from "../../connect/createStripeCli.js";
+import { stripeEventMatchesEnv } from "../common/stripeEventMatchesEnv.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -78,6 +79,25 @@ export const stripeConnectSeederMiddleware = async (
 			}
 			return c.json({ error: message }, 400);
 		}
+	}
+
+	if (!stripeEventMatchesEnv({ event, env })) {
+		logger.warn(
+			`Skipping Stripe Connect webhook ${event.id}: livemode=${event.livemode} does not match ${env} endpoint`,
+			{
+				data: {
+					eventId: event.id,
+					eventType: event.type,
+					accountId: event.account,
+					env,
+					livemode: event.livemode,
+				},
+			},
+		);
+		return c.json(
+			{ message: `Event livemode does not match ${env} endpoint, skipping` },
+			200,
+		);
 	}
 
 	// Step 4: Get org from account ID
