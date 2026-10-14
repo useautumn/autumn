@@ -3,13 +3,13 @@ import {
 	EntInterval,
 	type Feature,
 	Infinite,
+	type PriceTier,
 	type ProductItem,
 	ProductItemFeatureType,
 	ProductItemType,
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
-import { stripTierUids } from "@/views/products/plan/utils/tierUids";
 import { notNullish, nullish } from "../genUtils";
 import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
 import { itemToUsageType } from "./productItemUtils/convertItem";
@@ -152,7 +152,9 @@ export const stripEditorFields = ({
 }): ProductItem[] | undefined =>
 	items?.map(({ _uid, ...item }) => ({
 		...item,
-		tiers: item.tiers ? stripTierUids(item.tiers) : item.tiers,
+		tiers: item.tiers?.map(
+			({ _uid, ...tier }: PriceTier & { _uid?: string }) => tier,
+		),
 	})) as ProductItem[] | undefined;
 
 export const getPrepaidItems = (product: ProductV2 | undefined) => {

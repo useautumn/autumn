@@ -1,4 +1,4 @@
-import { FeatureType, isAnyCreditSystem } from "@autumn/shared";
+import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -17,6 +17,7 @@ import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -38,6 +39,26 @@ export function EditPlanFeatureSheet({
 	const hasItemChanges = useHasItemChanges();
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
+
+	const handleTierBehaviorChange = (val: string) => {
+		const newBehavior = val as TierBehavior;
+		const newItem = { ...item, tier_behavior: newBehavior };
+
+		if (newBehavior !== TierBehavior.VolumeBased) {
+			if (newItem.tiers) {
+				newItem.tiers = newItem.tiers.map((tier) => ({
+					...tier,
+					flat_amount: undefined,
+					additional_currencies: migrateTierCurrenciesForMode({
+						entries: tier.additional_currencies,
+						mode: "per_unit",
+					}),
+				}));
+			}
+		}
+
+		setItem(newItem);
+	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
 		if (oldId !== newId && product.items) {
@@ -137,7 +158,7 @@ export function EditPlanFeatureSheet({
 						{isFeaturePrice && (
 							<SheetSection title="Price" className="space-y-3">
 								<div>
-									<PriceTiers />
+									<PriceTiers onTierBehaviorChange={handleTierBehaviorChange} />
 									<UsageReset showBillingLabel={true} />
 								</div>
 								<PricedFeatureSettings />

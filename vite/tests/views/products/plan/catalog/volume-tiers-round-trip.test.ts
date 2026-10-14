@@ -7,7 +7,6 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FrontendProduct,
-	type PriceTier,
 	ProductItemInterval,
 	planItemV0ToProductItem,
 	planItemV1ToV0,
@@ -15,7 +14,6 @@ import {
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
 import { buildUpdateCatalogPlanParams } from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
-import { updateTierPrice } from "@/views/products/plan/utils/tierUtils";
 
 const messages: Feature = {
 	internal_id: "fe_messages",
@@ -83,28 +81,17 @@ const product = (items: FrontendProduct["items"]): FrontendProduct => ({
 	basePriceType: "recurring",
 });
 
-const saveItem = (item: FrontendProduct["items"][number]) => {
-	const params = buildUpdateCatalogPlanParams({
-		baseProduct: product([dashboardItem]),
-		editedProduct: product([item]),
-		features: [messages],
-	});
-	const body = JSON.parse(JSON.stringify(params));
-	expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
-	return body.items.find(
-		(saved: { feature_id?: string }) => saved.feature_id === "messages",
-	);
-};
-
 describe("API-created volume item saved from the dashboard", () => {
-	test("loads each tier's flat fee onto its own row, blank where unset", () => {
-		expect(
-			dashboardItem.tiers?.map((tier: PriceTier) => tier.flat_amount),
-		).toEqual([5, undefined, 20]);
-	});
-
-	test("save keeps every tier amount and flat fee", () => {
-		const savedItem = saveItem(dashboardItem);
+	test("save with no edits keeps every tier amount and flat fee", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: product([dashboardItem]),
+			editedProduct: product([dashboardItem]),
+			features: [messages],
+		});
+		const body = JSON.parse(JSON.stringify(params));
+		const savedItem = body.items.find(
+			(item: { feature_id?: string }) => item.feature_id === "messages",
+		);
 
 		expect(savedItem.included).toBe(100);
 		expect(savedItem.price.tier_behavior).toBe("volume");
@@ -117,29 +104,6 @@ describe("API-created volume item saved from the dashboard", () => {
 				}),
 			),
 		).toEqual(apiTiers);
-	});
-
-	test("an EUR flat fee on the tier without a USD flat fee saves", () => {
-		const withEur = updateTierPrice({
-			item: {
-				...dashboardItem,
-				base_currency: "usd",
-				tiers: dashboardItem.tiers?.map((tier: PriceTier) => ({
-					...tier,
-					additional_currencies: [{ currency: "eur", amount: 0.5 }],
-				})),
-			},
-			index: 1,
-			currency: "eur",
-			baseCurrency: "usd",
-			field: "flat_amount",
-			value: "4",
-		});
-		const savedTier = saveItem(withEur).price.tiers[1];
-
-		expect(savedTier.flat_amount).toBe(0);
-		expect(savedTier.additional_currencies).toEqual([
-			{ currency: "eur", amount: 0.5, flat_amount: 4 },
-		]);
+		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
 	});
 });

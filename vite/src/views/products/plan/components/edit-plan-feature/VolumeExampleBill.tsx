@@ -1,14 +1,10 @@
-import { numberWithCommas } from "@autumn/shared";
+import { formatAmount, numberWithCommas } from "@autumn/shared";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { useState } from "react";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { featureUnitName } from "../../utils/billingUnitsUtils";
-import { itemInCurrency } from "../../utils/currencyUtils";
 import { itemToIncludedUsage, tierToDisplay } from "../../utils/tierUtils";
 import {
 	billedTierLabel,
-	formatBillAmount,
 	itemToVolumeExampleBill,
 } from "../../utils/volumeExampleBill";
 import { BillCell } from "./BillCell";
@@ -16,12 +12,13 @@ import { BillCell } from "./BillCell";
 export function VolumeExampleBill({
 	currency,
 	baseCurrency,
+	unitName,
 }: {
 	currency: string;
 	baseCurrency: string;
+	unitName: string;
 }) {
 	const { item } = useProductItemContext();
-	const { features } = useFeaturesQuery();
 	const [usageInput, setUsageInput] = useState(() =>
 		item
 			? tierToDisplay({
@@ -33,15 +30,19 @@ export function VolumeExampleBill({
 	if (!item) return null;
 
 	const bill = itemToVolumeExampleBill({
-		item: itemInCurrency({ item, code: currency, baseCurrency }),
+		item,
 		usage: Number(usageInput.replace(/,/g, "")) || 0,
+		currency,
+		baseCurrency,
 	});
-	const format = (amount: number) => formatBillAmount({ amount, currency });
+	const format = (amount: number) =>
+		formatAmount({
+			amount,
+			currency,
+			minFractionDigits: Number.isInteger(amount) ? 0 : 2,
+			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		});
 	const flatFee = bill.billedTier?.flat_amount ?? 0;
-	const unitName = featureUnitName({
-		feature: features.find((feature) => feature.id === item.feature_id),
-		plural: true,
-	});
 
 	return (
 		<div className="flex flex-col gap-3 rounded-xl border p-3 tabular-nums">

@@ -1,7 +1,6 @@
 import {
 	addAllowanceToTiers,
 	findTierByQuantity,
-	formatAmount,
 	numberWithCommas,
 	type ProductItem,
 	roundUsageToNearestBillingUnit,
@@ -9,47 +8,45 @@ import {
 	type UsageTier,
 	volumeTiersToLineAmount,
 } from "@autumn/shared";
+import { tierPriceInCurrency } from "./currencyUtils";
 import { itemToIncludedUsage } from "./tierUtils";
 
-export type VolumeExampleBill = {
-	total: number;
-	billedUsage: number;
-	billedTier: UsageTier | undefined;
-	isWithinIncluded: boolean;
-	unitRate: number;
-};
-
-/** Bills `usage` the way `usagePriceToLineItem` does: usage-based bills the overage past
- * included at the tier total usage reaches; prepaid bills every unit on allowance-shifted tiers. */
+/** Bills `usage` like `usagePriceToLineItem`: usage-based bills the overage past included at the
+ * tier total usage reaches; prepaid bills every unit. Prices come from `currency`'s cells only. */
 export const itemToVolumeExampleBill = ({
 	item,
 	usage,
+	currency,
+	baseCurrency,
 }: {
 	item: ProductItem;
 	usage: number;
-}): VolumeExampleBill => {
-	const tiers: UsageTier[] = (item.tiers ?? []).map((tier) => ({
-		to: tier.to,
-		amount: tier.amount ?? 0,
-		flat_amount: tier.flat_amount ?? undefined,
-	}));
-	const allowance = itemToIncludedUsage(item);
+	currency: string;
+	baseCurrency: string;
+}) => {
+	const tiers: UsageTier[] = (item.tiers ?? []).map((tier) => {
+		const price = tierPriceInCurrency({ tier, code: currency, baseCurrency });
+		return {
+			to: tier.to,
+			amount: price.amount ?? 0,
+			flat_amount: price.flat_amount ?? undefined,
+		};
+	});
+	const included = itemToIncludedUsage(item);
 	const billingUnits = item.billing_units || 1;
-	const isPrepaid = item.usage_model === UsageModel.Prepaid;
-	const tierShift = isPrepaid ? allowance : 0;
-	const billedQuantity = isPrepaid ? usage : Math.max(0, usage - allowance);
+	const tierShift = item.usage_model === UsageModel.Prepaid ? included : 0;
 	const billedUsage = roundUsageToNearestBillingUnit({
-		usage: billedQuantity,
+		usage: Math.max(0, usage - included + tierShift),
 		billingUnits,
 	});
-	const isWithinIncluded = usage <= allowance;
 	const billedTier = findTierByQuantity({
-		tiers: addAllowanceToTiers({ tiers, allowance }),
-		quantity: billedUsage + allowance - tierShift,
+		tiers: addAllowanceToTiers({ tiers, allowance: included }),
+		quantity: billedUsage + included - tierShift,
 	});
+	const isWithinIncluded = usage <= included;
 	const total = volumeTiersToLineAmount({
 		tiers,
-		usage: billedQuantity,
+		usage: billedUsage,
 		allowance: tierShift,
 		billingUnits,
 	});
@@ -64,22 +61,11 @@ export const itemToVolumeExampleBill = ({
 };
 
 /** Names the billed tier the way the tier table labels its rows. */
-export const billedTierLabel = (bill: VolumeExampleBill): string => {
-	if (bill.isWithinIncluded) return "Included";
-	if (typeof bill.billedTier?.to !== "number") return "Unlimited";
-	return `Up to ${numberWithCommas(bill.billedTier.to)}`;
+export const billedTierLabel = ({
+	isWithinIncluded,
+	billedTier,
+}: ReturnType<typeof itemToVolumeExampleBill>) => {
+	if (isWithinIncluded) return "Included";
+	if (typeof billedTier?.to !== "number") return "Unlimited";
+	return `Up to ${numberWithCommas(billedTier.to)}`;
 };
-
-export const formatBillAmount = ({
-	amount,
-	currency,
-}: {
-	amount: number;
-	currency: string;
-}) =>
-	formatAmount({
-		amount,
-		currency,
-		minFractionDigits: Number.isInteger(amount) ? 0 : 2,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});

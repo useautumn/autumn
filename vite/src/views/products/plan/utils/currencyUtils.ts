@@ -6,7 +6,6 @@ import {
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
 import { toast } from "sonner";
-import { stripTierUids } from "./tierUids";
 
 type ProductItemTier = NonNullable<ProductItem["tiers"]>[number];
 
@@ -32,7 +31,7 @@ const tierForCurrency = ({
 	};
 };
 
-/** The prices one tier charges in `code`, blank where that currency has none set. */
+/** A tier's prices in `code`, blank where that currency has none set. */
 export const tierPriceInCurrency = ({
 	tier,
 	code,
@@ -240,48 +239,16 @@ const alignCurrencyEntries = (tier: PriceTier) => {
 	}));
 };
 
-export const tierChargesFlatFee = (tier: ProductItemTier): boolean =>
-	[tier, ...(tier.additional_currencies ?? [])].some(
-		(entry) => (entry.flat_amount ?? 0) > 0,
-	);
-
-/** Any currency's flat fee keeps the base `flat_amount` present, so the save can't strip it. */
 export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
 	if (!item.tiers) return item;
 	return {
 		...item,
-		tiers: stripTierUids(item.tiers).map((tier) => {
-			const aligned = tierChargesFlatFee(tier)
-				? { ...tier, flat_amount: tier.flat_amount ?? 0 }
-				: tier;
-			return {
-				...aligned,
-				additional_currencies: alignCurrencyEntries(aligned),
-			};
-		}),
+		tiers: item.tiers.map((tier) => ({
+			...tier,
+			additional_currencies: alignCurrencyEntries(tier),
+		})),
 	};
 };
-
-/** The item priced in one currency's own cells, with unset cells as 0 rather than the base price. */
-export const itemInCurrency = ({
-	item,
-	code,
-	baseCurrency,
-}: {
-	item: ProductItem;
-	code: string;
-	baseCurrency: string;
-}): ProductItem => ({
-	...item,
-	tiers: item.tiers?.map((tier) => {
-		const price = tierPriceInCurrency({ tier, code, baseCurrency });
-		return {
-			to: tier.to,
-			amount: price.amount ?? 0,
-			flat_amount: price.flat_amount ?? undefined,
-		};
-	}),
-});
 
 const cleanCurrencyEntries = <
 	T extends AdditionalCurrencyPrice | AdditionalCurrencyTier,

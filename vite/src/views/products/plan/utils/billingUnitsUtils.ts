@@ -1,16 +1,15 @@
 import { type Feature, getFeatureName, type ProductItem } from "@autumn/shared";
 
-/** The feature's unit in lowercase; a bare name like "Users" reads "user" in the singular. */
+/** A bare feature name like "Users" reads "user" in the singular. */
 export const featureUnitName = ({
 	feature,
 	plural,
 }: {
-	feature: Feature | undefined;
+	feature?: Feature;
 	plural: boolean;
 }) => {
 	const name = getFeatureName({ feature, plural }).toLowerCase();
-	if (plural || feature?.display?.singular) return name;
-	return name.replace(/s$/, "");
+	return plural || feature?.display?.singular ? name : name.replace(/s$/, "");
 };
 
 export const billingUnitsLabel = ({
@@ -20,9 +19,11 @@ export const billingUnitsLabel = ({
 	item: ProductItem;
 	features: Feature[];
 }) => {
-	const feature = features.find((feature) => feature.id === item.feature_id);
-	if ((item.billing_units ?? 1) === 1) {
-		return `per ${featureUnitName({ feature, plural: false })}`;
-	}
-	return `per ${item.billing_units} ${featureUnitName({ feature, plural: true })}`;
+	const unitName = featureUnitName({
+		feature: features.find((feature) => feature.id === item.feature_id),
+		plural: Boolean(item.billing_units && item.billing_units > 1),
+	});
+	return item.billing_units === 1
+		? `per ${unitName}`
+		: `per ${item.billing_units} ${unitName}`;
 };

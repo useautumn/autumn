@@ -10,9 +10,11 @@ import { checkRolloverConfigValid } from "../../utils/rolloverUtils";
 export function SheetFooterActions({
 	isDirty,
 	canConfirm,
+	onBeforeCommit,
 }: {
 	isDirty: boolean;
 	canConfirm: boolean;
+	onBeforeCommit?: () => void;
 }) {
 	const { item, handleUpdateProductItem } = useProductItemContext();
 	const { initialItem, itemDraft, closeSheet } = useSheet();
@@ -31,6 +33,7 @@ export function SheetFooterActions({
 	const handleUpdateItem = async () => {
 		if (item && !checkItemCurrenciesValid(item)) return;
 		if (item && !checkRolloverConfigValid(item.config?.rollover)) return;
+		await onBeforeCommit?.();
 		await handleUpdateProductItem();
 	};
 
