@@ -37,12 +37,7 @@ const PERSIST_CURSOR_EVERY_EVENTS = 10;
  * through reopens; the loop settles on its next check either way. */
 const MIN_IDLE_WINDOW_MS = ms.seconds(1);
 
-/** A quiet window must end by the time the turn may settle. A full window
- * opened near the deadline outlives the caller's backstop, which then kills
- * the run with a timeout warning instead of letting it settle on its own.
- * Read again at every arm, since each event restarts the window. The deadline
- * always lands before the quiet cap, because activity starts after it is set.
- * A working child keeps the full window: the deadline does not settle it. */
+/** No window outlives the turn ceiling, which the caller's backstop is sized from. */
 const idleWindowFor = ({
 	activity,
 	deadlineAt,
@@ -50,12 +45,16 @@ const idleWindowFor = ({
 	activity: TurnActivity;
 	deadlineAt?: number;
 }) => {
-	if (deadlineAt === undefined || activity.activeChildren() > 0) {
-		return STREAM_IDLE_TIMEOUT_MS;
-	}
+	const untilDeadline =
+		deadlineAt !== undefined &&
+		activity.activeChildren() === 0 &&
+		Date.now() < deadlineAt
+			? deadlineAt - Date.now()
+			: STREAM_IDLE_TIMEOUT_MS;
+	const untilCeiling = MAX_TURN_DURATION_MS - activity.msSinceStart();
 	return Math.max(
 		MIN_IDLE_WINDOW_MS,
-		Math.min(STREAM_IDLE_TIMEOUT_MS, deadlineAt - Date.now()),
+		Math.min(STREAM_IDLE_TIMEOUT_MS, untilDeadline, untilCeiling),
 	);
 };
 
@@ -369,13 +368,16 @@ export const consumeAgentTurn = async ({
 
 			// A quiet parent is not a done turn — children stream on their own
 			// sessions; MAX_TURN_DURATION_MS still bounds a runaway turn.
-			const childIsWorking = activity.activeChildren() > 0;
+			const parentIsStreaming =
+				turn.progress.turnStarted &&
+				activity.msSinceActivity() < STREAM_IDLE_TIMEOUT_MS;
+			const turnIsWorking = activity.activeChildren() > 0 || parentIsStreaming;
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
 			const deadlineReached =
 				deadlineAt !== undefined && Date.now() >= deadlineAt;
 			if (
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
-				(!childIsWorking && (quietTooLong || deadlineReached))
+				(!turnIsWorking && (quietTooLong || deadlineReached))
 			) {
 				return settleExhaustedTurn({
 					activity,

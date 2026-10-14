@@ -15,10 +15,6 @@ const REPLAY_IDLE_DIVISOR = 10;
  * relaying — so only a multiple of the wall can be the true ceiling. */
 const CEILING_WALLS_PER_TURN = 5;
 
-/** The caller's hard kill: the wall plus enough grace that leaf settles the
- * turn itself rather than being cut off mid-settle. */
-export const TURN_BACKSTOP_MS = TURN_WALL_MS + BACKSTOP_GRACE_MS;
-
 /** Leaf answers with whatever it has by here, one grace window inside the
  * wall, so a turn eve never resumes still produces a reply. */
 export const TURN_SETTLE_BUDGET_MS = TURN_WALL_MS - SETTLE_GRACE_MS;
@@ -27,6 +23,11 @@ export const TURN_SETTLE_BUDGET_MS = TURN_WALL_MS - SETTLE_GRACE_MS;
  * one event per idle window would otherwise reset the resync budget forever.
  * The only budget that outranks a working child. */
 export const MAX_TURN_DURATION_MS = TURN_WALL_MS * CEILING_WALLS_PER_TURN;
+
+/** The caller's hard kill: the ceiling plus enough grace that leaf settles the
+ * turn itself rather than being cut off mid-settle. */
+export const TURN_BACKSTOP_MS =
+	MAX_TURN_DURATION_MS + SETTLE_GRACE_MS + BACKSTOP_GRACE_MS;
 
 /** The one answer to "how long may a stream be quiet before leaf acts": a
  * parent quiet this long with no live child has nothing left to wait for. */
