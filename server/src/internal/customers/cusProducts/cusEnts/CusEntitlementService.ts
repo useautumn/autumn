@@ -679,6 +679,23 @@ export class CusEntService {
 			.returning();
 	}
 
+	/** Same order as sync_balances_v2, so a transaction holding these can't deadlock a balance flush. */
+	static async lockInIdOrder({
+		ctx,
+		ids,
+	}: {
+		ctx: RepoContext;
+		ids: string[];
+	}) {
+		if (ids.length === 0) return;
+		await ctx.db
+			.select({ id: customerEntitlements.id })
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.id, ids))
+			.orderBy(customerEntitlements.id)
+			.for("update");
+	}
+
 	/** Re-keys `entities[from]` as `entities[to]` (its `id` updated); a missing `from` moves nothing. */
 	static async moveEntityBalances({
 		ctx,

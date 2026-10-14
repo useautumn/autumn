@@ -6,8 +6,9 @@ import type {
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { planetScaleTag } from "@/db/dbUtils.js";
+import { isTransactionRollbackError, planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { retryAsync } from "@/utils/retryAsync.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 
 export const SYNC_CONFLICT_CODES = {
@@ -104,14 +105,22 @@ export const flushSubjectBalancesToDb = async ({
 	);
 	const rolloverEntries = subjectBalancesToRolloverEntries({ subjectBalances });
 
+	const params = JSON.stringify({
+		customer_entitlement_updates: entries,
+		rollover_updates: rolloverEntries,
+		usage_window_updates: usageWindowUpdates,
+	});
 	const { error } = await tryCatch(
-		db.execute(
-			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
-				customer_entitlement_updates: entries,
-				rollover_updates: rolloverEntries,
-				usage_window_updates: usageWindowUpdates,
-			})}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
-		),
+		retryAsync({
+			attempts: 3,
+			delayMs: 50,
+			maxDelayMs: 500,
+			shouldRetry: (error) => isTransactionRollbackError({ error }),
+			run: () =>
+				db.execute(
+					sql`SELECT * FROM sync_balances_v2(${params}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
+				),
+		}),
 	);
 
 	if (!error) {
