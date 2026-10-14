@@ -56,7 +56,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("check idempotency: lock_id is the body-level dedup — same lock_id twice is refused")}`,
+	`${chalk.yellowBright("check idempotency: lock_id is the body-level dedup — the same lock_id on other terms is refused")}`,
 	async () => {
 		const freeProd = products.base({
 			id: "free",
@@ -75,19 +75,19 @@ test.concurrent(
 
 		await deleteLock({ ctx, lockId: customerId });
 
-		const checkWithLock = () =>
+		const checkWithLock = ({ requiredBalance }: { requiredBalance: number }) =>
 			autumnV2_1.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				required_balance: 5,
+				required_balance: requiredBalance,
 				lock: { enabled: true, lock_id: customerId },
 			});
 
-		await checkWithLock();
+		await checkWithLock({ requiredBalance: 5 });
 
 		await expectAutumnError({
 			errCode: ErrCode.LockAlreadyExists,
-			func: checkWithLock,
+			func: () => checkWithLock({ requiredBalance: 6 }),
 		});
 	},
 );

@@ -204,13 +204,13 @@ export function rethrowBalanceWorkerError({
 	}
 	if (
 		cause instanceof BalanceWorkerClientError &&
-		cause.workerCode === "LOCK_ALREADY_EXISTS"
+		cause.workerCode === "LOCK_TERMS_CONFLICT"
 	) {
 		// Same code and status as the legacy path, which callers branch on.
 		throw new RecaseError({
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
-			message: "A lock with this ID already exists",
+			message: "lock_id already used with different terms",
 		});
 	}
 	if (

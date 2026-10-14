@@ -14,6 +14,7 @@
  *  8. a lock with a caller-set expiry is released when its timer fires, and the balance returns;
  *  9. a lock handed in after its expiry holds nothing; its seq still lands;
  * 10. a timer fired after its lock settled moves nothing, even once the lock id is taken again; that lock's own timer releases it;
+ * 11. a lock's track handed in again, on any terms, while the lock is open moves nothing: deducted once, its seq lands;
  *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
  *     once: a seq the customer already holds from that journal deducts nothing again.
  */
@@ -687,6 +688,38 @@ test.skipIf(!isBalanceWorkerRoute())(
 		await fireTimerOf({ customerId, lock: second });
 		await expectRemaining(10);
 		await expectNoLockRow({ customerId });
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks11: a lock's track handed in again while the lock is open moves nothing: deducted once, its seq lands")}`,
+	async () => {
+		const customerId = "atom-tracks11";
+		const { lockTrack, append, expectSeq } = await initLockHandIn({
+			customerId,
+		});
+		await append([{ command: lockTrack }], 1);
+		await expectSeq(1);
+
+		// Under ids and a key nothing remembers, so it reaches the decide rather than the claim.
+		const retried = {
+			...lockTrack,
+			requestId: `${lockTrack.requestId}_again`,
+			commandId: `${lockTrack.commandId}_again`,
+			idempotency: {
+				key: `track:${lockTrack.requestId}_again`,
+				ttlMs: 86_400_000,
+			},
+		};
+		await append([{ command: retried }], 2);
+
+		await expectSeq(2);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
 	},
 	120_000,
 );

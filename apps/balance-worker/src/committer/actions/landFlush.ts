@@ -1,4 +1,4 @@
-import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { LockTermsConflictError } from "@autumn/balance-engine";
 import { writesSubjectSnapshots } from "@autumn/edge-config";
 import {
 	FlushBookmarkConflictError,
@@ -65,7 +65,7 @@ const refusalOf = ({
 	const isLockRow =
 		lockId && cause instanceof Error && cause.message.includes("balance_locks");
 	if (isLockRow && sqlState === PostgresSqlState.UniqueViolation)
-		return new LockAlreadyExistsError({ lockId });
+		return new LockTermsConflictError({ lockId });
 	if (isLockRow && sqlState === PostgresSqlState.ForeignKeyViolation)
 		return new SubjectNotFoundError({ identity });
 	return new FlushRecordRefusedError({ mutationId: record.mutation.id, cause });

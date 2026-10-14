@@ -1,0 +1,1 @@
+ALTER TABLE "balance_locks" ADD COLUMN "value" numeric;
