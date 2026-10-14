@@ -280,7 +280,8 @@ const options = {
 			impersonationSessionDuration: 1000 * 60 * 60 * 24, // 1 days
 		}),
 
-		jwt(),
+		// Nothing reads the per-request JWT header; signing it cost a jwks query on every getSession.
+		jwt({ disableSettingJwtHeader: true }),
 		genericOAuth({ config: getAgentIdOAuthConfigs() }),
 		oauthProvider({
 			loginPage: `${process.env.CLIENT_URL}/sign-in`,

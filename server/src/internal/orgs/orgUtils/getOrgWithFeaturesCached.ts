@@ -30,12 +30,15 @@ export const getOrgWithFeaturesCached = async ({
 	orgId,
 	env,
 	skipCache = false,
+	skipL1 = false,
 	requestId,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
 	skipCache?: boolean;
+	/** Skip this process's L1 so a clear made by another process is seen at once. */
+	skipL1?: boolean;
 	requestId?: string;
 }): Promise<OrgWithFeatures | null> => {
 	const load = () => OrgService.getWithFeatures({ db, orgId, env });
@@ -46,6 +49,7 @@ export const getOrgWithFeaturesCached = async ({
 			env,
 			load,
 			requestId,
+			skipL1,
 		});
 
 	const fresh = await load();

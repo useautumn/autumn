@@ -50,18 +50,21 @@ export const getCachedOrgWithFeatures = async <T>({
 	orgId,
 	env,
 	requestId,
+	skipL1 = false,
 }: {
 	ctx: ReadThroughCacheContext;
 	orgId: string;
 	env: AppEnv;
 	requestId?: string;
+	/** Read Redis directly: a clear only reaches the clearing process's L1. */
+	skipL1?: boolean;
 }): Promise<T | null> => {
 	const redis = ctx.miscCache.resolve({ requestId });
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
 	// Hands back the cached reference, not a copy — callers must treat the org
 	// and its features as read-only, or the write leaks into every later hit.
-	const local = getOrgWithFeaturesL1().get(cacheKey);
+	const local = skipL1 ? undefined : getOrgWithFeaturesL1().get(cacheKey);
 	if (local) return local.value as T;
 
 	const cached = await tryRedisOp({
@@ -112,15 +115,17 @@ export const readThroughOrgWithFeatures = <T>({
 	env,
 	load,
 	requestId,
+	skipL1 = false,
 }: {
 	ctx: ReadThroughCacheContext;
 	orgId: string;
 	env: AppEnv;
 	load: () => Promise<T | null>;
 	requestId?: string;
+	skipL1?: boolean;
 }): Promise<T | null> => {
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
-	const local = getOrgWithFeaturesL1().get(cacheKey);
+	const local = skipL1 ? undefined : getOrgWithFeaturesL1().get(cacheKey);
 	if (local) return Promise.resolve(local.value as T);
 
 	const inFlight = inFlightLookups.get(cacheKey);
@@ -132,6 +137,7 @@ export const readThroughOrgWithFeatures = <T>({
 			orgId,
 			env,
 			requestId,
+			skipL1,
 		});
 		if (cached) return cached;
 

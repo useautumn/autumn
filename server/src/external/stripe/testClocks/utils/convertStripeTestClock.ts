@@ -1,5 +1,11 @@
 import { AppEnv } from "@autumn/shared";
+import { tryCatch } from "@shared/utils";
 import type { Stripe } from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli";
+import {
+	getCachedStripeTestClockId,
+	setCachedStripeTestClockId,
+} from "@/external/redis/actions/stripeTestClockCache/stripeTestClockCache";
 import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -39,12 +45,32 @@ export const getTestClockFrozenTimeMs = async ({
 }): Promise<number | undefined> => {
 	if (ctx.env === AppEnv.Live || !stripeCustomerId) return undefined;
 
+	// Most sandbox customers have no clock; caching that skips a Stripe call per customer page load.
+	const cachedClockId = await getCachedStripeTestClockId({
+		stripeCustomerId,
+		requestId: ctx.id,
+	});
+	if (cachedClockId === null) return undefined;
+	if (cachedClockId) {
+		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+		const { data: clock } = await tryCatch(
+			stripeCli.testHelpers.testClocks.retrieve(cachedClockId),
+		);
+		if (clock) return clock.frozen_time * 1000;
+	}
+
 	const stripeCus = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId,
 		errorOnNotFound: false,
 	});
+	if (!stripeCus) return undefined;
 
-	if (!stripeCus?.test_clock) return undefined;
+	await setCachedStripeTestClockId({
+		stripeCustomerId,
+		testClockId: stripeCus.test_clock?.id ?? null,
+		requestId: ctx.id,
+	});
+	if (!stripeCus.test_clock) return undefined;
 	return stripeCus.test_clock.frozen_time * 1000;
 };

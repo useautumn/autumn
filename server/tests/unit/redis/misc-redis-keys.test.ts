@@ -35,6 +35,7 @@ import {
 	buildSecretKeyCacheKey,
 	SECRET_KEY_CACHE_TTL_SECONDS,
 } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { buildStripeTestClockCacheKey } from "@/external/redis/actions/stripeTestClockCache/stripeTestClockCache.js";
 import {
 	buildTrmnlDeviceKey,
 	buildTrmnlOrgKey,
@@ -80,6 +81,12 @@ describe("misc redis key formats", () => {
 
 	test("customer JWT auth", () => {
 		expect(buildCustomerJwtAuthCacheKey("icus_1")).toBe("cjwt_auth:icus_1");
+	});
+
+	test("stripe test clock", () => {
+		expect(buildStripeTestClockCacheKey("cus_1")).toBe(
+			"stripe_test_clock:cus_1",
+		);
 	});
 
 	test("stripe webhook idempotency", () => {
