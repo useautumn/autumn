@@ -3,6 +3,7 @@ import { deductionDeltaSchema } from "../../../deduction/types/deductionDelta.js
 import { propertiesSchema } from "../../common/json.js";
 import { openEnum } from "../../common/openSchema.js";
 import {
+	finiteNumberSchema,
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../common/primitives.js";
@@ -18,6 +19,8 @@ export const workerLockSchema = z
 		customer_id: nonEmptyStringSchema,
 		entity_id: nonEmptyStringSchema.nullable(),
 		feature_id: nonEmptyStringSchema,
+		/** What the lock was taken for; null on a row from before it was recorded, absent on one an older server read. */
+		value: finiteNumberSchema.nullish(),
 		overage_behavior: openEnum({
 			name: "workerLock.overage_behavior",
 			values: ["cap", "reject", "overflow"],

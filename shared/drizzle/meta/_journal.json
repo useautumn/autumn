@@ -729,6 +729,13 @@
       "when": 1791903579011,
       "tag": "0103_customers_atom_seqs",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1791989060876,
+      "tag": "0104_balance_locks_value",
+      "breakpoints": true
     }
   ]
 }

@@ -7,10 +7,12 @@ import {
 	type SubjectState,
 	slimSubjectForFeatures,
 	type TrackCommand,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
+import { readHeldLock } from "../actions/readHeldLock.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
@@ -25,9 +27,12 @@ import type {
 export async function decideTrack({
 	scope,
 	command,
+	heldLock = null,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
+	/** Autumn's row for the command's lock id, found by the caller; what tells a retry of the lock from a conflict. */
+	heldLock?: WorkerLock | null;
 }): Promise<DecidedTrack> {
 	const { ctx } = scope;
 	const customerKey = meteringIdentityToPartitionKey({
@@ -51,6 +56,7 @@ export async function decideTrack({
 							state,
 							customerKey,
 							command,
+							heldLock,
 							decidedAgainst,
 						}),
 					),
@@ -67,7 +73,11 @@ export async function track({
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
 }): Promise<TrackReply> {
-	const decided = await decideTrack({ scope, command });
+	// Only a locked track reads first: any other decides in the order it arrived, with no await ahead of it.
+	const heldLock = command.lock
+		? await readHeldLock({ scope, command, lock: command.lock })
+		: null;
+	const decided = await decideTrack({ scope, command, heldLock });
 	const committed = await decided.waitForCommit();
 	return toTrackReply({
 		scope,
@@ -122,6 +132,7 @@ export function mutateTrack({
 	state,
 	customerKey,
 	command,
+	heldLock = null,
 	decidedAgainst,
 }: {
 	scope: PartitionProcessorScope;
@@ -129,6 +140,7 @@ export function mutateTrack({
 	customerKey: string;
 	decidedAgainst: DecidedAgainst;
 	command: TrackCommand;
+	heldLock?: WorkerLock | null;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
@@ -140,7 +152,7 @@ export function mutateTrack({
 		catalog,
 		identity: command.identity,
 	});
-	const decision = computeTrackDecision({ fullSubject, command });
+	const decision = computeTrackDecision({ fullSubject, command, heldLock });
 	const { mutation } = decision;
 	const nextState = applyMutation({ state, mutation });
 	const after = scope.ctx.subjectHydrator.readSubjectWith({

@@ -26,6 +26,8 @@ export const balanceLocks = pgTable(
 		customer_id: text("customer_id").notNull(),
 		entity_id: text("entity_id"),
 		feature_id: text("feature_id").notNull(),
+		/** What the lock was taken for; a retry of the lock id on the same terms is the same lock. Null before it was recorded. */
+		value: numeric({ mode: "number" }),
 		/** Governs a confirm above the locked value, whatever the finalize call asks for. */
 		overage_behavior: text("overage_behavior").notNull(),
 		properties: jsonb("properties").$type<Record<string, unknown> | null>(),

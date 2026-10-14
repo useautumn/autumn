@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
 	computeTrack,
-	LockAlreadyExistsError,
+	LockTermsConflictError,
 	type SubjectState,
 	type TrackCommand,
 } from "../../../../src/balanceEngine.js";
@@ -67,7 +67,7 @@ describe("a locked track", () => {
 	});
 
 	test.concurrent(
-		"a duplicate lock id deducts nothing and writes nothing",
+		"a lock id already open, with no row to compare, deducts nothing and writes nothing",
 		() => {
 			const state = createState();
 			const opened = applyMutation({
@@ -77,7 +77,7 @@ describe("a locked track", () => {
 			expect(opened.openLocks).toEqual([{ id: "lck_1", lock_id: "L1" }]);
 			expect(() =>
 				track({ state: opened, command: lockedTrack({ id: "lck_2" }) }),
-			).toThrow(new LockAlreadyExistsError({ lockId: "L1" }));
+			).toThrow(new LockTermsConflictError({ lockId: "L1" }));
 		},
 	);
 

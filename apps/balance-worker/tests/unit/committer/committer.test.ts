@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { LockTermsConflictError } from "@autumn/balance-engine";
 import {
 	FlushBookmarkConflictError,
 	type SubjectRowChange,
@@ -534,7 +534,7 @@ describe("committer", () => {
 		expect(outcome.failure).toBeUndefined();
 		expect(outcome.rejections?.map(({ record }) => record)).toEqual([locked]);
 		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(
-			LockAlreadyExistsError,
+			LockTermsConflictError,
 		);
 		// The skip carried no row changes, so neither the deduction nor the lock row reached Postgres.
 		const lockAttempts = fake.transactions

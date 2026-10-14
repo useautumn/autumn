@@ -14,6 +14,7 @@ const lock: WorkerLock = {
 	customer_id: "cus_1",
 	entity_id: null,
 	feature_id: "messages",
+	value: 8,
 	overage_behavior: "reject",
 	properties: {},
 	deltas: [],
