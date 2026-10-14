@@ -3,7 +3,9 @@ import {
 	type BillingContext,
 	type BillingInterval,
 	type EntInterval,
+	isFixedPrice,
 	isOneOffPrice,
+	type Price,
 	type StripeSubscriptionAction,
 	secondsToMs,
 } from "@autumn/shared";
@@ -29,6 +31,12 @@ const cancelAtWhenTrialEnds = ({
 	const requestedCancelAt = stripeSubscriptionAction.params.cancel_at;
 	if (requestedCancelAt === undefined) return currentCancelAt;
 	return typeof requestedCancelAt === "number" ? requestedCancelAt : null;
+};
+
+/** Mirrors cusPriceToStripeItemSpec, which never sends a free fixed price to Stripe. */
+const becomesRecurringStripeItem = (price: Price) => {
+	if (isOneOffPrice(price)) return false;
+	return !isFixedPrice(price) || (price.config.amount ?? 0) > 0;
 };
 
 type Recurrence = {
@@ -70,7 +78,7 @@ const recurrencesWhenTrialEnds = ({
 
 	const incomingRecurrences = billingContext.fullProducts
 		.flatMap((fullProduct) => fullProduct.prices)
-		.filter((price) => !isOneOffPrice(price))
+		.filter(becomesRecurringStripeItem)
 		.map((price) => ({
 			interval: price.config.interval as BillingInterval,
 			intervalCount: price.config.interval_count ?? 1,
