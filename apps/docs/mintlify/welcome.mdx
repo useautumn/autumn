@@ -76,7 +76,7 @@ Your subscriptions live in Stripe. You're never locked in.
 <Accordion title="Do I need to call Autumn before every action?">
 For latency-sensitive operations, you may not want to make an `autumn.check()` network call before every action.
 
-You can either cache the Autumn customer data on your end, or use the `customer.products.updated` webhook to replicate Autumn state into your own system.
+You can either cache the Autumn customer data on your end, or use the `billing.updated` webhook to replicate Autumn state into your own system.
 </Accordion>
 
 <Accordion title="What if Autumn goes down?">

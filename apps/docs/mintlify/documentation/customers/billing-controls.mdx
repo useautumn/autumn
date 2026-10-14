@@ -650,6 +650,6 @@ Billing controls tie into three webhook events that fire automatically based on 
 |-------|---------------|
 | [`balances.limit_reached`](/api-reference/webhooks/balancesLimitReached) | Customer transitions from allowed to not allowed on a feature (included allowance exhausted, max purchase hit, spend limit reached, or usage limit hit). The payload's `limit_type` distinguishes `included`, `max_purchase`, `spend_limit`, and `usage_limit`. |
 | [`balances.usage_alert_triggered`](/api-reference/webhooks/balancesUsageAlertTriggered) | Customer's usage crosses a configured alert threshold |
-| [`customer.products.updated`](/documentation/webhooks#customerproductsupdated) | Customer's subscription changes (new, upgrade, downgrade, cancel, etc.) |
+| [`billing.updated`](/api-reference/webhooks/billingUpdated) | Customer's plans change (new subscription, upgrade, downgrade, cancellation, expiry, etc.) |
 
 For webhook setup and security details, see [Webhooks](/documentation/webhooks).
