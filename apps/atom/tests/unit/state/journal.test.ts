@@ -117,7 +117,13 @@ describe("journal", () => {
 		const reopened = open({ databasePath });
 
 		expect(reopened.owed({ customerId: "cus_1" })).toEqual([
-			{ customerId: "cus_1", seq: 1, appendedAt: expect.any(Number), command },
+			{
+				customerId: "cus_1",
+				writerId: reopened.writerId,
+				seq: 1,
+				appendedAt: expect.any(Number),
+				command,
+			},
 		]);
 	});
 

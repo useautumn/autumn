@@ -205,7 +205,7 @@ export const openJournal = ({
 	}): Promise<JournalEntry> {
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
-		const entry = { customerId, seq, appendedAt: now(), command };
+		const entry = { customerId, writerId, seq, appendedAt: now(), command };
 		owe({ entry });
 		const key = command.type === "track" ? callerKeyOf({ command }) : null;
 		if (key) holdInFlight({ customerId, key });
@@ -260,19 +260,33 @@ export const openJournal = ({
 		customerId: string;
 		atomSeqs: Record<string, Record<string, number>> | null;
 	}): Promise<void> {
-		const atomSeq = Object.values(atomSeqs ?? {}).find(
-			(writerSeqs) => writerId in writerSeqs,
-		)?.[writerId];
-		if (atomSeq === undefined) return Promise.resolve();
 		const entries = owed({ customerId });
-		const unseen = entries.filter(({ seq }) => seq > atomSeq);
+		// How far Autumn has seen each writer's seqs for the customer, whatever atom id it holds them under.
+		const seen = new Map(
+			[...new Set(entries.map((entry) => entry.writerId))].map((writer) => [
+				writer,
+				Object.values(atomSeqs ?? {}).find(
+					(writerSeqs) => writer in writerSeqs,
+				)?.[writer] ?? 0,
+			]),
+		);
+		const isSeen = (entry: JournalEntry) =>
+			entry.seq <= (seen.get(entry.writerId) ?? 0);
+		const unseen = entries.filter((entry) => !isSeen(entry));
 		if (unseen.length === entries.length) return Promise.resolve();
-		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
+		for (const entry of entries) if (isSeen(entry)) releaseUnsent(entry);
 		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
-		return file
-			.write("deleteJournalEntriesUpTo", `${customerId}\u0000${atomSeq}`)
-			.then(() => {});
+		return Promise.all(
+			[...seen]
+				.filter(([, seq]) => seq > 0)
+				.map(([writer, seq]) =>
+					file.write(
+						"deleteJournalEntriesUpTo",
+						`${customerId}\u0000${writer}\u0000${seq}`,
+					),
+				),
+		).then(() => {});
 	}
 
 	function forget({ customerId }: { customerId: string }): Promise<void> {
