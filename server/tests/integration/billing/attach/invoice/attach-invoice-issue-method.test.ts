@@ -10,12 +10,18 @@
  *     finalize → open, auto_advance off; plan active
  *   precedence: issue_method wins over the deprecated finalize
  *   back compat: finalize: false alone still drafts
- *   finalize with a plan waiting for payment: allowed, invoice open without auto_advance, plan pending
+ *   finalize with a plan waiting for payment: allowed, invoice open without auto_advance, plan pending;
+ *     editing that pending plan re-issues its invoice silently too
  *   errors: issue_method without enabled: true → 400
  */
 
 import { test } from "bun:test";
-import { type AttachParamsV1Input, CusProductStatus } from "@autumn/shared";
+import {
+	type AttachParamsV1Input,
+	BillingInterval,
+	CusProductStatus,
+	type UpdateSubscriptionV1ParamsInput,
+} from "@autumn/shared";
 import {
 	expectInvoicesIssuedAs,
 	expectPlanStatus,
@@ -294,6 +300,37 @@ test.concurrent(
 			customerId,
 			planId: scenario.planId,
 			status: CusProductStatus.Pending,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("attach issue_method: editing a plan pending on a silent invoice re-issues it silently")}`,
+	async () => {
+		const customerId = "attach-issue-method-finalize-pending-edit";
+		const scenario = await setupPlan({ customerId });
+		await attachWithInvoiceMode({
+			scenario,
+			customerId,
+			invoiceMode: {
+				enabled: true,
+				issue_method: "finalize",
+				enable_plan_immediately: false,
+			},
+		});
+
+		await scenario.autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: scenario.planId,
+			customize: { price: { amount: 30, interval: BillingInterval.Month } },
+		});
+
+		await expectInvoicesIssuedAs({
+			autumnV2_3: scenario.autumnV2_3,
+			customerId,
+			issueMethod: "finalize",
+			count: 2,
+			issuedCount: 1,
 		});
 	},
 );
