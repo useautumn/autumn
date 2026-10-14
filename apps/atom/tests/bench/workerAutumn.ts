@@ -79,7 +79,7 @@ async function serveWorkerAutumn(): Promise<void> {
 			for (const track of tracks)
 				applyTrack({
 					command: track.command,
-					writerId: track.writer ?? writer,
+					writerId: track.writerId ?? track.writer ?? writer,
 					seq: track.seq,
 				});
 			const body = readBody();
