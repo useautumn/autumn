@@ -83,7 +83,7 @@ export const createReplica = ({
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const membership = createMembership({ self: address });
 	for (const peer of joined) {
-		membership.markReady(peer);
+		membership.markReady({ address: peer, boot: "fixture" });
 		membership.markJoined(peer);
 	}
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
@@ -182,6 +182,7 @@ export const createReplica = ({
 					membership,
 					replication: { peers: async () => ringPeers },
 					folders: createDeployedFolders({ slots: auth.slots }),
+					thread: 0,
 					threads: 1,
 					publicPort: PUBLIC_PORT,
 					peer: { port: PEER_PORT, secret },

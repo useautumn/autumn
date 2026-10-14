@@ -2,17 +2,22 @@ import type { MemberState, Membership } from "./types/membership.js";
 
 /** Peers a deployment can hold at once; the table is fixed-size so threads can share it. */
 const MAX_PEERS = 8;
-const INTS_PER_PEER = 5;
+const INTS_PER_PEER = 6;
 /** After the peer's address, in each row. */
 const STATE = 1;
+/** Which of this replica's threads have handed the peer its entries since it was marked ready, as a bitmask. */
 const HANDED_OFF = 2;
 /** When it was marked leaving, in seconds since the epoch (fits an Int32 until 2038). */
 const LEAVING_SINCE_S = 3;
 /** The leaver's threads that have handed everything; `HANDOFF_COMPLETE` once all of them have. */
 const HANDOFF_DONE = 4;
+/** A hash of the boot the peer was marked ready from. */
+const BOOT = 5;
 const HANDOFF_COMPLETE = 1 << 30;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
 export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
+/** The bitmask's width. */
+export const MAX_THREADS = 31;
 
 const STATES: Record<MemberState, number> = { ready: 1, joined: 2, leaving: 3 };
 const STATE_NAMES = Object.fromEntries(
@@ -35,6 +40,9 @@ const codeOf = (address: string): number => {
 	return Bun.hash.xxHash32(address) | 0;
 };
 
+/** A boot as an Int32: never 0, so a row holding one is told from a row holding none. */
+const bootCodeOf = (boot: string): number => Bun.hash.xxHash32(boot) | 0 || 1;
+
 /** Backed by `table`, a SharedArrayBuffer's Int32Array on a deployed replica, so every thread reads one view. */
 export const createMembership = ({
 	self,
@@ -43,6 +51,9 @@ export const createMembership = ({
 	self: string;
 	table?: Int32Array;
 }): Membership => {
+	/** The boot names seen, by code; a thread that only read the code from the table reports the code. */
+	const boots = new Map<number, string>();
+
 	const rowOf = (address: string): number => {
 		const code = codeOf(address);
 		for (let row = 0; row < MAX_PEERS; row++)
@@ -70,37 +81,51 @@ export const createMembership = ({
 			: (STATE_NAMES[Atomics.load(table, at + STATE)] ?? null);
 	};
 
-	const set = (address: string, state: MemberState): void => {
-		Atomics.store(table, rowFor(address) + STATE, STATES[state]);
+	const clearRow = (at: number): void => {
+		Atomics.store(table, at + STATE, 0);
+		Atomics.store(table, at + HANDED_OFF, 0);
+		Atomics.store(table, at + LEAVING_SINCE_S, 0);
+		Atomics.store(table, at + HANDOFF_DONE, 0);
+		Atomics.store(table, at + BOOT, 0);
 	};
 
 	return {
 		self,
 		stateOf,
 		isMember: (address) => stateOf(address) === "joined",
-		markReady: (address) => {
+		markReady: ({ address, boot }) => {
 			const at = rowFor(address);
-			const was = Atomics.compareExchange(table, at + STATE, 0, STATES.ready);
-			if (was === 0) return true;
-			// Back from leaving: its customers' entries are handed to it again before it owns them.
-			if (was === STATES.leaving) {
-				Atomics.store(table, at + HANDED_OFF, 0);
-				Atomics.store(table, at + HANDOFF_DONE, 0);
-				return (
-					Atomics.compareExchange(
-						table,
-						at + STATE,
-						STATES.leaving,
-						STATES.ready,
-					) === STATES.leaving
-				);
-			}
-			return false;
+			const code = bootCodeOf(boot);
+			boots.set(code, boot);
+			// Back after leaving, from a new boot: its customers' entries are handed to it again before it owns them.
+			clearRow(at);
+			Atomics.store(table, at + BOOT, code);
+			Atomics.store(table, at + STATE, STATES.ready);
 		},
-		markJoined: (address) => set(address, "joined"),
-		handedOff: ({ address, threads }) => {
+		bootOf: (address) => {
+			const at = rowOf(address);
+			if (at < 0) return null;
+			const code = Atomics.load(table, at + BOOT);
+			return code === 0 ? null : (boots.get(code) ?? String(code));
+		},
+		markJoined: (address) =>
+			Atomics.store(table, rowFor(address) + STATE, STATES.joined),
+		hasHandedOff: ({ address, thread }) => {
+			const at = rowOf(address);
+			return (
+				at >= 0 && (Atomics.load(table, at + HANDED_OFF) & (1 << thread)) !== 0
+			);
+		},
+		handedOff: ({ address, thread, threads }) => {
+			if (thread >= MAX_THREADS || threads > MAX_THREADS)
+				throw new Error(
+					`The membership table counts up to ${MAX_THREADS} threads`,
+				);
 			const at = rowFor(address);
-			const done = Atomics.add(table, at + HANDED_OFF, 1) + 1 >= threads;
+			const mask =
+				Atomics.or(table, at + HANDED_OFF, 1 << thread) | (1 << thread);
+			const everyThread = (1 << threads) - 1;
+			const done = (mask & everyThread) === everyThread;
 			if (done) Atomics.store(table, at + STATE, STATES.joined);
 			return done;
 		},
@@ -132,10 +157,7 @@ export const createMembership = ({
 		forget: (address) => {
 			const at = rowOf(address);
 			if (at < 0) return;
-			Atomics.store(table, at + STATE, 0);
-			Atomics.store(table, at + HANDED_OFF, 0);
-			Atomics.store(table, at + LEAVING_SINCE_S, 0);
-			Atomics.store(table, at + HANDOFF_DONE, 0);
+			clearRow(at);
 			Atomics.store(table, at, 0);
 		},
 		leaveSelf: () => Atomics.store(table, SELF_LEAVING_INDEX, 1),

@@ -3,18 +3,26 @@ export type MemberState = "ready" | "joined" | "leaving";
 
 /**
  * Which of the service name's addresses count as ring members, shared by every thread of the replica so all of them
- * flip at once: a peer counts once it is ready and this replica has handed it its customers' entries (`joined`), and stops
- * counting the moment it announces leaving; this replica itself stops counting when it leaves.
+ * flip at once: a peer counts once it is ready and every thread of this replica has handed it its customers' entries
+ * (`joined`), and stops counting the moment it announces leaving; this replica itself stops counting when it leaves.
  */
 export type Membership = {
 	self: string;
 	isMember(address: string): boolean;
 	stateOf(address: string): MemberState | null;
-	/** The peer answered ready; true the first time, so the caller hands off and then marks it joined. */
-	markReady(address: string): boolean;
+	/** The peer answered ready from the boot named: counted from nothing, or again after leaving when the boot is a new one. */
+	markReady(params: { address: string; boot: string }): void;
+	/** The boot the peer was marked ready from, so a leaving peer back at the same address is told apart. */
+	bootOf(address: string): string | null;
 	markJoined(address: string): void;
-	/** One thread has handed the peer its entries; true once every thread has, which is when the peer is joined. */
-	handedOff(params: { address: string; threads: number }): boolean;
+	/** Whether this thread has handed the peer its entries since it was marked ready. */
+	hasHandedOff(params: { address: string; thread: number }): boolean;
+	/** This thread has handed the peer its entries; true once every one of `threads` has, which is when the peer is joined. */
+	handedOff(params: {
+		address: string;
+		thread: number;
+		threads: number;
+	}): boolean;
 	markLeaving(address: string): void;
 	/** When the peer announced leaving, in ms; null unless it is leaving. */
 	leavingSince(address: string): number | null;

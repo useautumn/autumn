@@ -10,8 +10,6 @@ import type { Membership } from "./types/membership.js";
 /** How often each thread looks at the peers the service name lists that are not members yet. */
 export const PROBE_EVERY_MS = 1_000;
 const PROBE_TIMEOUT_MS = 1_000;
-/** A peer still listed this long after it announced leaving came back at the same address without the name dropping it. */
-const LEAVING_TTL_MS = 60_000;
 /** A listed peer that has answered no probe for this long is worth a line: both replicas may be owning everything. */
 const UNPROBED_WARN_MS = 60_000;
 
@@ -19,36 +17,43 @@ export type ReadinessProberContext = Omit<HandOffContext, "ring"> & {
 	ring: ReplicaRing;
 	membership: Membership;
 	replication: Pick<Replication, "peers">;
-	/** The replica's threads: a peer is joined once every one of them has handed it its customers' entries. */
+	/** This thread, and the replica's threads: a peer is joined once every one of them has handed it its customers' entries. */
+	thread: number;
 	threads: number;
-	/** The peers' public port, where /health says whether they serve. */
+	/** The peers' public port, where /health says whether they serve, and from which boot. */
 	publicPort: number;
 	logger: Pick<AutumnLogger, "info" | "warn">;
+	/** A test seam: told each peer this thread handed its entries to. */
+	onHandedOff?: (peer: string) => void;
 };
 
-const isReady = async ({
+/** The boot a ready peer answers from; null when it is not ready or not reachable. */
+const readyBootOf = async ({
 	ctx,
 	peer,
 }: {
 	ctx: ReadinessProberContext;
 	peer: string;
-}): Promise<boolean> => {
+}): Promise<string | null> => {
 	try {
 		const reply = await (ctx.peer.fetch ?? fetch)(
 			`http://${peer}:${ctx.publicPort}/health`,
 			{ signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) },
 		);
-		await reply.arrayBuffer();
-		return reply.status === 200;
+		const health = (await reply.json().catch(() => null)) as {
+			bootedAt?: string;
+		} | null;
+		if (reply.status !== 200) return null;
+		return health?.bootedAt ?? "unknown";
 	} catch {
-		return false;
+		return null;
 	}
 };
 
 /**
- * A peer the service name lists is counted as an owner only once it answers ready and this thread has handed it the
+ * A peer the service name lists is counted as an owner only once it answers ready and every thread has handed it the
  * entries of the customers that move to it; the last thread to do so flips it to joined, for every thread at once. A
- * peer the service name dropped is forgotten, so the container that comes back at its address starts over.
+ * leaving peer that answers from a new boot is back: counted again the same way. One the service name dropped is forgotten.
  */
 export const startReadinessProber = ({
 	ctx,
@@ -56,8 +61,8 @@ export const startReadinessProber = ({
 	ctx: ReadinessProberContext;
 }) => {
 	const sleep = ctx.sleep ?? Bun.sleep;
-	/** Peers this thread has handed its entries to since they came up. */
-	const handedTo = new Set<string>();
+	/** Every peer this thread has seen listed, so one that disappears is forgotten. */
+	const seen = new Set<string>();
 	/** When each listed peer was first seen unready, until it answers; warned about once. */
 	const unreadySince = new Map<string, number>();
 	let stopped = false;
@@ -73,36 +78,48 @@ export const startReadinessProber = ({
 		);
 	};
 
+	/** Ready from nothing, or back from leaving under a new boot: marked ready, so every thread hands off to it. */
+	async function noticeReady(peer: string): Promise<void> {
+		const state = ctx.membership.stateOf(peer);
+		if (state === "ready" || state === "joined") return;
+		const boot = await readyBootOf({ ctx, peer });
+		if (boot === null) {
+			if (state === null) noteUnready(peer);
+			return;
+		}
+		if (state === "leaving" && boot === ctx.membership.bootOf(peer)) return;
+		ctx.membership.markReady({ address: peer, boot });
+		unreadySince.delete(peer);
+	}
+
 	async function probeOnce(): Promise<void> {
 		const listed = (await ctx.replication.peers().catch(() => [])).filter(
 			(peer) => peer !== ctx.ring.self,
 		);
-		for (const peer of handedTo)
+		for (const peer of seen)
 			if (!listed.includes(peer)) {
-				handedTo.delete(peer);
+				seen.delete(peer);
 				ctx.membership.forget(peer);
 			}
 		for (const peer of listed) {
-			const leavingSince = ctx.membership.leavingSince(peer);
-			if (leavingSince !== null && Date.now() - leavingSince > LEAVING_TTL_MS) {
-				handedTo.delete(peer);
-				ctx.membership.forget(peer);
-			}
-			const state = ctx.membership.stateOf(peer);
-			if (state === null) {
-				if (await isReady({ ctx, peer })) {
-					ctx.membership.markReady(peer);
-					unreadySince.delete(peer);
-				} else noteUnready(peer);
-			}
-			if (ctx.membership.stateOf(peer) !== "ready" || handedTo.has(peer))
+			seen.add(peer);
+			await noticeReady(peer);
+			if (
+				ctx.membership.stateOf(peer) !== "ready" ||
+				ctx.membership.hasHandedOff({ address: peer, thread: ctx.thread })
+			)
 				continue;
 			await handOffJournals({
 				ctx,
 				ownerOf: (customerId) => ctx.ring.ownerOnceJoined({ customerId, peer }),
 			});
-			handedTo.add(peer);
-			if (ctx.membership.handedOff({ address: peer, threads: ctx.threads }))
+			ctx.onHandedOff?.(peer);
+			const joined = ctx.membership.handedOff({
+				address: peer,
+				thread: ctx.thread,
+				threads: ctx.threads,
+			});
+			if (joined)
 				ctx.logger.info(
 					{ type: "atom_peer_joined", data: { peer } },
 					`${peer} is ready and holds its customers' entries: it owns them from now on`,

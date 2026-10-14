@@ -82,6 +82,7 @@ export const createAtomServer = ({
 		ctx: {
 			...handoverContext,
 			replication: ctx.replication,
+			thread: ctx.health.thread,
 			threads: env.ATOM_THREADS,
 			publicPort: env.ATOM_PORT,
 		},

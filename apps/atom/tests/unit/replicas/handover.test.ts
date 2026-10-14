@@ -514,7 +514,7 @@ describe("a replica joining the ring", () => {
 		});
 
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
-		b.membership.markReady(A);
+		b.membership.markReady({ address: A, boot: "boot-1" });
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
 		b.membership.markJoined(A);
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
@@ -525,7 +525,7 @@ describe("a replica joining the ring", () => {
 		b.membership.markLeaving(A);
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
 
-		b.membership.markReady(A);
+		b.membership.markReady({ address: A, boot: "boot-2" });
 		b.membership.markJoined(A);
 
 		expect(b.membership.stateOf(A)).toBe("joined");
