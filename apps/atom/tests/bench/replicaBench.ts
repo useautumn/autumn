@@ -212,6 +212,10 @@ const drive = async ({
 			[
 				"bun",
 				"--config=./bunfig.toml",
+				// Each replica's CPU profile, written as it exits, when asked for.
+				...(process.env.BENCH_PROF_DIR
+					? ["--cpu-prof", `--cpu-prof-dir=${process.env.BENCH_PROF_DIR}`]
+					: []),
 				import.meta.path,
 				"replica",
 				address,

@@ -24,7 +24,11 @@ import {
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
 import { startFakeAutumn, until } from "../utils/fakeAutumnTracks.js";
-import { openSlotProcessor, owedCommand } from "../utils/journalFixtures.js";
+import {
+	createSlotFolder,
+	openSlotProcessor,
+	owedCommand,
+} from "../utils/journalFixtures.js";
 
 const autumn = startFakeAutumn();
 afterAll(() => autumn.stop());
@@ -298,6 +302,67 @@ describe("handing the journal to Autumn", () => {
 					.filter((track) => track.customerId === customerId)
 					.map(({ seq }) => seq),
 			).toEqual(Array.from({ length: 600 }, (_, index) => index + 1));
+	});
+});
+
+describe("a deduction sent again after a restart", () => {
+	test("is the very command sent before: same request id, idempotency key, writer and seq", async () => {
+		const folder = createSlotFolder();
+		cleanups.push(folder.remove);
+		const handedIn: unknown[][] = [];
+		/** Each boot's forwarder, recording what it hands Autumn. */
+		const boot = () => {
+			const sent: unknown[] = [];
+			handedIn.push(sent);
+			const slot = openSlotProcessor({
+				subjectsPath: folder.subjectsPath,
+				journal: openJournal({ databasePath: folder.journalPath }),
+			});
+			const forwarding = createJournalForwarder({
+				ctx: {
+					autumnClient: {
+						appendTracks: async ({ writer, tracks }) => {
+							for (const track of tracks)
+								sent.push({ writer: track.writer ?? writer, ...track });
+						},
+					},
+					logger: { info() {}, warn() {} },
+					sleep: () => new Promise(() => {}),
+				},
+			}).forward({
+				journal: slot.journal,
+				tokenHash: () => "hash_folder",
+				pulls: noFolderPulls,
+			});
+			return { ...slot, sent, stop: forwarding.stop };
+		};
+
+		const first = boot();
+		await first.processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 1000 }) }),
+		);
+		await first.processor.check({ request: sendEvent() });
+		await until(() => first.sent.length === 1);
+		first.stop();
+		first.close();
+
+		// No push showed it applied, so the restarted Atom sends it again.
+		const second = boot();
+		cleanups.push(() => {
+			second.stop();
+			second.close();
+		});
+		await until(() => second.sent.length === 1);
+
+		expect(second.sent).toEqual(first.sent);
+		expect(first.sent[0]).toMatchObject({
+			seq: 1,
+			command: {
+				requestId: expect.stringMatching(/^atom_req_/),
+				commandId: expect.stringMatching(/^atom_req_/),
+				idempotency: { key: expect.stringMatching(/^track:atom_req_/) },
+			},
+		});
 	});
 });
 
