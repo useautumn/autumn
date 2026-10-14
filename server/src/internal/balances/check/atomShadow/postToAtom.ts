@@ -3,6 +3,9 @@ import type { AtomShadowTarget } from "./types/atomShadowOutcome.js";
 
 /** Set when Atom had the API answer instead, so the body is not Atom's own. */
 export const ATOM_FORWARDED_HEADER = "x-atom-forwarded";
+/** On a refused check: the limit the Atom's engine ran into, and why it refused. */
+export const ATOM_LIMIT_TYPE_HEADER = "x-atom-limit-type";
+export const ATOM_DENY_REASON_HEADER = "x-atom-deny-reason";
 
 /** A caller's call as the caller sent it, opened with the Atom token: no secret key, so Atom forwards nothing. */
 export const postToAtom = ({

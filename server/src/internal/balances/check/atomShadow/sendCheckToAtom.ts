@@ -1,5 +1,10 @@
 import type { ApiVersionClass, CheckParams } from "@autumn/shared";
-import { ATOM_FORWARDED_HEADER, postToAtom } from "./postToAtom.js";
+import {
+	ATOM_DENY_REASON_HEADER,
+	ATOM_FORWARDED_HEADER,
+	ATOM_LIMIT_TYPE_HEADER,
+	postToAtom,
+} from "./postToAtom.js";
 import type {
 	AtomCheckReply,
 	AtomShadowTarget,
@@ -71,7 +76,12 @@ const requestCheck = async ({
 				? { kind: "atom_error", reason: `forwarded_${forwardReason}` }
 				: { kind: "atom_error", reason: `http_${response.status}` };
 		}
-		return { kind: "answered", body: await response.json() };
+		return {
+			kind: "answered",
+			body: await response.json(),
+			limitType: response.headers.get(ATOM_LIMIT_TYPE_HEADER),
+			denyReason: response.headers.get(ATOM_DENY_REASON_HEADER),
+		};
 	} catch (error) {
 		if (errorToReason(error) === "TimeoutError") return { kind: "timeout" };
 		return { kind: "atom_error", reason: errorToReason(error) };
