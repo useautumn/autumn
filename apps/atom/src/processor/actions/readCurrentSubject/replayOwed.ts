@@ -8,6 +8,7 @@ import {
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 
 /**
  * The snapshot with each owed command applied as the balance worker applies it: decided on the rows so far, then applied.
@@ -35,10 +36,12 @@ export const replayOwed = ({
 						entityId: command.identity.entityId,
 					});
 		try {
-			return applyMutation({
-				state: current,
-				mutation: computeTrack({ fullSubject, command }),
-			});
+			return timeStage("engineStep", () =>
+				applyMutation({
+					state: current,
+					mutation: computeTrack({ fullSubject, command }),
+				}),
+			);
 		} catch (error) {
 			if (error instanceof UnsupportedCommandError) return current;
 			throw error;

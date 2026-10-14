@@ -1,6 +1,7 @@
 import { readViewFoldThreadStats } from "../../processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import { readJournalThreadStats } from "../../state/journal/openJournal.js";
+import { readStageClock } from "./stageClock.js";
 import type { ThreadCounters, ThreadStatField } from "./threadStats.js";
 
 const TICK_MS = 1000;
@@ -15,6 +16,7 @@ export const startThreadStatsTick = ({
 	counters: ThreadCounters;
 	held: HeldSubjects;
 }): { stop(): void } => {
+	const startedAt = performance.now();
 	let dueAt = performance.now() + TICK_MS;
 	const timer = setInterval(() => {
 		const lagMs = Math.max(0, performance.now() - dueAt);
@@ -33,7 +35,13 @@ export const startThreadStatsTick = ({
 		counters.set("journalOldestUnsentMs", journals.journalOldestUnsentMs);
 		counters.set("tracksAppended", journals.tracksAppended);
 		counters.set("appendFailed", journals.appendFailed);
-		for (const [field, value] of Object.entries(readViewFoldThreadStats()))
+		const stages = readStageClock({
+			aliveUs: (performance.now() - startedAt) * 1000,
+		});
+		for (const [field, value] of Object.entries({
+			...readViewFoldThreadStats(),
+			...stages,
+		}))
 			counters.set(field as ThreadStatField, value);
 	}, TICK_MS);
 	timer.unref();
