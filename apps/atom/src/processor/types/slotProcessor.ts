@@ -2,6 +2,7 @@ import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
 import type { Journal } from "../../state/journal/types/journal.js";
+import type { OpenLockRows } from "../../state/openLockRows/types/openLockRows.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { FolderSubjectPulls } from "../../subjectPulls/types/subjectPulls.js";
@@ -15,6 +16,8 @@ export type SlotProcessorContext = {
 	subjectPulls: FolderSubjectPulls;
 	/** The slot's commands owed to Autumn. */
 	journal: Journal;
+	/** The rows of the locks this slot took, which a retried lock_id is compared with. */
+	openLockRows: OpenLockRows;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */

@@ -3,9 +3,11 @@ import {
 	type CheckResult,
 	computeCheck,
 	computeTrackDecision,
+	findLockInsertInMutation,
 	type TrackCommand,
 	trackResultToCheckResult,
 	UnsupportedCommandError,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
@@ -13,7 +15,7 @@ import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
 /**
  * A lock is decided by its track, as the worker decides it: what applies is held, and a lock_id already open is
- * refused with LockAlreadyExistsError (worker parity, D2).
+ * refused with LockAlreadyExistsError (worker parity). The row it would insert is what a retry is compared with.
  */
 const decideLockedTrack = ({
 	subject,
@@ -23,18 +25,21 @@ const decideLockedTrack = ({
 	subject: CurrentSubject;
 	command: CheckCommand;
 	track: TrackCommand;
-}): CheckResult => {
+}): { result: CheckResult; lockRow: WorkerLock | null } => {
 	try {
-		const { result } = computeTrackDecision({
+		const { mutation } = computeTrackDecision({
 			fullSubject: subject.fullSubject,
 			command: track,
-		}).mutation;
-		if (result.type !== "track")
-			throw new Error(`Track ${track.commandId} decided a non-track result`);
-		return trackResultToCheckResult({
-			result,
-			requiredBalance: command.requiredBalance,
 		});
+		if (mutation.result.type !== "track")
+			throw new Error(`Track ${track.commandId} decided a non-track result`);
+		return {
+			result: trackResultToCheckResult({
+				result: mutation.result,
+				requiredBalance: command.requiredBalance,
+			}),
+			lockRow: findLockInsertInMutation({ mutation }),
+		};
 	} catch (error) {
 		if (error instanceof UnsupportedCommandError)
 			throw new CannotAnswerError({ reason: "lock_unsupported" });
@@ -61,12 +66,17 @@ export const deductOnSubject = ({
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
-	const result = track.lock
+	const { result, lockRow } = track.lock
 		? decideLockedTrack({ subject, command, track })
-		: computeCheck({ fullSubject: subject.fullSubject, command });
+		: {
+				result: computeCheck({ fullSubject: subject.fullSubject, command }),
+				lockRow: null,
+			};
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });
+	// Held from the append: a retry of it may arrive before the commit lands.
+	if (lockRow) ctx.openLockRows.hold({ row: lockRow });
 	return {
 		result,
 		committed: committed.catch(() => {

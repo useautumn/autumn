@@ -9,6 +9,7 @@ import type { SlotProcessorContext } from "../../../src/processor/types/slotProc
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLockRows } from "../../../src/state/openLockRows/createOpenLockRows.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import { freshHeld, noFolderPulls } from "./atomFixtures.js";
 
@@ -41,6 +42,7 @@ export const openSlotProcessor = ({
 		logger: getAtomLogger(),
 		subjectPulls: noFolderPulls,
 		journal,
+		openLockRows: createOpenLockRows(),
 	};
 	return {
 		ctx,

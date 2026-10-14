@@ -83,6 +83,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { lockParamsToTrackLock } from "./commands/track/lockParamsToTrackLock.js";
 export {
 	isLandedSeq,
 	trackOfNothing,
@@ -94,7 +95,6 @@ export type {
 	TrackLock,
 	TrackUsageEvent,
 } from "./commands/track/types/trackCommand.js";
-export { lockParamsToTrackLock } from "./commands/track/lockParamsToTrackLock.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
 export { computeUpdateBalance } from "./commands/updateBalance/computeUpdateBalance.js";
 export type { UpdateBalanceCommand } from "./commands/updateBalance/types/updateBalanceCommand.js";
@@ -255,6 +255,7 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { findLockInsertInMutation } from "./utils/mutationUtils/findMutationUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,
