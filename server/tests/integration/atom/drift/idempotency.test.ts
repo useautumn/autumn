@@ -6,7 +6,7 @@
  *  1. the Atom first, then the API: the API's track is the duplicate (409) and moves nothing;
  *  2. the API first, then the Atom: the Atom's hand-in is the duplicate, lands only its seq, and one usage event exists;
  *  3. the same key sent to the Atom twice: Autumn deducts once, and the Atom answers checks from that one deduction
- *     even before the push shows it.
+ *     even before the push shows it (skipped: deferred, B7).
  */
 
 import { expect, test } from "bun:test";
@@ -123,38 +123,36 @@ test.skipIf(!replicaSetRunsHere)(
 	120_000,
 );
 
-test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("idempotency3: a key sent to the Atom twice deducts once, and the Atom's checks agree before the push")}`,
-	async () => {
-		const customerId = "idempotency3";
-		const idempotencyKey = `${customerId}-key`;
-		const { atom } = await initMessagesCustomer({
-			customerId,
-			atom: replicaSet,
-		});
+// DISABLED: B7 (ATMN-1072) is deferred by John (2026-10-14) with the Atom's idempotency-key design; re-enable when
+// the Atom dedups a keyed retry at decide time (handoffs/idempotency-keys-later.md in the infra Captain drive).
+test.skip(`${chalk.yellowBright("idempotency3: a key sent to the Atom twice deducts once, and the Atom's checks agree before the push")}`, async () => {
+	const customerId = "idempotency3";
+	const idempotencyKey = `${customerId}-key`;
+	const { atom } = await initMessagesCustomer({
+		customerId,
+		atom: replicaSet,
+	});
 
-		replicaSet().holdPushes();
-		const sendTrack = () =>
-			trackOnAtom({
-				atom,
-				customerId,
-				featureId: TestFeature.Messages,
-				value: TRACKED,
-				idempotencyKey,
-			});
-		await sendTrack();
-		await sendTrack();
-		const fitsOneDeduction = await checkOnAtom({
+	replicaSet().holdPushes();
+	const sendTrack = () =>
+		trackOnAtom({
 			atom,
-			secretKey: defaultCtx.orgSecretKey,
 			customerId,
 			featureId: TestFeature.Messages,
-			requiredBalance: 100 - TRACKED,
+			value: TRACKED,
+			idempotencyKey,
 		});
-		await replicaSet().releasePushes();
+	await sendTrack();
+	await sendTrack();
+	const fitsOneDeduction = await checkOnAtom({
+		atom,
+		secretKey: defaultCtx.orgSecretKey,
+		customerId,
+		featureId: TestFeature.Messages,
+		requiredBalance: 100 - TRACKED,
+	});
+	await replicaSet().releasePushes();
 
-		expect(fitsOneDeduction.body).toMatchObject({ allowed: true });
-		await expectDeductedOnce({ customerId, atomSeqs: [2] });
-	},
-	120_000,
-);
+	expect(fitsOneDeduction.body).toMatchObject({ allowed: true });
+	await expectDeductedOnce({ customerId, atomSeqs: [2] });
+}, 120_000);

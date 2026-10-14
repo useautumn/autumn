@@ -10,7 +10,7 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ATOM_TRACKS_APPEND_PATH } from "@autumn/byoc";
-import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
+import { getCustomerEvents } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
 import { setCustomerUsageAlerts } from "@tests/integration/balances/utils/usage-alert-utils/customerUsageAlertUtils.js";
 import {
 	countUsageAlertWebhooks,
@@ -25,7 +25,7 @@ import {
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
@@ -144,9 +144,11 @@ test.skipIf(!isBalanceWorkerRoute())(
 			}),
 			limitReached: await countLimitReached({ customerId }),
 		}).toEqual({ usageAlerts: 1, limitReached: 1 });
-		await expectCustomerEventsCorrect({
-			customerId,
-			events: [{ value: 40 }, { value: 60 }],
+		// Both tracks land in one batch, so their events may share a timestamp: compare them unordered.
+		await pollUntilAsserted({
+			fetch: () => getCustomerEvents({ customerId }),
+			assert: (events) =>
+				expect(events.map((event) => event.value).sort()).toEqual([40, 60]),
 		});
 	},
 	180_000,
