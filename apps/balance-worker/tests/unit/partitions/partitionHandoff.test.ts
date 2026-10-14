@@ -132,6 +132,8 @@ type WorkerOptions = {
 	prepareGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
+	/** Holds the fence a worker writes after claiming for itself. */
+	fenceGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
@@ -149,6 +151,7 @@ const createWorker = ({
 	prepareGate,
 	prepareFailures,
 	activateGate,
+	fenceGate,
 	awaitReadyAnnouncement,
 	acquirePreparation,
 	deaf = false,
@@ -198,6 +201,10 @@ const createWorker = ({
 				status = "activating";
 				await activateGate;
 				status = "ready";
+			},
+			fence: async () => {
+				record("fence");
+				await fenceGate;
 			},
 			drain: async () => {
 				record("withdraw");
@@ -319,6 +326,7 @@ const createWorker = ({
 							? { routeEpoch: event.routeEpoch }
 							: undefined,
 				}),
+			awaitRouteClaim: (params) => publication.awaitClaim(params),
 		};
 		return { runtime, publication, markUnavailable: () => undefined };
 	};
@@ -403,6 +411,24 @@ const ownAlone = async (
 	await waitFor(() =>
 		partitions.every((partition) => worker.status(partition) === "ready"),
 	);
+};
+
+/** The route servers hold: the newest `claimed` for the partition (ownershipReplay applies claims in offset order). */
+const latestClaim = ({
+	log,
+	partition,
+}: {
+	log: ReturnType<typeof createOwnershipLog>;
+	partition: number;
+}) => {
+	let newest: { endpoint: string; routeEpoch: string } | undefined;
+	for (const event of log.records) {
+		if (event.type !== "claimed" || event.partition !== partition) continue;
+		if (newest && BigInt(event.routeEpoch) <= BigInt(newest.routeEpoch))
+			continue;
+		newest = { endpoint: event.endpoint, routeEpoch: event.routeEpoch };
+	}
+	return newest;
 };
 
 const preparesOf = (worker: ReturnType<typeof createWorker>) =>
@@ -984,6 +1010,166 @@ describe("partition handoff", () => {
 		} finally {
 			drain.resolve();
 			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a handoff claim landing after the successor claimed for itself is the route it serves", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const send = deferred();
+		const prepare = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+			drainGate: drain.promise,
+			announceDrainingGate: send.promise,
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20 },
+			prepareGate: prepare.promise,
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			// B is ready only after A's ready timeout, so A hands off to it instead of releasing.
+			await Bun.sleep(60);
+			prepare.resolve();
+			// A's draining record is slow and its drain outlasts B's silence: B claims for itself.
+			await waitFor(() => B.has("claim:B:2"));
+			await waitFor(() => B.status(2) === "ready");
+
+			drain.resolve();
+			send.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			await settle();
+
+			// Servers route by the newest claim; both name B, so B must admit the newest.
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			send.resolve();
+			prepare.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a drain that finishes past the drain cap does not leave the successor on an older route", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("claim:B:2"), 1_000);
+			await waitFor(() => B.status(2) === "ready");
+
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			await settle();
+
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a handoff claim landing while the successor fences its own claim is the route it serves", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const fence = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+			fenceGate: fence.promise,
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("fence:2"), 1_000);
+
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			fence.resolve();
+			await waitFor(() => B.ownership.isAdmitted({ partition: 2 }));
+
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+		} finally {
+			drain.resolve();
+			fence.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("an older claim delivered after a newer one does not move the admitted route back", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20 },
+		});
+		try {
+			await ownAlone(B, [2]);
+			const admitted = latestClaim({ log, partition: 2 });
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: B.endpoint,
+				routeEpoch: "50",
+			});
+			await settle();
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: admitted?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+			expect(
+				B.ownership.findRuntime({ partition: 2, routeEpoch: "50" }),
+			).toBeUndefined();
+		} finally {
 			await B.ownership.stop();
 		}
 	});

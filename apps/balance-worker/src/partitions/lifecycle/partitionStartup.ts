@@ -153,6 +153,7 @@ export async function startPartition({
 		});
 		if (!isStillStarting()) return;
 
+		const claims = followClaimsNamingSelf({ state, entry });
 		const handedOff = await awaitHandoffClaim({ ctx, entry });
 		if (!isStillStarting()) return;
 		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
@@ -161,7 +162,7 @@ export async function startPartition({
 		const activation = entry.runtime.activate();
 		try {
 			// Named owner already: requests routed here wait at the gate while the runtime fences.
-			if (handedOff) admitPartition({ state, entry, routeEpoch: handedOff });
+			if (handedOff) claims.admit({ routeEpoch: handedOff });
 			await activation;
 		} catch (cause) {
 			state.directory.withdraw({ partition });
@@ -185,7 +186,7 @@ export async function startPartition({
 			// The claim names this worker; the marker written under its epoch is what fences the last one.
 			await entry.runtime.fence?.();
 			if (!isStillStarting()) return;
-			admitPartition({ state, entry, routeEpoch });
+			claims.admit({ routeEpoch });
 		}
 		await resumeCommands({ ctx, partition });
 	} finally {
@@ -223,6 +224,63 @@ function admitPartition({
 		routeEpoch,
 		runtime: entry.runtime,
 	});
+}
+
+/** Servers route by the newest `claimed`, and a predecessor's handoff claim can land after this worker
+ *  claimed for itself, even mid-fence. Listening from before either claim, the newest one naming it is admitted. */
+function followClaimsNamingSelf({
+	state,
+	entry,
+}: {
+	state: PartitionsState;
+	entry: PartitionEntry;
+}): { admit(params: { routeEpoch: string }): void } {
+	const { partition } = entry;
+	let newest: bigint | undefined;
+	let admitted = false;
+
+	function admitNewest(): void {
+		if (newest === undefined) return;
+		admitPartition({ state, entry, routeEpoch: newest.toString() });
+	}
+
+	function isServing(): boolean {
+		return (
+			state.entries.get(partition) === entry &&
+			state.directory.findOwnedRuntime({ partition }) === entry.runtime
+		);
+	}
+
+	function observe({ routeEpoch }: { routeEpoch: string }): boolean {
+		const epoch = BigInt(routeEpoch);
+		if (newest !== undefined && epoch <= newest) return false;
+		newest = epoch;
+		return true;
+	}
+
+	async function follow(): Promise<void> {
+		while (!entry.withdrawn) {
+			const signal = entry.handoffAbort.signal;
+			let claim: { routeEpoch: string };
+			try {
+				claim = await entry.publication.awaitRouteClaim({ signal });
+			} catch {
+				// A cancelled handoff swaps in a fresh signal and the entry serves on; anything else ends the watch.
+				if (signal.aborted && !entry.handoffAbort.signal.aborted) continue;
+				return;
+			}
+			if (observe(claim) && admitted && isServing()) admitNewest();
+		}
+	}
+
+	function admit({ routeEpoch }: { routeEpoch: string }): void {
+		observe({ routeEpoch });
+		admitted = true;
+		admitNewest();
+	}
+
+	void follow();
+	return { admit };
 }
 
 /** The route epoch of the predecessor's `claimed` naming this worker, or null when none came in time. */
