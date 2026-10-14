@@ -268,6 +268,29 @@ describe("an Atom in an org's cloud", () => {
 		expect(allowed.headers.get("x-atom-forwarded")).toBeNull();
 	});
 
+	test("a refused check names the engine's limit and reason in headers, for the comparer; an allowed one names neither", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+
+		const allowed = await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 10 }),
+		);
+		const refused = await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
+
+		expect([
+			refused.headers.get("x-atom-deny-reason"),
+			refused.headers.get("x-atom-limit-type"),
+		]).toEqual(["insufficient_balance", "included"]);
+		expect([
+			allowed.headers.get("x-atom-deny-reason"),
+			allowed.headers.get("x-atom-limit-type"),
+		]).toEqual([null, null]);
+	});
+
 	test("a push routed to one customer but holding another is refused and stores nothing", async () => {
 		const { app } = createDeployedApp();
 

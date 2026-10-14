@@ -9,14 +9,13 @@ import {
 	ApiVersionClass,
 	AppEnv,
 	applyRequestVersionChanges,
-	type CheckResponseV3,
 	findFeatureById,
 	LATEST_VERSION,
 	type SharedContext,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
-import type { AnswerableCheck } from "../../types/check.js";
+import type { AnswerableCheck, CheckDecided } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
@@ -92,7 +91,7 @@ export const renderCheck = ({
 	result: CheckResult;
 	subject: CurrentSubject;
 	isDeductingCheck?: boolean;
-}): CheckResponseV3 => {
+}): CheckDecided => {
 	const { response } = checkResultToApiResponse({
 		ctx: toRenderContext({ ctx, check, subject }),
 		apiVersion: check.apiVersion,
@@ -101,7 +100,7 @@ export const renderCheck = ({
 		fullSubject: subject.fullSubject,
 		isDeductingCheck,
 	});
-	return response;
+	return { response, result };
 };
 
 /** The engine's own check on the subject, as the API's check response: the same decision, renderer and version changes the API uses. */
@@ -113,7 +112,7 @@ export const answerCheck = ({
 	ctx: SlotProcessorContext;
 	check: AnswerableCheck;
 	subject: CurrentSubject;
-}): CheckResponseV3 => {
+}): CheckDecided => {
 	const command = checkToCommand({ check, subject });
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });
 	return renderCheck({ ctx, check, command, result, subject });

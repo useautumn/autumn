@@ -46,7 +46,11 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 	const applied: string[] = [];
 	const slots = {
 		processorFor: () => ({
-			check: async () => ({ json: '{"allowed":true}', allowed: true }),
+			check: async () => ({
+				json: '{"allowed":true}',
+				allowed: true,
+				denial: null,
+			}),
 			setSubject: async ({ customerId }: { customerId: string }) => {
 				applied.push(customerId);
 				return true;
@@ -93,6 +97,7 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 	expect(await processor.check({ request })).toEqual({
 		json: '{"allowed":true}',
 		allowed: true,
+		denial: null,
 	});
 	expect(await listSince()).toEqual([]);
 

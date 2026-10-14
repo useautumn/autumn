@@ -1,8 +1,11 @@
 import { computeCheck } from "@autumn/balance-engine";
-import type { CheckResponseV3 } from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { Journal } from "../../../state/journal/types/journal.js";
-import type { AnswerableCheck, CheckRequest } from "../../types/check.js";
+import type {
+	AnswerableCheck,
+	CheckDecided,
+	CheckRequest,
+} from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { checkToCommand, renderCheck } from "../check/answerCheck.js";
@@ -30,7 +33,7 @@ export const answerDeductingCheck = async ({
 	kind: CheckRequest["kind"];
 	skipEvent: boolean;
 	subject: CurrentSubject;
-}): Promise<CheckResponseV3> => {
+}): Promise<CheckDecided> => {
 	if (journal.isBackedUp({ customerId: check.customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
 	const command = checkToCommand({ check, subject });

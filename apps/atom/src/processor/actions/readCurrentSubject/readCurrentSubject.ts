@@ -100,8 +100,9 @@ const foldByLastEntry = new WeakMap<JournalEntry, ViewFold>();
 
 /** One line per thread this often names why folds are replayed, so a busy thread cannot flood the logs. */
 const REBUILT_WARN_EVERY_MS = 60_000;
-/** Enough of each side to tell which field differs and how. */
+/** Enough of each side to tell which field differs and how; a customer's atom_seqs map is logged whole. */
 const LOGGED_VALUE_CHARS = 80;
+const LOGGED_ATOM_SEQS_CHARS = 400;
 
 type RebuildReason = FoldRebuilt["rebuiltFor"] | "noFold";
 
@@ -127,18 +128,26 @@ export const readViewFoldThreadStats = () => ({
 	viewFoldRebuiltState: viewFoldRebuilt.state,
 });
 
-const loggedValueOf = (value: unknown): string =>
-	(JSON.stringify(value) ?? "undefined").slice(0, LOGGED_VALUE_CHARS);
+const loggedValueOf = (
+	value: unknown,
+	chars: number = LOGGED_VALUE_CHARS,
+): string => (JSON.stringify(value) ?? "undefined").slice(0, chars);
 
 /** Counts why the fold was replayed; where Autumn's copy differs is logged once a minute per thread. */
 const countRebuilt = ({
 	ctx,
 	customerId,
 	rebuilt,
+	fold,
+	customer,
+	owed,
 }: {
 	ctx: SlotProcessorContext;
 	customerId: string;
 	rebuilt: FoldRebuilt | null;
+	fold: ViewFold | null;
+	customer: StoredSubject;
+	owed: readonly JournalEntry[];
 }): void => {
 	viewFoldRebuilt[rebuilt?.rebuiltFor ?? "noFold"]++;
 	const difference = rebuilt?.difference;
@@ -154,6 +163,20 @@ const countRebuilt = ({
 				path: difference.path,
 				held: loggedValueOf(difference.left),
 				pushed: loggedValueOf(difference.right),
+				// Each copy's customer row says how far Autumn had seen each journal; and which entries the push trimmed from the fold.
+				writerId: ctx.journal.writerId,
+				trimmedSeqs: fold?.owed
+					.filter((entry) => !owed.includes(entry))
+					.map(({ seq }) => seq),
+				owedFirstSeq: owed[0]?.seq ?? null,
+				heldCustomerAtomSeqs: loggedValueOf(
+					fold?.customer.state.customer.atom_seqs ?? null,
+					LOGGED_ATOM_SEQS_CHARS,
+				),
+				pushedCustomerAtomSeqs: loggedValueOf(
+					customer.state.customer.atom_seqs ?? null,
+					LOGGED_ATOM_SEQS_CHARS,
+				),
 			},
 		},
 		`A push replaced ${customerId}'s copy with more than its own deductions acknowledged (${rebuilt.rebuiltFor} differs at ${difference.path}); its view was replayed`,
@@ -223,6 +246,9 @@ export const readCurrentSubject = ({
 			ctx,
 			customerId,
 			rebuilt: acrossPush && "rebuiltFor" in acrossPush ? acrossPush : null,
+			fold: carried,
+			customer,
+			owed,
 		});
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
