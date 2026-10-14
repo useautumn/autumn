@@ -366,3 +366,66 @@ describe("reconciling on push: a push says how far it has seen this Atom's journ
 		expect(await remainingOf({ processor })).toBe(990);
 	});
 });
+
+describe("reconciling from the pushed customer row, whatever atom id Autumn keys it under", () => {
+	/** A push whose top-level atom_seqs is null, as herald sends one, and whose customer row holds `customerAtomSeqs`. */
+	const pushWithCustomerAtomSeqs = async ({
+		processor,
+		balance,
+		customerAtomSeqs,
+	}: {
+		processor: ReturnType<typeof openSlotProcessor>["processor"];
+		balance: number;
+		customerAtomSeqs: Record<string, Record<string, number>>;
+	}) => {
+		const stored = storedSubjectWith({ balance, readAt: 2000 });
+		const push = subjectPushOf({
+			subject: {
+				...stored,
+				state: {
+					...stored.state,
+					customer: { ...stored.state.customer, atom_seqs: customerAtomSeqs },
+				},
+			},
+		});
+		return processor.setSubject({
+			customerId: push.customerId,
+			body: JSON.stringify({ ...JSON.parse(push.body), atom_seqs: null }),
+		});
+	};
+
+	test("a push whose top-level atom_seqs is null but whose customer row holds this writer under any atom id trims the journal", async () => {
+		const { processor, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+		await owe({ journal, value: 20 });
+
+		await pushWithCustomerAtomSeqs({
+			processor,
+			balance: 990,
+			customerAtomSeqs: { cache_deployment_42: { [journal.writerId]: 1 } },
+		});
+
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[2],
+		);
+		expect(await remainingOf({ processor })).toBe(970);
+	});
+
+	test("a push whose customer row names only another writer trims nothing", async () => {
+		const { processor, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+
+		await pushWithCustomerAtomSeqs({
+			processor,
+			balance: 1000,
+			customerAtomSeqs: { cache_deployment_42: { other_writer: 7 } },
+		});
+
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[1],
+		);
+		expect(await remainingOf({ processor })).toBe(990);
+	});
+});
