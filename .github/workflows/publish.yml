@@ -43,7 +43,7 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       packages: ${{ steps.plan.outputs.packages }}
       has-changes: ${{ steps.patch.outputs.has-changes }}
-      unknown-files: ${{ steps.unknown.outputs.unknown-files }}
+      unknown-files: ${{ steps.unknown.outputs.files }}
       dry-run: ${{ env.DRY_RUN }}
     steps:
       # The branch tip, not the triggering commit, so a queued run builds on the previous bot commit.
@@ -81,11 +81,6 @@ jobs:
           bun -F @autumn/agent-docs gen
           bun -F @autumn/atmn-generator generate
 
-      # Unknown regenerated files are dropped with a warning before planning, so they can't bump a package.
-      - name: Drop unknown regenerated files
-        id: unknown
-        run: bun scripts/release/stagePublish.ts --discard-unknown
-
       - name: Plan packages and versions
         id: plan
         env:
@@ -97,7 +92,18 @@ jobs:
         run: bun install --lockfile-only
 
       - name: Stage generated files
-        run: bun scripts/release/stagePublish.ts
+        id: stage
+        run: |
+          set -o pipefail
+          bun scripts/release/stagePublish.ts 2>&1 | tee "$RUNNER_TEMP/stage.log"
+
+      # The guard names each unknown file; hand them to the #shipped alert.
+      - name: Record unknown regenerated files
+        id: unknown
+        if: failure() && steps.stage.outcome == 'failure'
+        run: |
+          files=$(grep -o '::error file=[^:]*' "$RUNNER_TEMP/stage.log" | cut -d= -f2 | paste -sd, - || true)
+          echo "files=$files" >> "$GITHUB_OUTPUT"
 
       - name: Build patch
         id: patch

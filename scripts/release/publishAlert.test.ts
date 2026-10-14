@@ -41,21 +41,55 @@ describe("buildPublishAlert", () => {
 				unknownFiles: "",
 				runUrl: RUN_URL,
 			}),
-		).toEqual({ runUrl: RUN_URL, failedJobs: ["publish", "commit"], unknownFiles: [] });
+		).toEqual({
+			runUrl: RUN_URL,
+			failedJobs: ["publish", "commit"],
+			unknownFiles: [],
+		});
 	});
 
-	test("names unknown regenerated files even when every job passed", () => {
+	test("the guard's unknown files are named on the failed prepare job", () => {
 		expect(
 			buildPublishAlert({
-				needs: { prepare: ok, publish: ok, commit: ok },
+				needs: {
+					prepare: { result: "failure" },
+					publish: { result: "skipped" },
+					commit: { result: "skipped" },
+				},
 				unknownFiles: "apps/website/public/SKILL.md,server/x.ts",
 				runUrl: RUN_URL,
 			}),
 		).toEqual({
 			runUrl: RUN_URL,
-			failedJobs: [],
-			unknownFiles: ["apps/website/public/SKILL.md", "server/x.ts"],
+			failedJobs: [
+				"prepare (regenerated files not in .github/generated-paths.txt: apps/website/public/SKILL.md, server/x.ts)",
+			],
+			unknownFiles: [],
 		});
+	});
+
+	test("a long file list is cut to fit infra's 300-character entry limit", () => {
+		const files = Array.from(
+			{ length: 40 },
+			(_, i) => `apps/some/long/path/file${i}.md`,
+		);
+		const alert = buildPublishAlert({
+			needs: { prepare: { result: "failure" } },
+			unknownFiles: files.join(","),
+			runUrl: RUN_URL,
+		});
+		expect(alert?.failedJobs[0]?.length).toBeLessThanOrEqual(300);
+		expect(alert?.failedJobs[0]).toEndWith("…)");
+	});
+
+	test("unknown files alone never alert: the guard always fails prepare", () => {
+		expect(
+			buildPublishAlert({
+				needs: { prepare: ok, publish: ok, commit: ok },
+				unknownFiles: "server/x.ts",
+				runUrl: RUN_URL,
+			}),
+		).toBeNull();
 	});
 
 	test("the CLI prints the payload, or nothing, and never fails", () => {
@@ -63,7 +97,10 @@ describe("buildPublishAlert", () => {
 			Bun.spawnSync(["bun", join(import.meta.dir, "publishAlert.ts")], {
 				env: { ...process.env, RUN_URL, ...env },
 			});
-		const quiet = cli({ NEEDS: JSON.stringify({ prepare: ok }), UNKNOWN_FILES: "" });
+		const quiet = cli({
+			NEEDS: JSON.stringify({ prepare: ok }),
+			UNKNOWN_FILES: "",
+		});
 		expect(quiet.exitCode).toBe(0);
 		expect(quiet.stdout.toString()).toBe("");
 

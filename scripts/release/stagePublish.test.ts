@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GENERATED_PAGE } from "./generatorOwnership.test";
-import { discardUnknownChanges, stagePublish } from "./stagePublish";
+import { stagePublish } from "./stagePublish";
 
 const repos: string[] = [];
 afterEach(() => {
@@ -88,7 +88,7 @@ describe("stage publish", () => {
 		});
 	});
 
-	test("stages listed changes and leaves unknown ones unstaged", async () => {
+	test("reports unknown changes and stages nothing", async () => {
 		const root = await createRepo();
 		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
 		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
@@ -100,84 +100,20 @@ describe("stage publish", () => {
 			"packages/sdk/src/hooks/custom.ts",
 			"server/new.ts",
 		]);
-		expect(result.staged).toEqual(["packages/sdk/src/models/a.ts"]);
-		expect(git(root, "diff", "--cached", "--name-only")).toBe(
-			"packages/sdk/src/models/a.ts",
-		);
+		expect(result.staged).toEqual([]);
+		expect(git(root, "diff", "--cached", "--name-only")).toBe("");
 	});
 
-	test("the CLI warns about each unknown file, succeeds, and outputs them", async () => {
+	test("the CLI fails and names each unknown file", async () => {
 		const root = await createRepo();
-		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
 		await write(root, "server/new.ts", "x\n");
-		const output = join(root, ".gh-output");
 		const run = Bun.spawnSync(
 			["bun", join(import.meta.dir, "stagePublish.ts"), root],
-			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
+			{ cwd: root },
 		);
-		const log = run.stdout.toString() + run.stderr.toString();
-		expect(run.exitCode).toBe(0);
-		expect(log).toContain("::warning file=server/new.ts::");
-		expect(log).not.toContain("::error");
-		expect(await Bun.file(output).text()).toBe("unknown-files=server/new.ts\n");
-		expect(git(root, "diff", "--cached", "--name-only")).toBe(
-			"packages/sdk/src/models/a.ts",
-		);
-	});
-
-	test("the CLI outputs an empty list when every change is known", async () => {
-		const root = await createRepo();
-		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
-		const output = join(root, ".gh-output");
-		const run = Bun.spawnSync(
-			["bun", join(import.meta.dir, "stagePublish.ts"), root],
-			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
-		);
-		expect(run.exitCode).toBe(0);
-		expect(await Bun.file(output).text()).toBe("unknown-files=\n");
-	});
-
-	test("discarding unknown changes restores edited files and removes new ones, keeping known changes", async () => {
-		const root = await createRepo();
-		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
-		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
-		await write(root, "packages/sdk/src/hooks/new.ts", "new\n");
-
-		expect(discardUnknownChanges({ root })).toEqual([
-			"packages/sdk/src/hooks/custom.ts",
-			"packages/sdk/src/hooks/new.ts",
-		]);
-		expect(
-			await Bun.file(join(root, "packages/sdk/src/hooks/custom.ts")).text(),
-		).toBe("custom\n");
-		expect(
-			await Bun.file(join(root, "packages/sdk/src/hooks/new.ts")).exists(),
-		).toBe(false);
-		expect(git(root, "status", "--porcelain")).toBe(
-			"M packages/sdk/src/models/a.ts",
-		);
-	});
-
-	test("the discard CLI runs before planning: it warns, outputs the files and succeeds", async () => {
-		const root = await createRepo();
-		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
-		const output = join(root, ".git/gh-output");
-		const run = Bun.spawnSync(
-			[
-				"bun",
-				join(import.meta.dir, "stagePublish.ts"),
-				"--discard-unknown",
-				root,
-			],
-			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
-		);
-		expect(run.exitCode).toBe(0);
+		expect(run.exitCode).toBe(1);
 		expect(run.stdout.toString() + run.stderr.toString()).toContain(
-			"::warning file=packages/sdk/src/hooks/custom.ts::",
+			"server/new.ts",
 		);
-		expect(await Bun.file(output).text()).toBe(
-			"unknown-files=packages/sdk/src/hooks/custom.ts\n",
-		);
-		expect(git(root, "status", "--porcelain")).toBe("");
 	});
 });
