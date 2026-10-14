@@ -11,6 +11,8 @@ export type ForwardReason =
 	| "lock_version"
 	/** A finalize of a lock this slot holds no row for: the API's own, or one taken elsewhere (parked D1). */
 	| "lock_not_held"
+	/** A finalize after its lock's expiry, which Autumn's timer has settled or is about to. */
+	| "lock_expired"
 	/** A lock the API refuses or answers itself: on an allocated feature, or one nothing funds. */
 	| "lock_unsupported"
 	| "with_preview"
