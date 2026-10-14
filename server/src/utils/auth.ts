@@ -26,6 +26,7 @@ import {
 	testUtils,
 } from "better-auth/plugins";
 import type { AccessControl } from "better-auth/plugins/access";
+import { adminAc, defaultAc, userAc } from "better-auth/plugins/admin/access";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { getAgentIdOAuthConfigs } from "@/external/agentId/agentIdOAuthConfig.js";
@@ -277,6 +278,15 @@ const options = {
 		}),
 		admin({
 			adminUserIds: ADMIN_USER_IDs,
+			// better-auth's default admin role can't impersonate other admins, which hides
+			// orgs whose only members are Autumn staff (e.g. a claimed QA sandbox).
+			roles: {
+				admin: defaultAc.newRole({
+					...adminAc.statements,
+					user: [...adminAc.statements.user, "impersonate-admins"],
+				}),
+				user: userAc,
+			},
 			impersonationSessionDuration: 1000 * 60 * 60 * 24, // 1 days
 		}),
 
