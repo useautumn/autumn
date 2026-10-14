@@ -89,7 +89,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		config: {
 			env,
 			// The highest-indexed threads receive: slots go round-robin from 0, so the lowest own one more.
-			receivesPushes: index >= env.ATOM_THREADS - env.ATOM_PUSH_RECEIVERS,
+			receivesPushes: receivesPushesOn({ index, env }),
 		},
 	});
 
@@ -173,6 +173,20 @@ const openReplicas = ({
 		folders,
 	});
 	return { replication, sync };
+};
+
+// BENCH ONLY (staging #361, never merged): ATOM_BENCH_PUSH_RECEIVER_INDEX makes that one thread the receiver.
+const receivesPushesOn = ({
+	index,
+	env,
+}: {
+	index: number;
+	env: { ATOM_THREADS: number; ATOM_PUSH_RECEIVERS: number };
+}): boolean => {
+	const benchIndex = process.env.ATOM_BENCH_PUSH_RECEIVER_INDEX;
+	if (benchIndex !== undefined && env.ATOM_PUSH_RECEIVERS > 0)
+		return index === Number(benchIndex);
+	return index >= env.ATOM_THREADS - env.ATOM_PUSH_RECEIVERS;
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */

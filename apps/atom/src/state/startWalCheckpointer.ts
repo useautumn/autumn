@@ -9,7 +9,8 @@ const TICK_MS = 1000;
  * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
  * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
  */
-export const TICKS_PER_FILE = 30;
+// BENCH ONLY (staging #361, never merged): 3, not 30, so no checkpoint copies 30 s of log at once.
+export const TICKS_PER_FILE = 3;
 const WAL_SUFFIX = "-wal";
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
