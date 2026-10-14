@@ -9,6 +9,8 @@ import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { createReplicaRing } from "../replicas/createReplicaRing.js";
+import { leaveRing } from "../replicas/handover/leaveRing.js";
+import { createMembership } from "../replicas/membership/createMembership.js";
 import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
@@ -59,6 +61,17 @@ export const createAtomServer = ({
 			: undefined;
 	const loop = startLoopWatch();
 	let stopping = false;
+	// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
+	const own = () =>
+		env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses();
+	const membership = createMembership({
+		self: own()[0] ?? env.ATOM_HOSTNAME,
+		table: ctx.membershipTable,
+	});
+	const ring = createReplicaRing({
+		ctx: { resolver: ctx.replication, own, membership },
+	});
+	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
@@ -70,18 +83,7 @@ export const createAtomServer = ({
 		secretKeys,
 		replication: ctx.replication,
 		stopping: () => stopping,
-		peer: {
-			port: env.ATOM_PEER_PORT,
-			secret: env.ATOM_PEER_SECRET,
-			ring: createReplicaRing({
-				ctx: {
-					resolver: ctx.replication,
-					// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
-					own: () =>
-						env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses(),
-				},
-			}),
-		},
+		peer: { ...peer, ring, membership },
 	};
 	const app = createAtomApp({ ctx: httpContext });
 	// The other replicas are listened to on the port the stack keeps off the public endpoint.
@@ -130,14 +132,19 @@ export const createAtomServer = ({
 	}
 
 	/**
-	 * In-flight requests and leased pushes finish, then the journals drain to Autumn before the files close. The peer port
-	 * stays up through the drain, refusing handed-on checks, so a peer sends them to the API instead of failing to connect.
+	 * First the ring: this replica owns nothing and its peers are told. Leased pushes finish and the journals drain to
+	 * Autumn while both ports stay up: a public check hops to the new owner, a handed-on one is refused as leaving. Only
+	 * then do the listeners and the files close.
 	 */
 	async function stop(): Promise<void> {
-		stopping = true;
+		await leaveRing({
+			ctx: { ring, membership, peer, logger: ctx.logger },
+		});
 		pushReceiver?.stop();
-		await Promise.all([listener?.stop(), receiving]);
+		await receiving;
 		await ctx.journalForwarder.drainAll({ deadlineMs: DRAIN_DEADLINE_MS });
+		stopping = true;
+		await listener?.stop();
 		await peerListener?.stop();
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
