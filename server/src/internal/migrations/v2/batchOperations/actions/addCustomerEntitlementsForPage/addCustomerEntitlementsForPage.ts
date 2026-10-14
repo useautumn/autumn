@@ -15,6 +15,7 @@ import type { OperationScope } from "@/internal/migrations/v2/batchOperations/sc
 import type { BatchMigrationExecutionAdd } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import {
 	type CycleEnrichmentCandidate,
+	type EnrichedCycleCandidate,
 	enrichCustomerEntitlementCycles,
 } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -191,20 +192,30 @@ const enrichAndInsertCandidates = async ({
 		excludedInternalCustomerIds,
 		insertedItems: insertableRows
 			.filter((row) => insertedIdSet.has(row.id))
-			.map((row) => ({
-				internalCustomerId: row.internalCustomerId,
-				customerProductId: row.customerProductId,
-				entityId: row.entityId,
-				planId: fromProduct.id,
-				featureId: add.entitlement.feature.id,
-				granted: add.initialState.granted,
-				unlimited: add.initialState.unlimited === true,
-				nextResetAt: row.nextResetAt,
-				status: row.status,
-				startsAt: row.startsAt,
-				canceledAt: row.canceledAt,
-				endedAt: row.endedAt,
-				trialEndsAt: row.trialEndsAt,
-			})),
+			.map((row) => toAddedItem({ row, planId: fromProduct.id, add })),
 	};
 };
+
+export const toAddedItem = ({
+	row,
+	planId,
+	add,
+}: {
+	row: EnrichedCycleCandidate;
+	planId: string;
+	add: BatchMigrationExecutionAdd;
+}): BatchMigrationInsertedItem => ({
+	internalCustomerId: row.internalCustomerId,
+	customerProductId: row.customerProductId,
+	entityId: row.entityId,
+	planId,
+	featureId: add.entitlement.feature.id,
+	granted: add.initialState.granted,
+	unlimited: add.initialState.unlimited === true,
+	nextResetAt: row.nextResetAt,
+	status: row.status,
+	startsAt: row.startsAt,
+	canceledAt: row.canceledAt,
+	endedAt: row.endedAt,
+	trialEndsAt: row.trialEndsAt,
+});

@@ -2,12 +2,12 @@ import {
 	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
-	isBooleanEntitlement,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { cycleAnchorSourcesSql } from "@/internal/migrations/v2/batchOperations/actions/utils/cycleAnchorSql.js";
+import { featureGrantAbsentSql } from "@/internal/migrations/v2/batchOperations/actions/utils/featureGrantAbsentSql.js";
 import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
 import {
 	type OperationScope,
@@ -20,7 +20,7 @@ const nullableNumeric = z.preprocess(
 	z.number().nullable(),
 );
 
-const CandidateRowSchema = z.object({
+export const AddCandidateRowSchema = z.object({
 	customer_product_id: z.string(),
 	internal_customer_id: z.string(),
 	customer_id: z.string().nullable(),
@@ -51,6 +51,7 @@ export const buildAddCandidateRowsQuery = ({
 	includeAnchorSources,
 	afterCustomerProductId,
 	limit,
+	extraSelect = sql``,
 }: {
 	internalCustomerIds: string[];
 	scope: OperationScope;
@@ -58,13 +59,10 @@ export const buildAddCandidateRowsQuery = ({
 	includeAnchorSources: boolean;
 	afterCustomerProductId?: string;
 	limit?: number;
+	extraSelect?: SQL;
 }) => {
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
-
-	const dedupIntervalCondition = isBooleanEntitlement({ entitlement })
-		? sql``
-		: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}`;
 
 	const anchors = cycleAnchorSourcesSql({
 		include: includeAnchorSources,
@@ -90,6 +88,7 @@ export const buildAddCandidateRowsQuery = ({
 			cp.billing_cycle_anchor,
 			${anchors.subscriptionAnchorColumn} AS subscription_cycle_anchor,
 			${anchors.siblingAnchorColumn} AS sibling_reset_cycle_anchor
+			${extraSelect}
 		FROM page
 		INNER JOIN customer_products AS cp
 			ON cp.internal_customer_id = page.internal_customer_id
@@ -101,15 +100,7 @@ export const buildAddCandidateRowsQuery = ({
 		${anchors.subscriptionJoin}
 		WHERE ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
-			AND NOT EXISTS (
-				SELECT 1
-				FROM customer_entitlements AS existing
-				INNER JOIN entitlements AS existing_definition
-					ON existing_definition.id = existing.entitlement_id
-				WHERE existing.customer_product_id = cp.id
-					AND existing.internal_feature_id = ${entitlement.internal_feature_id}
-					${dedupIntervalCondition}
-			)
+			AND ${featureGrantAbsentSql({ entitlement, customerProductId: sql`cp.id` })}
 		ORDER BY cp.id
 		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}
 	`;
@@ -144,21 +135,27 @@ export const selectAddCandidateRows = async ({
 	);
 
 	return rows.map((row) => {
-		const parsed = CandidateRowSchema.parse(row);
-		return {
-			customerProductId: parsed.customer_product_id,
-			internalCustomerId: parsed.internal_customer_id,
-			customerId: parsed.customer_id,
-			entityId: parsed.entity_id,
-			status: parsed.status,
-			startsAt: parsed.starts_at,
-			canceledAt: parsed.canceled_at,
-			endedAt: parsed.ended_at,
-			trialEndsAt: parsed.trial_ends_at,
-			isPaidRecurring: parsed.is_paid_recurring,
-			billingCycleAnchor: parsed.billing_cycle_anchor,
-			subscriptionCycleAnchor: parsed.subscription_cycle_anchor,
-			siblingResetCycleAnchor: parsed.sibling_reset_cycle_anchor,
-		};
+		const parsed = AddCandidateRowSchema.parse(row);
+		return toAddCandidate({ parsed });
 	});
 };
+
+export const toAddCandidate = ({
+	parsed,
+}: {
+	parsed: z.infer<typeof AddCandidateRowSchema>;
+}): CycleEnrichmentCandidate => ({
+	customerProductId: parsed.customer_product_id,
+	internalCustomerId: parsed.internal_customer_id,
+	customerId: parsed.customer_id,
+	entityId: parsed.entity_id,
+	status: parsed.status,
+	startsAt: parsed.starts_at,
+	canceledAt: parsed.canceled_at,
+	endedAt: parsed.ended_at,
+	trialEndsAt: parsed.trial_ends_at,
+	isPaidRecurring: parsed.is_paid_recurring,
+	billingCycleAnchor: parsed.billing_cycle_anchor,
+	subscriptionCycleAnchor: parsed.subscription_cycle_anchor,
+	siblingResetCycleAnchor: parsed.sibling_reset_cycle_anchor,
+});

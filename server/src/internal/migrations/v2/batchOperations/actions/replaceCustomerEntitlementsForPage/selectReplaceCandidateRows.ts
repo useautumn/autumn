@@ -29,6 +29,12 @@ export type ReplaceCandidateRow = CycleEnrichmentCandidate & {
 	customerEntitlementId: string;
 	liveBalance: number | null;
 	liveNextResetAt: number | null;
+	entitlementId: string;
+	ownerInternalEntityId: string | null;
+	ownerEntityId: string | null;
+	internalProductId: string;
+	productIsCustom: boolean;
+	customerPriceIds: string[];
 	liveDefinition?: EntitlementWithFeature;
 };
 

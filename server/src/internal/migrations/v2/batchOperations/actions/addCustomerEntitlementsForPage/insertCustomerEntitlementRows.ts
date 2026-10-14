@@ -7,6 +7,7 @@ import {
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import type { EnrichedCycleCandidate } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
+import { featureGrantAbsentSql } from "../utils/featureGrantAbsentSql.js";
 
 export type InsertableCustomerEntitlementRow = EnrichedCycleCandidate & {
 	id: string;
@@ -110,6 +111,7 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 			INNER JOIN customer_products AS cp
 				ON cp.id = new_row.customer_product_id
 				AND ${operationScopeSql({ scope })}
+			WHERE ${featureGrantAbsentSql({ entitlement, customerProductId: sql`new_row.customer_product_id` })}
 			ON CONFLICT (id) DO NOTHING
 			RETURNING id
 		)
