@@ -70,7 +70,8 @@ let nestedUs = 0;
  * Runs `run` and counts its synchronous work to `stage`: an async function counts up to its first await, so time
  * spent waiting (on a peer, Autumn or the disk's turn) is never counted as busy.
  */
-export const timeStage = <T>(stage: Stage, run: () => T): T => {
+export const timeStage = <T>(_stage: Stage, run: () => T): T => run();
+export const timeStageMeasured = <T>(stage: Stage, run: () => T): T => {
 	const nestedBefore = nestedUs;
 	nestedUs = 0;
 	const startedAt = performance.now();
