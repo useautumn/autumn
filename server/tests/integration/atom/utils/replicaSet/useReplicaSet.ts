@@ -15,13 +15,19 @@ const STARTUP_TIMEOUT_MS = 120_000;
  * One replica set for the test file, registered as the org's Atom before its first test and removed after its last.
  * Each test starts from `size` running replicas, every link healed and the balancer spreading requests.
  */
-export const useReplicaSet = ({ size }: { size: number }) => {
+export const useReplicaSet = ({
+	size,
+	subnet,
+}: {
+	size: number;
+	subnet?: number;
+}) => {
 	let replicaSet: ReplicaSet | undefined;
 
 	beforeAll(async () => {
 		if (!replicaSetRunsHere) return;
 		const autumn = new AutumnInt({ secretKey: defaultCtx.orgSecretKey });
-		replicaSet = await createReplicaSet({ autumn, size });
+		replicaSet = await createReplicaSet({ autumn, size, subnet });
 	}, STARTUP_TIMEOUT_MS);
 
 	beforeEach(async () => {

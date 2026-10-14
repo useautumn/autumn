@@ -23,7 +23,8 @@ import {
 } from "../utils/replicaSet/useReplicaSet.js";
 import { startTraffic } from "../utils/startTraffic.js";
 
-const replicaSet = useReplicaSet({ size: 2 });
+// On this subnet the ring gives atom-replica-boot3 to replica 0, so a check replica 1 takes while it boots hops to its owner.
+const replicaSet = useReplicaSet({ size: 2, subnet: 1 });
 /** A replica boots in well under a second here, so a few tries make sure some checks land in that window. */
 const BOOT_ATTEMPTS = 5;
 

@@ -212,14 +212,16 @@ const close = async ({
 export const createReplicaSet = async ({
 	autumn,
 	size,
+	subnet = 1 + Math.floor(Math.random() * 250),
 }: {
 	autumn: AutumnInt;
 	size: number;
+	subnet?: number;
 }): Promise<ReplicaSet> => {
 	const token = generateAtomToken();
 	const ctx: ReplicaSetContext = {
 		dir: mkdtempSync(join(tmpdir(), "atom-replica-set-")),
-		subnet: 1 + Math.floor(Math.random() * 250),
+		subnet,
 		tokenHash: atomTokenToHash({ token }),
 		peerSecret: randomBytes(32).toString("hex"),
 		autumnApiUrl: autumn.baseUrl.replace(/\/v1$/, ""),
