@@ -1,5 +1,6 @@
 /** Appends behind the first get this long to join its commit, so a commit's fixed cost is shared by a burst, not paid per pair. */
-const LINGER_MS = 1;
+// BENCH ONLY (#369 pacing spike, never merge): 4 ms, so a hot journal commits ~4× more entries per transaction.
+const LINGER_MS = 4;
 /** A batch this full commits at once: nothing is gained by waiting for more. */
 export const MAX_GATHERED = 500;
 
