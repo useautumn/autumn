@@ -84,7 +84,8 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
-		receiveHandoff: async ({ handoffs }) => {
+		receiveHandoff: async ({ handoffs, keys }) => {
+			await ctx.journal.takeKeys({ keys });
 			const held = await ctx.journal.appendForeign({
 				entries: handoffs.flatMap(({ entries }) => entries),
 			});

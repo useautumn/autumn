@@ -102,3 +102,45 @@ export const readJournalKey = ({
 			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
 		)
 		.get(customerId, journalKeyHash({ key }), appendedSince) !== null;
+
+/** Every row appended since `appendedSince`, along the age index. */
+export function* readJournalKeysSince({
+	ctx,
+	appendedSince,
+}: {
+	ctx: JournalContext;
+	appendedSince: number;
+}): Generator<{ customerId: string; keyHash: Uint8Array; appendedAt: number }> {
+	for (const row of ctx.sqliteDb
+		.query<
+			{ customerId: string; keyHash: Uint8Array; appendedAt: bigint },
+			[number]
+		>(
+			"SELECT customer_id AS customerId, key_hash AS keyHash, appended_at AS appendedAt FROM journal_keys WHERE appended_at >= ?",
+		)
+		.iterate(appendedSince))
+		yield { ...row, appendedAt: Number(row.appendedAt) };
+}
+
+/** A write: keys another replica logged, `customerId`, hex hash and time per key, NUL-separated, in one transaction. */
+export const insertHandedJournalKeys = ({
+	ctx,
+	payload,
+}: {
+	ctx: JournalContext;
+	payload: string;
+}): string => {
+	const fields = payload.split("\u0000");
+	const insert = ctx.sqliteDb.query(
+		"INSERT OR IGNORE INTO journal_keys (customer_id, key_hash, appended_at) VALUES ($customerId, $keyHash, $appendedAt)",
+	);
+	ctx.sqliteDb.transaction(() => {
+		for (let at = 0; at < fields.length; at += 3)
+			insert.run({
+				customerId: fields[at] as string,
+				keyHash: Buffer.from(fields[at + 1] as string, "hex"),
+				appendedAt: Number(fields[at + 2]),
+			});
+	})();
+	return "";
+};

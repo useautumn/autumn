@@ -6,11 +6,16 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
+import {
+	PRUNE_CHUNK,
+	readJournalKey,
+	readJournalKeysSince,
+} from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
 	HandedEntry,
+	HandedKey,
 	Journal,
 	JournalEntry,
 	JournaledCommand,
@@ -419,6 +424,32 @@ export const openJournal = ({
 		);
 	}
 
+	/** After the commits in flight land, so a key appended just before the call is in the log it reads. */
+	async function keysSince({ since }: { since: number }): Promise<HandedKey[]> {
+		await Promise.all([...committing.values()]);
+		return [...readJournalKeysSince({ ctx, appendedSince: since })].map(
+			({ customerId, keyHash, appendedAt }) => ({
+				customerId,
+				keyHash: Buffer.from(keyHash).toString("hex"),
+				appendedAt,
+			}),
+		);
+	}
+
+	/** One transaction; a key this journal already holds keeps its row. */
+	async function takeKeys({ keys }: { keys: HandedKey[] }): Promise<void> {
+		if (keys.length === 0) return;
+		await file.write(
+			"insertHandedJournalKeys",
+			keys
+				.map(
+					({ customerId, keyHash, appendedAt }) =>
+						`${customerId}\u0000${keyHash}\u0000${appendedAt}`,
+				)
+				.join("\u0000"),
+		);
+	}
+
 	let closed = false;
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
@@ -460,6 +491,8 @@ export const openJournal = ({
 		forget,
 		close,
 		holdsKey,
+		keysSince,
+		takeKeys,
 		appendForeign,
 		handoffs,
 		dropHandedOff,

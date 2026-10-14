@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { PEER_KEY_HANDOFF_PATH } from "../../replicas/handover/handoffContract.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 /** A subject push is passed on as text, to be parsed on its customer's owner thread. */
@@ -9,6 +10,8 @@ export async function requestBodyMiddleware(
 	context: Context<AtomHttpEnv>,
 	next: Next,
 ): Promise<void> {
+	// Binary: read as bytes by the peer signature and its route, never decoded as text.
+	if (context.req.path === PEER_KEY_HANDOFF_PATH) return next();
 	const text = await context.req.text();
 	if (context.req.path === SUBJECT_PUSH_PATH) return next();
 	context.set("body", parseJson(text));

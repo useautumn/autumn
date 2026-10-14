@@ -9,6 +9,13 @@ import {
 	releaseHandoffSession,
 } from "./handOffJournals.js";
 import {
+	handOffKeys,
+	handOffKeysUpToNow,
+	handOffOlderKeys,
+	KEYS_BEFORE_SWITCH_MS,
+	KEYS_OVERLAP_MS,
+} from "./handOffKeys.js";
+import {
 	type LeavingAnnouncement,
 	PEER_LEAVING_PATH,
 } from "./leavingContract.js";
@@ -69,6 +76,13 @@ export const leaveRing = async ({
 }: {
 	ctx: LeaveRingContext;
 }): Promise<void> => {
+	// While this replica still answers its customers, so a retry reaching their next owner first is already a duplicate there.
+	const keysSentAt = Date.now();
+	const keysBefore = await handOffKeys({
+		ctx,
+		since: keysSentAt - KEYS_BEFORE_SWITCH_MS,
+		ownerOf: ctx.ring.ownerAfterLeaving,
+	});
 	ctx.membership.leaveSelf();
 	const peers = await ctx.ring.members();
 	const told = await Promise.all(
@@ -84,16 +98,36 @@ export const leaveRing = async ({
 	const session = createHandoffSession();
 	const { handed, kept } = await handOffJournals({ ctx, session });
 	releaseHandoffSession({ session });
+	const keysSince = await handOffKeysUpToNow({
+		ctx,
+		since: keysSentAt - KEYS_OVERLAP_MS,
+		ownerOf: ctx.ring.ownerOf,
+	});
 	// Told once per thread: the peers release every moved customer's wait once all of this replica's threads have handed off.
 	await Promise.all(
 		peers
 			.filter((_, index) => told[index])
 			.map((peer) => announceTo({ ctx, peer, handedOff: true })),
 	);
+	// Before the listeners close: a retry of one of these that reaches its new owner first is not caught.
+	const older = await handOffOlderKeys({
+		ctx,
+		switchedAt: keysSentAt,
+		ownerOf: ctx.ring.ownerOf,
+	});
 	ctx.logger.info(
 		{
 			type: "atom_leaving",
-			data: { announced: peers.length - unreached.length, handed, kept },
+			data: {
+				announced: peers.length - unreached.length,
+				handed,
+				kept,
+				keysHanded: keysBefore.handed + keysSince.handed,
+				keysFailed: keysBefore.failed + keysSince.failed,
+				olderKeysHanded: older.handed,
+				olderKeysFailed: older.failed,
+				olderKeysMs: older.ms,
+			},
 		},
 		"This replica left the ring: its customers are owned by its peers",
 	);

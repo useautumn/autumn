@@ -14,7 +14,7 @@ export type SignedRequest = {
 	customerId?: string;
 	/** The folder the request is for; "" for the one folder of an org's own Atom. */
 	atomId?: string | null;
-	body: string;
+	body: string | Uint8Array;
 };
 
 /** Over the method, path, routed customer, folder and body, so a signed body cannot be replayed to another route, customer or tenant. */
