@@ -166,7 +166,7 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		});
 	});
 
-	test("a re-saved schedule replays its current phase's start, even when that phase began after its plans", () => {
+	test("a re-saved schedule replays its plans' start or its current phase's, even when that phase began after its plans", () => {
 		const phaseStart = planStart + ms.days(10);
 		const active = subscriptionWithStatus("active");
 		const schedule = scheduleWithCurrentPhaseFrom(phaseStart);
@@ -181,6 +181,13 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		expect(
 			replace({
 				startsAt: planStart,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: schedule,
+			}),
+		).toEqual({});
+		expect(
+			replace({
+				startsAt: planStart - ms.days(5),
 				stripeSubscription: active,
 				stripeSubscriptionSchedule: schedule,
 			}),
