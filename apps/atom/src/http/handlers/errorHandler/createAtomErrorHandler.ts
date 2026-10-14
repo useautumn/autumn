@@ -3,6 +3,7 @@ import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
+import { FORWARDED_HEADER } from "../../forward/forwardRequest.js";
 import { forwardToAutumn } from "../../forward/forwardToAutumn.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { atomErrorOf } from "./atomErrorOf.js";
@@ -45,6 +46,20 @@ export const createAtomErrorHandler = ({
 	}
 
 	return function handleError(cause, context) {
+		// An owner out of reach is no verdict on the lock, and the API holds no row for it until its hand-in lands.
+		if (
+			cause instanceof CannotAnswerError &&
+			cause.reason === "owner_unavailable" &&
+			context.req.path === "/v1/balances.finalize"
+		)
+			return context.json(
+				{
+					message: "The replica that owns this customer is unavailable",
+					code: "atom_unavailable",
+				},
+				503,
+				{ [FORWARDED_HEADER]: cause.reason },
+			);
 		if (cause instanceof CannotAnswerError)
 			return forwardWithinCap(context, cause.reason);
 
