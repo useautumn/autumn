@@ -41383,7 +41383,7 @@ paths:
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges, 'bill_difference'
-                    charges/credits the full-period price difference now without
+                    bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without
                     changing the billing cycle.
                 redirect_mode:
                   enum:
@@ -42154,8 +42154,8 @@ paths:
                     - bill_difference
                   type: string
                   description: Whether to prorate the immediate phase. 'none' skips proration
-                    charges and credits, 'bill_difference' charges/credits the
-                    full-period price difference.
+                    charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full
+                    difference on upgrades, prorated credit on downgrades).
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the schedule.
@@ -50645,8 +50645,7 @@ paths:
                   title: BillingBehavior
                   description: How to handle billing. 'prorate_immediately' charges/credits
                     prorated amounts now, 'none' does not charge/credit
-                    anything, 'bill_difference' charges/credits the full-period
-                    price difference now without changing the billing cycle.
+                    anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
                 billing_cycle_anchor:
                   const: now
                   description: Pass 'now' to reset the billing cycle of every plan on the
@@ -53521,7 +53520,7 @@ paths:
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges, 'bill_difference'
-                    charges/credits the full-period price difference now without
+                    bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without
                     changing the billing cycle.
                 redirect_mode:
                   enum:
@@ -55328,8 +55327,7 @@ paths:
                   title: BillingBehavior
                   description: How to handle billing. 'prorate_immediately' charges/credits
                     prorated amounts now, 'none' does not charge/credit
-                    anything, 'bill_difference' charges/credits the full-period
-                    price difference now without changing the billing cycle.
+                    anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
                 billing_cycle_anchor:
                   const: now
                   description: Pass 'now' to reset the billing cycle of every plan on the
@@ -58538,7 +58536,7 @@ paths:
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges, 'bill_difference'
-                    charges/credits the full-period price difference now without
+                    bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without
                     changing the billing cycle.
                 redirect_mode:
                   enum:
@@ -61533,7 +61531,7 @@ paths:
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges, 'bill_difference'
-                    charges/credits the full-period price difference now without
+                    bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without
                     changing the billing cycle.
                 redirect_mode:
                   enum:
@@ -62411,7 +62409,7 @@ paths:
                         description: How to handle proration for this update. 'prorate_immediately'
                           charges/credits prorated amounts now, 'none' skips
                           creating any charges, 'bill_difference'
-                          charges/credits the full-period price difference now
+                          bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now
                           without changing the billing cycle.
                     required:
                       - cancel_action
@@ -62615,7 +62613,7 @@ paths:
                         description: How to handle proration for this update. 'prorate_immediately'
                           charges/credits prorated amounts now, 'none' skips
                           creating any charges, 'bill_difference'
-                          charges/credits the full-period price difference now
+                          bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now
                           without changing the billing cycle.
                     required:
                       - cancel_action
@@ -65597,7 +65595,7 @@ paths:
                   description: How to handle proration when updating an existing subscription.
                     'prorate_immediately' charges/credits prorated amounts now,
                     'none' skips creating any charges, 'bill_difference'
-                    charges/credits the full-period price difference now without
+                    bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without
                     changing the billing cycle.
                 subscription_id:
                   type: string

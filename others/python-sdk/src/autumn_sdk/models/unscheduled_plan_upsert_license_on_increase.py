@@ -240,7 +240,7 @@ CreateScheduleBillingBehavior = Literal[
     "none",
     "bill_difference",
 ]
-r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference."""
+r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades)."""
 
 
 class UnscheduledPlanFeatureQuantityTypedDict(TypedDict):
