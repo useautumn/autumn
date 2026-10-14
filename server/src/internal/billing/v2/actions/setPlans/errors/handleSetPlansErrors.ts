@@ -34,7 +34,6 @@ import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErro
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleFutureStartActivationErrors } from "./handleFutureStartActivationErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
-import { handleSetPlansDraftUsageErrors } from "./handleSetPlansDraftUsageErrors";
 import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
@@ -205,5 +204,4 @@ export const handleSetPlansBillingPlanErrors = ({
 	handleInvoiceLineEditsErrors({ params: {}, billingContext, billingPlan });
 	handleStripeSchedulePhaseLimitErrors({ billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
-	handleSetPlansDraftUsageErrors({ billingContext, billingPlan });
 };

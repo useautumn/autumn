@@ -38,15 +38,17 @@ export const expectInvoicesIssuedAs = async ({
 	return invoices;
 };
 
-/** The plan's customer_product row has the status, whichever status filter the API applies. */
+/** The plan's customer_product rows have these statuses (one row with `status` by default), in any order. */
 export const expectPlanStatus = async ({
 	customerId,
 	planId,
 	status,
+	statuses = [status],
 }: {
 	customerId: string;
 	planId: string;
 	status: CusProductStatus;
+	statuses?: CusProductStatus[];
 }) => {
 	const customer = await CusService.get({
 		db: ctx.db,
@@ -61,5 +63,5 @@ export const expectPlanStatus = async ({
 			inStatuses: ALL_STATUSES,
 		})
 	).filter((customerProduct) => customerProduct.product.id === planId);
-	expect(rows.map((row) => row.status)).toEqual([status]);
+	expect(rows.map((row) => row.status).sort()).toEqual([...statuses].sort());
 };

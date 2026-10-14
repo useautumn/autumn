@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistDeferredSetPlansSchedule } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { movePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/movePendingCustomerProducts";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/promotePendingCustomerProducts";
 import { refreshDeferredBillingPlan } from "@/internal/billing/v2/execute/refreshDeferredBillingPlan/refreshDeferredBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
@@ -55,6 +56,22 @@ export const executeDeferredBillingPlan = async ({
 		billingContext,
 		resumeAfter,
 	});
+
+	// A later stage deferred again (e.g. the new subscription's draft invoice): its deferral carries the plan from here.
+	if (stripeBillingResult.deferred && stripeBillingResult.deferredMetadataId) {
+		await movePendingCustomerProducts({
+			ctx,
+			fromMetadataId: metadata.id,
+			toMetadataId: stripeBillingResult.deferredMetadataId,
+		});
+		await MetadataService.delete({ db, id: metadata.id });
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: billingContext.fullCustomer.id ?? "",
+			source: "executeDeferredBillingPlan:deferredAgain",
+		});
+		return;
+	}
 
 	if (stripeSubscription) {
 		addStripeSubscriptionIdToBillingPlan({
