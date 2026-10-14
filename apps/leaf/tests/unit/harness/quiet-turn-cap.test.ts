@@ -99,10 +99,19 @@ await mockLeafModule({
 	}),
 });
 
+const deletedSessions: Array<{ reason: string; sessionId: string }> = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
-		deleteEveSession: async () => undefined,
+		deleteEveSession: async ({
+			reason,
+			sessionId,
+		}: {
+			reason: string;
+			sessionId: string;
+		}) => {
+			deletedSessions.push({ reason, sessionId });
+		},
 		upsertEveSession: async () => undefined,
 	}),
 });
@@ -112,6 +121,9 @@ const { MAX_TURN_DURATION_MS } = await import(
 );
 const { consumeAgentTurn } = await import(
 	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/consumeAgentTurn.js"
+);
+const { resolveAgentTurnOutcome } = await import(
+	"../../../src/internal/agentRuntime/actions/runAgentTurn/finalize/resolveAgentTurnOutcome.js"
 );
 
 const event = (partial: Record<string, unknown>) =>
@@ -184,6 +196,7 @@ const nineQuietPasses = (first: EveEvent[]): StreamPass[] => [
 
 describe("a parent quiet past the cap settles on the clock", () => {
 	beforeEach(() => {
+		deletedSessions.length = 0;
 		parentStreamCalls = 0;
 		childEvents = [];
 		childKeepsStreaming = false;
@@ -385,5 +398,22 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		expect(nowMs - TURN_START.getTime()).toBeLessThan(
 			MAX_TURN_DURATION_MS + 1_000,
 		);
+	});
+
+	test("a turn the session never streamed for drops the session, so the next message starts fresh", async () => {
+		streamPasses = nineQuietPasses([]);
+
+		const { outcome } = await consumeAndCaptureAbandon();
+		await resolveAgentTurnOutcome({
+			env: AppEnv.Sandbox,
+			logger: { info: () => {}, warn: () => {} } as never,
+			orgId: "org_1",
+			outcome,
+			session: session(),
+		});
+
+		expect(deletedSessions).toEqual([
+			{ reason: "turn_unusable", sessionId: "eve_session_1" },
+		]);
 	});
 });
