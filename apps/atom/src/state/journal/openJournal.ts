@@ -5,9 +5,14 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
+import {
+	journalKeyHash,
+	PRUNE_CHUNK,
+	readJournalKey,
+} from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
+import { addKey, mayHoldKey } from "./keyBloom.js";
 import type {
 	Journal,
 	JournalEntry,
@@ -172,7 +177,14 @@ export const openJournal = ({
 		const entry = { customerId, seq, appendedAt: now(), command };
 		owe({ entry });
 		const key = command.type === "track" ? callerKeyOf({ command }) : null;
-		if (key) holdInFlight({ customerId, key });
+		if (key) {
+			holdInFlight({ customerId, key });
+			addKey({
+				customerId,
+				keyHash: journalKeyHash({ key }),
+				now: entry.appendedAt,
+			});
+		}
 		try {
 			await groupCommit.add(entry);
 			return entry;
@@ -280,15 +292,16 @@ export const openJournal = ({
 		customerId: string;
 		key: string;
 	}): boolean {
-		return (
-			inFlightKeys.get(customerId)?.has(key) === true ||
-			readJournalKey({
-				ctx,
-				customerId,
-				key,
-				appendedSince: now() - KEY_ROW_TTL_MS,
-			})
-		);
+		if (inFlightKeys.get(customerId)?.has(key)) return true;
+		const keyHash = journalKeyHash({ key });
+		const at = now();
+		if (!mayHoldKey({ customerId, keyHash, now: at })) return false;
+		return readJournalKey({
+			ctx,
+			customerId,
+			keyHash,
+			appendedSince: at - KEY_ROW_TTL_MS,
+		});
 	}
 
 	let closed = false;

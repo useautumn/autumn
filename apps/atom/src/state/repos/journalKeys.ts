@@ -89,16 +89,16 @@ export const deleteCustomerJournalKeys = ({
 export const readJournalKey = ({
 	ctx,
 	customerId,
-	key,
+	keyHash,
 	appendedSince,
 }: {
 	ctx: JournalContext;
 	customerId: string;
-	key: string;
+	keyHash: Uint8Array;
 	appendedSince: number;
 }): boolean =>
 	ctx.sqliteDb
 		.query<{ held: bigint }, [string, Uint8Array, number]>(
 			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
 		)
-		.get(customerId, journalKeyHash({ key }), appendedSince) !== null;
+		.get(customerId, keyHash, appendedSince) !== null;
