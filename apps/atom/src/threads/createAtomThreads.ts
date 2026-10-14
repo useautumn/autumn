@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
+import { MEMBERSHIP_INTS } from "../replicas/membership/createMembership.js";
 import { getSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { removeUnreadableFiles } from "../state/removeUnreadableFiles.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
@@ -97,6 +98,9 @@ export const createAtomThreads = ({
 		env.ATOM_THREADS * Int32Array.BYTES_PER_ELEMENT,
 	);
 	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
+	const membership = new SharedArrayBuffer(
+		MEMBERSHIP_INTS * Int32Array.BYTES_PER_ELEMENT,
+	);
 	let stopping = false;
 	let healthLog: { stop(): void } | null = null;
 
@@ -137,6 +141,7 @@ export const createAtomThreads = ({
 				ready: readyFlag,
 				threadsReady,
 				stats,
+				membership,
 				sqliteOpenLock: getSqliteOpenLock(),
 				peers,
 			},

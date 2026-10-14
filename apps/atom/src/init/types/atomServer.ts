@@ -28,6 +28,8 @@ export type AtomServerDependencies = {
 	replication: Replication;
 	/** Hands Autumn what this thread's journals hold; drained before the files close. */
 	journalForwarder: Pick<JournalForwarder, "drainAll">;
+	/** The replica's membership table, shared by its threads (createMembership). */
+	membershipTable: Int32Array;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };
