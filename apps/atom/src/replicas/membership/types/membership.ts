@@ -8,6 +8,9 @@ export type Membership = {
 	isMember(address: string): boolean;
 	isLeaving(address: string): boolean;
 	markLeaving(address: string): void;
+	/** One of the leaver's threads handed everything it owed; true once all `threads` of them have. */
+	handoffCompleted(params: { address: string; threads: number }): boolean;
+	isHandoffComplete(address: string): boolean;
 	/** Rows for peers the service name no longer lists are dropped once their leave, if any, has aged out. */
 	keepOnly(addresses: string[]): void;
 	leaveSelf(): void;
