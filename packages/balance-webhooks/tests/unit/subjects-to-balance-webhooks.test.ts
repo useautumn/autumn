@@ -5,6 +5,7 @@ import {
 	computeTrackDecision,
 	createSubjectState,
 	type DeductionDecision,
+	type FinalizeDecision,
 	type SubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
@@ -45,7 +46,7 @@ const decidedOn = ({
 	decision: { mutation, outcome },
 }: {
 	state: SubjectState;
-	decision: DeductionDecision;
+	decision: FinalizeDecision;
 }) => ({
 	mutation,
 	outcome,
@@ -58,7 +59,7 @@ const webhooksOf = ({
 	decision,
 }: {
 	state: SubjectState;
-	decision: DeductionDecision;
+	decision: FinalizeDecision;
 }) => subjectsToBalanceWebhooks(decidedOn({ state, decision }));
 
 /** Tracks `value` against an allowance of `balance`. */

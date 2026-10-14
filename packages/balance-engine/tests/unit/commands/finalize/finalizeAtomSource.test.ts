@@ -5,6 +5,7 @@ import {
 	computeTrack,
 	type FinalizeCommand,
 	LockNotFoundError,
+	parseFinalizeCommand,
 	type SubjectState,
 	type WorkerLock,
 } from "../../../../src/balanceEngine.js";
@@ -60,7 +61,7 @@ const release = ({
 }: {
 	state: SubjectState;
 	lock: WorkerLock;
-	/** The source the server stamped; null for a finalize the API sent. */
+	/** The source the server stamped, on an Atom's finalize that names only the lock; null for the API's, which passes its row. */
 	sent: typeof source | null;
 }) => {
 	const command: FinalizeCommand = {
@@ -71,18 +72,17 @@ const release = ({
 		identity,
 		occurredAt,
 		org,
-		lock,
 		internalFeatureId: "feat_messages",
 		finalValue: 0,
 		properties: null,
-		...(sent && { source: sent }),
+		...(sent ? { lock: null, lockId: lock.lock_id, source: sent } : { lock }),
 	};
 	return computeFinalize({ fullSubject: createSubjectFor({ state }), command });
 };
 
 describe("a finalize an Atom handed in", () => {
 	test.concurrent(
-		"past its journal's held seq, it unwinds the lock and lands the seq",
+		"past its journal's held seq, it settles Autumn's own row from state, unwinds it and lands the seq",
 		() => {
 			const { state, lock } = lockedState({ atomSeqs: { atom_1: { w_1: 4 } } });
 
@@ -94,6 +94,9 @@ describe("a finalize an Atom handed in", () => {
 			expect(balanceOf({ state: settled })).toBe(balanceOf({ state }) + 8);
 			expect(settled.openLocks).toEqual([]);
 			expect(settled.customer.atom_seqs).toEqual({ atom_1: { w_1: 5 } });
+			expect(release({ state, lock, sent: source }).command).toMatchObject({
+				lock,
+			});
 		},
 	);
 
@@ -151,6 +154,20 @@ describe("a finalize an Atom handed in", () => {
 			expect(() => release({ state: settled, lock, sent: null })).toThrow(
 				LockNotFoundError,
 			);
+		},
+	);
+
+	test.concurrent(
+		"only an Atom's finalize may name its lock by id instead of a row",
+		() => {
+			const { state, lock } = lockedState({});
+			const { command } = release({ state, lock, sent: null });
+
+			expect(() =>
+				parseFinalizeCommand({
+					input: { ...command, lock: null, lockId: lock.lock_id },
+				}),
+			).toThrow();
 		},
 	);
 });

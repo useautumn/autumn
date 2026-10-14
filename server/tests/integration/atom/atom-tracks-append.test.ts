@@ -9,24 +9,21 @@
  *     names no rows, and rows it names anyway are never read;
  *  3. a body that is not a tracks.append request is 400 unreadable; an unknown token hash is 401 atom_unknown;
  *  5. a lock's track and its release in one request settle in order: the lock is taken, then given back;
- *  6. a release handed in after Autumn already settled the lock moves nothing, and its seq still lands;
+ *  6. a release of a lock Autumn already settled, or named under another customer, moves nothing; its seq still lands;
  *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
  *     once: a seq the customer already holds from that journal deducts nothing again.
  */
 
 import { afterAll, expect, test } from "bun:test";
-import type { WorkerLock } from "@autumn/balance-engine";
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TRACKS_APPEND_PATH,
+	type AtomFinalize,
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
 import type { AtomSubjectBody } from "@autumn/byoc/subjects";
-import {
-	type ApiCustomerV5,
-	customerEntitlements,
-	customers,
-} from "@autumn/shared";
+import { type ApiCustomerV5, customers } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -307,7 +304,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 	120_000,
 );
 
-/** A customer with 10 monthly messages, the Atom's handle on it, and the lock row Autumn writes for an 8-message lock. */
+/** A customer with 10 monthly messages, and the Atom's hand-ins for it under one fresh journal. */
 const initLockHandIn = async ({ customerId }: { customerId: string }) => {
 	const free = products.base({
 		id: "free",
@@ -315,28 +312,16 @@ const initLockHandIn = async ({ customerId }: { customerId: string }) => {
 	});
 	const { autumnV2_6 } = await initScenario({
 		customerId,
-		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		setup: [
+			s.customer({ testClock: false }),
+			s.otherCustomers([{ id: `${customerId}-other` }]),
+			s.products({ list: [free] }),
+		],
 		actions: [s.billing.attach({ productId: free.id })],
 	});
 	const atom = await ensureAtomDeployment({ autumn });
 	const tokenHash = atomTokenToHash({ token: atom.token });
 	const writerId = `w_${crypto.randomUUID()}`;
-	const [customer] = await defaultCtx.db
-		.select({ internalId: customers.internal_id })
-		.from(customers)
-		.where(
-			and(
-				eq(customers.org_id, defaultCtx.org.id),
-				eq(customers.env, defaultCtx.env),
-				eq(customers.id, customerId),
-			),
-		);
-	const [grant] = await defaultCtx.db
-		.select({ id: customerEntitlements.id })
-		.from(customerEntitlements)
-		.where(
-			eq(customerEntitlements.internal_customer_id, customer?.internalId ?? ""),
-		);
 	const lockTrack = atomTrack({
 		customerId,
 		value: 8,
@@ -347,35 +332,8 @@ const initLockHandIn = async ({ customerId }: { customerId: string }) => {
 			expiryAction: "release",
 		},
 	});
-	// The only grant takes the whole lock, so this is the row Autumn's own split writes.
-	const lock: WorkerLock = {
-		id: lockTrack.lock?.id ?? "",
-		org_id: defaultCtx.org.id,
-		env: defaultCtx.env,
-		lock_id: customerId,
-		internal_customer_id: customer?.internalId ?? "",
-		customer_id: customerId,
-		entity_id: null,
-		feature_id: TestFeature.Messages,
-		overage_behavior: "overflow",
-		properties: null,
-		deltas: [
-			{
-				table: "customerEntitlements",
-				id: grant?.id ?? "",
-				entityKey: null,
-				balanceDelta: -8,
-				usageDelta: 0,
-				valueDelta: -8,
-				creditCost: 1,
-			},
-		],
-		expires_at: lockTrack.lock?.expiresAt ?? 0,
-		expiry_action: "release",
-		created_at: lockTrack.occurredAt,
-	};
 	const append = async (
-		commands: (ReturnType<typeof atomTrack> | ReturnType<typeof atomRelease>)[],
+		handIns: ({ command: TrackCommand } | { finalize: AtomFinalize })[],
 		firstSeq: number,
 	) => {
 		const reply = await postAsAtom({
@@ -383,10 +341,10 @@ const initLockHandIn = async ({ customerId }: { customerId: string }) => {
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash,
 			body: {
-				tracks: commands.map((command, index) => ({
+				tracks: handIns.map((handIn, index) => ({
 					writerId,
 					seq: firstSeq + index,
-					command,
+					...handIn,
 				})),
 			},
 		});
@@ -405,19 +363,25 @@ const initLockHandIn = async ({ customerId }: { customerId: string }) => {
 				).json()) as AtomSubjectBody,
 			assert: (body) => expect(body.atom_seqs?.[writerId]).toBe(seq),
 		});
-	return { autumnV2_6, lockTrack, lock, append, expectSeq };
+	return { autumnV2_6, lockTrack, append, expectSeq };
 };
 
 // A handed-in track only lands through the balance worker's log.
 test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-tracks5: a lock's track and its release in one request settle in order")}`,
+	`${chalk.yellowBright("atom-tracks5: a lock's track and its release in one request settle in order, against Autumn's own row")}`,
 	async () => {
 		const customerId = "atom-tracks5";
-		const { lockTrack, lock, append, expectSeq } = await initLockHandIn({
+		const { lockTrack, append, expectSeq } = await initLockHandIn({
 			customerId,
 		});
 
-		await append([lockTrack, atomRelease({ lock })], 1);
+		await append(
+			[
+				{ command: lockTrack },
+				{ finalize: atomRelease({ customerId, lockId: customerId }) },
+			],
+			1,
+		);
 
 		await expectSeq(2);
 		await expectBalanceCorrect({
@@ -430,22 +394,43 @@ test.skipIf(!isBalanceWorkerRoute())(
 );
 
 test.skipIf(!isBalanceWorkerRoute())(
-	`${chalk.yellowBright("atom-tracks6: a release handed in after Autumn settled the lock moves nothing, and its seq lands")}`,
+	`${chalk.yellowBright("atom-tracks6: a release of a lock Autumn already settled, or named under another customer, moves nothing and its seq lands")}`,
 	async () => {
 		const customerId = "atom-tracks6";
-		const { autumnV2_6, lockTrack, lock, append, expectSeq } =
-			await initLockHandIn({ customerId });
-		await append([lockTrack], 1);
+		const { autumnV2_6, lockTrack, append, expectSeq } = await initLockHandIn({
+			customerId,
+		});
+		await append([{ command: lockTrack }], 1);
 		await expectSeq(1);
+
+		await append(
+			[
+				{
+					finalize: atomRelease({
+						customerId: `${customerId}-other`,
+						lockId: customerId,
+					}),
+				},
+			],
+			2,
+		);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
 
 		await autumnV2_6.balances.finalize({
 			lock_id: customerId,
 			action: "confirm",
 			customer_id: customerId,
 		});
-		await append([atomRelease({ lock })], 2);
+		await append(
+			[{ finalize: atomRelease({ customerId, lockId: customerId }) }],
+			3,
+		);
 
-		await expectSeq(2);
+		await expectSeq(3);
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,

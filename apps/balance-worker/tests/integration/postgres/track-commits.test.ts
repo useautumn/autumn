@@ -7,6 +7,7 @@ import {
 	type CheckCommand,
 	parseCheckCommand,
 	parseEvictCommand,
+	parseFinalizeCommand,
 	parseReadSubjectStateCommand,
 	parseResetCommand,
 	parseTrackCommand,
@@ -1030,6 +1031,82 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(await readAtomSeqs()).toEqual({ atom_1: { w_1: 7 } });
 			} finally {
 				await handedIn.cleanup();
+			}
+		}, 60_000);
+
+		test("an open lock is read back whole from Postgres after an evict, and an Atom's finalize naming it settles Autumn's row", async () => {
+			const first = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(first)) workers.push(first);
+			const locking = await seedCustomer({ postgres, balance: 100 });
+			const readLockIds = async () =>
+				(
+					await postgres.db.execute(
+						sql`SELECT lock_id FROM balance_locks WHERE internal_customer_id = ${locking.internalCustomerId}`,
+					)
+				).rows.map((row) => row.lock_id);
+			try {
+				await trackOrExplain(
+					harness,
+					parseTrackCommand({
+						input: {
+							...trackCommand({
+								customer: locking,
+								commandId: "lock_track_1",
+								value: 8,
+							}),
+							lock: {
+								id: "lck_hydrate_1",
+								lockId: "L_hydrate",
+								expiresAt: Date.now() + 3_600_000,
+								expiryAction: "release",
+							},
+						},
+					}),
+				);
+				expect(await waitForBalance({ customer: locking, balance: 92 })).toBe(
+					92,
+				);
+				expect(await readLockIds()).toEqual(["L_hydrate"]);
+
+				await harness.client.evict({
+					command: evictCommand({
+						customerId: locking.identity.customerId,
+						orgId: locking.orgId,
+						env: locking.env,
+					}),
+				});
+				await harness.client.enqueue({
+					commands: [
+						parseFinalizeCommand({
+							input: {
+								schemaVersion: 1,
+								type: "finalize",
+								requestId: "req_atom_release_1",
+								commandId: "atom_release_1",
+								occurredAt: Date.now(),
+								identity: locking.identity,
+								org: trackCommand({
+									customer: locking,
+									commandId: "org_of",
+									value: 0,
+								}).org,
+								lock: null,
+								lockId: "L_hydrate",
+								internalFeatureId: locking.internalFeatureId,
+								finalValue: 0,
+								properties: null,
+								source: { atomId: "atom_1", writerId: "w_1", seq: 1 },
+							},
+						}),
+					],
+				});
+
+				expect(await waitForBalance({ customer: locking, balance: 100 })).toBe(
+					100,
+				);
+				expect(await readLockIds()).toEqual([]);
+			} finally {
+				await locking.cleanup();
 			}
 		}, 60_000);
 

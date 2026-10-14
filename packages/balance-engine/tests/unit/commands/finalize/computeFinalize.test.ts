@@ -171,7 +171,7 @@ describe("computeFinalize", () => {
 			});
 			expect(mutation.changes).toEqual([]);
 			expect(balanceOf({ state })).toBe(2);
-			expect(state.openLocks).toEqual([{ id: "lck_1", lock_id: "L1" }]);
+			expect(state.openLocks).toEqual([locked.lock]);
 		},
 	);
 

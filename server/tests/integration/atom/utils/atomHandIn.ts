@@ -1,10 +1,5 @@
-import {
-	type FinalizeCommand,
-	orgToCommandOrg,
-	type TrackCommand,
-	type WorkerLock,
-} from "@autumn/balance-engine";
-import { ATOM_TOKEN_HASH_HEADER } from "@autumn/byoc";
+import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
+import { ATOM_TOKEN_HASH_HEADER, type AtomFinalize } from "@autumn/byoc";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -54,34 +49,22 @@ export const atomTrack = ({
 	};
 };
 
-/** The Atom's release of `lock`, as it journals the finalize of a lock it took. */
+/** The Atom's release of a lock it took, named as the API names it. */
 export const atomRelease = ({
-	lock,
+	customerId,
+	lockId,
 }: {
-	lock: WorkerLock;
-}): FinalizeCommand => {
-	const requestId = `atom_release_${crypto.randomUUID()}`;
-	return {
-		schemaVersion: 1,
-		requestId,
-		identity: {
-			orgId: lock.org_id,
-			env: lock.env,
-			customerId: lock.customer_id,
-			entityId: lock.entity_id,
-		},
-		occurredAt: Date.now(),
-		type: "finalize",
-		org: orgToCommandOrg({ org: defaultCtx.org }),
-		commandId: requestId,
-		lock,
-		internalFeatureId:
-			defaultCtx.features.find((feature) => feature.id === lock.feature_id)
-				?.internal_id ?? "",
-		finalValue: 0,
-		properties: null,
-	};
-};
+	customerId: string;
+	lockId: string;
+}): AtomFinalize => ({
+	requestId: `atom_release_${crypto.randomUUID()}`,
+	occurredAt: Date.now(),
+	customer_id: customerId,
+	lock_id: lockId,
+	entity_id: null,
+	feature_id: TestFeature.Messages,
+	finalValue: 0,
+});
 
 /** A request to one of the Atom's own routes on Autumn, proven by its token hash. */
 export const postAsAtom = ({

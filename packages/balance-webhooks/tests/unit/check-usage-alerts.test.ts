@@ -5,7 +5,7 @@ import {
 	computeFinalizeDecision,
 	computeTrackDecision,
 	createSubjectState,
-	type DeductionDecision,
+	type FinalizeDecision,
 	type SubjectState,
 	subjectStateToFullSubject,
 	type WorkerCustomer,
@@ -104,7 +104,7 @@ const catalogOf = ({
 };
 
 /** What the worker hands the decision: the mutation and its deduction, with the subject as it found it and as it left it. */
-type DecidedOn = DeductionDecision & {
+type DecidedOn = FinalizeDecision & {
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 };

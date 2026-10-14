@@ -121,7 +121,7 @@ describe("an Atom's resent journal entries", () => {
 	});
 });
 
-/** The Atom's release of `lock` as journal entry `seq`; `sent` varies only its command id. */
+/** The Atom's release of `lock` as journal entry `seq`, naming only the lock; `sent` varies only its command id. */
 const releasedBy = ({
 	lock,
 	seq,
@@ -136,11 +136,13 @@ const releasedBy = ({
 		finalValue: 0,
 		commandId: `atom_release_${seq}${sent}`,
 	}),
+	lock: null,
+	lockId: lock.lock_id,
 	source: { atomId: "atom_1", writerId, seq },
 });
 
 describe("an Atom's handed-in finalize", () => {
-	test("on a lock Autumn already settled, it is consumed and lands its seq", async () => {
+	test("for a lock Autumn no longer holds, it is consumed and lands its seq", async () => {
 		const pipeline = createCommandPipeline();
 		try {
 			const lock = await takeLock({ pipeline, customerId, lockId: "L1" });

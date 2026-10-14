@@ -1,9 +1,9 @@
 /**
  * POST /atom/tracks.append: an Atom hands in the deductions it granted, by its token hash.
  *
- *  each journaled track or finalize is queued as the Atom journaled it, in request order, stamped with the Atom, its
- *  journal's writer id and its seq → 204;
- *  an unreadable body, or a command off the Atom's own org and env → 400 unreadable; no or unknown hash → 401.
+ *  each journaled track is queued as the Atom journaled it, and each finalize naming its lock, in request order, stamped
+ *  with the Atom, its journal's writer id and its seq → 204;
+ *  an unreadable body, a command off the Atom's own org and env, or a finalize of an unknown feature → 400; no or unknown hash → 401.
  */
 
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
@@ -13,12 +13,13 @@ import {
 	ATOM_TRACKS_APPEND_PATH,
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, OrgConfigSchema } from "@autumn/shared";
 import { Hono } from "hono";
 import * as balanceWorkerClient from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { atomRouter } from "@/internal/byoc/atomRouter.js";
 import { cacheDeploymentRepo } from "@/internal/byoc/repos/cacheDeploymentRepo.js";
+import * as orgCache from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { createTrackCommand } from "../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 
 const TOKEN_HASH = "a".repeat(64);
@@ -34,44 +35,26 @@ const journaled = (commandId: string): TrackCommand => ({
 	idempotency: { key: `track:${commandId}`, ttlMs: 86_400_000 },
 });
 
-/** The Atom's release of the lock it took with `atom_req_1`. */
-const journaledRelease = (): FinalizeCommand => {
-	const { org, identity, occurredAt } = journaled("atom_req_1");
-	return {
-		schemaVersion: 1,
-		type: "finalize",
-		commandId: "atom_release_1",
-		requestId: "atom_release_1",
-		identity,
-		occurredAt,
-		org,
-		lock: {
-			id: "lck_1",
-			org_id: identity.orgId,
-			env: identity.env,
-			lock_id: "L1",
-			internal_customer_id: "cus_int_1",
-			customer_id: identity.customerId,
-			entity_id: null,
-			feature_id: "messages",
-			overage_behavior: "reject",
-			properties: null,
-			deltas: [],
-			expires_at: occurredAt + 86_400_000,
-			expiry_action: "confirm",
-			created_at: occurredAt,
-		},
-		internalFeatureId: "feat_messages",
-		finalValue: 0,
-		properties: null,
-	};
-};
+/** The Atom's release of L1, named as the API names it. */
+const release = ({ featureId = "messages" }: { featureId?: string } = {}) => ({
+	requestId: "atom_release_1",
+	occurredAt: 1_700_000_000_000,
+	customer_id: "cus_1",
+	lock_id: "L1",
+	entity_id: "ent_1",
+	feature_id: featureId,
+	finalValue: 0,
+});
 
 let queued: (TrackCommand | FinalizeCommand)[][];
 const spies: { mockRestore(): void }[] = [];
 beforeEach(() => {
 	queued = [];
 	spies.push(
+		spyOn(orgCache, "getOrgWithFeaturesCached").mockResolvedValue({
+			org: { id: "org_1", slug: "org-1", config: OrgConfigSchema.parse({}) },
+			features: [{ id: "messages", internal_id: "feat_messages" }],
+		} as never),
 		spyOn(cacheDeploymentRepo, "findByTokenHash").mockImplementation(
 			async ({ tokenHash }) => (tokenHash === TOKEN_HASH ? atom : null),
 		),
@@ -142,15 +125,14 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 	]);
 });
 
-test("a lock's track and its finalize in one request are queued in request order, the finalize stamped like the track", async () => {
+test("a lock's track and its finalize in one request are queued in order; the finalize names its lock, never a row", async () => {
 	const lockTrack = journaled("atom_req_1");
-	const release = journaledRelease();
 
 	const reply = await append({
 		body: {
 			tracks: [
 				{ writerId: "w_1", seq: 1, command: lockTrack },
-				{ writerId: "w_1", seq: 2, command: release },
+				{ writerId: "w_1", seq: 2, finalize: release() },
 			],
 		},
 	});
@@ -159,7 +141,21 @@ test("a lock's track and its finalize in one request are queued in request order
 	expect(queued).toEqual([
 		[
 			{ ...lockTrack, source: { atomId: "atom_1", writerId: "w_1", seq: 1 } },
-			{ ...release, source: { atomId: "atom_1", writerId: "w_1", seq: 2 } },
+			expect.objectContaining({
+				type: "finalize",
+				commandId: "atom_release_1",
+				identity: {
+					orgId: "org_1",
+					env: AppEnv.Sandbox,
+					customerId: "cus_1",
+					entityId: "ent_1",
+				},
+				lock: null,
+				lockId: "L1",
+				internalFeatureId: "feat_messages",
+				finalValue: 0,
+				source: { atomId: "atom_1", writerId: "w_1", seq: 2 },
+			}),
 		],
 	]);
 });
@@ -186,7 +182,7 @@ test("a request carrying several journals stamps each command with its own track
 	]);
 });
 
-test("an unreadable body, a command that is neither a track nor a finalize, or one off the Atom's own org and env is 400 unreadable, and nothing is queued", async () => {
+test("an unreadable body, a command that is neither a track nor a finalize, one off the Atom's own org and env, or a finalize of a feature the org lacks is 400 unreadable, and nothing is queued", async () => {
 	const track = journaled("atom_req_1");
 	for (const body of [
 		{ tracks: [{ writerId: "w_1", seq: 0, command: track }] },
@@ -217,6 +213,15 @@ test("an unreadable body, a command that is neither a track nor a finalize, or o
 						...track,
 						identity: { ...track.identity, env: AppEnv.Live },
 					},
+				},
+			],
+		},
+		{
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					finalize: release({ featureId: "unknown_feature" }),
 				},
 			],
 		},

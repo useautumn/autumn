@@ -74,7 +74,9 @@ describe("a locked track", () => {
 				state,
 				mutation: track({ state, command: lockedTrack() }),
 			});
-			expect(opened.openLocks).toEqual([{ id: "lck_1", lock_id: "L1" }]);
+			expect(
+				opened.openLocks.map(({ id, lock_id }) => ({ id, lock_id })),
+			).toEqual([{ id: "lck_1", lock_id: "L1" }]);
 			expect(() =>
 				track({ state: opened, command: lockedTrack({ id: "lck_2" }) }),
 			).toThrow(new LockAlreadyExistsError({ lockId: "L1" }));
