@@ -547,4 +547,123 @@ describe("a replica joining the ring", () => {
 	});
 });
 
+describe("a lock taken on the leaving owner", () => {
+	const lockCall = (body: Record<string, unknown>) => ({
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			authorization: "Bearer am_sk_test_1",
+			"x-atom-token": ATOM_TOKEN,
+			"x-api-version": LATEST_VERSION,
+		},
+		body: JSON.stringify(body),
+	});
+	const lockOn = (replica: Replica) =>
+		replica.app.request(
+			"/v1/balances.check",
+			lockCall({
+				customer_id: CUSTOMER,
+				feature_id: "messages",
+				required_balance: 3,
+				lock: { enabled: true, lock_id: "lock_1" },
+			}),
+		);
+	const finalizeOn = (replica: Replica) =>
+		replica.app.request(
+			"/v1/balances.finalize",
+			lockCall({ customer_id: CUSTOMER, lock_id: "lock_1", action: "release" }),
+		);
+
+	test("still unsent at the move is handed with its lock row, settled on the new owner, and handed in once before its finalize", async () => {
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({ bForwarder: journals.forwarder });
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		expect(await remainingAt(a)).toBe(7);
+		const aWriter = journalOwing(a)?.writerId;
+
+		await a.leave();
+
+		expect(await remainingAt(b)).toBe(7);
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await reply.json()).toEqual({ success: true });
+		expect(await remainingAt(b)).toBe(10);
+		// B hands the lock's track in under A's writer, then its own finalize after it, so Autumn applies them in order.
+		await until(() => journals.handedIn.length === 2);
+		expect(
+			journals.handedIn.map(({ type, writer }) => ({
+				type,
+				writer: writer === aWriter ? "a" : "b",
+			})),
+		).toEqual([
+			{ type: "track", writer: "a" },
+			{ type: "finalize", writer: "b" },
+		]);
+	});
+
+	test("already sent to Autumn by the leaver is still settled on the new owner, which hands in the finalize alone", async () => {
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({
+			aForwarder: journals.forwarder,
+			bForwarder: journals.forwarder,
+		});
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		await until(() => journals.appended.length === 1);
+		const aWriter = journalOwing(a)?.writerId;
+
+		await a.leave();
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await remainingAt(b)).toBe(10);
+		await until(() => journals.handedIn.length === 2);
+		await Bun.sleep(60);
+		expect(
+			journals.handedIn.map(({ type, writer }) => ({
+				type,
+				writer: writer === aWriter ? "a" : "b",
+			})),
+		).toEqual([
+			{ type: "track", writer: "a" },
+			{ type: "finalize", writer: "b" },
+		]);
+	});
+
+	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
+		const calls: string[] = [];
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		expect((await lockOn(a)).status).toBe(200);
+		// B unreachable for A's leave: nothing is handed.
+		connect({ replicas: [a] });
+		await a.leave();
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		b.membership.markLeaving(A);
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBe("lock_not_held");
+		expect(calls).toEqual(["/v1/balances.finalize"]);
+	});
+});
+
 export { PEER_PORT };
