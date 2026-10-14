@@ -369,4 +369,57 @@ describe("the leaving replica's owed entries", () => {
 	});
 });
 
+describe("a replica leaving with nobody to hand to", () => {
+	test("H4: its peer is down: the announcement and the handoff fail, and the entries drain to Autumn as today", async () => {
+		const aAutumn = toggledAutumn();
+		aAutumn.up();
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			journalForwarder: aAutumn.forwarder,
+		});
+		await storeOnly({ replica: a, customerId: CUSTOMER, readAt: 1700 });
+		connect({
+			replicas: [a],
+			autumn: async () => new Response(null, { status: 503 }),
+		});
+		// Deducted while Autumn held nothing: journaled, unsent.
+		connect({ replicas: [a] });
+		await deductOnA({ a, times: 2 });
+		await until(() => aAutumn.taken.length === 2);
+		const writer = journalOwing(a)?.writerId;
+		aAutumn.taken.length = 0;
+
+		await a.leave();
+
+		expect(a.membership.isSelfLeaving()).toBe(true);
+		// Nothing moved: the entries are still A's, owed until a push shows them applied.
+		expect(journalOwing(a)?.owed({ customerId: CUSTOMER })).toHaveLength(2);
+		expect(writer).toBeDefined();
+	});
+
+	test("H8: both replicas leave at once: neither takes the other's entries, and each drains its own to Autumn", async () => {
+		const aAutumn = toggledAutumn();
+		const bAutumn = toggledAutumn();
+		const { a, b } = await agreeingPair({
+			aForwarder: aAutumn.forwarder,
+			bForwarder: bAutumn.forwarder,
+		});
+		connect({ replicas: [a, b] });
+		await deductOnA({ a, times: 2 });
+		const writer = journalOwing(a)?.writerId;
+
+		await Promise.all([a.leave(), b.leave()]);
+		aAutumn.up();
+		bAutumn.up();
+		await until(() => aAutumn.taken.length + bAutumn.taken.length >= 2);
+
+		const keys = [...aAutumn.taken, ...bAutumn.taken];
+		expect(new Set(keys)).toEqual(new Set([`${writer}/1`, `${writer}/2`]));
+		expect(a.membership.isSelfLeaving()).toBe(true);
+		expect(b.membership.isSelfLeaving()).toBe(true);
+	});
+});
+
 export { PEER_PORT };
