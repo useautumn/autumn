@@ -161,7 +161,14 @@ test.concurrent(
 		const customerId = "set-plans-draft-usage-replay";
 		const scenario = await draftUsageThenFinalize({ customerId });
 
-		expect(scenario.subscriptionDraft.items?.length).toBeGreaterThan(0);
+		// Line items are stored by a queued job.
+		await pollUntilAsserted({
+			timeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			fetch: () =>
+				listInvoices({ autumnV2_3: scenario.autumnV2_3, customerId }),
+			assert: ([subscriptionDraft]) =>
+				expect(subscriptionDraft.items?.length).toBeGreaterThan(0),
+		});
 		await expectPlanStatus({
 			customerId,
 			planId: scenario.planId,
