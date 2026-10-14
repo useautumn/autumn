@@ -74,6 +74,9 @@ export const finalize = async ({
 	const { customerId, lockId } = answerable;
 	const lock = heldLockRowOf({ ctx, customerId, lockId });
 	if (!lock) throw new CannotAnswerError({ reason: "lock_not_held" });
+	// Autumn's timer settles a lock at its expiry, so a finalize after it is the API's to answer.
+	if (request.occurredAt > lock.expires_at)
+		throw new CannotAnswerError({ reason: "lock_expired" });
 
 	const subject = readCurrentSubject({ ctx, customerId, entityId: null });
 	const command = finalizeToCommand({
