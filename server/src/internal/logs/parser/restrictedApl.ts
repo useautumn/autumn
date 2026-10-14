@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import {
 	DEFAULT_RESTRICTED_APL_STAGES,
 	RESTRICTED_APL_DANGEROUS_TEXT_PATTERNS,
@@ -388,7 +389,7 @@ class Parser {
 			this.index++;
 			this.expectSymbol("(");
 			const field = this.expectField();
-			if (field.kind !== "topLevel" || field.name !== "timestamp") {
+			if (!isTimestampField(field)) {
 				throw new Error("bin() only supports the timestamp field");
 			}
 			this.expectSymbol(",");
@@ -705,18 +706,18 @@ class Parser {
 const isTimestampField = (field: RestrictedAplField) =>
 	field.kind === "topLevel" && field.name === "timestamp";
 
-const ISO_DATETIME =
-	/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+const IsoTimestampLiteral = z.union([
+	z.iso.date(),
+	z.iso.datetime({ offset: true, local: true }),
+]);
 
 const assertTimestampLiteral = (
 	field: RestrictedAplField,
 	value: LiteralValue,
 ) => {
-	if (!isTimestampField(field)) return;
 	if (
-		typeof value !== "string" ||
-		!ISO_DATETIME.test(value) ||
-		!Number.isFinite(Date.parse(value))
+		isTimestampField(field) &&
+		!IsoTimestampLiteral.safeParse(value).success
 	) {
 		throw new Error("timestamp must be compared to an ISO datetime string");
 	}
