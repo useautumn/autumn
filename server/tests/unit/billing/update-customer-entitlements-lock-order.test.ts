@@ -12,6 +12,7 @@ type PlanUpdate = NonNullable<
 const planUpdate = ({ id }: { id: string }) =>
 	({
 		customerEntitlement: { id, entitlement: { feature: { id: "messages" } } },
+		entityBalanceChanges: { entity_1: -1 },
 	}) as unknown as PlanUpdate;
 
 test("a plan locks every customer entitlement it updates in id order before writing any", async () => {
@@ -29,9 +30,11 @@ test("a plan locks every customer entitlement it updates in id order before writ
 		updates: [planUpdate({ id: "cus_ent_b" }), planUpdate({ id: "cus_ent_a" })],
 	});
 
-	expect(queries).toHaveLength(1);
+	expect(queries).toHaveLength(3);
 	expect(queries[0].sql).toMatch(
 		/from "customer_entitlements".*order by "customer_entitlements"\."id".*for update/i,
 	);
 	expect(queries[0].params).toEqual(["cus_ent_b", "cus_ent_a"]);
+	expect(queries[1].sql).toMatch(/^update "customer_entitlements"/i);
+	expect(queries[2].sql).toMatch(/^update "customer_entitlements"/i);
 });
