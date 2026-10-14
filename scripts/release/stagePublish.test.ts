@@ -88,7 +88,7 @@ describe("stage publish", () => {
 		});
 	});
 
-	test("reports unknown changes and stages nothing", async () => {
+	test("stages listed changes and leaves unknown ones unstaged", async () => {
 		const root = await createRepo();
 		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
 		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
@@ -100,20 +100,42 @@ describe("stage publish", () => {
 			"packages/sdk/src/hooks/custom.ts",
 			"server/new.ts",
 		]);
-		expect(result.staged).toEqual([]);
-		expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+		expect(result.staged).toEqual(["packages/sdk/src/models/a.ts"]);
+		expect(git(root, "diff", "--cached", "--name-only")).toBe(
+			"packages/sdk/src/models/a.ts",
+		);
 	});
 
-	test("the CLI fails and names each unknown file", async () => {
+	test("the CLI warns about each unknown file, succeeds, and outputs them", async () => {
 		const root = await createRepo();
+		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
 		await write(root, "server/new.ts", "x\n");
+		const output = join(root, ".gh-output");
 		const run = Bun.spawnSync(
 			["bun", join(import.meta.dir, "stagePublish.ts"), root],
-			{ cwd: root },
+			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
 		);
-		expect(run.exitCode).toBe(1);
-		expect(run.stdout.toString() + run.stderr.toString()).toContain(
-			"server/new.ts",
+		const log = run.stdout.toString() + run.stderr.toString();
+		expect(run.exitCode).toBe(0);
+		expect(log).toContain("::warning file=server/new.ts::");
+		expect(log).not.toContain("::error");
+		expect(await Bun.file(output).text()).toBe(
+			"unknown-files=server/new.ts\n",
 		);
+		expect(git(root, "diff", "--cached", "--name-only")).toBe(
+			"packages/sdk/src/models/a.ts",
+		);
+	});
+
+	test("the CLI outputs an empty list when every change is known", async () => {
+		const root = await createRepo();
+		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
+		const output = join(root, ".gh-output");
+		const run = Bun.spawnSync(
+			["bun", join(import.meta.dir, "stagePublish.ts"), root],
+			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
+		);
+		expect(run.exitCode).toBe(0);
+		expect(await Bun.file(output).text()).toBe("unknown-files=\n");
 	});
 });
