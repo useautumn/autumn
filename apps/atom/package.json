@@ -14,6 +14,7 @@
 		"bench:replicas": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/replicaBench.ts",
 		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts",
 		"bench:stages": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/stagesBench.ts",
+		"bench:alloc": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/allocBench.ts",
 		"bench:gc": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/gcBench.ts",
 		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts",
 		"bench:multi-worker-autumn": "bun tests/bench/multiWorkerAutumn.ts"
