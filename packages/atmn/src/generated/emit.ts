@@ -17,7 +17,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"name",
 			"type",
 			"consumable",
-			"combine",
 			"creditSchema",
 			"modelMarkups",
 			"defaultMarkup",
@@ -47,7 +46,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 		paths: [
 			"archived",
-			"combine",
 			"consumable",
 			"creditSchema",
 			"creditSchema.billingUnits",
