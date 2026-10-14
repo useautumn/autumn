@@ -24,6 +24,8 @@ export const startThreadStatsTick = ({
 		held.expireIdle();
 		counters.set("heldSubjects", held.size);
 		counters.set("heldBytes", held.bytes);
+		counters.set("heldParsed", held.parsedSize);
+		counters.set("heldParses", held.parses);
 		counters.set("heldLookups", held.lookups);
 		counters.set("heldMisses", held.misses);
 		counters.set("heldEvicted", held.evicted);

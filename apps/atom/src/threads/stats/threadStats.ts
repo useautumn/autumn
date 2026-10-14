@@ -39,6 +39,9 @@ export const THREAD_STAT_FIELDS = [
 	"subjectFills",
 	"heldSubjects",
 	"heldBytes",
+	/** Of the held subjects, how many are parsed now; and the texts parsed since boot, on a miss or after the parsed tier let the copy go. */
+	"heldParsed",
+	"heldParses",
 	"heldLookups",
 	"heldMisses",
 	/** Held copies dropped for the budget, and for sitting idle. */
