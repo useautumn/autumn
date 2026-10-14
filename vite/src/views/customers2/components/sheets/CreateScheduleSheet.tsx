@@ -142,6 +142,11 @@ export function buildInitialValues({
 
 	const seededState = customerProductsToSetPlansState({
 		customerProducts,
+		savedPhaseStarts: savedLaterPhaseStarts({
+			schedules,
+			customerProducts,
+			nowMs,
+		}),
 		entities: customer?.entities ?? [],
 		products,
 	});
@@ -193,14 +198,37 @@ export function buildInitialValues({
 	};
 }
 
-/** The live plans are today's phase; each scheduled start, and each scheduled
- * end of a live plan that isn't a cancellation, is its own later phase. */
+/** Later phases the saved schedule holds for these plans, including ones that only repeat the phase before. */
+const savedLaterPhaseStarts = ({
+	schedules,
+	customerProducts,
+	nowMs,
+}: {
+	schedules: FullCustomerSchedule[];
+	customerProducts: FullCusProduct[];
+	nowMs: number;
+}): number[] =>
+	schedules
+		.flatMap((schedule) => schedule.phases)
+		.filter(
+			(phase) =>
+				phase.starts_at > nowMs &&
+				phase.customer_product_ids.some((id) =>
+					customerProducts.some((customerProduct) => customerProduct.id === id),
+				),
+		)
+		.map((phase) => phase.starts_at);
+
+/** The live plans are today's phase; each scheduled start, each scheduled end of a
+ * live plan that isn't a cancellation, and each saved schedule phase is a later phase. */
 function customerProductsToSetPlansState({
 	customerProducts,
+	savedPhaseStarts,
 	entities,
 	products,
 }: {
 	customerProducts: FullCusProduct[];
+	savedPhaseStarts: number[];
 	entities: Entity[];
 	products: ProductV2[];
 }) {
@@ -222,11 +250,16 @@ function customerProductsToSetPlansState({
 			? [customerProduct.ended_at]
 			: [],
 	);
+	const rowStarts = [...new Set([...scheduledStarts, ...scheduledEnds])];
+	const repeatedStarts = savedPhaseStarts.filter(
+		(startsAt) =>
+			!rowStarts.some(
+				(rowStart) => Math.abs(rowStart - startsAt) <= MAX_PHASE_START_DRIFT_MS,
+			),
+	);
 	const phaseStarts: PhaseStart[] = [
 		"now",
-		...[...new Set([...scheduledStarts, ...scheduledEnds])].sort(
-			(a, b) => a - b,
-		),
+		...[...new Set([...rowStarts, ...repeatedStarts])].sort((a, b) => a - b),
 	];
 
 	return customerProductsToCustomerState({
