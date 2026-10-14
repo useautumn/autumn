@@ -1,6 +1,7 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
 import type { Journal } from "../../state/journal/types/journal.js";
+import type { OpenLocks } from "../../state/openLocks/createOpenLocks.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -81,6 +82,8 @@ export type Slots = {
 	ownedStores(): SqliteStore[];
 	/** The journals of the slots this thread owns: what it hands over when it leaves. */
 	ownedJournals(): Journal[];
+	/** The open locks of the slots this thread owns: handed over with the journals, so the new owner can settle them. */
+	ownedOpenLocks(): OpenLocks[];
 	/**
 	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
 	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only

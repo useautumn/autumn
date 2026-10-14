@@ -11,7 +11,10 @@ import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
-import { createOpenLocks } from "../state/openLocks/createOpenLocks.js";
+import {
+	createOpenLocks,
+	type OpenLocks,
+} from "../state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
@@ -93,6 +96,7 @@ export const openSlots = ({
 				.stored,
 	});
 	const journals: Journal[] = [];
+	const openLocksOfSlots: OpenLocks[] = [];
 	const forwardings: Forwarding[] = [];
 	const forwardedOf = ({ journal }: { journal: Journal }) => ({
 		journal,
@@ -116,6 +120,8 @@ export const openSlots = ({
 		});
 		journals.push(journal);
 		forwardings.push(journalForwarder.forward(forwardedOf({ journal })));
+		const openLocks = createOpenLocks();
+		openLocksOfSlots.push(openLocks);
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
@@ -125,7 +131,7 @@ export const openSlots = ({
 					logger,
 					subjectPulls,
 					journal,
-					openLocks: createOpenLocks(),
+					openLocks,
 					barrier,
 				},
 			}),
@@ -222,6 +228,7 @@ export const openSlots = ({
 		ownedStores: () =>
 			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
 		ownedJournals: () => [...journals],
+		ownedOpenLocks: () => [...openLocksOfSlots],
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

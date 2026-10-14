@@ -84,6 +84,9 @@ export const createSlotProcessor = ({
 			const held = await ctx.journal.appendForeign({
 				entries: handoffs.flatMap(({ entries }) => entries),
 			});
+			// The old owner's locks: their finalize finds the row here, as if this slot had taken them.
+			for (const lock of handoffs.flatMap(({ locks }) => locks))
+				ctx.openLocks.hold(lock);
 			for (const { customerId } of handoffs)
 				ctx.barrier?.arrived({ customerId });
 			return { held };

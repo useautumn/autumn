@@ -6,7 +6,10 @@ import type {
 	HandedEntry,
 	Journal,
 } from "../../state/journal/types/journal.js";
-import type { OpenLocks } from "../../state/openLocks/createOpenLocks.js";
+import type {
+	OpenLock,
+	OpenLocks,
+} from "../../state/openLocks/createOpenLocks.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { FolderSubjectPulls } from "../../subjectPulls/types/subjectPulls.js";
@@ -56,6 +59,10 @@ export type SlotProcessor = {
 	}): Promise<PushedSubject>;
 	/** Customers' owed entries another replica handed over with them: held in this slot's journal, in one transaction, under their own writers. */
 	receiveHandoff(params: {
-		handoffs: { customerId: string; entries: HandedEntry[] }[];
+		handoffs: {
+			customerId: string;
+			entries: HandedEntry[];
+			locks: OpenLock[];
+		}[];
 	}): Promise<{ held: number }>;
 };
