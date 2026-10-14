@@ -101,7 +101,6 @@ export const UpdateCatalogParamsSchema = z.object({
 		description:
 			"Catalog-wide migration default, overridable per plan. draft: true asks the server to draft a migration for every row an edit leaves customers behind on.",
 	}),
-	// expand: z.array(CatalogExpandSchema).optional(),
 });
 
 export type UpdateCatalogParams = z.infer<typeof UpdateCatalogParamsSchema>;

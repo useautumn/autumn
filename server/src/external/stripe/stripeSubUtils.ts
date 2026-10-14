@@ -7,7 +7,6 @@ import {
 	ProrationBehavior,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-// import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@server/internal/subscriptions/SubService.js";
 import { differenceInSeconds } from "date-fns";
 import type Stripe from "stripe";

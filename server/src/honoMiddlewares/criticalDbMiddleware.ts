@@ -16,7 +16,6 @@ const CRITICAL_ROUTES = [
 	{ method: "POST", url: "/events" },
 	{ method: "POST", url: "/track" },
 
-	// Get or create customer
 	{ method: "POST", url: "/customers" },
 	{ method: "GET", url: "/customers/:customer_id" },
 	{ method: "GET", url: "/customers/:customer_id/entities/:entity_id" },

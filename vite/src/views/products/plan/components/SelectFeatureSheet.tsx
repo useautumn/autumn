@@ -84,7 +84,6 @@ export function SelectFeatureSheet({
 
 		const newItem = getDefaultItem({ feature: selectedFeature });
 
-		// Add the new item to the product
 		const newItems = [...product.items, newItem];
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);

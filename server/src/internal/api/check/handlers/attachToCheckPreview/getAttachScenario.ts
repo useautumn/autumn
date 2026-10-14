@@ -32,7 +32,6 @@ export const getAttachScenario = async ({
 	}
 
 	if (branch == AttachBranch.Downgrade) {
-		// return AttachScenario.Downgrade;
 		if (isFreeProduct(product.prices)) {
 			return AttachScenario.Cancel;
 		} else {

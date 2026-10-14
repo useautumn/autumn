@@ -46,17 +46,6 @@ export const PRODUCT_EXAMPLE = {
 		{
 			type: "feature",
 			feature_id: "dashboard",
-			// feature_type: "static",
-			// feature: {
-			// 	id: "dashboard",
-			// 	name: "Dashboard",
-			// 	type: "boolean",
-			// 	display: {
-			// 		singular: "Dashboard",
-			// 		plural: "Dashboard",
-			// 	},
-			// 	archived: false,
-			// },
 			entity_feature_id: null,
 			display: {
 				primary_text: "Dashboard",
@@ -65,17 +54,6 @@ export const PRODUCT_EXAMPLE = {
 		{
 			type: "feature",
 			feature_id: "messages",
-			// feature_type: "single_use",
-			// feature: {
-			// 	id: "messages",
-			// 	name: "Messages",
-			// 	type: "single_use",
-			// 	display: {
-			// 		singular: "Messages",
-			// 		plural: "Messages",
-			// 	},
-			// 	archived: false,
-			// },
 			included_usage: 10,
 			interval: "month",
 			interval_count: 1,
@@ -95,13 +73,6 @@ export const PRODUCT_EXAMPLE = {
 
 	base_variant_id: null,
 	scenario: "new",
-	// properties: {
-	// 	is_free: false,
-	// 	is_one_off: false,
-	// 	interval_group: "month",
-	// 	has_trial: false,
-	// 	updateable: false,
-	// },
 };
 
 export const ApiProductPropertiesSchema = z.object({

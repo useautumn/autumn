@@ -42,7 +42,6 @@ export async function headlessFeaturesCommand(
 	try {
 		const secretKey = getKey(environment);
 
-		// Fetch all features
 		const allFeatures = await fetchFeatures({
 			secretKey,
 			includeArchived,
@@ -76,7 +75,6 @@ export async function headlessFeaturesCommand(
 		const paginatedFeatures = filteredFeatures.slice(startIndex, endIndex);
 		const hasMore = endIndex < filteredFeatures.length;
 
-		// Output the list
 		outputFeatureList(
 			paginatedFeatures,
 			{

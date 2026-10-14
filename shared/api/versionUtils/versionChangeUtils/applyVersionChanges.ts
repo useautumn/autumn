@@ -52,10 +52,6 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	// If target is newer than current, throw error (can't transform forward)
 	if (targetVersion.gt(_currentVersion)) {
 		targetVersion = _currentVersion;
-		// throw new Error(
-		// 	`Cannot transform forward from ${_currentVersion} to ${targetVersion}. ` +
-		// 		"Transforms only work backwards to older versions.",
-		// );
 	}
 
 	// Get all versions between current and target (exclusive of target, inclusive of current)

@@ -448,19 +448,6 @@ export const dbToApiFeatureV1 = ({
 	});
 };
 
-// export const fromApiFeature = ({
-// 	apiFeature,
-// 	orgId,
-// 	env,
-// }: {
-// 	apiFeature: ApiFeatureV0;
-// 	orgId: string;
-// 	env: AppEnv;
-// }) => {
-// 	const isMetered =
-// 		apiFeature.type === ApiFeatureType.SingleUsage ||
-// 		apiFeature.type === ApiFeatureType.ContinuousUse;
-
 // 	const featureType: FeatureType = isMetered
 // 		? FeatureType.Metered
 // 		: (apiFeature.type as unknown as FeatureType);
@@ -474,11 +461,6 @@ export const dbToApiFeatureV1 = ({
 // 			env,
 // 		});
 // 	}
-
-// 	if (featureType === FeatureType.CreditSystem) {
-// 		if (!apiFeature.credit_schema || apiFeature.credit_schema.length === 0) {
-// 			throw new Error("Credit system schema is required");
-// 		}
 
 // 		return constructCreditSystem({
 // 			featureId: apiFeature.id,

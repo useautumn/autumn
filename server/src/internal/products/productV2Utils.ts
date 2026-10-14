@@ -64,8 +64,6 @@ export const mapToProductV2 = ({
 	const items: ProductItem[] = [];
 	const prices = product.prices ?? [];
 	const entitlements = product.entitlements ?? [];
-	// console.log("Prices:", product.prices);
-	// console.log("Entitlements:", product.entitlements);
 
 	for (const ent of entitlements) {
 		const relatedPrice = getEntRelatedPrice(ent, prices);
@@ -75,8 +73,6 @@ export const mapToProductV2 = ({
 	for (const price of prices) {
 		const relatedEnt = getPriceEntitlement(price, entitlements);
 
-		// console.log("Price:", price.id);
-		// console.log("Related ent:", relatedEnt);
 		if (!relatedEnt) {
 			items.push(toProductItem({ price }));
 		}

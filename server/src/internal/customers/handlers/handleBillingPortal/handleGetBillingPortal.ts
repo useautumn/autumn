@@ -19,7 +19,6 @@ export const handleGetBillingPortal = createRoute({
 	params: z.object({
 		customer_id: z.string(),
 	}),
-	// body: GetBillingPortalBodySchema,
 	handler: async (c) => {
 		const returnUrl = c.req.valid("query").return_url;
 		const customerId = c.req.param().customer_id;

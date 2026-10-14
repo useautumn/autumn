@@ -43,13 +43,6 @@ export const updateStripeSub2 = async ({
 	const { stripeCli, paymentMethod } = attachParams;
 	const { invoiceOnly, proration } = config;
 
-	// if (config.requirePaymentMethod !== false && nullish(paymentMethod)) {
-	// 	throw new RecaseError({
-	// 		message: "Payment method is required",
-	// 		code: "payment_method_required",
-	// 	});
-	// }
-
 	if (curSub.billing_mode.type !== "flexible") {
 		curSub = await stripeCli.subscriptions.migrate(curSub.id, {
 			billing_mode: { type: "flexible" },

@@ -78,8 +78,6 @@ import {
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
 
-// const tracer = trace.getTracer("express");
-
 export class CusService {
 	static async getFull({
 		ctx,
@@ -196,10 +194,6 @@ export class CusService {
 					useReplica: ctx.testOptions?.useReplica,
 				});
 				const sqlMs = performance.now() - tSqlStart;
-
-				// ctx.logger.info(
-				// 	`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
-				// );
 
 				let fullCus: FullCustomer;
 				if (useFlatModel) {

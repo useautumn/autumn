@@ -1,8 +1,3 @@
-// export interface ErrorResponse {
-//   message: string;
-//   code: string;
-// }
-
 export class ErrorResponse extends Error {
 	public readonly message: string;
 	public readonly code: string;

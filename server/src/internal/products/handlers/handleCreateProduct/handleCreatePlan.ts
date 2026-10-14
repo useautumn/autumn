@@ -37,7 +37,6 @@ import { constructProduct, initProductInStripe } from "../../productUtils.js";
  */
 export const handleCreatePlan = createRoute({
 	scopes: [Scopes.Plans.Write],
-	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsV1Schema,
 		[ApiVersion.V1_Beta]: CreateProductV2ParamsSchema,

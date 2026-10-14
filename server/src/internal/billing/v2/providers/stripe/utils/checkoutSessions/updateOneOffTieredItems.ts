@@ -46,7 +46,6 @@ export const updateOneOffTieredItems = ({
 			});
 		}
 
-		// Build context for line item
 		const context: LineItemContext = {
 			price: autumnPrice,
 			product: autumnProduct,

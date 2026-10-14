@@ -253,7 +253,6 @@ export function transformGroupedData({
 		}
 	}
 
-	// Build new meta
 	const newMeta: Array<{ name: string }> = [{ name: "period" }];
 	for (const featureCol of featureColumns) {
 		for (const groupValue of groupValues) {

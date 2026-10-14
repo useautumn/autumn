@@ -117,7 +117,6 @@ export const customerProductToLineItems = ({
 		});
 		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
 
-		// Build line item context
 		const context: LineItemContext = {
 			price,
 			product: customerProduct.product,

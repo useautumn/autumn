@@ -81,8 +81,6 @@ export function transformSubscriptionToCusProductV3({
 		current_period_start: input.current_period_start,
 		current_period_end: input.current_period_end,
 
-		// entity_id: null,
-
 		quantity: input.quantity,
 	} satisfies z.infer<typeof ApiCusProductV3Schema>;
 }
