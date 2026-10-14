@@ -11,9 +11,14 @@ export const atomTracksToCommands = ({
 	request: AtomTracksAppendRequest;
 }): TrackCommand[] | null => {
 	try {
-		const commands = tracks.map(({ seq, command }) => ({
-			...parseTrackCommand({ input: command }),
-			source: { atomId: atom.id, writerId: writer, seq },
+		const commands = tracks.map((track) => ({
+			...parseTrackCommand({ input: track.command }),
+			// The contract guarantees one of the two.
+			source: {
+				atomId: atom.id,
+				writerId: (track.writer ?? writer) as string,
+				seq: track.seq,
+			},
 		}));
 		const isAtomsOwn = ({ identity }: TrackCommand) =>
 			identity.orgId === atom.orgId && identity.env === atom.env;
