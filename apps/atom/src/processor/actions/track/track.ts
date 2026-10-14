@@ -24,7 +24,7 @@ export const track = async ({
 		check: { ...answerableTrack, requiredBalance: value },
 		subject,
 	});
-	const { result } = await deductOnSubject({
+	const { result, committed } = deductOnSubject({
 		ctx,
 		subject,
 		command,
@@ -37,5 +37,6 @@ export const track = async ({
 	});
 	// Whether a track the balance does not cover caps, overflows or is refused is the API's to decide.
 	if (!result.allowed) throw new CannotAnswerError({ reason: "track_denied" });
+	await committed;
 	return { customer_id: customerId, value, balance: null };
 };
