@@ -2,8 +2,7 @@ import type {
 	SetPlansReviewSection,
 	SetPlansReviewValue,
 } from "@autumn/shared";
-
-const MIN_VALUE_COLUMN_WIDTH_PX = 104;
+import { REVIEW_VALUE_COLUMN_MIN_WIDTH_PX } from "../../components/review/reviewColumns";
 
 const valueText = (value: SetPlansReviewValue) =>
 	value.suffix ? `${value.amount} ${value.suffix}` : value.amount;
@@ -16,5 +15,5 @@ export const reviewValueColumnWidth = (section: SetPlansReviewSection) => {
 			.flatMap((phase) => phase.rows)
 			.map((row) => (row.value ? valueText(row.value).length : 0)),
 	);
-	return `max(${MIN_VALUE_COLUMN_WIDTH_PX}px, ${longestValue}ch)`;
+	return `max(${REVIEW_VALUE_COLUMN_MIN_WIDTH_PX}px, ${longestValue}ch)`;
 };

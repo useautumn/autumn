@@ -46,7 +46,9 @@ export function ReviewChangePhaseBlock({
 		>
 			{showsScopes
 				? groupRowsByScope({ rows: phase.rows }).map(({ entityId, rows }) => (
-						<Fragment key={entityId ?? "customer"}>
+						<Fragment
+							key={entityId === null ? "customer" : `entity:${entityId}`}
+						>
 							<ReviewScopeHeader entityId={entityId} />
 							{rows.map((row) => (
 								<ReviewChangeRowItem

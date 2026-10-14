@@ -14,9 +14,9 @@ import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhase
 import { hasScopedRows } from "../../utils/review/groupRowsByScope";
 import { reviewValueColumnWidth } from "../../utils/review/reviewValueColumnWidth";
 import type {
-	ReviewChangeLayout,
-	ReviewChangeSystem,
-} from "../../utils/review/types/reviewChange";
+	ReviewGroupLayout,
+	ReviewGroupSystem,
+} from "../../utils/review/types/reviewGroup";
 import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
 import { ReviewChangeSkeletonPhases } from "./ReviewChangeSkeletonPhases";
 import { ReviewPhaseTimeline } from "./ReviewPhaseTimeline";
@@ -29,6 +29,19 @@ import { ReviewValueColumnProvider } from "./ReviewValueColumnContext";
 const hasContent = (section: SetPlansReviewSection) =>
 	section.phases.length > 0 || Boolean(section.stripe_ids?.length);
 
+function ReviewSummary({ summary }: { summary: string }) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
+					{summary}
+				</span>
+			</TooltipTrigger>
+			<TooltipContent side="top">{summary}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 /** Renders a skeleton in the same slots until `section` resolves, so nothing shifts on load. */
 export function ReviewChangeGroup({
 	value,
@@ -39,9 +52,9 @@ export function ReviewChangeGroup({
 	placeholderPhases = [],
 }: {
 	value: string;
-	system: ReviewChangeSystem;
+	system: ReviewGroupSystem;
 	title: string;
-	layout?: ReviewChangeLayout;
+	layout?: ReviewGroupLayout;
 	section?: SetPlansReviewSection;
 	placeholderPhases?: SkeletonScope[][];
 }) {
@@ -72,16 +85,7 @@ export function ReviewChangeGroup({
 				{section && section.phases.length > 1 ? (
 					<ReviewPhaseTimeline phases={section.phases} system={system} />
 				) : section ? (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
-								{formatReviewText(section.summary)}
-							</span>
-						</TooltipTrigger>
-						<TooltipContent side="top">
-							{formatReviewText(section.summary)}
-						</TooltipContent>
-					</Tooltip>
+					<ReviewSummary summary={formatReviewText(section.summary)} />
 				) : (
 					<Skeleton className="h-3.5 w-24 rounded-sm" />
 				)}
@@ -108,7 +112,7 @@ function ReviewChangeGroupBody({
 	showsStatus,
 	showsScopes,
 }: {
-	layout: ReviewChangeLayout;
+	layout: ReviewGroupLayout;
 	section?: SetPlansReviewSection;
 	placeholderPhases: SkeletonScope[][];
 	showsStatus: boolean;

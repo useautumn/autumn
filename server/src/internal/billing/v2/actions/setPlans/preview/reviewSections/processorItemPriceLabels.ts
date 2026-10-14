@@ -17,7 +17,6 @@ export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	});
 };
 
-const NO_QUANTITY = "—";
 const ONE_TIME_LABEL = "one-time";
 const STRIPE_LOCALE = "en-GB";
 const MAX_UNIT_PRICE_DIGITS = 10;
@@ -103,9 +102,10 @@ export const pricingTableUnitPrice = (price: ProcessorItemPrice) => {
 	return label ? withBillingPeriod({ label, price }) : undefined;
 };
 
+/** Undefined when the quantity doesn't apply, e.g. usage-billed items. */
 export const pricingTableQuantity = (item: ProcessorItem) =>
 	item.quantity === null || item.price?.usage_type === "metered"
-		? NO_QUANTITY
+		? undefined
 		: numberWithCommas(item.quantity);
 
 /** The Total column: "US$37,500.00 / year", or how it varies when usage decides it. */

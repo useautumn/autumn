@@ -61,7 +61,6 @@ const subscriptionEndRow = (phaseIndex: number): SetPlansReviewRow => ({
 	key: `subscription-ends-${phaseIndex}`,
 	title: "Subscription canceled",
 	description: ["No items left to bill"],
-	quantity: "—",
 });
 
 const phaseRange = ({

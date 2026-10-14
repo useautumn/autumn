@@ -3,9 +3,9 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@autumn/ui";
 import { uniq } from "lodash";
 import { cn } from "@/lib/utils";
 import { formatReviewText } from "../../utils/review/formatReviewText";
-import type { ReviewChangeSystem } from "../../utils/review/types/reviewChange";
+import type { ReviewGroupSystem } from "../../utils/review/types/reviewGroup";
 
-const DOT_COLOR: Record<ReviewChangeSystem, string> = {
+const DOT_COLOR: Record<ReviewGroupSystem, string> = {
 	stripe: "border-indigo-500 bg-indigo-500",
 	autumn: "border-primary bg-primary",
 };
@@ -21,7 +21,7 @@ export function ReviewPhaseTimeline({
 	system,
 }: {
 	phases: SetPlansReviewPhase[];
-	system: ReviewChangeSystem;
+	system: ReviewGroupSystem;
 }) {
 	return (
 		<HoverCard>

@@ -59,8 +59,11 @@ export function ReviewStatusChip({
 				side="top"
 				className={cn("flex flex-col gap-1", REVIEW_RICH_TOOLTIP_CLASS)}
 			>
-				{changes.map((change) => (
-					<ReviewChangeLineRow key={change.label} change={change} />
+				{changes.map((change, index) => (
+					<ReviewChangeLineRow
+						key={`${index}-${change.label}`}
+						change={change}
+					/>
 				))}
 			</TooltipContent>
 		</Tooltip>
