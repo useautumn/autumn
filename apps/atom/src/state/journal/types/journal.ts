@@ -16,6 +16,9 @@ export type JournalEntry = {
 	command: JournaledCommand;
 };
 
+/** An owed entry as it crosses to another journal: with whether Autumn already took it, so the receiver sends it or not. */
+export type HandedEntry = JournalEntry & { sent: boolean };
+
 /** One slot's commands owed to Autumn, written only by the slot's owner thread. */
 export type Journal = {
 	/** Made once with the file: Autumn counts what it has seen per writer, since seqs count within one file. */
@@ -58,6 +61,15 @@ export type Journal = {
 	}): Promise<void>;
 	/** The customer is gone from Autumn: nothing it owes can ever apply. */
 	forget(params: { customerId: string }): Promise<void>;
+	/**
+	 * Entries another journal minted, handed over with their customer: held and forwarded under their own writer and seq,
+	 * so Autumn's per-writer watermark clears them wherever they were sent from. Ones already held are ignored.
+	 */
+	appendForeign(params: { entries: HandedEntry[] }): Promise<number>;
+	/** Every customer owing something, with each committed entry and whether Autumn already holds it: what a handoff carries. */
+	handoffs(): Promise<{ customerId: string; entries: HandedEntry[] }[]>;
+	/** Entries handed to another journal, which holds them now: gone from this one. */
+	dropHandedOff(params: { entries: JournalEntry[] }): Promise<void>;
 	close(): void;
 	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
 	holdsKey(params: { customerId: string; key: string }): boolean;

@@ -9,6 +9,7 @@ import type {
 } from "../../../processor/types/finalize.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
+import type { HandedEntry } from "../../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -39,6 +40,10 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "track"; request: TrackRequestOnWire }
 	| { type: "finalize"; request: FinalizeRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
+	| {
+			type: "receiveHandoff";
+			handoffs: { customerId: string; entries: HandedEntry[] }[];
+	  }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
 	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
@@ -94,7 +99,8 @@ export type OwnerReply =
 				| FinalizeResponse
 				| boolean
 				| AppliedSubjectOnWire[]
-				| SubjectDigestOnWire[];
+				| SubjectDigestOnWire[]
+				| { held: number };
 	  }
 	| {
 			id: number;

@@ -138,6 +138,42 @@ export const deleteJournalEntriesUpTo = ({
 	return "";
 };
 
+/** One string for the writer thread: each entry's customer, writer and seq, NUL-separated. */
+export const encodeJournalEntryKeys = ({
+	entries,
+}: {
+	entries: JournalEntry[];
+}): string =>
+	entries
+		.map(
+			({ customerId, writerId, seq }) =>
+				`${customerId}\u0000${writerId}\u0000${seq}`,
+		)
+		.join("\u0000");
+
+/** The rows named by customer, writer and seq: what a handoff moved to another journal. */
+export const deleteJournalEntries = ({
+	ctx,
+	payload,
+}: {
+	ctx: JournalContext;
+	payload: string;
+}): string => {
+	const fields = payload.split("\u0000");
+	const deleteEntry = ctx.sqliteDb.query(
+		"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq = $seq",
+	);
+	ctx.sqliteDb.transaction(() => {
+		for (let at = 0; at < fields.length; at += 3)
+			deleteEntry.run({
+				customerId: fields[at] as string,
+				writerId: fields[at + 1] as string,
+				seq: Number(fields[at + 2]),
+			});
+	})();
+	return "";
+};
+
 export const deleteCustomerJournalEntries = ({
 	ctx,
 	payload: customerId,

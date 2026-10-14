@@ -138,7 +138,7 @@ export const createAtomServer = ({
 	 */
 	async function stop(): Promise<void> {
 		await leaveRing({
-			ctx: { ring, membership, peer, logger: ctx.logger },
+			ctx: { ring, membership, folders: ctx.folders, peer, logger: ctx.logger },
 		});
 		pushReceiver?.stop();
 		await receiving;
