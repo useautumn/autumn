@@ -236,16 +236,14 @@ export const createCommandPipeline = ({
 		/** Runs before each record is handed over, as another request arriving on the partition would. */
 		beforeEach?: (params: { index: number }) => void;
 	}): Promise<void> {
-		for (const [index, record] of commands.entries()) {
+		const messages = commands.map((record, index) => ({
+			offset: String(firstOffset + index),
+			...serializeCommandRecord({ record }),
+		}));
+		await current.handler.beginBatch?.({ topic, partition, messages });
+		for (const [index, message] of messages.entries()) {
 			beforeEach?.({ index });
-			await current.handler.applyRecord({
-				topic,
-				partition,
-				message: {
-					offset: String(firstOffset + index),
-					...serializeCommandRecord({ record }),
-				},
-			});
+			await current.handler.applyRecord({ topic, partition, message });
 			if (parked.length > 0) return;
 			// The consumer's heartbeat between records is where the writer's commit loop gets its turn.
 			await new Promise<void>((resolve) => setImmediate(resolve));
@@ -276,6 +274,7 @@ export const createCommandPipeline = ({
 			store.readState({ identity: identityOf({ customerId }) }),
 		readBookmark: () => bookmark,
 		lockReads,
+		storedLockIds: () => [...storedLocks.keys()],
 		readDecides: () => decides,
 		/** Command offsets in the order Kafka took their records. */
 		committedSources: () =>

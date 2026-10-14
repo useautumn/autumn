@@ -8,14 +8,19 @@
  *  2. Autumn deducts a handed-in track by its own split, exactly as an API track of the same value: the request
  *     names no rows, and rows it names anyway are never read;
  *  3. a body that is not a tracks.append request is 400 unreadable; an unknown token hash is 401 atom_unknown;
+ *  5. a lock's track and its release in one request settle in order: the lock is taken, then given back;
+ *  6. a release of a lock Autumn already settled, or named under another customer, moves nothing; its seq still lands;
+ *  7. a confirm above the lock that leaves the balance under its auto top-up threshold tops it up, as the API's would;
  *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
  *     once: a seq the customer already holds from that journal deducts nothing again.
  */
 
 import { afterAll, expect, test } from "bun:test";
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TRACKS_APPEND_PATH,
+	type AtomFinalize,
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
 import type { AtomSubjectBody } from "@autumn/byoc/subjects";
@@ -31,7 +36,7 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { expectBalanceCorrect } from "../utils/expectBalanceCorrect.js";
-import { atomTrack, postAsAtom } from "./utils/atomHandIn.js";
+import { atomFinalizeOf, atomTrack, postAsAtom } from "./utils/atomHandIn.js";
 import { atomTestClient } from "./utils/atomTestClient.js";
 import {
 	deleteAtomDeployment,
@@ -295,6 +300,226 @@ test.skipIf(!isBalanceWorkerRoute())(
 			customerId,
 			featureId: TestFeature.Messages,
 			remaining: 79,
+		});
+	},
+	120_000,
+);
+
+/** A customer with 10 monthly messages, and the Atom's hand-ins for it under one fresh journal. */
+const initLockHandIn = async ({ customerId }: { customerId: string }) => {
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 10 })],
+	});
+	const { autumnV2_6 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: false }),
+			s.otherCustomers([{ id: `${customerId}-other` }]),
+			s.products({ list: [free] }),
+		],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+	const atom = await ensureAtomDeployment({ autumn });
+	const tokenHash = atomTokenToHash({ token: atom.token });
+	const writerId = `w_${crypto.randomUUID()}`;
+	const lockTrack = atomTrack({
+		customerId,
+		value: 8,
+		lock: {
+			id: `lck_${crypto.randomUUID()}`,
+			lockId: customerId,
+			expiresAt: Date.now() + 3_600_000,
+			expiryAction: "release",
+		},
+	});
+	const append = async (
+		handIns: ({ command: TrackCommand } | { finalize: AtomFinalize })[],
+		firstSeq: number,
+	) => {
+		const reply = await postAsAtom({
+			autumn,
+			path: ATOM_TRACKS_APPEND_PATH,
+			tokenHash,
+			body: {
+				tracks: handIns.map((handIn, index) => ({
+					writerId,
+					seq: firstSeq + index,
+					...handIn,
+				})),
+			},
+		});
+		expect(reply.status).toBe(204);
+	};
+	const expectSeq = (seq: number) =>
+		pollUntilAsserted({
+			fetch: async () =>
+				(await (
+					await postAsAtom({
+						autumn,
+						path: ATOM_SUBJECT_READ_PATH,
+						tokenHash,
+						body: { customer_id: customerId, entity_id: null },
+					})
+				).json()) as AtomSubjectBody,
+			assert: (body) => expect(body.atom_seqs?.[writerId]).toBe(seq),
+		});
+	return { autumnV2_6, lockTrack, append, expectSeq };
+};
+
+// A handed-in track only lands through the balance worker's log.
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks5: a lock's track and its release in one request settle in order, against Autumn's own row")}`,
+	async () => {
+		const customerId = "atom-tracks5";
+		const { lockTrack, append, expectSeq } = await initLockHandIn({
+			customerId,
+		});
+
+		await append(
+			[
+				{ command: lockTrack },
+				{ finalize: atomFinalizeOf({ customerId, lockId: customerId }) },
+			],
+			1,
+		);
+
+		await expectSeq(2);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks6: a release of a lock Autumn already settled, or named under another customer, moves nothing and its seq lands")}`,
+	async () => {
+		const customerId = "atom-tracks6";
+		const { autumnV2_6, lockTrack, append, expectSeq } = await initLockHandIn({
+			customerId,
+		});
+		await append([{ command: lockTrack }], 1);
+		await expectSeq(1);
+
+		await append(
+			[
+				{
+					finalize: atomFinalizeOf({
+						customerId: `${customerId}-other`,
+						lockId: customerId,
+					}),
+				},
+			],
+			2,
+		);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
+
+		await autumnV2_6.balances.finalize({
+			lock_id: customerId,
+			action: "confirm",
+			customer_id: customerId,
+		});
+		await append(
+			[{ finalize: atomFinalizeOf({ customerId, lockId: customerId }) }],
+			3,
+		);
+
+		await expectSeq(3);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks7: a confirm above the lock that leaves the balance under the threshold fires auto top-up")}`,
+	async () => {
+		const customerId = "atom-tracks7";
+		const oneOff = products.oneOffAddOn({
+			id: "atom-topup",
+			items: [
+				items.oneOffMessages({
+					includedUsage: 0,
+					billingUnits: 100,
+					price: 10,
+				}),
+			],
+		});
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [oneOff] }),
+			],
+			actions: [
+				s.attach({
+					productId: oneOff.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+				}),
+			],
+		});
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: {
+				auto_topups: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						threshold: 20,
+						quantity: 100,
+					},
+				],
+			},
+		});
+		const atom = await ensureAtomDeployment({ autumn });
+		const writerId = `w_${crypto.randomUUID()}`;
+		const lockTrack = atomTrack({
+			customerId,
+			value: 10,
+			lock: {
+				id: `lck_${crypto.randomUUID()}`,
+				lockId: customerId,
+				expiresAt: Date.now() + 3_600_000,
+				expiryAction: "release",
+			},
+		});
+
+		const reply = await postAsAtom({
+			autumn,
+			path: ATOM_TRACKS_APPEND_PATH,
+			tokenHash: atomTokenToHash({ token: atom.token }),
+			body: {
+				tracks: [
+					{ writerId, seq: 1, command: lockTrack },
+					{
+						writerId,
+						seq: 2,
+						finalize: atomFinalizeOf({
+							customerId,
+							lockId: customerId,
+							finalValue: 85,
+						}),
+					},
+				],
+			},
+		});
+
+		expect(reply.status).toBe(204);
+		// 100 - 85 leaves 15, under the threshold of 20, so one pack of 100 is bought.
+		await pollUntilAsserted({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			assert: (customer) =>
+				expect(customer.balances[TestFeature.Messages]?.remaining).toBe(115),
+			timeoutMs: 30_000,
 		});
 	},
 	120_000,
