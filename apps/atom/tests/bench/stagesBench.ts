@@ -462,6 +462,14 @@ const drive = async ({
 			[
 				process.execPath,
 				"--config=./bunfig.toml",
+				...(process.env.BENCH_CPU_PROF && address === ADDRESSES[0]
+					? [
+							"--cpu-prof",
+							"--cpu-prof-md",
+							`--cpu-prof-interval=${process.env.BENCH_CPU_PROF_INTERVAL ?? "250"}`,
+							`--cpu-prof-dir=${process.env.BENCH_CPU_PROF}`,
+						]
+					: []),
 				import.meta.path,
 				"replica",
 				address,

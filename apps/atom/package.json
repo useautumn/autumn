@@ -15,7 +15,8 @@
 		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts",
 		"bench:stages": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/stagesBench.ts",
 		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts",
-		"bench:multi-worker-autumn": "bun tests/bench/multiWorkerAutumn.ts"
+		"bench:multi-worker-autumn": "bun tests/bench/multiWorkerAutumn.ts",
+		"bench:plumbing": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/plumbingBench.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",
