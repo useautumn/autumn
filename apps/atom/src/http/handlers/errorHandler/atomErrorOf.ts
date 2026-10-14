@@ -4,6 +4,7 @@ import {
 } from "@autumn/balance-engine";
 import { ErrCode, InsufficientBalanceError } from "@autumn/shared";
 import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
+import { DuplicateIdempotencyKeyError } from "../../../processor/actions/track/duplicateIdempotencyKeyError.js";
 import { LockTermsConflictError } from "../../../processor/actions/track/lockTerms.js";
 import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
 import { AtomApiError } from "./atomApiError.js";
@@ -34,6 +35,12 @@ export const atomErrorOf = ({ cause }: { cause: Error }): AtomError => {
 			status: 409,
 			code: ErrCode.LockAlreadyExists,
 			message: "lock_id already used with different terms",
+		};
+	if (cause instanceof DuplicateIdempotencyKeyError)
+		return {
+			status: 409,
+			code: ErrCode.DuplicateIdempotencyKey,
+			message: cause.message,
 		};
 	// A lock no longer open, as the API answers one it no longer holds a row for.
 	if (cause instanceof LockNotFoundError)

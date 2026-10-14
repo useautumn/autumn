@@ -28,6 +28,7 @@ export const track = async ({
 		ctx,
 		subject,
 		command,
+		idempotencyKey: answerableTrack.idempotencyKey,
 		track: trackToCommand({
 			command,
 			subject,
