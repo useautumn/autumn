@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createGroupCommit } from "../../../src/state/journal/createGroupCommit.js";
+import {
+	createGroupCommit,
+	MAX_GATHERED,
+} from "../../../src/state/journal/createGroupCommit.js";
 
 /** A commit the test finishes by hand, so appends can arrive while it is in flight. */
 const heldCommits = () => {
@@ -18,7 +21,59 @@ const heldCommits = () => {
 	return { batches, commit, releaseNext };
 };
 
+/** The linger the commit waits out, ended by the test, so appends can arrive across turns before it ends. */
+const heldLingers = () => {
+	const ends: (() => void)[] = [];
+	return {
+		linger: () => new Promise<void>((resolve) => ends.push(resolve)),
+		lingering: () => ends.length,
+		endNext: () => ends.shift()?.(),
+	};
+};
+
 describe("group commit", () => {
+	test("appends a few turns apart land in one commit: the commit lingers for those right behind the first", async () => {
+		const batches: number[][] = [];
+		const lingers = heldLingers();
+		const groupCommit = createGroupCommit({
+			commit: (items: number[]) => {
+				batches.push(items);
+			},
+			linger: lingers.linger,
+		});
+
+		const first = groupCommit.add(1);
+		await Bun.sleep(2);
+		const later = [groupCommit.add(2), groupCommit.add(3)];
+		await Bun.sleep(2);
+		expect(batches).toEqual([]);
+
+		lingers.endNext();
+		await Promise.all([first, ...later]);
+		expect(batches).toEqual([[1, 2, 3]]);
+	});
+
+	test("a full batch commits at once, without waiting out the linger", async () => {
+		const batches: number[][] = [];
+		const lingers = heldLingers();
+		const groupCommit = createGroupCommit({
+			commit: (items: number[]) => {
+				batches.push(items);
+			},
+			linger: lingers.linger,
+		});
+
+		await Promise.all(
+			Array.from({ length: MAX_GATHERED }, (_, index) =>
+				groupCommit.add(index),
+			),
+		);
+
+		expect(batches).toHaveLength(1);
+		expect(batches[0]).toHaveLength(MAX_GATHERED);
+		expect(lingers.lingering()).toBe(0);
+	});
+
 	test("N appends arriving during one in-flight commit land in one transaction", async () => {
 		const { batches, commit, releaseNext } = heldCommits();
 		const groupCommit = createGroupCommit({ commit });
