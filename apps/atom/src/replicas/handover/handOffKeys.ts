@@ -11,7 +11,7 @@ import {
 const BATCHES_IN_FLIGHT = 4;
 const HANDOFF_TIMEOUT_MS = 2_000;
 /** Caller keys this young move with their customers, so a retry within the hour is 409 at the next owner too. */
-export const HANDED_KEYS_WINDOW_MS = 60 * 60_000;
+export const KEY_HANDOFF_WINDOW_MS = 60 * 60_000;
 /** The newest of them are handed before ownership switches; the rest stream after it, so the switch never waits on an hour of keys. */
 export const KEYS_BEFORE_SWITCH_MS = 10 * 60_000;
 /** Each round reaches back this far before the last one's read, past any commit then still landing. */
@@ -162,7 +162,7 @@ export const handOffOlderKeys = async ({
 	const startedAt = performance.now();
 	const sent = await handOffKeys({
 		ctx,
-		since: switchedAt - HANDED_KEYS_WINDOW_MS,
+		since: switchedAt - KEY_HANDOFF_WINDOW_MS,
 		until: switchedAt - KEYS_BEFORE_SWITCH_MS,
 		ownerOf,
 	});
