@@ -5,6 +5,7 @@ import {
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
+import type { TrackRequest } from "../../processor/types/track.js";
 import type {
 	AppliedSubject,
 	SubjectDigest,
@@ -15,6 +16,7 @@ import type {
 	CheckRequestOnWire,
 	OwnerReply,
 	SubjectDigestOnWire,
+	TrackRequestOnWire,
 } from "./types/ownerCall.js";
 
 /** One instance per version on the owner: building one sorts the version registry. */
@@ -44,6 +46,24 @@ export const wireToCheckRequest = ({
 }): CheckRequest => ({
 	...request,
 	apiVersion: request.apiVersion ? apiVersionOf(request.apiVersion) : null,
+});
+
+export const trackRequestToWire = ({
+	request,
+}: {
+	request: TrackRequest;
+}): TrackRequestOnWire => ({
+	...request,
+	apiVersion: request.apiVersion.value,
+});
+
+export const wireToTrackRequest = ({
+	request,
+}: {
+	request: TrackRequestOnWire;
+}): TrackRequest => ({
+	...request,
+	apiVersion: apiVersionOf(request.apiVersion),
 });
 
 export const errorToReply = ({
