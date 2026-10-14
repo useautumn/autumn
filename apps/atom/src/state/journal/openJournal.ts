@@ -413,6 +413,7 @@ export const openJournal = ({
 		for (const entry of owed({ customerId })) releaseUnsent(entry);
 		unsentByCustomer.delete(customerId);
 		setOwed({ customerId, entries: [] });
+		recentKeys.forget({ customerId, now: now() });
 		return file
 			.write("deleteCustomerJournalEntries", customerId)
 			.then(() => {});

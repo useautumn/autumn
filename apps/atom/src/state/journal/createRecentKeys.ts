@@ -79,17 +79,20 @@ const createSlab = ({ startsAt }: { startsAt: number }) => {
 
 /**
  * The keys taken in the last `windowMs`, in memory: a key check reads no SQLite page. Times are whole seconds, rounded
- * up, so a key is held at least the window.
+ * up, so a key is held at least the window; a forgotten customer's keys taken before its forget are no longer held.
  */
 export const createRecentKeys = ({ windowMs }: { windowMs: number }) => {
 	const slabMs = windowMs / SLABS_PER_WINDOW;
 	let slabs: ReturnType<typeof createSlab>[] = [];
+	const forgottenAtSec = new Map<string, number>();
 	const toSec = (ms: number) => Math.ceil(ms / 1000);
 
-	/** Drops every slab whose last key is past the window. */
+	/** Drops every slab whose last key is past the window, and a forget past it too. */
 	function age({ now }: { now: number }): void {
 		const oldest = now - windowMs;
 		slabs = slabs.filter(({ startsAt }) => startsAt + slabMs > oldest);
+		for (const [customerId, atSec] of forgottenAtSec)
+			if (atSec * 1000 < oldest) forgottenAtSec.delete(customerId);
 	}
 
 	function add({
@@ -103,6 +106,7 @@ export const createRecentKeys = ({ windowMs }: { windowMs: number }) => {
 		at: number;
 		now: number;
 	}): void {
+		if ((forgottenAtSec.get(customerId) ?? -1) >= toSec(at)) return;
 		age({ now });
 		let slab = slabs.find(
 			({ startsAt }) => at >= startsAt && at < startsAt + slabMs,
@@ -123,16 +127,29 @@ export const createRecentKeys = ({ windowMs }: { windowMs: number }) => {
 		fingerprint: bigint;
 		since: number;
 	}): boolean {
-		const floorSec = toSec(since);
+		const floorSec = Math.max(
+			toSec(since),
+			(forgottenAtSec.get(customerId) ?? -1) + 1,
+		);
 		return slabs.some(
 			(slab) => (slab.takenAtSecOf(fingerprint) ?? -1) >= floorSec,
 		);
 	}
 
+	function forget({
+		customerId,
+		now,
+	}: {
+		customerId: string;
+		now: number;
+	}): void {
+		forgottenAtSec.set(customerId, toSec(now));
+	}
 
 	return {
 		add,
 		has,
+		forget,
 		keys: () => slabs.reduce((sum, slab) => sum + slab.keys(), 0),
 		bytes: () => slabs.reduce((sum, slab) => sum + slab.bytes(), 0),
 	};
