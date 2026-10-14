@@ -77,6 +77,7 @@ export const createCatalogCache = ({
 		put: ({ rows }) => putCatalogRows({ scope, rows }),
 		invalidate: ({ orgId, env }) => invalidateCatalog({ scope, orgId, env }),
 		size: () => scope.state.entries.size,
+		sizeBytes: () => scope.state.entries.calculatedSize,
 		isCurrent: ({ catalog }) => isCatalogCurrent({ scope, catalog }),
 	};
 };
