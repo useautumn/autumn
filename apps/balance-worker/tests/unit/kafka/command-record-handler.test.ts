@@ -250,6 +250,7 @@ const lockRowOf = ({ lockId }: { lockId: string }): WorkerLock => ({
 	customer_id: testIdentity.customerId,
 	entity_id: null,
 	feature_id: "messages",
+	value: 10,
 	overage_behavior: "reject",
 	properties: null,
 	deltas: [],

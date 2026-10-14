@@ -47,7 +47,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-1: lock not su
 // ERR-2: duplicate lock key (Redis path) → 409
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate lock key (Redis) → 409")}`, async () => {
+test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: a lock key reused on other terms (Redis) → 409")}`, async () => {
 	const freeProd = products.base({
 		id: "free",
 		items: [items.monthlyMessages({ includedUsage: 20 })],
@@ -71,14 +71,14 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 		lock: { enabled: true, lock_id: customerId },
 	});
 
-	// Second check with same lock key — should fail with LockAlreadyExists
+	// The same lock key for a different value is another lock: LockAlreadyExists
 	await expectAutumnError({
 		errCode: ErrCode.LockAlreadyExists,
 		func: async () => {
 			await autumnV2_1.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				required_balance: 5,
+				required_balance: 6,
 				lock: { enabled: true, lock_id: customerId },
 			});
 		},
@@ -89,7 +89,7 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 // ERR-3: duplicate lock key (Postgres / skip_cache path) → 409
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate lock key (Postgres) → 409")}`, async () => {
+test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: a lock key reused on other terms (Postgres) → 409")}`, async () => {
 	const freeProd = products.base({
 		id: "free",
 		items: [items.monthlyMessages({ includedUsage: 20 })],
@@ -114,14 +114,14 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate l
 		skip_cache: true,
 	});
 
-	// Second check with same lock key — should fail with LockAlreadyExists
+	// The same lock key for a different value is another lock: LockAlreadyExists
 	await expectAutumnError({
 		errCode: ErrCode.LockAlreadyExists,
 		func: async () => {
 			await autumnV2_1.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				required_balance: 5,
+				required_balance: 6,
 				lock: { enabled: true, lock_id: customerId },
 				skip_cache: true,
 			});

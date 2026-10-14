@@ -25,6 +25,7 @@ const createLock = ({
 	customer_id: identity.customerId,
 	entity_id: null,
 	feature_id: "messages",
+	value: 10,
 	overage_behavior: "reject",
 	properties: null,
 	deltas: [],
