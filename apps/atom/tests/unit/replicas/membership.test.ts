@@ -75,6 +75,7 @@ const proberOf = ({
 									owingCustomers: () => [],
 									holdForHandoff() {},
 									releaseHandoffHold() {},
+									keysSince: async () => [],
 								},
 							],
 							ownedOpenLocks: () => openLocks,

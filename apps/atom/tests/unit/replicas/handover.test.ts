@@ -3,7 +3,7 @@
  * itself, the survivor owns its customers at once, and the leaving replica's public port keeps answering by hopping.
  */
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
@@ -910,3 +910,191 @@ describe("a lock taken on the leaving owner", () => {
 });
 
 export { PEER_PORT };
+
+describe("a caller's idempotency key across a move", () => {
+	const keyedDeduction = ({ key }: { key: string }) => {
+		const request = checkFor({ customerId: CUSTOMER, sendEvent: true });
+		return {
+			...request,
+			headers: { ...request.headers, "idempotency-key": key },
+		};
+	};
+
+	test("a key A took and still owes is 409 at B once A has left", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+		const first = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_owed" }),
+		);
+		expect(first.status).toBe(200);
+
+		await a.leave();
+		const retried = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_owed" }),
+		);
+
+		expect(retried.status).toBe(409);
+		expect(await remainingAt(b)).toBe(9);
+	});
+
+	test("a key A took that Autumn already applied is 409 at B once A has left", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+		const first = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_applied" }),
+		);
+		expect(first.status).toBe(200);
+		const aJournal = journalOwing(a);
+		if (!aJournal) throw new Error("A owes its keyed entry");
+		// Autumn applied it: a push showing A's writer at seq 1 trims it from what A owes.
+		await aJournal.reconcile({
+			customerId: CUSTOMER,
+			atomSeqs: { atom_1: { [aJournal.writerId]: 1 } },
+		});
+
+		await a.leave();
+		const retried = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_applied" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+
+	test("a key A took 30 min ago that Autumn already applied is 409 at B once A has left: the older keys stream before it exits", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+		setSystemTime(Date.now() - 30 * 60_000);
+		const first = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_older" }),
+		);
+		setSystemTime();
+		expect(first.status).toBe(200);
+		const aJournal = journalOwing(a);
+		if (!aJournal) throw new Error("A owes its keyed entry");
+		await aJournal.reconcile({
+			customerId: CUSTOMER,
+			atomSeqs: { atom_1: { [aJournal.writerId]: 1 } },
+		});
+
+		await a.leave();
+		const retried = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_older" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+
+	test("a key A took is 409 at B while A's entries are still on their way", async () => {
+		const { a, b } = await agreeingPair();
+		handoffNetwork({ replicas: [a, b], holdMs: 500 });
+		const first = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_window" }),
+		);
+		expect(first.status).toBe(200);
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const retried = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_window" }),
+		);
+		await leaving;
+
+		expect(retried.status).toBe(409);
+	});
+});
+
+describe("a caller's idempotency key across a join", () => {
+	const keyedDeduction = ({ key }: { key: string }) => {
+		const request = checkFor({ customerId: CUSTOMER, sendEvent: true });
+		return {
+			...request,
+			headers: { ...request.headers, "idempotency-key": key },
+		};
+	};
+
+	/** A back from away, B the stand-in that owned A's customers meanwhile and took `key` for CUSTOMER. */
+	const standInTook = async ({ key }: { key: string }) => {
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+		const first = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key }),
+		);
+		expect(first.status).toBe(200);
+		return { a, b };
+	};
+
+	test("a key the stand-in took and still owes is 409 at the owner once it is back", async () => {
+		const { a, b } = await standInTook({ key: "k_owed" });
+
+		await b.probeOnce();
+		const retried = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_owed" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+
+	test("a key the stand-in took that Autumn already applied is 409 at the owner once it is back", async () => {
+		const { a, b } = await standInTook({ key: "k_applied" });
+		const bJournal = journalOwing(b);
+		if (!bJournal) throw new Error("B owes its keyed entry");
+		// Autumn applied it: a push showing B's writer at seq 1 trims it from what B owes.
+		await bJournal.reconcile({
+			customerId: CUSTOMER,
+			atomSeqs: { atom_1: { [bJournal.writerId]: 1 } },
+		});
+
+		await b.probeOnce();
+		const retried = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_applied" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+
+	test("a key the stand-in took 30 min ago that Autumn already applied is 409 at the owner once the older keys have streamed", async () => {
+		setSystemTime(Date.now() - 30 * 60_000);
+		const { a, b } = await standInTook({ key: "k_older" });
+		setSystemTime();
+		const bJournal = journalOwing(b);
+		if (!bJournal) throw new Error("B owes its keyed entry");
+		await bJournal.reconcile({
+			customerId: CUSTOMER,
+			atomSeqs: { atom_1: { [bJournal.writerId]: 1 } },
+		});
+
+		await b.probeOnce();
+		await until(() =>
+			a.slots
+				.ownedJournals()
+				.some((journal) =>
+					journal.holdsKey({ customerId: CUSTOMER, key: "k_older" }),
+				),
+		);
+		const retried = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_older" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+});
