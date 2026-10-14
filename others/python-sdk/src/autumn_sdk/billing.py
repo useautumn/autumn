@@ -59,6 +59,12 @@ class Billing(BaseSDK):
                 List[models.AttachCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[List[models.AttachRemoveLine], List[models.AttachRemoveLineTypedDict]]
+        ] = None,
+        add_lines: Optional[
+            Union[List[models.AttachAddLine], List[models.AttachAddLineTypedDict]]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -120,6 +126,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -181,6 +189,12 @@ class Billing(BaseSDK):
             long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.AttachRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.AttachAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(
@@ -316,6 +330,12 @@ class Billing(BaseSDK):
                 List[models.AttachCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[List[models.AttachRemoveLine], List[models.AttachRemoveLineTypedDict]]
+        ] = None,
+        add_lines: Optional[
+            Union[List[models.AttachAddLine], List[models.AttachAddLineTypedDict]]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -377,6 +397,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -438,6 +460,12 @@ class Billing(BaseSDK):
             long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.AttachRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.AttachAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(
@@ -1227,6 +1255,18 @@ class Billing(BaseSDK):
                 List[models.PreviewAttachCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.PreviewAttachRemoveLine],
+                List[models.PreviewAttachRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.PreviewAttachAddLine],
+                List[models.PreviewAttachAddLineTypedDict],
+            ]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -1299,6 +1339,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -1361,6 +1403,12 @@ class Billing(BaseSDK):
             long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.PreviewAttachRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.PreviewAttachAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(
@@ -1502,6 +1550,18 @@ class Billing(BaseSDK):
                 List[models.PreviewAttachCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.PreviewAttachRemoveLine],
+                List[models.PreviewAttachRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.PreviewAttachAddLine],
+                List[models.PreviewAttachAddLineTypedDict],
+            ]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -1574,6 +1634,8 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -1636,6 +1698,12 @@ class Billing(BaseSDK):
             long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.PreviewAttachRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.PreviewAttachAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(
@@ -2114,6 +2182,18 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.BillingUpdateRemoveLine],
+                List[models.BillingUpdateRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.BillingUpdateAddLine],
+                List[models.BillingUpdateAddLineTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2165,6 +2245,8 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2216,6 +2298,12 @@ class Billing(BaseSDK):
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.BillingUpdateRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.BillingUpdateAddLine]]
             ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
@@ -2341,6 +2429,18 @@ class Billing(BaseSDK):
                 List[models.BillingUpdateCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.BillingUpdateRemoveLine],
+                List[models.BillingUpdateRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.BillingUpdateAddLine],
+                List[models.BillingUpdateAddLineTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2392,6 +2492,8 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2443,6 +2545,12 @@ class Billing(BaseSDK):
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.BillingUpdateCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.BillingUpdateRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.BillingUpdateAddLine]]
             ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
@@ -2568,6 +2676,18 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.PreviewUpdateRemoveLine],
+                List[models.PreviewUpdateRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.PreviewUpdateAddLine],
+                List[models.PreviewUpdateAddLineTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2619,6 +2739,8 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2671,6 +2793,12 @@ class Billing(BaseSDK):
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.PreviewUpdateRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.PreviewUpdateAddLine]]
             ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
@@ -2796,6 +2924,18 @@ class Billing(BaseSDK):
                 List[models.PreviewUpdateCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.PreviewUpdateRemoveLine],
+                List[models.PreviewUpdateRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.PreviewUpdateAddLine],
+                List[models.PreviewUpdateAddLineTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         billing_cycle_anchor: Optional[
             Union[
@@ -2847,6 +2987,8 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param custom_line_items: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
@@ -2899,6 +3041,12 @@ class Billing(BaseSDK):
             ),
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewUpdateCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.PreviewUpdateRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.PreviewUpdateAddLine]]
             ),
             cancel_action=cancel_action,
             billing_cycle_anchor=billing_cycle_anchor,
@@ -3647,6 +3795,18 @@ class Billing(BaseSDK):
                 List[models.SetupPaymentCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.SetupPaymentRemoveLine],
+                List[models.SetupPaymentRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.SetupPaymentAddLine],
+                List[models.SetupPaymentAddLineTypedDict],
+            ]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -3710,6 +3870,8 @@ class Billing(BaseSDK):
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -3764,6 +3926,12 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.SetupPaymentRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.SetupPaymentAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(
@@ -3895,6 +4063,18 @@ class Billing(BaseSDK):
                 List[models.SetupPaymentCustomLineItemTypedDict],
             ]
         ] = None,
+        remove_lines: Optional[
+            Union[
+                List[models.SetupPaymentRemoveLine],
+                List[models.SetupPaymentRemoveLineTypedDict],
+            ]
+        ] = None,
+        add_lines: Optional[
+            Union[
+                List[models.SetupPaymentAddLine],
+                List[models.SetupPaymentAddLineTypedDict],
+            ]
+        ] = None,
         processor_subscription_id: Optional[str] = None,
         carry_over_balances: Optional[
             Union[
@@ -3958,6 +4138,8 @@ class Billing(BaseSDK):
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+        :param remove_lines: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+        :param add_lines: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
@@ -4012,6 +4194,12 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
+            ),
+            remove_lines=utils.get_pydantic_model(
+                remove_lines, Optional[List[models.SetupPaymentRemoveLine]]
+            ),
+            add_lines=utils.get_pydantic_model(
+                add_lines, Optional[List[models.SetupPaymentAddLine]]
             ),
             processor_subscription_id=processor_subscription_id,
             carry_over_balances=utils.get_pydantic_model(

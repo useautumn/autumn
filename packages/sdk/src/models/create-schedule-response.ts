@@ -17,15 +17,18 @@ import {
   PhaseAddItemExpiry2,
   PhaseAddItemExpiry2$Outbound,
   PhaseAddItemExpiry2$outboundSchema,
-  PhaseAddItemMarkups2,
-  PhaseAddItemMarkups2$Outbound,
-  PhaseAddItemMarkups2$outboundSchema,
+  PhaseAddItemModelMarkups2,
+  PhaseAddItemModelMarkups2$Outbound,
+  PhaseAddItemModelMarkups2$outboundSchema,
   PhaseAddItemPrice2,
   PhaseAddItemPrice2$Outbound,
   PhaseAddItemPrice2$outboundSchema,
   PhaseAddItemProration2,
   PhaseAddItemProration2$Outbound,
   PhaseAddItemProration2$outboundSchema,
+  PhaseAddItemProviderMarkups2,
+  PhaseAddItemProviderMarkups2$Outbound,
+  PhaseAddItemProviderMarkups2$outboundSchema,
   PhaseAddItemReset2,
   PhaseAddItemReset2$Outbound,
   PhaseAddItemReset2$outboundSchema,
@@ -56,7 +59,7 @@ import {
   UnscheduledPlan,
   UnscheduledPlan$Outbound,
   UnscheduledPlan$outboundSchema,
-} from "./phase-add-item-markups-2.js";
+} from "./phase-add-item-model-markups-2.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   CreateScheduleAttachDiscount,
@@ -72,7 +75,28 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./unscheduled-plan-upsert-license-on-decrease.js";
+} from "./unscheduled-plan-upsert-license-on-increase.js";
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type PhaseAddItemMarkups2 = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: PhaseAddItemProviderMarkups2 }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?: { [k: string]: PhaseAddItemModelMarkups2 } | null | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -616,10 +640,16 @@ export type PhaseUpsertLicensePriceTier2 = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PhaseUpsertLicenseTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PhaseUpsertLicenseTierBehavior2 = ClosedEnum<
   typeof PhaseUpsertLicenseTierBehavior2
 >;
@@ -674,6 +704,9 @@ export type PhaseUpsertLicensePrice2 = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PhaseUpsertLicensePriceTier2> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PhaseUpsertLicenseTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1490,6 +1523,54 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
+export type PhaseAddItemMarkups2$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: PhaseAddItemProviderMarkups2$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: PhaseAddItemModelMarkups2$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const PhaseAddItemMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMarkups2$Outbound,
+  PhaseAddItemMarkups2
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(
+      z.nullable(
+        z.record(z.string(), PhaseAddItemProviderMarkups2$outboundSchema),
+      ),
+    ),
+    modelMarkups: z.optional(
+      z.nullable(
+        z.record(z.string(), PhaseAddItemModelMarkups2$outboundSchema),
+      ),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function phaseAddItemMarkups2ToJSON(
+  phaseAddItemMarkups2: PhaseAddItemMarkups2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemMarkups2$outboundSchema.parse(phaseAddItemMarkups2),
+  );
+}
+
+/** @internal */
 export type PhaseAddItemFeatureOverride2$Outbound = {
   credit_schema?: Array<PhaseAddItemCreditSchemaUnion2$Outbound> | undefined;
   markups?: PhaseAddItemMarkups2$Outbound | undefined;
@@ -1504,7 +1585,7 @@ export const PhaseAddItemFeatureOverride2$outboundSchema: z.ZodMiniType<
     creditSchema: z.optional(
       z.array(PhaseAddItemCreditSchemaUnion2$outboundSchema),
     ),
-    markups: z.optional(PhaseAddItemMarkups2$outboundSchema),
+    markups: z.optional(z.lazy(() => PhaseAddItemMarkups2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

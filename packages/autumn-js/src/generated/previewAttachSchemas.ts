@@ -108,6 +108,13 @@ export const previewAttachCustomLineItemSchema = z.object({
 	description: z.string(),
 });
 
+export const previewAttachAddLineSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	periodStart: z.union([z.number(), z.undefined()]).optional(),
+	periodEnd: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const previewAttachCarryOverBalancesSchema = z.object({
 	enabled: z.boolean(),
 	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
@@ -490,7 +497,8 @@ export const previewAttachRemoveLicenseOutboundSchema = z.object({
 export const previewAttachInvoiceModeOutboundSchema = z.object({
 	enabled: z.boolean(),
 	enable_plan_immediately: z.boolean(),
-	finalize: z.boolean(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issue_method: z.union([z.string(), z.undefined()]).optional(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
 	payment_method_types: z
@@ -511,6 +519,90 @@ export const previewAttachBillingCycleAnchorOutboundSchema = z.union([
 export const previewAttachCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
 	description: z.string(),
+});
+
+export const previewAttachPriceRemoveLineOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachPriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	previewAttachPriceRemoveLineOutboundSchema,
+]);
+
+export const previewAttachRemoveLineFeatureQuantityOutboundSchema = z.object({
+	feature_id: z.string(),
+	billing_behavior: z.string(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachPriceLicenseQuantityOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachLicenseQuantityPriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	previewAttachPriceLicenseQuantityOutboundSchema,
+]);
+
+export const previewAttachLicenseQuantityFeatureQuantityOutboundSchema =
+	z.object({
+		feature_id: z.string(),
+		billing_behavior: z.string(),
+		interval: z.union([z.string(), z.undefined()]).optional(),
+		interval_count: z.union([z.number(), z.undefined()]).optional(),
+	});
+
+export const previewAttachRemoveLineLicenseQuantityOutboundSchema = z.object({
+	license_plan_id: z.string(),
+	price: z
+		.union([
+			z.boolean(),
+			previewAttachPriceLicenseQuantityOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(previewAttachLicenseQuantityFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachRemoveLineOutboundSchema = z.object({
+	plan_id: z.string(),
+	entity_id: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([z.string(), z.undefined()]).optional(),
+	price: z
+		.union([
+			z.boolean(),
+			previewAttachPriceRemoveLineOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(previewAttachRemoveLineFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	license_quantities: z
+		.union([
+			z.array(previewAttachRemoveLineLicenseQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachAddLineOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	period_start: z.union([z.number(), z.undefined()]).optional(),
+	period_end: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachCarryOverBalancesOutboundSchema = z.object({
@@ -891,12 +983,17 @@ export const previewAttachCustomizeSchema = z.object({
 		.optional(),
 });
 
+export const previewAttachIssueMethodSchema = closedEnumSchema;
+
 export const previewAttachPaymentMethodTypeSchema = closedEnumSchema;
 
 export const previewAttachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issueMethod: z
+		.union([previewAttachIssueMethodSchema, z.undefined()])
+		.optional(),
 	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
 	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
 	paymentMethodTypes: z
@@ -909,6 +1006,105 @@ export const previewAttachProrationBehaviorSchema = closedEnumSchema;
 export const previewAttachRedirectModeSchema = closedEnumSchema;
 
 export const previewAttachPlanScheduleSchema = closedEnumSchema;
+
+export const previewAttachDirectionSchema = closedEnumSchema;
+
+export const previewAttachPriceRemoveLineIntervalSchema = closedEnumSchema;
+
+export const previewAttachPriceRemoveLineSchema = z.object({
+	interval: z
+		.union([previewAttachPriceRemoveLineIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachPriceUnionSchema = z.union([
+	z.boolean(),
+	previewAttachPriceRemoveLineSchema,
+]);
+
+export const previewAttachBillingBehaviorSchema = closedEnumSchema;
+
+export const previewAttachFeatureQuantityIntervalSchema = closedEnumSchema;
+
+export const previewAttachRemoveLineFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: previewAttachBillingBehaviorSchema,
+	interval: z
+		.union([previewAttachFeatureQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachPriceLicenseQuantityIntervalSchema = closedEnumSchema;
+
+export const previewAttachPriceLicenseQuantitySchema = z.object({
+	interval: z
+		.union([previewAttachPriceLicenseQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachLicenseQuantityPriceUnionSchema = z.union([
+	z.boolean(),
+	previewAttachPriceLicenseQuantitySchema,
+]);
+
+export const previewAttachLicenseQuantityBillingBehaviorSchema =
+	closedEnumSchema;
+
+export const previewAttachLicenseQuantityFeatureQuantityIntervalSchema =
+	closedEnumSchema;
+
+export const previewAttachLicenseQuantityFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: previewAttachLicenseQuantityBillingBehaviorSchema,
+	interval: z
+		.union([
+			previewAttachLicenseQuantityFeatureQuantityIntervalSchema,
+			z.undefined(),
+		])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachRemoveLineLicenseQuantitySchema = z.object({
+	licensePlanId: z.string(),
+	price: z
+		.union([
+			z.boolean(),
+			previewAttachPriceLicenseQuantitySchema,
+			z.undefined(),
+		])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(previewAttachLicenseQuantityFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachRemoveLineSchema = z.object({
+	planId: z.string(),
+	entityId: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([previewAttachDirectionSchema, z.undefined()]).optional(),
+	price: z
+		.union([z.boolean(), previewAttachPriceRemoveLineSchema, z.undefined()])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(previewAttachRemoveLineFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+	licenseQuantities: z
+		.union([
+			z.array(previewAttachRemoveLineLicenseQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
 
 export const previewAttachTaxExemptSchema = closedEnumSchema;
 
@@ -965,6 +1161,12 @@ export const previewAttachParamsSchema = z.object({
 	longLivedCheckout: z.union([z.boolean(), z.undefined()]).optional(),
 	customLineItems: z
 		.union([z.array(previewAttachCustomLineItemSchema), z.undefined()])
+		.optional(),
+	removeLines: z
+		.union([z.array(previewAttachRemoveLineSchema), z.undefined()])
+		.optional(),
+	addLines: z
+		.union([z.array(previewAttachAddLineSchema), z.undefined()])
 		.optional(),
 	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	carryOverBalances: z
@@ -1178,6 +1380,12 @@ export const previewAttachParamsOutboundSchema = z.object({
 	long_lived_checkout: z.union([z.boolean(), z.undefined()]).optional(),
 	custom_line_items: z
 		.union([z.array(previewAttachCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_lines: z
+		.union([z.array(previewAttachRemoveLineOutboundSchema), z.undefined()])
+		.optional(),
+	add_lines: z
+		.union([z.array(previewAttachAddLineOutboundSchema), z.undefined()])
 		.optional(),
 	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	carry_over_balances: z

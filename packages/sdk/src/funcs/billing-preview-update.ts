@@ -51,6 +51,8 @@ import { Result } from "../types/fp.js";
  * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
  * @param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
  * @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
+ * @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+ * @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
  * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
  * @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
  * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
