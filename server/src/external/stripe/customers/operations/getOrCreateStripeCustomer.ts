@@ -1,9 +1,12 @@
 import {
 	type Customer,
+	ErrCode,
 	orgDisableStripeWrites,
 	ProcessorType,
+	RecaseError,
 } from "@autumn/shared";
 import { tryCatch } from "@shared/utils";
+import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
@@ -14,7 +17,6 @@ import {
 } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
-import { retryAsync } from "@/utils/retryAsync";
 
 /** The caller's customer may be a snapshot taken before a concurrent
  * customers.update committed; pushing its email to Stripe would echo the stale
@@ -36,37 +38,6 @@ const latestCustomerEmail = async ({
 	});
 	return current?.email ?? customer.email;
 };
-
-const waitForConcurrentlyLinkedStripeCustomer = ({
-	ctx,
-	customer,
-	options,
-	error,
-}: {
-	ctx: AutumnContext;
-	customer: Customer;
-	options?: { updateDb?: boolean; expandTax?: boolean };
-	error: Error;
-}) =>
-	retryAsync({
-		attempts: 5,
-		delayMs: 500,
-		run: async () => {
-			const latest = await CusService.get({
-				db: ctx.db,
-				idOrInternalId: customer.internal_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
-			const linkedStripeCustomer = await getExpandedStripeCustomer({
-				ctx,
-				stripeCustomerId: latest?.processor?.id,
-			});
-			if (!linkedStripeCustomer) throw error;
-			customer.processor = latest?.processor;
-			return getOrCreateStripeCustomer({ ctx, customer, options });
-		},
-	});
 
 export const getOrCreateStripeCustomer = async ({
 	ctx,
@@ -126,11 +97,11 @@ export const getOrCreateStripeCustomer = async ({
 	);
 
 	if (error instanceof Stripe.errors.StripeIdempotencyError) {
-		return waitForConcurrentlyLinkedStripeCustomer({
-			ctx,
-			customer,
-			options,
-			error,
+		throw new RecaseError({
+			message:
+				"Another request is creating this customer in Stripe. Retry this request.",
+			code: ErrCode.StripeCreateCustomerFailed,
+			statusCode: StatusCodes.CONFLICT,
 		});
 	}
 	if (error) throw error;
