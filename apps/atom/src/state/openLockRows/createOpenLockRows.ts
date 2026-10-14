@@ -2,9 +2,11 @@ import type { WorkerLock } from "@autumn/balance-engine";
 import type { JournalEntry } from "../journal/types/journal.js";
 import type { OpenLockRows } from "./types/openLockRows.js";
 
-/** The lock an owed entry takes; null for a plain track. */
+/** The lock an owed entry takes or settles; null for a plain track. */
 const lockIdOf = ({ command }: JournalEntry): string | null =>
-	command.lock?.lockId ?? null;
+	command.type === "finalize"
+		? command.lock.lock_id
+		: (command.lock?.lockId ?? null);
 
 export const createOpenLockRows = (): OpenLockRows => {
 	const rowsByCustomer = new Map<string, Map<string, WorkerLock>>();

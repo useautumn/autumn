@@ -2,8 +2,8 @@ import type { WorkerLock } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../journal/types/journal.js";
 
 /**
- * The rows of the locks this slot took, by customer: a retried lock_id is compared with its row, and only the slot that
- * took a lock computed it. Memory only; after a restart a lock still owed has its row replayed from the journal.
+ * The rows of the locks this slot took, by customer: a retried lock_id is compared with its row, a finalize carries it,
+ * and only the slot that took a lock computed it. Memory only; after a restart a lock still owed has its row replayed from the journal.
  */
 export type OpenLockRows = {
 	hold(params: { row: WorkerLock }): void;

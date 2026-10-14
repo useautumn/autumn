@@ -8,7 +8,7 @@ import { freshestCatalog } from "../readCurrentSubject/freshestCatalog.js";
 import { replayOwed } from "../readCurrentSubject/replayOwed.js";
 
 const takesLock = ({ command }: JournalEntry, lockId: string): boolean =>
-	command.lock?.lockId === lockId;
+	command.type === "track" && command.lock?.lockId === lockId;
 
 /** Every row the customer's owed entries insert, replayed from its stored rows as the view replays them. */
 const replayLockRows = ({

@@ -1,4 +1,7 @@
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { FinalizeCommand, TrackCommand } from "@autumn/balance-engine";
+
+/** What the journal owes: the worker's track of a deduction granted here, or the finalize of a lock taken here. */
+export type JournaledCommand = TrackCommand | FinalizeCommand;
 
 /** A deduction the Atom granted and owes Autumn: the worker's own track command, with the Atom's bookkeeping beside it. */
 export type JournalEntry = {
@@ -8,7 +11,7 @@ export type JournalEntry = {
 	seq: number;
 	/** When the Atom granted it, by the journal's clock. */
 	appendedAt: number;
-	command: TrackCommand;
+	command: JournaledCommand;
 };
 
 /** One slot's commands owed to Autumn, written only by the slot's owner thread. */
@@ -18,7 +21,7 @@ export type Journal = {
 	/** In the customer's view from the call on; resolves once its commit is on disk, and rejects if the commit failed. */
 	append(params: {
 		customerId: string;
-		command: TrackCommand;
+		command: JournaledCommand;
 	}): Promise<JournalEntry>;
 	/**
 	 * What the customer's view replays, oldest first: every entry no push has shown applied. An append grows this very

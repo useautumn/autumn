@@ -1,4 +1,3 @@
-import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	deleteCustomerJournalEntries,
 	deleteJournalEntriesUpTo,
@@ -9,7 +8,11 @@ import {
 } from "../repos/journalEntries.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import { openJournalDatabase } from "./openJournalDatabase.js";
-import type { Journal, JournalEntry } from "./types/journal.js";
+import type {
+	Journal,
+	JournalEntry,
+	JournaledCommand,
+} from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
 const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
@@ -152,7 +155,7 @@ export const openJournal = ({
 		command,
 	}: {
 		customerId: string;
-		command: TrackCommand;
+		command: JournaledCommand;
 	}): Promise<JournalEntry> {
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
