@@ -227,6 +227,14 @@ export function createMeteringConsumer({
 		}
 	}
 
+	async function beginBatch(batch: {
+		topic: string;
+		partition: number;
+		messages: TopicRecord["message"][];
+	}): Promise<void> {
+		await secondaryHandlerOf(batch)?.beginBatch?.(batch);
+	}
+
 	async function settleBatch(position: {
 		topic: string;
 		partition: number;
@@ -239,6 +247,7 @@ export function createMeteringConsumer({
 		? { readResumeOffset, applyRecords: bindApplyRecords(ctx.handler) }
 		: {
 				readResumeOffset,
+				beginBatch,
 				applyRecord: bindApplyRecord(ctx.handler),
 				settleBatch,
 			};
