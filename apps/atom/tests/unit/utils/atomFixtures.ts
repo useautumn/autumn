@@ -23,6 +23,7 @@ import {
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
+import type { TrackRequest } from "../../../src/processor/types/track.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import type { Replication } from "../../../src/replication/types/replication.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
@@ -151,13 +152,27 @@ export const checkRequestFor = ({
 	query?: CheckRequest["query"];
 	apiVersion?: ApiVersionClass | null;
 } = {}): CheckRequest => ({
-	kind: "check",
 	requestId: "req_check_1",
 	occurredAt,
 	idempotencyKey: null,
 	params: { customer_id: "cus_1", feature_id: "messages", ...params },
 	query,
 	apiVersion,
+});
+
+/** A queued track of `cus_1`'s messages as a caller on the latest API version sends it. */
+export const trackRequestFor = ({
+	params = {},
+	idempotencyKey = null,
+}: {
+	params?: Partial<TrackRequest["params"]>;
+	idempotencyKey?: string | null;
+} = {}): TrackRequest => ({
+	requestId: "atom_req_1",
+	occurredAt,
+	idempotencyKey,
+	params: { customer_id: "cus_1", feature_id: "messages", ...params },
+	apiVersion: latestApiVersion,
 });
 
 /** The reason `run` left its request to the API; null when it answered itself. */

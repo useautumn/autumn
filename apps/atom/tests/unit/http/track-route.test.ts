@@ -197,6 +197,7 @@ describe("a track the Atom leaves to the API", () => {
 		const { replica, autumn } = await replicaAt100();
 		const cases: [ReturnType<typeof trackOf>, string][] = [
 			[trackOf({ body: { entity_id: "ent_1" } }), "send_event"],
+			[trackOf({ body: { customer_data: { name: "Ada" } } }), "customer_data"],
 			[
 				trackOf({ body: { feature_id: undefined, event_name: "msg" } }),
 				"track_by_event",
