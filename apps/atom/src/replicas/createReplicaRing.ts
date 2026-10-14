@@ -58,7 +58,9 @@ export const createReplicaRing = ({
 		);
 
 	async function members(): Promise<string[]> {
-		const peers = (await peersListed()).filter(
+		const listed = await peersListed();
+		membership?.keepOnly(listed);
+		const peers = listed.filter(
 			(peer) => !membership || membership.isMember(peer),
 		);
 		const own = membership?.isSelfLeaving() ? [] : [self];

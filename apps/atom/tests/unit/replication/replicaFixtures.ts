@@ -102,7 +102,7 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
-	const membership = createMembership({ self: address });
+	const membership = createMembership({ self: address, now });
 	const ring = createReplicaRing({
 		ctx: {
 			resolver: { peers: async () => ringPeers },
