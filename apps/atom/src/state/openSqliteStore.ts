@@ -1,4 +1,3 @@
-import { deepFreeze } from "./deepFreeze.js";
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
@@ -44,7 +43,7 @@ const sharedSlice = ({
 	const catalog = held?.catalog.deref();
 	const org = held?.org.deref();
 	if (catalog && org) return { catalog, org };
-	const shared = deepFreeze({ catalog: slice.catalog, org: slice.org });
+	const shared = { catalog: slice.catalog, org: slice.org };
 	slicesByHash.set(hash, {
 		catalog: new WeakRef(shared.catalog),
 		org: new WeakRef(shared.org),
@@ -92,11 +91,10 @@ export const openSqliteStore = ({
 		if (found) return found.subject;
 		const read = readSubjectRow({ ctx, ...params });
 		if (read === null) return null;
-		// Frozen, because every check of the subject shares the copy.
-		const subject = deepFreeze({
+		const subject = {
 			...read.subject,
 			...sharedSlice({ hash: read.sliceHash, slice: read.subject }),
-		});
+		};
 		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
 		return subject;
 	}
@@ -114,7 +112,7 @@ export const openSqliteStore = ({
 		return readSubjectVersion({ ctx, ...params });
 	}
 
-	/** A slice any held copy already has is reused, frozen; its row is rewritten only when this customer's held a different one. */
+	/** A slice any held copy already has is reused; its row is rewritten only when this customer's held a different one. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
@@ -140,10 +138,10 @@ export const openSqliteStore = ({
 		if (bytes !== null) {
 			held.hold({
 				key,
-				subject: deepFreeze({
+				subject: {
 					...subject,
 					customerVersion: customerVersion ?? subject.customerVersion,
-				}),
+				},
 				bytes,
 				sliceHash: slice.hash,
 			});
@@ -158,7 +156,7 @@ export const openSqliteStore = ({
 			return;
 		held.hold({
 			key,
-			subject: deepFreeze({ ...heldCopy.subject, customerVersion }),
+			subject: { ...heldCopy.subject, customerVersion },
 			bytes: heldCopy.bytes,
 			sliceHash: heldCopy.sliceHash,
 		});
