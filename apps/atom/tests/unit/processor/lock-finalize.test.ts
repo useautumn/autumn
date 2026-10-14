@@ -219,6 +219,20 @@ describe("a finalize on the Atom", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
+	test("B5: a lock_id taken again after its release here, before the push, is a new lock: it holds again and is journaled", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		await lockOf({ processor, value: 30 });
+		await processor.finalize({ request: finalizeRequestFor({}) });
+
+		const relocked = await lockOf({ processor, value: 30 });
+
+		expect(relocked.allowed).toBe(true);
+		expect(
+			journal.owed({ customerId: "cus_1" }).map(({ command }) => command.type),
+		).toEqual(["track", "finalize", "track"]);
+		expect(await remainingOf({ processor })).toBe(970);
+	});
+
 	test("parked D1: a miss goes to the API", async () => {
 		// L4, L5, L9: a lock taken on another replica before an owner move holds no row here, whatever this view shows.
 		const taker = await openHolding({ balance: 1000 });
