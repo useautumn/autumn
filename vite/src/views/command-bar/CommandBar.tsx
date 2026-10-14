@@ -42,8 +42,8 @@ import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonation
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
-import { impersonateUser } from "@/views/admin/adminUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { enterOrgAsAdmin, impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
@@ -900,7 +900,8 @@ const CommandBar = () => {
 											const firstNonAdminUser = org.users?.find(
 												(user) => user.role !== "admin",
 											);
-											if (!firstNonAdminUser) return null;
+											const hasNoMembers = (org.users?.length ?? 0) === 0;
+											if (!firstNonAdminUser && !hasNoMembers) return null;
 
 											return (
 												<CommandRow
@@ -917,19 +918,38 @@ const CommandBar = () => {
 														)
 													}
 													title={org.name}
-													subtext={org.slug}
+													subtext={
+														hasNoMembers
+															? `${org.slug} · no members, enter as admin`
+															: org.slug
+													}
 													onSelect={async () => {
 														try {
-															await impersonateUser({
-																userId: firstNonAdminUser.id,
-																organizationId: org.id,
-																isCurrentlyImpersonating,
-															});
+															if (firstNonAdminUser) {
+																await impersonateUser({
+																	userId: firstNonAdminUser.id,
+																	organizationId: org.id,
+																	isCurrentlyImpersonating,
+																});
+															} else {
+																await enterOrgAsAdmin({
+																	axiosInstance,
+																	organizationId: org.id,
+																	isCurrentlyImpersonating,
+																});
+																window.location.reload();
+															}
 															closeDialog();
 														} catch (error) {
 															console.error(
-																"Failed to impersonate user:",
+																"Failed to open organization:",
 																error,
+															);
+															toast.error(
+																getBackendErr(
+																	error,
+																	"Failed to open organization",
+																),
 															);
 														}
 													}}

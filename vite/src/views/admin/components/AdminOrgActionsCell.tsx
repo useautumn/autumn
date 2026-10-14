@@ -1,6 +1,7 @@
 import { DropdownMenuGroup, DropdownMenuItem } from "@autumn/ui";
 import { TableDropdownMenuCell } from "@/components/general/table";
 import type { AdminOrg } from "../AdminOrgColumns";
+import { AdminEnterOrgMenuItem } from "./AdminEnterOrgMenuItem";
 import { AdminImpersonateMenuItem } from "./AdminImpersonateMenuItem";
 
 export const AdminOrgActionsCell = ({
@@ -13,6 +14,7 @@ export const AdminOrgActionsCell = ({
 	onManageRedis: (org: AdminOrg) => void;
 }) => {
 	const firstNonAdminUser = org.users.find((user) => user.role !== "admin");
+	const hasNoMembers = org.users.length === 0;
 
 	return (
 		<div
@@ -33,6 +35,7 @@ export const AdminOrgActionsCell = ({
 							userId={firstNonAdminUser.id}
 						/>
 					)}
+					{hasNoMembers && <AdminEnterOrgMenuItem organizationId={org.id} />}
 				</DropdownMenuGroup>
 			</TableDropdownMenuCell>
 		</div>
