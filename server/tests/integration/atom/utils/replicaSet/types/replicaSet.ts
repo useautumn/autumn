@@ -60,6 +60,8 @@ export type ReplicaSet = TestAtom & {
 	/** The two replicas stop seeing each other, as a split network shows them; each still serves. */
 	cutPeer(left: number, right: number): Promise<void>;
 	healPeers(): Promise<void>;
+	/** The replica the Atom's own ring gives the customer to, among every replica of the set. */
+	ownerIndexOf(params: { customerId: string }): Promise<number>;
 	/** Every request the balancer gets goes to this replica; null spreads them over the running ones. */
 	routeTo(index: number | null): void;
 	pushes(): PushLanding[];
