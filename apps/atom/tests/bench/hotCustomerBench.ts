@@ -79,6 +79,16 @@ const sqliteStore = openSqliteStore({
 	held: createHeldSubjects({ budgetBytes: 512 * 1024 ** 2 }),
 });
 const journal = openJournal({ databasePath: join(folder, "journal.sqlite") });
+/** The append's own synchronous work, up to its commit: what an owed array copy would cost. */
+let appendUs = 0;
+let measuring = false;
+const append = journal.append;
+journal.append = (params) => {
+	const startedAt = performance.now();
+	const appended = append(params);
+	if (measuring) appendUs += (performance.now() - startedAt) * 1000;
+	return appended;
+};
 const processor = createSlotProcessor({
 	ctx: {
 		sqliteStore,
@@ -129,6 +139,7 @@ for (let sent = 0; sent < total; ) {
 	if (cpuBefore === null && now - startedAt >= WARMUP_MS) {
 		cpuBefore = jsThreadCpuMs();
 		measuredFrom = sent;
+		measuring = true;
 	}
 	const due = Math.min(total, Math.floor(((now - startedAt) / 1000) * rate));
 	for (; sent < due; sent++) {
@@ -179,6 +190,7 @@ console.log(
 		p99Ms: percentile(0.99),
 		maxMs: percentile(1),
 		pushes,
+		appendUsPerDeduction: Number((appendUs / measuredCalls).toFixed(2)),
 		...readViewFoldThreadStats(),
 		owedAtEnd: journal.owed({ customerId: "cus_1" }).length,
 	}),
