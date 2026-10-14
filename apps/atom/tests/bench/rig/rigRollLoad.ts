@@ -106,16 +106,23 @@ const send = async ({
 		} | null;
 		into.histogram[bucketOf(performance.now() - startedAt)]++;
 		if (isReplay) {
-			const doubled = reply.ok && body?.allowed;
+			const first = firstOutcomeOf.get(key as string);
+			// A first send shed or refused never deducted, so its replay is the caller's first deduction.
+			const firstDeducted = first === undefined || first.allowed === true;
+			const doubled = reply.ok && body?.allowed && firstDeducted;
 			add(
 				into.failedStatus,
 				doubled
 					? "replay allowed (deducted twice)"
-					: `replay ${reply.status} ${body?.code ?? ""}`,
+					: firstDeducted
+						? `replay ${reply.status} ${body?.code ?? ""}`
+						: `replay after undeducted first ${reply.status}`,
 			);
 			if (doubled && doublesFile && key)
 				await Bun.write(
-					Bun.file(`${doublesFile}-${plan.index}-${Date.now()}-${Math.random()}`),
+					Bun.file(
+						`${doublesFile}-${plan.index}-${Date.now()}-${Math.random()}`,
+					),
 					JSON.stringify({
 						key,
 						customerId,
