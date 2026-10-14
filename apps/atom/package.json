@@ -12,7 +12,8 @@
 		"ts": "tsc --noEmit",
 		"bench:deduct": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/deductBench.ts",
 		"bench:replicas": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/replicaBench.ts",
-		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts"
+		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts",
+		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",
