@@ -41,8 +41,10 @@ export function peerRequestMiddleware({
 				{ message: "Peer signature rejected", code: "atom_peer_rejected" },
 				401,
 			);
-		context.set("relayed", true);
-		await next();
+		await timeStage("mwPeerAuthAfter", () => {
+			context.set("relayed", true);
+			return next();
+		});
 	}
 	return authorizePeer;
 }

@@ -1,5 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -40,6 +41,9 @@ export function requestLogMiddleware({
 		} catch (cause) {
 			context.res = await handleError(toError(cause), context);
 		}
+		return timeStage("mwRequestLogAfter", () => logLine(context, startedAt));
+	}
+	function logLine(context: Context<AtomHttpEnv>, startedAt: number) {
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
 		const statusCode = context.res.status;
 		const forwarded = forwardedReason({ context });
@@ -72,7 +76,7 @@ export function requestLogMiddleware({
 				// A deduction's key at Autumn is this when present, the request id otherwise.
 				...(idempotencyKey && { idempotencyKey }),
 			},
-			res: await loggedResponseOf({ context }),
+			res: loggedResponseOf({ context }),
 			...(sampled && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),
 			...(forwarded && { forwarded }),
 			...(failure && {

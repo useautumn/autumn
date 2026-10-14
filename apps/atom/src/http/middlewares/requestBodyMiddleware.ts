@@ -11,12 +11,14 @@ export async function requestBodyMiddleware(
 	next: Next,
 ): Promise<void> {
 	const text = await context.req.text();
-	if (context.req.path === SUBJECT_PUSH_PATH) return next();
-	context.set(
-		"body",
-		timeStage("httpParseRespond", () => parseJson(text)),
-	);
-	await next();
+	await timeStage("mwRequestBodyAfter", () => {
+		if (context.req.path === SUBJECT_PUSH_PATH) return next();
+		context.set(
+			"body",
+			timeStage("httpParseRespond", () => parseJson(text)),
+		);
+		return next();
+	});
 }
 
 /** A body that is not JSON is read as none; whichever route it came to decides what that means. */

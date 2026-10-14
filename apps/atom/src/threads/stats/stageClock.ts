@@ -4,6 +4,28 @@ import { readFileSync } from "node:fs";
 export const STAGES = [
 	/** Hono's dispatch, middleware and handlers, each up to its first await; the stages they run are their own. */
 	"honoRoute",
+	/** Bench split of honoRoute: Bun.serve's fetch into Hono, routing and compose, outside any layer. */
+	"honoDispatch",
+	"mwAdmission",
+	"mwRequestLog",
+	/** requestLog after its await next(): counting, sampling, the line. */
+	"mwRequestLogAfter",
+	"mwRequestBody",
+	/** requestBody after the body text arrives: the set and the call down. */
+	"mwRequestBodyAfter",
+	"mwCheckHop",
+	/** checkHop after the owner lookup resolves. */
+	"mwCheckHopAfter",
+	"mwClientAuth",
+	"mwPeerAuth",
+	"mwPeerAuthAfter",
+	"handlerCheck",
+	/** The check body, query and version header read with the API's schemas. */
+	"requestContract",
+	/** receiveCheck after the processor answers: the Response built. */
+	"handlerCheckAfter",
+	"handlerTrack",
+	"handlerPush",
 	/** The request body parsed and the response's JSON written. */
 	"httpParseRespond",
 	/** A check this replica does not own: signed and handed to the owner. */

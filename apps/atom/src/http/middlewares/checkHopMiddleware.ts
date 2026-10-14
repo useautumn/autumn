@@ -76,7 +76,7 @@ export function checkHopMiddleware({
 
 	async function hopCheck(context: Context<AtomHttpEnv>, next: Next) {
 		const hop = await hopOf(context);
-		if (!hop) return next();
+		if (!hop) return timeStage("mwCheckHopAfter", () => next());
 		const { pathname, search } = new URL(context.req.url);
 		const body = await context.req.text();
 		let reply: Response;

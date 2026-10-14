@@ -43,13 +43,17 @@ import { createReplication } from "../../src/replication/createReplication.js";
 import { createHandlerRegistry } from "../../src/replication/handlers/createHandlerRegistry.js";
 import { createHeldSubjects } from "../../src/state/heldSubjects/createHeldSubjects.js";
 import { createSubjectPulls } from "../../src/subjectPulls/createSubjectPulls.js";
-import { readStageClock } from "../../src/threads/stats/stageClock.js";
+import {
+	readStageClock,
+	timeStage,
+} from "../../src/threads/stats/stageClock.js";
 import {
 	createThreadStatsBuffer,
 	openThreadCounters,
 	readThreadStats,
 } from "../../src/threads/stats/threadStats.js";
 import { allSlotsOwnedHere, atomOrg } from "../unit/utils/atomFixtures.js";
+import { createFastCheck } from "./fastCheckSpike.js";
 
 const MULTI_WORKER_AUTUMN_PATH = `${import.meta.dir}/multiWorkerAutumn.ts`;
 
@@ -318,10 +322,17 @@ const runReplica = async ({
 	};
 	const app = createAtomApp({ ctx: httpContext });
 	const peerApp = createPeerApp({ ctx: httpContext, secret: PEER_SECRET });
+	const fastCheck = createFastCheck({ ctx: httpContext as never, app });
 	Bun.serve({
 		hostname: address,
 		port: PORT,
+		...(process.env.BENCH_FAST_CHECK && {
+			routes: { "/v1/balances.check": { POST: fastCheck } },
+		}),
 		fetch: (request) => {
+			// The checks are POSTs; the bench's own GETs are told apart without parsing a URL on the measured path.
+			if (request.method !== "GET")
+				return timeStage("honoDispatch", () => app.fetch(request));
 			const { pathname } = new URL(request.url);
 			if (pathname === "/__bench/reset") {
 				reset();
@@ -355,7 +366,11 @@ const runReplica = async ({
 			return app.fetch(request);
 		},
 	});
-	Bun.serve({ hostname: address, port: PEER_PORT, fetch: peerApp.fetch });
+	Bun.serve({
+		hostname: address,
+		port: PEER_PORT,
+		fetch: (request) => timeStage("honoDispatch", () => peerApp.fetch(request)),
+	});
 	process.on("SIGTERM", () => {
 		rmSync(dataDir, { recursive: true, force: true });
 		process.exit(0);

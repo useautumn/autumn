@@ -21,11 +21,14 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
-	app.use("/v1/balances.check", timedRoute(admissionMiddleware({ ctx })));
-	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx })));
 	app.use(
-		timedRoute(requestLogMiddleware({ ctx, handleError })),
-		timedRoute(requestBodyMiddleware),
+		"/v1/balances.check",
+		timedRoute(admissionMiddleware({ ctx }), "mwAdmission"),
+	);
+	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx }), "mwAdmission"));
+	app.use(
+		timedRoute(requestLogMiddleware({ ctx, handleError }), "mwRequestLog"),
+		timedRoute(requestBodyMiddleware, "mwRequestBody"),
 	);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
@@ -39,17 +42,21 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const authorized = new Hono<AtomHttpEnv>();
 	authorized.post(
 		"/balances.check",
-		timedRoute(checkHopMiddleware({ ctx })),
-		timedRoute(clientAuthMiddleware({ ctx })),
-		timedRoute(receiveCheck),
+		timedRoute(checkHopMiddleware({ ctx }), "mwCheckHop"),
+		timedRoute(clientAuthMiddleware({ ctx }), "mwClientAuth"),
+		timedRoute(receiveCheck, "handlerCheck"),
 	);
 	authorized.post(
 		"/track",
 		timedRoute(checkHopMiddleware({ ctx })),
-		timedRoute(clientAuthMiddleware({ ctx })),
-		timedRoute(receiveTrack),
+		timedRoute(clientAuthMiddleware({ ctx }), "mwClientAuth"),
+		timedRoute(receiveTrack, "handlerTrack"),
 	);
-	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
+	authorized.post(
+		"/subjects.set",
+		timedRoute(pushAuth, "mwClientAuth"),
+		timedRoute(receiveSetSubject({ ctx }), "handlerPush"),
+	);
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
 	app.route("/v1", authorized);
 	return app;

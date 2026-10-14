@@ -47,23 +47,26 @@ export function createPeerApp({
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
-	app.use("/v1/balances.check", timedRoute(admissionMiddleware({ ctx })));
-	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx })));
 	app.use(
-		timedRoute(requestLogMiddleware({ ctx, handleError })),
-		timedRoute(requestBodyMiddleware),
-		timedRoute(peerRequestMiddleware({ secret })),
+		"/v1/balances.check",
+		timedRoute(admissionMiddleware({ ctx }), "mwAdmission"),
+	);
+	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx }), "mwAdmission"));
+	app.use(
+		timedRoute(requestLogMiddleware({ ctx, handleError }), "mwRequestLog"),
+		timedRoute(requestBodyMiddleware, "mwRequestBody"),
+		timedRoute(peerRequestMiddleware({ secret }), "mwPeerAuth"),
 	);
 	// A check another replica handed on is answered here, whoever this replica's ring says owns it: one hop at most.
 	app.post(
 		"/v1/balances.check",
-		timedRoute(clientAuthMiddleware({ ctx })),
-		timedRoute(receiveCheck),
+		timedRoute(clientAuthMiddleware({ ctx }), "mwClientAuth"),
+		timedRoute(receiveCheck, "handlerCheck"),
 	);
 	app.post(
 		"/v1/track",
-		timedRoute(clientAuthMiddleware({ ctx })),
-		timedRoute(receiveTrack),
+		timedRoute(clientAuthMiddleware({ ctx }), "mwClientAuth"),
+		timedRoute(receiveTrack, "handlerTrack"),
 	);
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
 	if (ctx.multiTenant) {
@@ -73,7 +76,10 @@ export function createPeerApp({
 	}
 	const folder = new Hono<AtomHttpEnv>();
 	folder.use(peerFolderMiddleware({ ctx }));
-	folder.post("/v1/subjects.set", receiveSetSubject({ ctx }));
+	folder.post(
+		"/v1/subjects.set",
+		timedRoute(receiveSetSubject({ ctx }), "handlerPush"),
+	);
 	folder.post("/v1/catalog.set", receiveSetCatalog({ ctx }));
 	folder.post(PEER_SUBJECTS_SINCE_PATH, receiveSubjectsSince({ ctx }));
 	folder.post(PEER_SUBJECTS_DIGEST_PATH, receiveSubjectsDigest({ ctx }));

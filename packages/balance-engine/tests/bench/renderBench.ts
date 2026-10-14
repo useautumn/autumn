@@ -20,12 +20,13 @@ import {
 } from "../unit/engineFixtures.js";
 
 const renders = Number(process.argv[2] ?? 20_000);
+const balance = Number(process.argv[3] ?? 1_000_000);
 const state = createState({
 	customerEntitlements: Array.from({ length: 40 }, (_, i) =>
 		createCustomerEntitlement({
 			id: i === 0 ? "messages_monthly" : `feature_${i}_monthly`,
 			featureId: i === 0 ? "messages" : `feature_${i}`,
-			balance: 1_000_000,
+			balance,
 		}),
 	),
 });
@@ -74,6 +75,7 @@ const microsPerRender = (isDeductingCheck: boolean) => {
 console.log(
 	JSON.stringify({
 		renders,
+		balance,
 		readCheckMicros: microsPerRender(false),
 		deductingCheckMicros: microsPerRender(true),
 	}),
