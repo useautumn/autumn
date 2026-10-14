@@ -20,7 +20,10 @@ export type Journal = {
 		customerId: string;
 		command: TrackCommand;
 	}): Promise<JournalEntry>;
-	/** What the customer's view replays, oldest first: every entry no push has shown applied. The same array until it changes. */
+	/**
+	 * What the customer's view replays, oldest first: every entry no push has shown applied. An append grows this very
+	 * array; anything else that changes it (a push's trim, a forget, a failed commit) gives a new one.
+	 */
 	owed(params: { customerId: string }): readonly JournalEntry[];
 	/** Committed entries Autumn does not hold yet, oldest commit first; each customer's in seq order. */
 	unsent(params: { limit: number }): JournalEntry[];
