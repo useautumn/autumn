@@ -11,6 +11,8 @@ export type ViewFold = {
 	/** The journal's array as read: an append grows it in place, so only its first `applied` entries are in this fold. */
 	owed: readonly JournalEntry[];
 	applied: number;
+	/** The customer's own rows after each applied entry in turn: what a push that acknowledged a prefix is compared to. */
+	statesAfter: readonly SubjectState[];
 	/** The customer's own rows with those entries applied, which a later append continues from. */
 	customerState: SubjectState;
 	current: CurrentSubject;
@@ -20,6 +22,8 @@ export type ViewFold = {
 export type ReplayBase = {
 	state: SubjectState;
 	applied: number;
+	/** The rows after each of the `applied` entries, carried into the fold the replay continues. */
+	statesAfter: readonly SubjectState[];
 	/** `state` joined, when the cached view is the customer's own: its fullSubject is exactly that. */
 	fullSubject: WorkerFullSubject | null;
 };
