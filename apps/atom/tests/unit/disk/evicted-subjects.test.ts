@@ -31,7 +31,6 @@ import type { ReplicaFolders } from "../../../src/replication/types/replicaFolde
 import { openSlots } from "../../../src/slots/openSlots.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
-import { pendingSqliteWrites } from "../../../src/state/writer/getSqliteWriter.js";
 import { createSubjectPulls } from "../../../src/subjectPulls/createSubjectPulls.js";
 import {
 	createThreadStatsBuffer,
@@ -59,15 +58,12 @@ import {
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 const HOUR = 3_600_000;
 const quiet = { warn() {} };
 
-/** Runs what is queued, including the writer thread's answers to the writes it posts. */
-const drainMicrotasks = async () => {
-	do await new Promise<void>((resolve) => setImmediate(resolve));
-	while (pendingSqliteWrites() > 0);
-};
+const drainMicrotasks = settleSqliteWrites;
 
 const folders: string[] = [];
 const closers: (() => void)[] = [];
