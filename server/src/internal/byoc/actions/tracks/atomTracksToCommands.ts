@@ -11,7 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { featureToInternalFeatureId } from "@/internal/balances/balanceWorker/featureToInternalFeatureId.js";
 import type { AtomHonoEnv } from "../../types/atomHonoEnv.js";
 
-type HandedInCommand = TrackCommand | AtomFinalizeCommand;
+export type HandedInCommand = TrackCommand | AtomFinalizeCommand;
 
 /** An Atom's finalize names its lock as the API does; the worker settles Autumn's own row for it, never the Atom's copy. */
 const finalizeToCommand = ({
