@@ -32,7 +32,10 @@ export const startWalCheckpointer = ({
 	logger,
 }: {
 	dataDir: string;
-	logger: { warn(fields: object, message: string): void };
+	logger: {
+		warn(fields: object, message: string): void;
+		info?(fields: object, message: string): void;
+	};
 }): { checkpoint(): void; stop(): void } => {
 	const open = new Map<string, Database>();
 	const failing = new Set<string>();
@@ -75,10 +78,36 @@ export const startWalCheckpointer = ({
 				database.close();
 				open.delete(path);
 			}
+		// BENCH ONLY (#369 rig diagnosis, never merge): each tick's checkpoint time and the log bytes it found.
+		const startedAt = performance.now();
+		let files = 0;
+		let walBytes = 0;
+		let maxMs = 0;
 		paths.forEach((path, index) => {
-			if (index % TICKS_PER_FILE === tick % TICKS_PER_FILE)
-				checkpointOne({ path });
+			if (index % TICKS_PER_FILE !== tick % TICKS_PER_FILE) return;
+			const fileStartedAt = performance.now();
+			try {
+				walBytes += statSync(`${path}${WAL_SUFFIX}`).size;
+			} catch {}
+			checkpointOne({ path });
+			files++;
+			maxMs = Math.max(maxMs, performance.now() - fileStartedAt);
 		});
+		const ms = performance.now() - startedAt;
+		if (ms >= 20)
+			logger.info?.(
+				{
+					type: "atom_rig_wal_checkpoint_tick",
+					data: {
+						tick,
+						files,
+						walBytes,
+						ms: Math.round(ms),
+						maxMs: Math.round(maxMs),
+					},
+				},
+				"WAL checkpoint tick",
+			);
 		tick += 1;
 	}
 
