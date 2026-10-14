@@ -1,10 +1,11 @@
 import posthog from "posthog-js";
 
-const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+// Public project key, shared with the dashboard so the .useautumn.com cookie
+// carries a visitor's first referrer and UTM tags onto the person who signs up.
+const POSTHOG_KEY = "phc_L763VL2WY6TExI5xG5xWOua6E5LYkZN496hBeSpEdAn";
+const PRODUCTION_HOST = /(^|\.)useautumn\.com$/;
 
-// Shares the dashboard's project key so the .useautumn.com cookie carries a
-// visitor's first referrer and UTM tags onto the person who later signs up.
-if (POSTHOG_KEY) {
+if (PRODUCTION_HOST.test(window.location.hostname)) {
 	posthog.init(POSTHOG_KEY, {
 		api_host: "https://us.i.posthog.com",
 		defaults: "2025-11-30",
