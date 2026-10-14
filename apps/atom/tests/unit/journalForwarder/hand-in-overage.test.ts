@@ -30,7 +30,7 @@ describe("a lock the Atom granted, handed in to Autumn", () => {
 				{
 					command: {
 						overageBehavior: "overflow",
-						lock: { ...lock, overageBehavior: callerBehavior },
+						lock: { ...lock, callerOverageBehavior: callerBehavior },
 					},
 				},
 			);
@@ -40,7 +40,7 @@ describe("a lock the Atom granted, handed in to Autumn", () => {
 		expect(handedIn({ overageBehavior: "cap", lock })).toMatchObject({
 			command: {
 				overageBehavior: "cap",
-				lock: { ...lock, overageBehavior: "cap" },
+				lock: { ...lock, callerOverageBehavior: "cap" },
 			},
 		});
 	});

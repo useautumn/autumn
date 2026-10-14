@@ -29,8 +29,8 @@ export const trackLockSchema = z
 			name: "track.lock.expiryAction",
 			values: ["release", "confirm"],
 		}),
-		/** The caller's, recorded on the row for a finalize above the lock, when the track is applied on other terms. */
-		overageBehavior: overageBehaviorSchema.optional(),
+		/** The caller's overage behaviour, recorded on the row for a finalize above the lock, when the track is applied on other terms. */
+		callerOverageBehavior: overageBehaviorSchema.optional(),
 	})
 	.loose();
 
