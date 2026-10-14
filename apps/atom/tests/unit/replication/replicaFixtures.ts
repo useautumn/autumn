@@ -310,11 +310,11 @@ export const recordJournals = () => {
 		ctx: {
 			autumnClient: {
 				appendTracks: async ({ writer, tracks }) => {
-					for (const { command: sent } of tracks) {
-						const command = parseTrackCommand({ input: sent });
+					for (const track of tracks) {
+						const command = parseTrackCommand({ input: track.command });
 						commands.push(command);
 						appended.push({
-							writer,
+							writer: (track.writer ?? writer) as string,
 							owner: command.requestId,
 							key: command.idempotency?.key,
 							value: command.value,

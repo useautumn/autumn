@@ -18,6 +18,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noFolderPulls,
 	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
@@ -234,6 +235,40 @@ describe("handing the journal to Autumn", () => {
 
 		expect(autumn.applied).toHaveLength(10);
 		expect(autumn.requestSizes.length).toBeLessThanOrEqual(2);
+	});
+
+	test("a folder's journals go to Autumn together: one tracks.append carries every journal with something to send", async () => {
+		const forwarder = forwarderTo({ sleep: heldSleeps().sleep });
+		const tokenHash = () => "hash_folder";
+		const journals = [1, 2, 3].map(() =>
+			openJournal({ databasePath: ":memory:" }),
+		);
+		const forwardings = journals.map((journal) =>
+			forwarder.forward({ journal, tokenHash, pulls: noFolderPulls }),
+		);
+		cleanups.push(() => {
+			for (const forwarding of forwardings) forwarding.stop();
+			for (const journal of journals) journal.close();
+		});
+
+		await Promise.all(
+			journals.map((journal, index) =>
+				journal.append({
+					customerId: `cus_${index}`,
+					command: owedCommand({
+						commandId: `slot_${index}`,
+						value: 1,
+						customerId: `cus_${index}`,
+					}),
+				}),
+			),
+		);
+		await until(() => journals.every((journal) => nothingUnsent({ journal })));
+
+		expect(autumn.requestSizes).toEqual([3]);
+		expect(new Set(autumn.applied.map(({ writer }) => writer))).toEqual(
+			new Set(journals.map(({ writerId }) => writerId)),
+		);
 	});
 
 	test("batches hold at most 500 tracks, each customer's in seq order", async () => {

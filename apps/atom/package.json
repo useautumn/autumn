@@ -10,7 +10,8 @@
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"ts": "tsc --noEmit",
-		"bench:deduct": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/deductBench.ts"
+		"bench:deduct": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/deductBench.ts",
+		"bench:replicas": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/replicaBench.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",

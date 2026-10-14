@@ -37,13 +37,13 @@ export const startFakeAutumn = () => {
 		if (!parsed.success || switches.refuseWith === 400)
 			return Response.json({ code: "unreadable" }, { status: 400 });
 		requestSizes.push(parsed.data.tracks.length);
-		for (const { seq, command: sent } of parsed.data.tracks) {
+		for (const { writer, seq, command: sent } of parsed.data.tracks) {
 			const command = parseTrackCommand({ input: sent });
 			const key = command.idempotency?.key ?? command.commandId;
 			if (appliedKeys.has(key)) continue;
 			appliedKeys.add(key);
 			applied.push({
-				writer: parsed.data.writer,
+				writer: (writer ?? parsed.data.writer) as string,
 				customerId: command.identity.customerId,
 				seq,
 				value: command.value,
