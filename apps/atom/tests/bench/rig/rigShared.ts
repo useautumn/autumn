@@ -113,9 +113,8 @@ export const timelineOf = ({ config }: { config: RigConfig }) => {
 		index,
 		multiple,
 		startsAtS: warmupSeconds + index * hot.stepSeconds,
-		hotDeductionsPerSec: Math.min(
-			hot.ratePerStep * multiple,
-			hot.maxRatePerSec,
+		hotDeductionsPerSec: Math.round(
+			Math.min(hot.ratePerStep * multiple, hot.maxRatePerSec),
 		),
 	}));
 	return {
