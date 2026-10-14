@@ -3,22 +3,28 @@ import { dedupeCjsChildren } from "../../../../../src/bunWorkarounds/cjsChildren
 
 const require = createRequire(import.meta.url);
 const parent = require("./parent.cjs") as { requireChild(): unknown };
-const withWorkaround = process.argv.includes("--dedupe");
-const ROUNDS = 5;
-const REQUIRES_PER_ROUND = 1_000_000;
+const REQUIRES = 5_000_000;
 
+/** Median of several forced full GCs: single collections are noisy on shared CI runners. */
 function fullGcMs(): number {
-	const startedAt = performance.now();
-	for (let i = 0; i < 5; i++) Bun.gc(true);
-	return (performance.now() - startedAt) / 5;
+	const samples: number[] = [];
+	for (let i = 0; i < 9; i++) {
+		const startedAt = performance.now();
+		Bun.gc(true);
+		samples.push(performance.now() - startedAt);
+	}
+	return samples.sort((a, b) => a - b)[4] ?? 0;
 }
 
-// One sweep is enough: once `children` is read, Bun stops appending duplicates for that parent.
-if (withWorkaround) dedupeCjsChildren({ cache: require.cache });
-// The first round warms the heap up; growth is measured from there.
-const gcMs: number[] = [];
-for (let round = 0; round < ROUNDS; round++) {
-	for (let i = 0; i < REQUIRES_PER_ROUND; i++) parent.requireChild();
-	gcMs.push(fullGcMs());
+function requireChildRepeatedly(): void {
+	for (let i = 0; i < REQUIRES; i++) parent.requireChild();
 }
-process.stdout.write(JSON.stringify({ gcMs }));
+
+requireChildRepeatedly();
+const leaked = fullGcMs();
+dedupeCjsChildren({ cache: require.cache });
+const deduped = fullGcMs();
+// Once `children` has been read, the same parent stops accumulating duplicates.
+requireChildRepeatedly();
+const afterMoreRequires = fullGcMs();
+process.stdout.write(JSON.stringify({ leaked, deduped, afterMoreRequires }));

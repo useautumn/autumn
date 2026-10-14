@@ -5,19 +5,17 @@ import { dedupeCjsChildren } from "../../../../src/bunWorkarounds/cjsChildren/de
 const FIXTURE = new URL("./fixtures/measureCachedRequires.ts", import.meta.url)
 	.pathname;
 
+type GcTimes = { leaked: number; deduped: number; afterMoreRequires: number };
+
 /** A fresh process, so the only CommonJS parent requiring in a loop is the fixture's. */
-async function measure({ dedupe }: { dedupe: boolean }): Promise<number[]> {
-	const child = Bun.spawn(
-		[process.execPath, FIXTURE, ...(dedupe ? ["--dedupe"] : [])],
-		{ stdout: "pipe", stderr: "inherit" },
-	);
+async function measure(): Promise<GcTimes> {
+	const child = Bun.spawn([process.execPath, FIXTURE], {
+		stdout: "pipe",
+		stderr: "inherit",
+	});
 	const output = await new Response(child.stdout).text();
 	expect(await child.exited).toBe(0);
-	return (JSON.parse(output) as { gcMs: number[] }).gcMs;
-}
-
-function growthMs({ gcMs }: { gcMs: number[] }): number {
-	return (gcMs.at(-1) ?? 0) - (gcMs[0] ?? 0);
+	return JSON.parse(output) as GcTimes;
 }
 
 test("reads children on every cached module", () => {
@@ -47,14 +45,12 @@ test("sweeps once on start and reports what it saw; disabled, it never sweeps", 
 });
 
 test.skipIf(typeof Bun === "undefined")(
-	"full GC grows with cached requires, and stays flat when children are read (oven-sh/bun#43279)",
+	"cached requires slow every full GC until children are read, and stop accumulating after (oven-sh/bun#43279)",
 	async () => {
-		const without = await measure({ dedupe: false });
-		const withDedupe = await measure({ dedupe: true });
-		expect(growthMs({ gcMs: without })).toBeGreaterThan(1.5);
-		expect(growthMs({ gcMs: withDedupe })).toBeLessThan(
-			growthMs({ gcMs: without }) / 4,
-		);
+		const { leaked, deduped, afterMoreRequires } = await measure();
+		const leakCostMs = leaked - deduped;
+		expect(leaked).toBeGreaterThan(deduped * 1.5);
+		expect(afterMoreRequires - deduped).toBeLessThan(leakCostMs / 3);
 	},
 	30_000,
 );
