@@ -3,6 +3,7 @@ import {
 	mergeSubjectStates,
 	type SubjectState,
 	subjectStateToFullSubject,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import {
 	CannotAnswerError,
@@ -87,7 +88,12 @@ type SubjectJoinCacheEntry = {
 };
 
 /** What a view's customer rows start from: the stored copy, or a cached view that already applied `applied`. */
-type ReplayBase = { state: SubjectState; applied: readonly JournalEntry[] };
+type ReplayBase = {
+	state: SubjectState;
+	applied: readonly JournalEntry[];
+	/** `state` joined, when the cached view is the customer's own: its fullSubject is exactly that. */
+	fullSubject: WorkerFullSubject | null;
+};
 
 /** Only appends happened since `previous`: anything else (a drop, a refusal, a restart) replaces an entry before its end. */
 const isAppendedTo = ({
@@ -130,8 +136,12 @@ export const readCurrentSubject = ({
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
 		isSameCopy && isAppendedTo({ owed, previous: joined.owed })
-			? { state: joined.customerState, applied: joined.owed }
-			: { state: customer.state, applied: [] };
+			? {
+					state: joined.customerState,
+					applied: joined.owed,
+					fullSubject: entity ? null : joined.current.fullSubject,
+				}
+			: { state: customer.state, applied: [], fullSubject: null };
 	const { current, customerState } = joinSubject({
 		customer,
 		entity,
@@ -183,7 +193,12 @@ const joinSubject = ({
 	const customerState =
 		unapplied.length === 0
 			? base.state
-			: replayOwed({ owed: unapplied, state: base.state, catalog });
+			: replayOwed({
+					owed: unapplied,
+					state: base.state,
+					catalog,
+					fullSubject: base.fullSubject,
+				});
 
 	const current: CurrentSubject = {
 		fullSubject: subjectStateToFullSubject({
