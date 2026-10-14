@@ -3,11 +3,13 @@
  *
  * Contract:
  *  1. a customer's own lock is taken on the Atom, not the API: the Atom's view holds the units at once, and its
- *     journal hands the locked track to Autumn with its writer and seq, where it lands as one balance_locks row.
+ *     journal hands the locked track to Autumn with its writer and seq, where it lands as one balance_locks row;
+ *  2. its finalize is settled on the Atom too and handed in after the lock: Autumn closes the lock, the units come back,
+ *     and the finalize's own seq lands on the customer, so the Atom's journal clears it.
  */
 
 import { afterAll, expect, test } from "bun:test";
-import { balanceLocks, customers } from "@autumn/shared";
+import { balanceLocks, customers, LATEST_VERSION } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -23,6 +25,7 @@ import {
 	atomIsHosted,
 	deleteAtomDeployment,
 	ensureAtomDeployment,
+	type TestAtom,
 } from "./utils/ensureAtomDeployment.js";
 import { expectAtomBalance } from "./utils/expectAtomBalance.js";
 import { checkOnAtom } from "./utils/expectAtomCheckCorrect.js";
@@ -32,6 +35,54 @@ const autumn = atomTestClient();
 afterAll(async () => {
 	await deleteAtomDeployment({ autumn });
 });
+
+/** A finalize sent to the Atom as an SDK on the latest API version sends it. */
+const finalizeOnAtom = async ({
+	atom,
+	customerId,
+	lockId,
+}: {
+	atom: TestAtom;
+	customerId: string;
+	lockId: string;
+}) => {
+	const response = await fetch(`${atom.endpointUrl}/v1/balances.finalize`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${defaultCtx.orgSecretKey}`,
+			"x-api-version": LATEST_VERSION,
+			"x-atom-token": atom.token,
+		},
+		body: JSON.stringify({
+			customer_id: customerId,
+			lock_id: lockId,
+			action: "release",
+		}),
+	});
+	return {
+		status: response.status,
+		forwarded: response.headers.get("x-atom-forwarded"),
+		body: await response.json(),
+	};
+};
+
+/** Every seq Autumn holds on the customer's row, across the Atom's journals. */
+const atomSeqsOf = async ({ customerId }: { customerId: string }) => {
+	const [row] = await defaultCtx.db
+		.select({ atomSeqs: customers.atom_seqs })
+		.from(customers)
+		.where(
+			and(
+				eq(customers.org_id, defaultCtx.org.id),
+				eq(customers.env, defaultCtx.env),
+				eq(customers.id, customerId),
+			),
+		);
+	return Object.values(row?.atomSeqs ?? {}).flatMap((writerSeqs) =>
+		Object.values(writerSeqs),
+	);
+};
 
 const ofThisCustomer = ({ customerId }: { customerId: string }) =>
 	and(
@@ -77,29 +128,71 @@ test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
 			assert: (rows) => expect(rows).toEqual([{ lockId: "atom-lock1-lock" }]),
 		});
 		await pollUntilAsserted({
-			fetch: () =>
-				defaultCtx.db
-					.select({ atomSeqs: customers.atom_seqs })
-					.from(customers)
-					.where(
-						and(
-							eq(customers.org_id, defaultCtx.org.id),
-							eq(customers.env, defaultCtx.env),
-							eq(customers.id, customerId),
-						),
-					),
-			assert: ([row]) =>
-				expect(
-					Object.values(row?.atomSeqs ?? {}).flatMap((writerSeqs) =>
-						Object.values(writerSeqs),
-					),
-				).toEqual([1]),
+			fetch: () => atomSeqsOf({ customerId }),
+			assert: (seqs) => expect(seqs).toEqual([1]),
 		});
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,
 			remaining: 70,
 		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
+	`${chalk.yellowBright("atom-lock2: a finalize settled on the Atom hands in after its lock, and Autumn closes the lock")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId } = await initScenario({
+			customerId: "atom-lock2",
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.billing.attach({ productId: free.id })],
+		});
+		const atom = await ensureAtomDeployment({ autumn });
+		await expectAtomBalance({ atom, customerId, remaining: 100 });
+		await checkOnAtom({
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			featureId: TestFeature.Messages,
+			requiredBalance: 30,
+			lock: { enabled: true, lock_id: "atom-lock2-lock" },
+		});
+
+		const released = await finalizeOnAtom({
+			atom,
+			customerId,
+			lockId: "atom-lock2-lock",
+		});
+
+		expect(released).toEqual({
+			status: 200,
+			forwarded: null,
+			body: { success: true },
+		});
+		await expectAtomBalance({ atom, customerId, remaining: 100, timeoutMs: 0 });
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+		});
+		await pollUntilAsserted({
+			fetch: () =>
+				defaultCtx.db
+					.select({ lockId: balanceLocks.lock_id })
+					.from(balanceLocks)
+					.where(ofThisCustomer({ customerId })),
+			assert: (rows) => expect(rows).toEqual([]),
+		});
+		await pollUntilAsserted({
+			fetch: () => atomSeqsOf({ customerId }),
+			assert: (seqs) => expect(seqs).toEqual([2]),
+		});
+		await expectAtomBalance({ atom, customerId, remaining: 100 });
 	},
 	120_000,
 );
