@@ -14,7 +14,7 @@ export const STAGES = [
 	"engineDecision",
 	/** A fold continued: each appended deduction replayed onto the cached view (computeTrack, applyMutation). */
 	"engineFoldStep",
-	/** The replay of a push's acknowledged deductions onto the old copy, to tell whether the fold carries across it. */
+	/** The comparison of a push with the rows the fold kept after the deductions it acknowledged, to tell whether the fold carries across it. */
 	"engineFoldCheck",
 	/** A fold rebuilt from the stored copy: every deduction still owed replayed. */
 	"engineFoldRebuild",
