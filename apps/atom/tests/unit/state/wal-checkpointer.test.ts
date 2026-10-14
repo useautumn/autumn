@@ -47,4 +47,27 @@ describe("WAL checkpointer", () => {
 			writer.close();
 		}
 	});
+
+	test("copies a written log back into its file within 3 ticks, however many files the folder holds", () => {
+		const dataDir = mkdtempSync(join(tmpdir(), "atom-wal-"));
+		const paths = Array.from({ length: 6 }, (_, slot) =>
+			join(dataDir, `slot-00${slot}-of-006.sqlite`),
+		);
+		const writers = paths.map((path) => openWriter({ path }));
+		const before = paths.map((path) => statSync(path).size);
+
+		const checkpointer = startWalCheckpointer({
+			dataDir,
+			logger: { warn: () => {} },
+		});
+		for (let tick = 0; tick < 3; tick++) checkpointer.checkpoint();
+		checkpointer.stop();
+
+		paths.forEach((path, index) => {
+			expect(statSync(path).size).toBeGreaterThan(
+				(before[index] ?? 0) + 150_000,
+			);
+		});
+		for (const writer of writers) writer.close();
+	});
 });
