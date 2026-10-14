@@ -11,10 +11,14 @@
  */
 
 import { test } from "bun:test";
-import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
+	BillingInterval,
+	BillingMethod,
+	type FullProduct,
+} from "@autumn/shared";
+import {
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
 } from "@tests/integration/utils/expectStripePriceResources.js";
 import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
@@ -66,7 +70,9 @@ const stripePriceIdOf = (price: { config: unknown }): string | undefined => {
 		stripe_prepaid_price_v2_id?: string | null;
 		stripe_price_id?: string | null;
 	};
-	return config.stripe_prepaid_price_v2_id || config.stripe_price_id || undefined;
+	return (
+		config.stripe_prepaid_price_v2_id || config.stripe_price_id || undefined
+	);
 };
 
 test.concurrent(
@@ -152,7 +158,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Team V2",
-						versioning: "new_version", active: true as const,
+						versioning: "new_version",
+						active: true as const,
 					},
 				],
 			});

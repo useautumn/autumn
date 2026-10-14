@@ -13,6 +13,20 @@ export const featureToCombine = ({
 		: FeatureCombine.Sum;
 };
 
+/** A change off max / min: pools already built under the old rule would keep it, so customers block it. */
+export const leavesCompetingCombine = ({
+	current,
+	next,
+}: {
+	current: Pick<Feature, "config">;
+	next: Pick<Feature, "config">;
+}) => {
+	const from = featureToCombine({ feature: current });
+	return (
+		from !== FeatureCombine.Sum && from !== featureToCombine({ feature: next })
+	);
+};
+
 /** Plans' unpriced grants of this feature compete (highest or lowest wins) instead of adding up. */
 export const isCompetingCombineFeature = ({
 	feature,

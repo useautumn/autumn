@@ -55,7 +55,9 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200), dashboardItem()],
-								propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
+								propagate: {
+									license_parents: [{ plan_id: parentId, version: 1 }],
+								},
 							},
 							{
 								plan_id: parentId,
@@ -85,9 +87,7 @@ test.concurrent(
 											license_plan_id: childId,
 											included: 2,
 											customize: {
-												remove_items: [
-													{ feature_id: TestFeature.Messages },
-												],
+												remove_items: [{ feature_id: TestFeature.Messages }],
 												add_items: [
 													{
 														feature_id: TestFeature.Messages,
@@ -142,7 +142,9 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200)],
-								propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
+								propagate: {
+									license_parents: [{ plan_id: parentId, version: 1 }],
+								},
 							},
 							{ plan_id: parentId, version: 1 },
 						],

@@ -342,7 +342,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: minted,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						items: [messagesItem({ included: 500 })],
 					},
 					{

@@ -14,15 +14,6 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
-import {
-	childItemOp,
-	dashboardAddCustomize,
-	expectLicenseDraftCase,
-	orPlanFilter,
-	orVersionPinnedFilter,
-	versionPinnedFilter,
-} from "../licenses/utils/expectLicenseMigrationDrafts.js";
 import {
 	dashboardItem,
 	messagesItem,
@@ -32,6 +23,15 @@ import {
 	seedBaseWithVariant,
 	seedVariantNewVersion,
 } from "../../variants/utils/seedVariantPlans.js";
+import {
+	childItemOp,
+	dashboardAddCustomize,
+	expectLicenseDraftCase,
+	orPlanFilter,
+	orVersionPinnedFilter,
+	versionPinnedFilter,
+} from "../licenses/utils/expectLicenseMigrationDrafts.js";
+import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
 
 const followDashboard = ({
 	baseId,
@@ -180,10 +180,7 @@ test.concurrent(
 				await seedVersionableCustomer({ ctx, planId: variantId, version: 2 });
 
 				const planFilter = orPlanFilter({
-					branches: [
-						{ plan_id: baseId, version: 1 },
-						{ plan_id: variantId },
-					],
+					branches: [{ plan_id: baseId, version: 1 }, { plan_id: variantId }],
 				});
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,

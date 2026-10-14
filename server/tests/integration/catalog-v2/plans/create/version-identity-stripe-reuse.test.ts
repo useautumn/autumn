@@ -8,9 +8,13 @@
  */
 
 import { expect, test } from "bun:test";
-import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
-import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
+import {
+	BillingInterval,
+	BillingMethod,
+	type FullProduct,
+} from "@autumn/shared";
 import { expectProductProcessorCorrect } from "@tests/integration/utils/expectStripePriceResources.js";
+import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -68,7 +72,8 @@ const seedPaidBaseAndV2 = async ({
 		plans: [
 			{
 				plan_id: baseId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				price: { amount: 30, interval: BillingInterval.Month },
 			},
 		],

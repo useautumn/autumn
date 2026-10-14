@@ -7,6 +7,7 @@
  *   - features.update changes `combine` without touching `consumable`, and back
  *     to `sum` omits it again.
  *   - AI credit systems reject `max` / `min`.
+ *   - Moving a feature customers hold off `max` / `min` is rejected.
  */
 
 import { expect, test } from "bun:test";
@@ -16,8 +17,12 @@ import {
 	FeatureCombine,
 	FeatureType,
 } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
 const makeFeatureId = () =>
 	`combine_feature_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -73,5 +78,43 @@ test.concurrent(
 				combine: FeatureCombine.Max,
 			}),
 		).rejects.toThrow();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("feature combine: a held feature cannot leave min")}`,
+	async () => {
+		const autumn = new AutumnInt({ version: ApiVersion.V2_1 });
+		const featureId = makeFeatureId();
+		const customerId = `${featureId}_customer`;
+		await autumn.post("/features.create", {
+			feature_id: featureId,
+			name: "Invoice fee",
+			type: FeatureType.Metered,
+			consumable: false,
+			combine: FeatureCombine.Min,
+		});
+		const plan = products.base({
+			id: `${featureId}_plan`,
+			items: [
+				constructFeatureItem({ featureId, includedUsage: 390, interval: null }),
+			],
+		});
+		await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			actions: [s.billing.attach({ productId: plan.id })],
+		});
+
+		await expectAutumnError({
+			errCode: "invalid_feature",
+			func: () =>
+				autumn.post("/features.update", {
+					feature_id: featureId,
+					combine: FeatureCombine.Sum,
+				}),
+		});
+		const got = await autumn.post("/features.get", { feature_id: featureId });
+		expect(got.combine).toBe(FeatureCombine.Min);
 	},
 );

@@ -12,15 +12,15 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import {
-	expectPlanPreviewRowCorrect,
-	parsePlanPreview,
-} from "../../preview/utils/expectPlanPreview.js";
-import {
 	dashboardItem,
 	messagesItem,
 	messagesOverride,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../../preview/utils/expectPlanPreview.js";
 import { seedBaseVariantWithChildLicense } from "../utils/seedVariantPlans.js";
 
 test.concurrent(

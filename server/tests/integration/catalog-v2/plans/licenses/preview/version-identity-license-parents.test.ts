@@ -44,7 +44,9 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200)],
-								propagate: { license_parents: [{ plan_id: parentId, version: 2 }] },
+								propagate: {
+									license_parents: [{ plan_id: parentId, version: 2 }],
+								},
 							},
 						],
 					}),
@@ -65,9 +67,7 @@ test.concurrent(
 									resolved: "existing",
 									options: ["existing", "all_versions"],
 								},
-								siblingVersions: [
-									{ version: 1, licenseAction: "unchanged" },
-								],
+								siblingVersions: [{ version: 1, licenseAction: "unchanged" }],
 							},
 						],
 					},
@@ -100,7 +100,9 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200)],
-								propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
+								propagate: {
+									license_parents: [{ plan_id: parentId, version: 1 }],
+								},
 							},
 						],
 					}),
@@ -121,9 +123,7 @@ test.concurrent(
 									resolved: "existing",
 									options: ["existing", "all_versions"],
 								},
-								siblingVersions: [
-									{ version: 2, licenseAction: "unchanged" },
-								],
+								siblingVersions: [{ version: 2, licenseAction: "unchanged" }],
 							},
 						],
 					},
