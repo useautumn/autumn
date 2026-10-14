@@ -42,7 +42,9 @@ const lazySection = <K extends string>(
 	load: () => Promise<Record<K, React.ComponentType>>,
 	name: K,
 ) =>
-	lazyWithPreload(() => load().then((module) => ({ default: module[name] })));
+	lazyWithPreload<Record<string, never>>(() =>
+		load().then((module) => ({ default: module[name] })),
+	);
 
 const AccountSection = lazySection(
 	() => import("./sections/AccountSection"),
