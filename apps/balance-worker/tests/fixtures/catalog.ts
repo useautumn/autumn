@@ -131,7 +131,14 @@ export const createTestCatalogCache = ({
 	rows?: CatalogRow[];
 } = {}): CatalogCache => {
 	const cache = createCatalogCache({
-		ctx: { db, config: { mutableRowTtlMs: 60_000, maxSizeBytes: 1_000_000 } },
+		ctx: {
+			db,
+			config: {
+				mutableRowTtlMs: 60_000,
+				maxSizeBytes: 1_000_000,
+				idleExpiryMs: 3_600_000,
+			},
+		},
 	});
 	cache.put({ rows });
 	return cache;
