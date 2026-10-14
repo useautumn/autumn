@@ -98,6 +98,29 @@ const planToRow = ({
 	value: reviewPlanPrice({ prices: plan.prices, features }),
 });
 
+/** A phase repeating the one before it has no changes of its own, so it lists the plans it keeps. */
+const withRepeatedPhaseRows = (phases: ReviewChangePhase[]) => {
+	const filled: ReviewChangePhase[] = [];
+	for (const phase of phases) {
+		const previous = filled.at(-1);
+		if (phase.rows.length > 0 || !previous) {
+			filled.push(phase);
+			continue;
+		}
+		const keptRows = previous.rows
+			.filter((row) => row.status !== "ends")
+			.map((row) => ({
+				...row,
+				key: `${phase.key}-${row.key}`,
+				status: "kept" as const,
+				changes: undefined,
+				description: undefined,
+			}));
+		filled.push({ ...phase, rows: keptRows });
+	}
+	return filled;
+};
+
 const removedPhaseToReviewPhase = ({
 	removedPhase,
 	features,
@@ -139,22 +162,24 @@ export const plansToReviewSection = ({
 	currency: string;
 	nowMs: number;
 }): ReviewChangeSection => {
-	const requestPhases = phases.map((phase, phaseIndex) => ({
-		key: `plans-${phaseIndex}`,
-		label: phaseLabel({ phase }),
-		startsAt: phase.starts_at,
-		rows: phase.plans.map((plan, planIndex) =>
-			planToRow({
-				plan,
-				phaseIndex,
-				planIndex,
-				planChanges: phase.plan_changes,
-				features,
-				currency,
-				nowMs,
-			}),
-		),
-	}));
+	const requestPhases = withRepeatedPhaseRows(
+		phases.map((phase, phaseIndex) => ({
+			key: `plans-${phaseIndex}`,
+			label: phaseLabel({ phase }),
+			startsAt: phase.starts_at,
+			rows: phase.plans.map((plan, planIndex) =>
+				planToRow({
+					plan,
+					phaseIndex,
+					planIndex,
+					planChanges: phase.plan_changes,
+					features,
+					currency,
+					nowMs,
+				}),
+			),
+		})),
+	);
 	const removedReviewPhases = removedPhases.map((removedPhase) =>
 		removedPhaseToReviewPhase({ removedPhase, features, currency, nowMs }),
 	);
