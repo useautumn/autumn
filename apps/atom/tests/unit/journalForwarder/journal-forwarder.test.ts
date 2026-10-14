@@ -18,6 +18,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	latestApiVersion,
 	noFolderPulls,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -440,6 +441,53 @@ describe("a track Autumn refuses on its own", () => {
 
 		expect(journal.parked()).toEqual([]);
 		expect(journal.unsent({ limit: 10 })).toHaveLength(1);
+	});
+});
+
+describe("a finalize the Atom settled", () => {
+	test("is handed in after its lock as the lock it names: customer, lock, entity and feature from its row, never the row", async () => {
+		const { processor, journal } = await openForwardedSlot();
+		await processor.check({
+			request: {
+				...sendEvent(),
+				params: {
+					...sendEvent().params,
+					send_event: undefined,
+					lock: { enabled: true, lock_id: "lock_1" },
+				},
+			},
+		});
+		await processor.finalize({
+			request: {
+				requestId: "atom_req_finalize",
+				occurredAt: 1_700_000_000_000,
+				params: {
+					customer_id: "cus_1",
+					lock_id: "lock_1",
+					action: "confirm",
+					override_value: 4,
+					properties: { model: "small" },
+				},
+				apiVersion: latestApiVersion,
+			},
+		});
+
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1]);
+		expect(autumn.finalized).toEqual([
+			{
+				writerId: journal.writerId,
+				seq: 2,
+				requestId: "atom_req_finalize",
+				occurredAt: 1_700_000_000_000,
+				customer_id: "cus_1",
+				lock_id: "lock_1",
+				entity_id: null,
+				feature_id: "messages",
+				finalValue: 4,
+				properties: { model: "small" },
+			},
+		]);
 	});
 });
 
