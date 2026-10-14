@@ -42,7 +42,9 @@ const seedDistributedAnchors = async ({
 			{
 				plan_id: parentAId,
 				name: "Parent A",
-				licenses: [{ license_plan_id: childId, included: 2, version_slug: "v1" }],
+				licenses: [
+					{ license_plan_id: childId, included: 2, version_slug: "v1" },
+				],
 			},
 		],
 	});
@@ -57,7 +59,9 @@ const seedDistributedAnchors = async ({
 			{
 				plan_id: parentBId,
 				name: "Parent B",
-				licenses: [{ license_plan_id: childId, included: 2, version_slug: "v2" }],
+				licenses: [
+					{ license_plan_id: childId, included: 2, version_slug: "v2" },
+				],
 			},
 		],
 	});

@@ -4,6 +4,7 @@ import type {
 	PooledBalancePlan,
 } from "@autumn/shared";
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
+import { applyCompetingPoolTotals } from "./competing/applyCompetingPoolTotals";
 import type { PooledBalanceComputeContext } from "./types/pooledBalanceComputeTypes";
 import { addToExpirePoolBalanceCandidates } from "./utils/pooledBalancePlanUtils";
 
@@ -17,7 +18,9 @@ const contributionValuesMatch = ({
 	current.pooled_balance_id === incoming.pooled_balance_id &&
 	current.current_contribution === incoming.current_contribution &&
 	current.next_cycle_contribution === incoming.next_cycle_contribution &&
-	(current.effective_at ?? null) === (incoming.effective_at ?? null);
+	(current.effective_at ?? null) === (incoming.effective_at ?? null) &&
+	current.competes === (incoming.competes ?? false) &&
+	current.unlimited === (incoming.unlimited ?? false);
 
 const toContributionUpdate = ({
 	current,
@@ -31,6 +34,8 @@ const toContributionUpdate = ({
 	current_contribution: incoming.current_contribution ?? 0,
 	next_cycle_contribution: incoming.next_cycle_contribution ?? 0,
 	effective_at: incoming.effective_at ?? null,
+	competes: incoming.competes ?? false,
+	unlimited: incoming.unlimited ?? false,
 	updated_at: incoming.updated_at ?? current.updated_at,
 });
 
@@ -111,15 +116,19 @@ export const finalizePooledBalanceTransitionPlan = ({
 
 	const finalizedPlan: PooledBalancePlan = {
 		...pooledBalancePlan,
-		updatePoolBalances: pooledBalancePlan.updatePoolBalances.filter(
-			(update) => update.balanceDelta !== 0 || update.grantedDelta !== 0,
-		),
 		insertPoolContributions,
 		updatePoolContributions: Array.from(contributionUpdatesById.values()),
 		deletePoolContributions: pooledBalancePlan.deletePoolContributions.filter(
 			(contribution) => !reconciledDeletedContributionIds.has(contribution.id),
 		),
 	};
+	applyCompetingPoolTotals({ computeContext, plan: finalizedPlan });
+	finalizedPlan.updatePoolBalances = finalizedPlan.updatePoolBalances.filter(
+		(update) =>
+			update.balanceDelta !== 0 ||
+			update.grantedDelta !== 0 ||
+			update.unlimited !== undefined,
+	);
 
 	collectExpiryCandidates({ computeContext, finalizedPlan, now });
 

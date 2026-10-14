@@ -202,12 +202,12 @@ test.concurrent(
 						eq(revenuecatMappings.env, ctx.env),
 					),
 				);
-			expect(
-				mappings.some((row) => row.autumn_product_id === newPlanId),
-			).toBe(true);
-			expect(
-				mappings.some((row) => row.autumn_product_id === planId),
-			).toBe(false);
+			expect(mappings.some((row) => row.autumn_product_id === newPlanId)).toBe(
+				true,
+			);
+			expect(mappings.some((row) => row.autumn_product_id === planId)).toBe(
+				false,
+			);
 		} finally {
 			await cleanupRefs({ ctx, planIds: [planId, newPlanId] });
 			await deleteDbPlans({ ctx, planIds: [planId, newPlanId] });

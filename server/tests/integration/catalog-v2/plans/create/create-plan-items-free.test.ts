@@ -6,10 +6,7 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	ResetInterval,
-	RolloverExpiryDurationType,
-} from "@autumn/shared";
+import { ResetInterval, RolloverExpiryDurationType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

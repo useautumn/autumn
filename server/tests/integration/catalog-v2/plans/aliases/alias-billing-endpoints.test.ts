@@ -5,11 +5,11 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type AttachParamsV1Input,
-	type CreateScheduleParamsV0Input,
-	type MultiUpdateParamsV0Input,
-	type UpdateSubscriptionV1ParamsInput,
+import type {
+	AttachParamsV1Input,
+	CreateScheduleParamsV0Input,
+	MultiUpdateParamsV0Input,
+	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect.js";
@@ -58,14 +58,17 @@ test.concurrent(
 		await deleteAliases({ ctx, planIds });
 		try {
 			await renamePlan({ autumn: autumnV2_3, fromId: proOld, toId: proNew });
-			await renamePlan({ autumn: autumnV2_3, fromId: addonOld, toId: addonNew });
+			await renamePlan({
+				autumn: autumnV2_3,
+				fromId: addonOld,
+				toId: addonNew,
+			});
 
-			const preview = await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(
-				{
+			const preview =
+				await autumnV2_3.billing.previewAttach<AttachParamsV1Input>({
 					customer_id: customerId,
 					plan_id: proOld,
-				},
-			);
+				});
 			const previewPlanIds = collectResponsePlanIds(preview);
 			expect(previewPlanIds.length).toBeGreaterThan(0);
 			expect(previewPlanIds.every((id) => id !== proOld)).toBe(true);
@@ -161,13 +164,14 @@ test.concurrent(
 				plan_id: oldId,
 			});
 
-			const preview = await autumnV2_3.billing.previewUpdate<UpdateSubscriptionV1ParamsInput>(
-				{
-					customer_id: customerId,
-					plan_id: oldId,
-					cancel_action: "cancel_end_of_cycle",
-				},
-			);
+			const preview =
+				await autumnV2_3.billing.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+					{
+						customer_id: customerId,
+						plan_id: oldId,
+						cancel_action: "cancel_end_of_cycle",
+					},
+				);
 			expect(collectResponsePlanIds(preview)).toContain(newId);
 
 			await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
@@ -244,9 +248,8 @@ test.concurrent(
 				customer_id: customerId,
 				plans: [{ plan_id: aOld }, { plan_id: bOld }],
 			};
-			const multiPreview = await autumnV2_3.billing.previewMultiAttach(
-				multiParams,
-			);
+			const multiPreview =
+				await autumnV2_3.billing.previewMultiAttach(multiParams);
 			expect(collectResponsePlanIds(multiPreview)).toContain(aNew);
 			expect(collectResponsePlanIds(multiPreview)).toContain(bNew);
 

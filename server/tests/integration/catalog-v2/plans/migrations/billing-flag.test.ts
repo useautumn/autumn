@@ -9,11 +9,7 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	BillingInterval,
-	BillingMethod,
-	ResetInterval,
-} from "@autumn/shared";
+import { BillingInterval, BillingMethod, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

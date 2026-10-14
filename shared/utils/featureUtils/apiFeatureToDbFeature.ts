@@ -4,6 +4,7 @@ import {
 } from "@api/features/prevVersions/apiFeatureV0.js";
 import type { UpdateFeatureParams } from "@api/features/updateFeatureParams.js";
 import {
+	FeatureCombine,
 	FeatureType,
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
@@ -38,6 +39,7 @@ import type { SharedContext } from "../../types/sharedContext.js";
 import { mapRecordValues } from "../common/objectUtils.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
+import { featureToCombine } from "./classifyFeature/featureCombine.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 import { isConsumableFeature } from "./classifyFeature/isConsumableFeature.js";
 
@@ -257,6 +259,14 @@ export const apiFeatureToDbFeature = ({
 	} satisfies Feature;
 };
 
+/** Sum is the unset default, so it is never stored. */
+const combineToDbConfig = ({
+	combine,
+}: {
+	combine?: FeatureCombine;
+}): { combine?: FeatureCombine } =>
+	combine && combine !== FeatureCombine.Sum ? { combine } : {};
+
 export const featureV1ToDbFeatureConfig = ({
 	apiFeature,
 	originalFeature,
@@ -285,10 +295,19 @@ export const featureV1ToDbFeatureConfig = ({
 		return config;
 	}
 
-	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
+	if (
+		nullish(apiFeature.consumable) &&
+		nullish(apiFeature.credit_schema) &&
+		nullish(apiFeature.combine)
+	)
 		return;
 
 	if (type === FeatureType.Boolean) return;
+
+	const combine = combineToDbConfig({
+		combine:
+			apiFeature.combine ?? featureToCombine({ feature: originalFeature }),
+	});
 
 	if (type === FeatureType.Metered) {
 		const newUsageType = notNullish(apiFeature.consumable)
@@ -298,6 +317,7 @@ export const featureV1ToDbFeatureConfig = ({
 			: originalFeature.config?.usage_type;
 		return {
 			usage_type: newUsageType,
+			...combine,
 		};
 	}
 
@@ -305,10 +325,12 @@ export const featureV1ToDbFeatureConfig = ({
 		const newSchema = notNullish(apiFeature.credit_schema)
 			? apiFeature.credit_schema.map(apiCreditSchemaItemToDb)
 			: originalFeature.config?.schema;
+		const { combine: _combine, ...config } = originalFeature.config ?? {};
 		return {
-			...originalFeature.config,
+			...config,
 			schema: newSchema,
 			usage_type: FeatureUsageType.Single,
+			...combine,
 		};
 	}
 
@@ -353,6 +375,14 @@ export const featureV1ToDbFeature = ({
 	if (apiFeature.credit_schema) {
 		newConfig.usage_type = FeatureUsageType.Single;
 		newConfig.schema = apiFeature.credit_schema.map(apiCreditSchemaItemToDb);
+	}
+
+	if (newConfig) {
+		delete newConfig.combine;
+		Object.assign(
+			newConfig,
+			combineToDbConfig({ combine: apiFeature.combine }),
+		);
 	}
 
 	const modelMarkups =
@@ -419,6 +449,11 @@ export const dbToApiFeatureV1 = ({
 		// predicate ignores it, so a re-pull never phantom-diffs on consumable.
 		consumable:
 			isAnyCreditSystem(dbFeature.type) || isConsumableFeature(dbFeature),
+		...(dbFeature.type === FeatureType.Boolean
+			? {}
+			: combineToDbConfig({
+					combine: featureToCombine({ feature: dbFeature }),
+				})),
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)
 			? dbFeature.config.schema.map(dbCreditSchemaItemToApi)
