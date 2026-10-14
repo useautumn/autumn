@@ -30,11 +30,6 @@ const subjectBodySchema = z.object({
 	read_at: z.number().int().nonnegative(),
 	/** On a customer push, the log offset of its latest evict; a string, as offsets are 64-bit. */
 	customer_version: z.string().regex(/^\d+$/).optional(),
-	/** The highest seq of each of this Atom's journals the state holds, by writer id; absent or null when none. */
-	atom_seqs: z
-		.record(z.string(), z.number().int().nonnegative())
-		.nullable()
-		.optional(),
 });
 
 const parsePush = <T>(read: () => T): T => {
@@ -66,6 +61,5 @@ export const subjectPushToStoredSubject = ({
 		logOffset: BigInt(parsed.log_offset),
 		readAt: parsed.read_at,
 		customerVersion: BigInt(parsed.customer_version ?? 0),
-		atomSeqs: parsed.atom_seqs ?? null,
 	};
 };

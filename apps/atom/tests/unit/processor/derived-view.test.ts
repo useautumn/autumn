@@ -10,6 +10,7 @@ import {
 	storedEntitySubjectWith,
 	storedSubjectWith,
 	subjectPushOf,
+	withAtomSeqs,
 } from "../utils/atomFixtures.js";
 import {
 	createSlotFolder,
@@ -59,13 +60,14 @@ const pushBalance = async ({
 	readAt?: number;
 	atomSeqs?: Record<string, number> | null;
 }) => {
-	const push = subjectPushOf({
-		subject: storedSubjectWith({ balance, readAt }),
-	});
-	return processor.setSubject({
-		customerId: push.customerId,
-		body: JSON.stringify({ ...JSON.parse(push.body), atom_seqs: atomSeqs }),
-	});
+	return processor.setSubject(
+		subjectPushOf({
+			subject: withAtomSeqs({
+				subject: storedSubjectWith({ balance, readAt }),
+				writerSeqs: atomSeqs,
+			}),
+		}),
+	);
 };
 
 const remainingOf = async ({

@@ -159,9 +159,11 @@ export const openJournal = ({
 		atomSeqs,
 	}: {
 		customerId: string;
-		atomSeqs: Record<string, number> | null;
+		atomSeqs: Record<string, Record<string, number>> | null;
 	}): void {
-		const atomSeq = atomSeqs?.[writerId];
+		const atomSeq = Object.values(atomSeqs ?? {}).find(
+			(writerSeqs) => writerId in writerSeqs,
+		)?.[writerId];
 		if (atomSeq === undefined) return;
 		const entries = owed({ customerId });
 		const unseen = entries.filter(({ seq }) => seq > atomSeq);
