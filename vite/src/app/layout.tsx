@@ -11,6 +11,7 @@ import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useActiveOrgId } from "@/hooks/common/useActiveOrgId";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useFontsReady } from "@/hooks/common/useFontsReady";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { LeafPanel } from "@/views/chat/LeafPanel";
 import CommandBar from "@/views/command-bar/CommandBar";
+import { CustomersListPrefetch } from "@/views/customers/CustomersListPrefetch";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
@@ -44,6 +46,8 @@ export function MainLayout() {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const queryClient = useQueryClient();
+	// Mounted (so data keeps loading) but hidden until fonts land, so the first paint doesn't shift.
+	const fontsReady = useFontsReady();
 
 	// Global error handler for API errors
 	useEffect(() => {
@@ -67,7 +71,12 @@ export function MainLayout() {
 			<QueryClientProvider client={queryClient}>
 				<NuqsAdapter>
 					<PortalContainerContext.Provider value={containerRef}>
-						<div className="w-screen h-screen flex bg-outer-background">
+						<div
+							className={cn(
+								"w-screen h-screen flex bg-outer-background",
+								!fontsReady && "invisible",
+							)}
+						>
 							<CustomToaster />
 							<DashboardShell
 								containerRef={containerRef}
@@ -148,9 +157,9 @@ const MainContent = ({
 	useFeaturesQuery();
 	useRewardsQuery();
 	useEventNames({ enabled: !isCapyDev });
-	usePrefetchCurrentRoute();
+	const { isCustomersList, routeChunkReady } = usePrefetchCurrentRoute();
 
-	const showLoading = orgLoading || !org;
+	const showLoading = orgLoading || !org || !routeChunkReady;
 
 	const switchToProduction = () => {
 		setActiveSandbox(null);
@@ -159,6 +168,7 @@ const MainContent = ({
 
 	return (
 		<AppContext.Provider value={{}}>
+			{isCustomersList && <CustomersListPrefetch />}
 			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden sm:py-3 sm:pr-3 relative",

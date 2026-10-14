@@ -6,14 +6,15 @@ import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
+import { CustomersListRoute, ProductsListRoute } from "./app/listRoutes";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { idbPersister } from "./lib/queryPersistence/idbPersister";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
-import { loadCustomerView } from "./views/customers2/customer/loadCustomerView";
+import { CustomerViewRoute } from "./views/customers2/customer/loadCustomerView";
 import LoadingScreen from "./views/general/LoadingScreen";
-import { loadPlanEditorView } from "./views/products/plan/loadPlanEditorView";
+import { PlanEditorRoute } from "./views/products/plan/loadPlanEditorView";
 // Eager: the command bar already bundles it, so lazy only added a fallback frame on load.
 import { SettingsView } from "./views/settings/SettingsView";
 
@@ -68,9 +69,6 @@ const SsoCallback = React.lazy(() =>
 		default: SsoCallback,
 	})),
 );
-const CustomersPage = React.lazy(
-	() => import("./views/customers/CustomersPage"),
-);
 const AnalyticsView = React.lazy(() =>
 	import("./views/customers/customer/analytics/AnalyticsView").then(
 		({ AnalyticsView }) => ({ default: AnalyticsView }),
@@ -81,7 +79,6 @@ const LogsView = React.lazy(() =>
 		default: LogsView,
 	})),
 );
-const CustomerView2 = React.lazy(loadCustomerView);
 const CustomerPlanEditor = React.lazy(
 	() => import("./views/customers2/customer-plan/CustomerPlanEditor"),
 );
@@ -117,8 +114,6 @@ const OnboardingView = React.lazy(
 const QuickstartView = React.lazy(
 	() => import("./views/onboarding4/QuickstartView"),
 );
-const ProductsView = React.lazy(() => import("./views/products/ProductsView"));
-const PlanEditorView = React.lazy(loadPlanEditorView);
 const TerminalView = React.lazy(() =>
 	import("./views/TerminalView").then(({ TerminalView }) => ({
 		default: TerminalView,
@@ -215,8 +210,8 @@ export default function App() {
 
 							{envRoutes(
 								"products",
-								<ProductsView env={AppEnv.Live} />,
-								<ProductsView env={AppEnv.Sandbox} />,
+								<ProductsListRoute env={AppEnv.Live} />,
+								<ProductsListRoute env={AppEnv.Sandbox} />,
 							)}
 							{envRoutes("migrations", <MigrationsView />)}
 							{envRoutes("migrations/:migration_id", <MigrationView />)}
@@ -225,12 +220,12 @@ export default function App() {
 							{envRoutes(
 								"products/:product_id",
 								<SquircleProvider>
-									<PlanEditorView />
+									<PlanEditorRoute />
 								</SquircleProvider>,
 							)}
 
-							{envRoutes("customers", <CustomersPage />)}
-							{envRoutes("customers/:customer_id", <CustomerView2 />)}
+							{envRoutes("customers", <CustomersListRoute />)}
+							{envRoutes("customers/:customer_id", <CustomerViewRoute />)}
 							{envRoutes(
 								"customers/:customer_id/:product_id",
 								<CustomerPlanEditor />,

@@ -1,5 +1,5 @@
 import type { Event } from "@autumn/shared";
-import type { ChartConfig } from "@autumn/ui";
+import type { ChartConfig } from "@autumn/ui/components/ui/chart";
 
 type TimeseriesMeta = {
 	name: string;

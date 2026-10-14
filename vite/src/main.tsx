@@ -3,10 +3,10 @@ import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { routeChunkForPath } from "./app/routeChunks";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 import { idbPersister } from "./lib/queryPersistence/idbPersister";
 import {
@@ -59,9 +59,10 @@ const queryClient = new QueryClient({
 	},
 });
 
-const shouldInitializePostHog = process.env.NODE_ENV === "production";
-
 /** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
+// Fetch the landing page's chunk alongside the session check rather than after it.
+void routeChunkForPath(window.location.pathname)?.preload();
+
 const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
 	console.error(error, errorInfo.componentStack);
 });
@@ -82,22 +83,7 @@ createRoot(document.getElementById("root")!, {
 			}}
 		>
 			<ThemeProvider>
-				{/* <App /> */}
-				{shouldInitializePostHog ? (
-					<PostHogProvider
-						apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-						options={{
-							api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-							autocapture: false,
-							capture_pageview: false,
-							capture_pageleave: false,
-						}}
-					>
-						<App />
-					</PostHogProvider>
-				) : (
-					<App />
-				)}
+				<App />
 				{/* <ReactQueryDevtools initialIsOpen={false} /> */}
 			</ThemeProvider>
 		</PersistQueryClientProvider>

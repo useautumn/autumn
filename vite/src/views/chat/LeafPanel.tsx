@@ -6,7 +6,7 @@ import {
 	PlusIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
@@ -14,9 +14,16 @@ import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useLeafPanelStore } from "@/hooks/stores/useLeafPanelStore";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
-import { LeafChatPanel } from "./components/LeafChatPanel";
-import { LeafThreadHistory } from "./components/LeafThreadHistory";
-import { useLeafChat } from "./hooks/useLeafChat";
+
+// The chat stack (markdown, math, syntax highlighting) is heavy, so it loads after startup.
+const loadLeafChatContainer = () => import("./LeafChatContainer");
+const LeafChatContainer = lazy(loadLeafChatContainer);
+const CHAT_PRELOAD_DELAY_MS = 5000;
+const LeafThreadHistory = lazy(() =>
+	import("./components/LeafThreadHistory").then((module) => ({
+		default: module.LeafThreadHistory,
+	})),
+);
 
 // Geometry animates via reflow (right/bottom-anchored in both modes) instead of
 // a motion layout FLIP, which scale-warps children mid-transition.
@@ -48,6 +55,11 @@ export const LeafPanel = () => {
 	// Lazy keep-alive: nothing mounts until first open; afterwards the panel stays
 	// mounted while hidden so the conversation and in-flight streams survive.
 	const [hasOpened, setHasOpened] = useState(false);
+	useEffect(() => {
+		if (!isAdmin || isMobile) return;
+		const timer = setTimeout(loadLeafChatContainer, CHAT_PRELOAD_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [isAdmin, isMobile]);
 	const panelRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
 		if (open) setHasOpened(true);
@@ -125,7 +137,9 @@ export const LeafPanel = () => {
 						Leaf
 					</div>
 					<div className="flex items-center gap-1.5">
-						<LeafThreadHistory />
+						<Suspense fallback={null}>
+							<LeafThreadHistory />
+						</Suspense>
 						<IconButton
 							className="cursor-pointer"
 							icon={<PlusIcon size={12} />}
@@ -158,69 +172,15 @@ export const LeafPanel = () => {
 						/>
 					</div>
 				</div>
-				<LeafChatContainer
-					contentClassName={expanded ? "mx-auto w-full max-w-3xl" : undefined}
-					key={threadId}
-					threadId={threadId}
-				/>
+				<Suspense fallback={null}>
+					<LeafChatContainer
+						contentClassName={expanded ? "mx-auto w-full max-w-3xl" : undefined}
+						key={threadId}
+						threadId={threadId}
+					/>
+				</Suspense>
 			</div>
 		</>,
 		container,
-	);
-};
-
-const LeafChatContainer = ({
-	contentClassName,
-	threadId,
-}: {
-	contentClassName?: string;
-	threadId: string;
-}) => {
-	const markThreadStarted = useLeafPanelStore((s) => s.markThreadStarted);
-	// Captured at mount (remounts via key on thread change): hydrate only
-	// threads that already have server history, and never mid-conversation.
-	const [shouldHydrate] = useState(
-		() => useLeafPanelStore.getState().threadStarted,
-	);
-
-	const {
-		messages,
-		input,
-		setInput,
-		isLoading,
-		handleSubmit,
-		deciding,
-		error,
-		queue,
-		removeQueued,
-		sendQueuedNow,
-		answerQuestion,
-		approve,
-		reject,
-		submitCatalogDecision,
-	} = useLeafChat({
-		onFirstMessage: markThreadStarted,
-		shouldHydrate,
-		threadId,
-	});
-
-	return (
-		<LeafChatPanel
-			contentClassName={contentClassName}
-			deciding={deciding}
-			error={error}
-			input={input}
-			isLoading={isLoading}
-			messages={messages}
-			onAnswerQuestion={answerQuestion}
-			onApprove={approve}
-			onInputChange={setInput}
-			onRemoveQueued={removeQueued}
-			onReject={reject}
-			onSendQueuedNow={sendQueuedNow}
-			onSubmit={handleSubmit}
-			onSubmitCatalogDecision={submitCatalogDecision}
-			queue={queue}
-		/>
 	);
 };

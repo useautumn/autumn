@@ -22,6 +22,7 @@ export function useCustomerProductsPageQuery({
 	kind,
 	initialPage,
 	enabled = true,
+	customerId,
 }: {
 	cursor: string;
 	pageSize: CustomerProductsPageSize;
@@ -29,8 +30,11 @@ export function useCustomerProductsPageQuery({
 	kind: CustomerProductsKindFilter;
 	initialPage?: CustomerProductsPage;
 	enabled?: boolean;
+	/** Defaults to the route's customer; the layout passes it before the route mounts. */
+	customerId?: string;
 }) {
-	const { customer_id } = useParams();
+	const { customer_id: routeCustomerId } = useParams();
+	const customer_id = customerId ?? routeCustomerId;
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const { entityId } = useEntity();

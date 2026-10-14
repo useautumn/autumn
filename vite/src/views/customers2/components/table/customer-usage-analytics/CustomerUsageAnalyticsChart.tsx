@@ -1,7 +1,11 @@
 "use client";
 
 import type { Event } from "@autumn/shared";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@autumn/ui";
+import {
+	ChartContainer,
+	ChartTooltip,
+	ChartTooltipContent,
+} from "@autumn/ui/components/ui/chart";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {

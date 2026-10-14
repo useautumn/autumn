@@ -1,4 +1,3 @@
-import { useParams } from "react-router";
 import { useLicenseBalancesQuery } from "@/hooks/queries/useLicenseBalancesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useCustomerProductsPageQuery } from "../../hooks/useCustomerProductsPageQuery";
@@ -9,12 +8,13 @@ import { useCustomerProductsTableState } from "../../hooks/useCustomerProductsTa
  * those queries alongside the customer query and let the page render once.
  */
 export const usePreloadEntityView = ({
+	customerId,
 	entityId,
 }: {
+	customerId: string | undefined;
 	entityId: string | null;
 }) => {
-	const { customer_id } = useParams();
-	const enabled = Boolean(entityId);
+	const enabled = Boolean(customerId && entityId);
 
 	const { currentCursor, pageSize, statuses, kind } =
 		useCustomerProductsTableState({ entityId });
@@ -24,9 +24,10 @@ export const usePreloadEntityView = ({
 		statuses,
 		kind,
 		enabled,
+		customerId,
 	});
 	const balances = useLicenseBalancesQuery({
-		customerId: customer_id,
+		customerId,
 		entityId: entityId ?? undefined,
 		enabled,
 	});

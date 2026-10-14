@@ -25,32 +25,97 @@ import {
 	UserIcon,
 	UsersIcon,
 } from "lucide-react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { LabelTag } from "@/components/general/LabelTag";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
+import { lazyWithPreload } from "@/lib/lazyWithPreload";
 import { cn } from "@/lib/utils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
-import { AccountSection } from "./sections/AccountSection";
-import { AgentSection } from "./sections/AgentSection";
-import { AppearanceSection } from "./sections/AppearanceSection";
-import { AtomSection, AtomSectionSkeleton } from "./sections/AtomSection";
-import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
-import { BillingSettingsSection } from "./sections/BillingSettingsSection";
-import { CustomButtonsSection } from "./sections/CustomButtonsSection";
-import { InvoicesSection } from "./sections/InvoicesSection";
-import { MembersSection } from "./sections/MembersSection";
-import { OrganizationSection } from "./sections/OrganizationSection";
-import { RevenueCatSection } from "./sections/RevenueCatSection";
-import { SsoSection } from "./sections/SsoSection";
-import { StripeSection } from "./sections/StripeSection";
-import { SubscriptionSection } from "./sections/SubscriptionSection";
-import { TransitionRulesSection } from "./sections/TransitionRulesSection";
-import { UsageAlertsSection } from "./sections/UsageAlertsSection";
-import { VercelSection } from "./sections/VercelSection";
+
+/** Sections load with the settings page, not the app: some pull in charts and integration SDKs. */
+const lazySection = <K extends string>(
+	load: () => Promise<Record<K, React.ComponentType>>,
+	name: K,
+) =>
+	lazyWithPreload(() => load().then((module) => ({ default: module[name] })));
+
+const AccountSection = lazySection(
+	() => import("./sections/AccountSection"),
+	"AccountSection",
+);
+const AgentSection = lazySection(
+	() => import("./sections/AgentSection"),
+	"AgentSection",
+);
+const AppearanceSection = lazySection(
+	() => import("./sections/AppearanceSection"),
+	"AppearanceSection",
+);
+const AtomSection = lazySection(
+	() => import("./sections/AtomSection"),
+	"AtomSection",
+);
+const AtomSectionSkeleton = lazySection(
+	() => import("./sections/AtomSection"),
+	"AtomSectionSkeleton",
+);
+const AuthorizedAppsSection = lazySection(
+	() => import("./sections/AuthorizedAppsSection"),
+	"AuthorizedAppsSection",
+);
+const BillingSettingsSection = lazySection(
+	() => import("./sections/BillingSettingsSection"),
+	"BillingSettingsSection",
+);
+const CustomButtonsSection = lazySection(
+	() => import("./sections/CustomButtonsSection"),
+	"CustomButtonsSection",
+);
+const InvoicesSection = lazySection(
+	() => import("./sections/InvoicesSection"),
+	"InvoicesSection",
+);
+const MembersSection = lazySection(
+	() => import("./sections/MembersSection"),
+	"MembersSection",
+);
+const OrganizationSection = lazySection(
+	() => import("./sections/OrganizationSection"),
+	"OrganizationSection",
+);
+const RevenueCatSection = lazySection(
+	() => import("./sections/RevenueCatSection"),
+	"RevenueCatSection",
+);
+const SsoSection = lazySection(
+	() => import("./sections/SsoSection"),
+	"SsoSection",
+);
+const StripeSection = lazySection(
+	() => import("./sections/StripeSection"),
+	"StripeSection",
+);
+const SubscriptionSection = lazySection(
+	() => import("./sections/SubscriptionSection"),
+	"SubscriptionSection",
+);
+const TransitionRulesSection = lazySection(
+	() => import("./sections/TransitionRulesSection"),
+	"TransitionRulesSection",
+);
+const UsageAlertsSection = lazySection(
+	() => import("./sections/UsageAlertsSection"),
+	"UsageAlertsSection",
+);
+const VercelSection = lazySection(
+	() => import("./sections/VercelSection"),
+	"VercelSection",
+);
 
 export type SettingsTab =
 	| "account"
@@ -189,7 +254,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 	},
 ];
 
-const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
+const SECTION_MAP: Record<SettingsTab, ReturnType<typeof lazySection>> = {
 	account: AccountSection,
 	organization: OrganizationSection,
 	subscription: SubscriptionSection,
@@ -341,10 +406,16 @@ const SettingsFrame = ({
 
 export const SettingsView = () => {
 	const activeTab = useActiveSettingsTab();
+	// Warm every tab so switching renders immediately instead of suspending.
+	useEffect(() => {
+		for (const section of Object.values(SECTION_MAP)) void section.preload();
+	}, []);
 	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<ActiveSection />
+			<Suspense fallback={<SettingsSectionFallback tab={activeTab} />}>
+				<ActiveSection />
+			</Suspense>
 		</SettingsFrame>
 	);
 };
@@ -357,10 +428,19 @@ const SECTION_SKELETONS: Partial<Record<SettingsTab, React.ComponentType>> = {
 /** Settings as it will render, while the org it needs still loads. */
 export const SettingsViewSkeleton = () => {
 	const activeTab = useActiveSettingsTab();
-	const SectionSkeleton = SECTION_SKELETONS[activeTab] ?? LoadingScreen;
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<SectionSkeleton />
+			<SettingsSectionFallback tab={activeTab} />
 		</SettingsFrame>
+	);
+};
+
+const SettingsSectionFallback = ({ tab }: { tab: SettingsTab }) => {
+	const SectionSkeleton = SECTION_SKELETONS[tab];
+	if (!SectionSkeleton) return <LoadingScreen />;
+	return (
+		<Suspense fallback={<LoadingScreen />}>
+			<SectionSkeleton />
+		</Suspense>
 	);
 };
