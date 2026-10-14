@@ -7,10 +7,13 @@
  *  1. a confirm above the lock, answered by the Atom while Autumn's balance has since moved (an API track): Autumn closes
  *     the lock and the Atom's 200 is what Autumn did;
  *  2. a confirm sent to the Atom after the lock's expiry, which Autumn's timer has released: Autumn charges what the Atom
- *     said it confirmed, or the Atom must not have answered 200.
+ *     said it confirmed, or the Atom must not have answered 200;
+ *  3. a lock the Atom grants on its view while Autumn's balance has since moved (an API track): what the Atom holds and
+ *     what its confirm settles is what Autumn holds and charges.
  */
 
 import { expect, test } from "bun:test";
+import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -179,6 +182,64 @@ test.skipIf(!replicaSetRunsHere)(
 			remaining: 100 - charged,
 		});
 		await expectAtomBalance({ atom, customerId, remaining: 100 - charged });
+	},
+	120_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("atom-finalize-drift3: a lock the Atom grants on a view behind Autumn is held and charged at Autumn as the Atom told its caller")}`,
+	async () => {
+		const customerId = "atom-finalize-drift3";
+		const lockId = `${customerId}-lock`;
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_6 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.billing.attach({ productId: free.id })],
+		});
+		const atom = replicaSet();
+		await expectAtomBalance({ atom, customerId, remaining: 100 });
+
+		replicaSet().holdPushes();
+		await autumnV2_6.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 90,
+			async: false,
+		});
+		// The Atom's view still shows 100 free.
+		const locked = await checkOnAtom({
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			featureId: TestFeature.Messages,
+			requiredBalance: LOCKED,
+			lock: { enabled: true, lock_id: lockId },
+		});
+		expect(locked).toMatchObject({ forwarded: null, body: { allowed: true } });
+		await pollUntilAsserted({
+			fetch: () => atomSeqsOf({ customerId }),
+			assert: (seqs) => expect(seqs).toEqual([1]),
+		});
+		const confirmed = await finalizeOnAtom({
+			atom,
+			customerId,
+			lockId,
+			action: "confirm",
+		});
+		expect(confirmed).toMatchObject({ status: 200, forwarded: null });
+		await replicaSet().releasePushes();
+
+		await pollUntilAsserted({
+			fetch: () => atomSeqsOf({ customerId }),
+			assert: (seqs) => expect(seqs).toEqual([2]),
+		});
+		await expectAutumnLockState({ customerId, openLockIds: [] });
+		const customer = await autumnV2_6.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages]?.usage).toBe(90 + LOCKED);
 	},
 	120_000,
 );
