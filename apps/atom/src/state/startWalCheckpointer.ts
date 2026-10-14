@@ -6,10 +6,10 @@ import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
 const TICK_MS = 1000;
 /**
- * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
- * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
+ * Each file is checkpointed once per this many ticks, a slice of the files each tick. A longer round copies more of a hot
+ * file at once, and on a 125 MB/s volume that burst stalls the writers behind it (rig, 2026-10-15).
  */
-export const TICKS_PER_FILE = 30;
+export const TICKS_PER_FILE = 3;
 const WAL_SUFFIX = "-wal";
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
