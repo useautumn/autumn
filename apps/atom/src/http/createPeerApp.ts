@@ -25,6 +25,7 @@ import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
 import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
+import { peerReadyMiddleware } from "./middlewares/peerReadyMiddleware.js";
 import {
 	peerFolderMiddleware,
 	peerRequestMiddleware,
@@ -57,10 +58,17 @@ export function createPeerApp({
 		peerRequestMiddleware({ secret }),
 	);
 	// A check another replica handed on is answered here, whoever this replica's ring says owns it: one hop at most.
-	app.post("/v1/balances.check", clientAuthMiddleware({ ctx }), receiveCheck);
-	app.post("/v1/track", clientAuthMiddleware({ ctx }), receiveTrack);
+	const ready = peerReadyMiddleware({ ctx });
+	app.post(
+		"/v1/balances.check",
+		ready,
+		clientAuthMiddleware({ ctx }),
+		receiveCheck,
+	);
+	app.post("/v1/track", ready, clientAuthMiddleware({ ctx }), receiveTrack);
 	app.post(
 		"/v1/balances.finalize",
+		ready,
 		clientAuthMiddleware({ ctx }),
 		receiveFinalize,
 	);
