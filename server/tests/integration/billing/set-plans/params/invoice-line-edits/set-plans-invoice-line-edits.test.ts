@@ -3,7 +3,7 @@
  *
  * Contract:
  *   - The immediate invoice drops the removed lines and bills the added ones; later phases are untouched.
- *   - A first phase that starts later takes add_lines on whatever is billed now.
+ *   - A first phase that starts later rejects add_lines: 400.
  *   - A new subscription bills added lines on its first invoice; remove_lines on it is a 400.
  */
 
@@ -108,7 +108,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set_plans invoice line edits 2: a later first phase takes add_lines on the credit billed now")}`,
+	`${chalk.yellowBright("set_plans invoice line edits 2: a first phase that starts later rejects add_lines")}`,
 	async () => {
 		const customerId = "set-plans-line-edits-future";
 		const { autumnV2_5, premium, advancedTo } = await setupPlans({
@@ -116,8 +116,7 @@ test.concurrent(
 			proActive: true,
 		});
 
-		// Pro ends now and is credited -$20; premium bills from its start.
-		const preview = await autumnV2_5.billing.previewSetPlans({
+		const params = {
 			customer_id: customerId,
 			phases: [
 				{
@@ -125,11 +124,18 @@ test.concurrent(
 					plans: [{ plan_id: premium.id }],
 				},
 			],
-			add_lines: [{ amount: 500, description: "Onboarding" }],
+		};
+		const preview = await autumnV2_5.billing.previewSetPlans(params);
+		expect(preview.invoice_lines_addable).toBe(false);
+
+		await expectAutumnError({
+			errMessage: "add_lines needs a charge billed now; billing starts later",
+			func: () =>
+				autumnV2_5.billing.previewSetPlans({
+					...params,
+					add_lines: [{ amount: 500, description: "Onboarding" }],
+				}),
 		});
-		expect(preview.invoice_lines_addable).toBe(true);
-		expect(preview.invoice_lines_removable).toBe(false);
-		expect(preview.total).toBeCloseTo(480, 2);
 	},
 );
 

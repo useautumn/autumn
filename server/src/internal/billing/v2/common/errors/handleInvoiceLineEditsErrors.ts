@@ -5,6 +5,7 @@ import type {
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { ErrCode, isCustomerProductOneOff, RecaseError } from "@autumn/shared";
+import { classifyFirstPhaseStart } from "@/internal/billing/v2/actions/setPlans/setup/classifyFirstPhaseStart";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 import { isCustomLineItem } from "@/internal/billing/v2/utils/lineItems/isCustomLineItem";
 
@@ -52,6 +53,15 @@ const addLinesBlockReason = ({
 }): string | undefined => {
 	if (isScheduledForEndOfCycle({ billingContext })) {
 		return "this request schedules the change for the end of the cycle";
+	}
+
+	const { billingStartsAt, currentEpochMs } = billingContext;
+	if (
+		billingStartsAt !== undefined &&
+		classifyFirstPhaseStart({ startsAt: billingStartsAt, currentEpochMs }) ===
+			"future"
+	) {
+		return "billing starts later";
 	}
 
 	if (billingPlan.stripe?.checkoutSessionAction) {
