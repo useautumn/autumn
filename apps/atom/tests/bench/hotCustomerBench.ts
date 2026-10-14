@@ -25,6 +25,7 @@ import {
 	checkRequestFor,
 	noFolderPulls,
 } from "../unit/utils/atomFixtures.js";
+import { startHoldSampler } from "./holdSampler.js";
 import { WORKER_AUTUMN_PATH } from "./workerAutumn.js";
 
 const rate = Number(process.argv[2] ?? 100);
@@ -141,6 +142,7 @@ await processor.setSubject({
 	}),
 });
 
+const sampler = startHoldSampler({ folder, journal });
 const latenciesMs: number[] = [];
 const pending: Promise<unknown>[] = [];
 const total = rate * seconds;
@@ -178,9 +180,12 @@ for (let sent = 0; sent < total; ) {
 				})
 				.then(
 					() => {
-						if (measured) latenciesMs.push(performance.now() - intendedAt);
+						const latencyMs = performance.now() - intendedAt;
+						sampler.latency(latencyMs);
+						if (measured) latenciesMs.push(latencyMs);
 					},
 					(error) => {
+						if (error?.name === "CannotAnswerError") return sampler.shed();
 						if (error?.name !== "DuplicateIdempotencyKeyError") throw error;
 						duplicates409++;
 					},
@@ -231,6 +236,7 @@ console.log(
 		owedAtEnd: journal.owed({ customerId: "cus_1" }).length,
 	}),
 );
+sampler.stop();
 forwarding.stop();
 pushServer.stop(true);
 autumn.kill();
