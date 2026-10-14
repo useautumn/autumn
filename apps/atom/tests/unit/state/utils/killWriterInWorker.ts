@@ -8,7 +8,7 @@ import {
 	newSqliteConnection,
 	shareSqliteOpenLock,
 } from "../../../../src/state/newSqliteConnection.js";
-import { terminateSqliteWriter } from "../../../../src/state/writer/getSqliteWriter.js";
+import { holdSqliteWriter } from "../../utils/sqliteWriterTesting.js";
 
 /** Run as a serving thread: commits one append, then loses its writer with a second posted to it, and says how that one ended. */
 export const KILL_WRITER_PATH = import.meta.path;
@@ -24,6 +24,7 @@ if (!isMainThread) {
 		lock: SharedArrayBuffer;
 	};
 	shareSqliteOpenLock({ lock });
+	const writer = holdSqliteWriter();
 	const journal = openJournal({ databasePath: path });
 	await journal.append({
 		customerId: "cus_1",
@@ -43,6 +44,6 @@ if (!isMainThread) {
 			parentPort?.postMessage(`second failed: ${error.message}`),
 	);
 	await Bun.sleep(50);
-	terminateSqliteWriter();
+	writer.terminate();
 	blocker.run("ROLLBACK");
 }

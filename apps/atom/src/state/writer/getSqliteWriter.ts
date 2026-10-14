@@ -28,8 +28,6 @@ type SqliteWriter = {
 	}): Promise<string>;
 	/** Synchronous too: the file is closed, its log checkpointed, once this returns. */
 	close(params: { fileId: number }): void;
-	terminate(): void;
-	pending(): number;
 };
 
 type Pending = {
@@ -78,12 +76,23 @@ const WRITER_ENTRY = new URL("./sqliteWriterEntry.ts", import.meta.url);
  * Run from source, the writer loads its own small module graph; a compiled Atom has no source path to load, so its
  * writer is the program started again, as a serving thread is (main.ts dispatches on `atomSqliteWriter`).
  */
-const spawnWriter = (): Worker =>
+const spawnOwnWriter = (): Worker =>
 	existsSync(fileURLToPath(WRITER_ENTRY))
 		? new Worker(WRITER_ENTRY.href)
 		: new Worker(Bun.main, {
 				workerData: { atomSqliteWriter: true },
 			} as WorkerOptions);
+
+let spawnWriter = spawnOwnWriter;
+
+/** Starts this thread's writer with `spawn` instead, so a test holds its Worker, as createAtomThreads' `spawnThread` does. */
+export const spawnSqliteWriterWith = ({
+	spawn,
+}: {
+	spawn: () => Worker;
+}): void => {
+	spawnWriter = spawn;
+};
 
 /** Bun's Worker, which can stop holding the process open. */
 type RefWorker = Worker & { ref(): void; unref(): void };
@@ -198,8 +207,6 @@ const startSqliteWriter = (): SqliteWriter => {
 		close: ({ fileId }) => {
 			if (!died) callSync(["close", nextId++, fileId]);
 		},
-		terminate: () => worker.terminate(),
-		pending: () => pending.size,
 	};
 };
 
@@ -210,9 +217,3 @@ export const getSqliteWriter = (): SqliteWriter => {
 	writer ??= startSqliteWriter();
 	return writer;
 };
-
-/** Writes posted and not yet answered: what a test waits out, since an answer arrives as a message, not a microtask. */
-export const pendingSqliteWrites = (): number => writer?.pending() ?? 0;
-
-/** Ends the writer as a crash would. */
-export const terminateSqliteWriter = (): void => writer?.terminate();
