@@ -10,6 +10,8 @@ import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
+import { createMembership } from "../../../src/replicas/membership/createMembership.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -55,6 +57,7 @@ export const createReplica = ({
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
 	ringPeers = [],
+	joined = ringPeers,
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
 }: {
@@ -66,6 +69,8 @@ export const createReplica = ({
 	now?: () => number;
 	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
 	ringPeers?: string[];
+	/** Which of them have joined (ready and handed their customers' entries); all of them by default. */
+	joined?: string[];
 	journalForwarder?: typeof forwardingNowhere;
 	/** True from the moment the thread starts stopping, as its server's stop sets it. */
 	stopping?: () => boolean;
@@ -95,6 +100,18 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
+	const membership = createMembership({ self: address });
+	for (const peer of joined) {
+		membership.markReady(peer);
+		membership.markJoined(peer);
+	}
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => ringPeers },
+			own: () => [address],
+			membership,
+		},
+	});
 	const httpContext = {
 		auth,
 		logger: quiet,
@@ -112,16 +129,7 @@ export const createReplica = ({
 		loop: loopOnTime,
 		replication,
 		stopping,
-		peer: {
-			port: PEER_PORT,
-			secret,
-			ring: createReplicaRing({
-				ctx: {
-					resolver: { peers: async () => ringPeers },
-					own: () => [address],
-				},
-			}),
-		},
+		peer: { port: PEER_PORT, secret, ring, membership },
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -146,6 +154,18 @@ export const createReplica = ({
 		peerApp,
 		slots: auth.slots,
 		replication,
+		ring,
+		membership,
+		/** The first step of a planned stop: owner of nothing, and every peer told. */
+		leave: () =>
+			leaveRing({
+				ctx: {
+					ring,
+					membership,
+					peer: { port: PEER_PORT, secret },
+					logger: quiet,
+				},
+			}),
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),

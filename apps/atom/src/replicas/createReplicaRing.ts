@@ -1,4 +1,5 @@
 import type { PeerResolver } from "../replication/discovery/createPeerResolver.js";
+import type { Membership } from "./membership/types/membership.js";
 import type { ReplicaRing } from "./types/replicaRing.js";
 
 /** Rendezvous score: the same slot hash, over a key no address can collide into ("/" never appears in one). */
@@ -10,24 +11,58 @@ const scoreOf = ({
 	customerId: string;
 }): number => Bun.hash.xxHash32(`${member}/${customerId}`);
 
+const bestOf = ({
+	members,
+	customerId,
+}: {
+	members: string[];
+	customerId: string;
+}): string | null => {
+	let owner: string | null = null;
+	let best = -1;
+	// Sorted members and a strict > break a tie toward the lowest address.
+	for (const member of members) {
+		const score = scoreOf({ member, customerId });
+		if (score > best) {
+			owner = member;
+			best = score;
+		}
+	}
+	return owner;
+};
+
 /**
  * A customer belongs to the member with the highest score for it, so a join or leave moves only the customers whose
- * top member changed: 1/N of them. No election and no stored owner; peers come from the resolver's DNS view.
+ * top member changed: 1/N of them. No election and no stored owner; peers come from the resolver's DNS view, counted as
+ * members only while the membership says so (joined, not leaving), and this replica counts until it leaves.
  */
 export const createReplicaRing = ({
 	ctx,
 }: {
-	ctx: { resolver: Pick<PeerResolver, "peers">; own: () => string[] };
+	ctx: {
+		resolver: Pick<PeerResolver, "peers">;
+		own: () => string[];
+		membership?: Membership;
+	};
 }): ReplicaRing => {
 	const self = ctx.own()[0];
 	if (self === undefined)
 		throw new Error(
 			"a replica with no address of its own cannot own customers",
 		);
+	const { membership } = ctx;
+
+	const peersListed = async (): Promise<string[]> =>
+		[...new Set(await ctx.resolver.peers().catch(() => []))].filter(
+			(peer) => peer !== self,
+		);
 
 	async function members(): Promise<string[]> {
-		const peers = await ctx.resolver.peers().catch(() => []);
-		return [...new Set([self, ...peers])].sort();
+		const peers = (await peersListed()).filter(
+			(peer) => !membership || membership.isMember(peer),
+		);
+		const own = membership?.isSelfLeaving() ? [] : [self];
+		return [...own, ...peers].sort();
 	}
 
 	async function ownerOf({
@@ -37,17 +72,25 @@ export const createReplicaRing = ({
 	}): Promise<string> {
 		if (customerId === "")
 			throw new Error("a customer id is required to find its owner replica");
-		let owner = self;
-		let best = -1;
-		// Sorted members and a strict > break a tie toward the lowest address.
-		for (const member of await members()) {
-			const score = scoreOf({ member, customerId });
-			if (score > best) {
-				owner = member;
-				best = score;
-			}
-		}
-		return owner;
+		return bestOf({ members: await members(), customerId }) ?? self;
+	}
+
+	/** The leaving peer the customer came from, when this replica owns it only because that peer is leaving. */
+	async function movedFrom({
+		customerId,
+	}: {
+		customerId: string;
+	}): Promise<string | null> {
+		if (!membership) return null;
+		const leaving = (await peersListed()).filter(
+			(peer) => membership.stateOf(peer) === "leaving",
+		);
+		if (leaving.length === 0) return null;
+		const before = bestOf({
+			members: [...(await members()), ...leaving].sort(),
+			customerId,
+		});
+		return before !== null && leaving.includes(before) ? before : null;
 	}
 
 	return {
@@ -55,5 +98,6 @@ export const createReplicaRing = ({
 		ownerOf,
 		isOwner: async ({ customerId }) => (await ownerOf({ customerId })) === self,
 		members,
+		movedFrom,
 	};
 };
