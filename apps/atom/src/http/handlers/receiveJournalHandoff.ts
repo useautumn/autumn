@@ -44,6 +44,7 @@ export const receiveJournalHandoff = ({
 						entries: entries as HandedEntry[],
 						locks: locks as OpenLock[],
 					})),
+					keys: [],
 				}),
 			),
 		);

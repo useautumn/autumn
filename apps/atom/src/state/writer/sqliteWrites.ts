@@ -8,6 +8,7 @@ import {
 	insertJournalEntries,
 } from "../repos/journalEntries.js";
 import {
+	appendHandedJournalKeys,
 	deleteCustomerJournalKeys,
 	pruneJournalKeys,
 } from "../repos/journalKeys.js";
@@ -26,6 +27,7 @@ export const SQLITE_WRITES = {
 	deleteCustomersWrittenBefore,
 	pruneJournalKeys,
 	deleteCustomerJournalKeys,
+	appendHandedJournalKeys,
 } satisfies Record<
 	string,
 	(params: { ctx: { sqliteDb: Database }; payload: string }) => string
