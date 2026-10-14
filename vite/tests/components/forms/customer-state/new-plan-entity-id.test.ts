@@ -3,7 +3,7 @@ import {
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
-import { newPlanEntityId } from "./newPlanEntityId";
+import { newPlanEntityId } from "@/components/forms/customer-state/utils/newPlanEntityId";
 
 const planFor = (entityId: string | null): CustomerStatePlan => ({
 	...EMPTY_CUSTOMER_STATE_PLAN,
