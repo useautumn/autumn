@@ -37,6 +37,7 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { expectBalanceCorrect } from "../utils/expectBalanceCorrect.js";
@@ -543,15 +544,16 @@ const releaseLockOf = ({
 	expiryAction: "release",
 });
 
-/** What the hand-in's timer for this lock delivers when it fires. */
-const fireTimerOf = ({
+/** What the hand-in's timer for this lock delivers when it fires: long after the worker persisted the lock's row. */
+const fireTimerOf = async ({
 	customerId,
 	lock,
 }: {
 	customerId: string;
 	lock: TrackLock;
-}) =>
-	expireLock({
+}) => {
+	await flushBalanceWorkerCustomer({ ctx: defaultCtx, customerId });
+	await expireLock({
 		// A real job's ctx is stamped when the job starts; the shared test ctx predates the lock.
 		ctx: { ...defaultCtx, timestamp: Date.now() },
 		payload: {
@@ -563,8 +565,11 @@ const fireTimerOf = ({
 			lockRowId: lock.id,
 		},
 	});
+};
 
-const expectNoLockRow = async ({ customerId }: { customerId: string }) =>
+/** The worker answers once its log has the delete; Postgres takes it just after. */
+const expectNoLockRow = async ({ customerId }: { customerId: string }) => {
+	await flushBalanceWorkerCustomer({ ctx: defaultCtx, customerId });
 	expect(
 		await defaultCtx.db
 			.select({ id: balanceLocks.id })
@@ -578,6 +583,7 @@ const expectNoLockRow = async ({ customerId }: { customerId: string }) =>
 				),
 			),
 	).toEqual([]);
+};
 
 test.skipIf(!isBalanceWorkerRoute())(
 	`${chalk.yellowBright("atom-tracks8: a lock with a caller-set expiry is released when its timer fires")}`,
