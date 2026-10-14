@@ -101,6 +101,30 @@ test("keyless login writes the key, names the org after the project, hides the U
 	expect(text).not.toContain("https://app.useautumn.com/claim");
 });
 
+test("keyless login says the org can be linked any time when the server sets no deadline", async () => {
+	const root = mkdtempSync(join(tmpdir(), "keyless-"));
+	const { deps: d } = deps();
+	const { lines, write } = capture();
+
+	const result = await runKeylessLogin({
+		repoRoot: root,
+		envDirs: [root],
+		deps: {
+			...d,
+			provision: async (params) => ({
+				...(await d.provision(params)),
+				claimExpiresAt: null,
+			}),
+		},
+		prompter: createPrompter({ interactive: false, write }),
+	});
+
+	expect(result.claimExpiresAt).toBeNull();
+	expect(lines.join("")).toContain(
+		"Link it to an account any time: atmn login --claim",
+	);
+});
+
 test("claim returns and emails the same secure browser link", async () => {
 	const { deps: d, calls } = deps();
 	const output = capture();
