@@ -27,7 +27,8 @@
 					"ATOM_HOSTNAME": "0.0.0.0",
 					"ATOM_PORT": "8080",
 					"ATOM_DATA_DIR": "/data",
-					"ATOM_PEER_PORT": "8081"
+					"ATOM_PEER_PORT": "8081",
+					"BUN_JSC_logGC": "1"
 				},
 				"healthCheck": {
 					"path": "/health",
@@ -38,7 +39,7 @@
 				"kubernetesSecretMounts": [],
 				"links": [{ "type": "queue", "id": "pushes" }],
 				"permissions": "atom",
-				"persistentStorage": { "mountPath": "/data", "size": "20Gi" },
+				"persistentStorage": { "mountPath": "/data", "size": "100Gi" },
 				"ports": [{ "port": 8080 }, { "port": 8081 }],
 				"publicEndpoints": [
 					{
