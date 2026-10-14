@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"main": "src/main.ts",
+	"main": "src/benchMain.ts",
 	"scripts": {
 		"start": "bun --config=./bunfig.toml src/main.ts",
 		"dev": "NODE_ENV=development ATOM_PRETTY_LOGS=true bun --watch --no-clear-screen --config=./bunfig.toml src/main.ts",
