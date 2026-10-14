@@ -18,7 +18,6 @@ import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	childItemOp,
 	collapsedPlanFilter,
@@ -27,6 +26,7 @@ import {
 	orPlanFilter,
 	parentLicenseOp,
 } from "../../migrations/licenses/utils/expectLicenseMigrationDrafts.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
@@ -227,10 +227,7 @@ test.concurrent(
 							filter: {
 								customer: {
 									plan: orPlanFilter({
-										branches: [
-											{ plan_id: childId },
-											{ plan_id: parentId },
-										],
+										branches: [{ plan_id: childId }, { plan_id: parentId }],
 									}),
 								},
 							},

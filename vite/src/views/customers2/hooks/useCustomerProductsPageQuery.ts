@@ -21,14 +21,20 @@ export function useCustomerProductsPageQuery({
 	statuses,
 	kind,
 	initialPage,
+	enabled = true,
+	customerId,
 }: {
 	cursor: string;
 	pageSize: CustomerProductsPageSize;
 	statuses: CustomerProductsStatusOption[];
 	kind: CustomerProductsKindFilter;
 	initialPage?: CustomerProductsPage;
+	enabled?: boolean;
+	/** Defaults to the route's customer; the layout passes it before the route mounts. */
+	customerId?: string;
 }) {
-	const { customer_id } = useParams();
+	const { customer_id: routeCustomerId } = useParams();
+	const customer_id = customerId ?? routeCustomerId;
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const { entityId } = useEntity();
@@ -77,7 +83,7 @@ export function useCustomerProductsPageQuery({
 				entityId,
 			]),
 			queryFn: fetcher,
-			enabled: !!customer_id,
+			enabled: enabled && !!customer_id,
 			initialData: seedPage,
 			initialDataUpdatedAt: 0,
 			placeholderData: keepPreviousData,

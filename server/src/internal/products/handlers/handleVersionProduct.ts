@@ -112,7 +112,6 @@ export const handleVersionProductV2 = async ({
 		baseInternalProductId: effectiveBaseInternalProductId,
 	});
 
-	// Validate product items...
 	validateProductItems({
 		newItems: newProductV2.items,
 		features,

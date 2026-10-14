@@ -44,15 +44,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 		currentCustomerProduct,
 	});
 
-	// const existingUsages = cusProductToExistingUsages({
-	// 	cusProduct: customerProduct,
-	// 	entityId: fullCustomer.entity?.id,
-	// });
-
-	// const existingRollovers = cusProductToExistingRollovers({
-	// 	cusProduct: customerProduct,
-	// });
-
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -62,8 +53,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 			fullProduct,
 			featureQuantities,
 			customerLicenseQuantities,
-			// existingUsages,
-			// existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 

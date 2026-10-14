@@ -11,7 +11,11 @@ const jsonResponse = (body: unknown) =>
 	});
 
 // Two-page fixture: page 1 points to page 2 via next_page, page 2 terminates.
-const twoPageFetch = (firstPageItems: unknown[], secondPageItems: unknown[]) => {
+const twoPageFetch = (
+	firstPageItems: unknown[],
+	secondPageItems: unknown[],
+	nextPage = "/v2/next-page-token",
+) => {
 	let call = 0;
 	const calls: string[] = [];
 	const fetchImpl = mock((url: URL) => {
@@ -22,7 +26,7 @@ const twoPageFetch = (firstPageItems: unknown[], secondPageItems: unknown[]) => 
 				jsonResponse({
 					object: "list",
 					items: firstPageItems,
-					next_page: "/v2/next-page-token",
+					next_page: nextPage,
 					url: "/v2/first",
 				}),
 			);
@@ -81,4 +85,44 @@ describe("initRevenuecatCli customer list pagination", () => {
 		expect(calls[1]).toContain("/v2/next-page-token");
 		expect(calls).toHaveLength(2);
 	});
+
+	const absoluteNextPage =
+		"https://api.revenuecat.com/v2/projects/proj_1/next?starting_after=item_1";
+
+	const paginatedListers = {
+		listCustomerSubscriptions: (cli: Cli) =>
+			cli.listCustomerSubscriptions("cust_1"),
+		listCustomerPurchases: (cli: Cli) => cli.listCustomerPurchases("cust_1"),
+		listAllProducts: (cli: Cli) => cli.listAllProducts(),
+		listProductStoreIdentifiers: (cli: Cli) =>
+			cli.listProductStoreIdentifiers(),
+		listProducts: (cli: Cli) => cli.listProducts(),
+		listWebhookIntegrations: (cli: Cli) => cli.listWebhookIntegrations(),
+		findProductByStoreIdentifier: (cli: Cli) =>
+			cli.findProductByStoreIdentifier({
+				appId: "app_x",
+				storeIdentifier: "missing",
+			}),
+	};
+
+	for (const [name, list] of Object.entries(paginatedListers)) {
+		test(`${name} follows an absolute next_page URL`, async () => {
+			const { fetchImpl, calls } = twoPageFetch(
+				[{ id: "item_1", store_identifier: "a", app_id: "app_a" }],
+				[{ id: "item_2", store_identifier: "b", app_id: "app_b" }],
+				absoluteNextPage,
+			);
+			const cli = initRevenuecatCli({
+				projectId: "proj_1",
+				accessToken: "tok",
+				fetchImpl,
+			});
+
+			await list(cli);
+
+			expect(calls[1]).toBe(absoluteNextPage);
+		});
+	}
 });
+
+type Cli = ReturnType<typeof initRevenuecatCli>;

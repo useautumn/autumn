@@ -16,7 +16,6 @@ export interface MonorepoInfo {
  * 5. pnpm-workspace.yaml exists
  */
 export function detectMonorepo(cwd: string = process.cwd()): MonorepoInfo {
-  // Check for turbo.json
   if (existsSync(resolve(cwd, "turbo.json"))) {
     return { detected: true, reason: "turbo.json found" };
   }
@@ -44,7 +43,6 @@ export function detectMonorepo(cwd: string = process.cwd()): MonorepoInfo {
     }
   }
 
-  // Check for pnpm-workspace.yaml
   if (existsSync(resolve(cwd, "pnpm-workspace.yaml"))) {
     return { detected: true, reason: "pnpm-workspace.yaml found" };
   }

@@ -111,70 +111,6 @@ export const handlePaidProduct = async ({
 		// 	attachParams,
 		// 	config,
 		// });
-
-		// await setStripeSubscriptionLock({
-		// 	stripeSubscriptionId: mergeSub.id,
-		// 	lockedAtMs: attachParams.now || Date.now(),
-		// });
-
-		// const { updatedSub, latestInvoice, url } = await updateStripeSub2({
-		// 	ctx,
-		// 	attachParams,
-		// 	curSub: mergeSub,
-		// 	itemSet: newItemSet,
-		// 	config,
-		// 	branch,
-		// });
-
-		// sub = updatedSub;
-
-		// if (latestInvoice) {
-		// 	invoice = await insertInvoiceFromAttach({
-		// 		db,
-		// 		stripeInvoice: latestInvoice,
-		// 		attachParams,
-		// 		logger,
-		// 	});
-		// }
-
-		// if (url) {
-		// 	return AttachFunctionResponseSchema.parse({
-		// 		checkout_url: url,
-		// 		code: SuccessCode.InvoiceActionRequired,
-		// 		message: "Payment action required",
-		// 	});
-		// }
-
-		// if (isStripeSubscriptionCanceling(mergeSub)) {
-		// 	logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
-		// 	schedule = await subToNewSchedule({
-		// 		ctx,
-		// 		sub: mergeSub,
-		// 		attachParams,
-		// 		config,
-		// 		endOfBillingPeriod: mergeSub.cancel_at!,
-		// 		removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
-		// 	});
-		// } else {
-		// 	const res = await getCustomerSchedule({
-		// 		attachParams,
-		// 		subId: mergeSub.id,
-		// 		logger,
-		// 	});
-		// 	schedule = res.schedule;
-		// 	logger.info(`ADD PRODUCT FLOW, SCHEDULE ID: ${schedule?.id}`);
-		// 	if (schedule) {
-		// 		await handleUpgradeFlowSchedule({
-		// 			ctx,
-		// 			attachParams,
-		// 			config,
-		// 			schedule,
-		// 			curSub: mergeSub,
-		// 			removeCusProducts: [],
-		// 			fromAddProduct: true,
-		// 		});
-		// 	}
-		// }
 	} else {
 		let billingCycleAnchorUnix: number | undefined;
 		const smallestInterval = getSmallestInterval({
@@ -203,7 +139,6 @@ export const handlePaidProduct = async ({
 			billingCycleAnchorUnix = attachParams.billingAnchor;
 		}
 
-		// console.log("Item set: ", itemSet);
 		sub = await createStripeSub2({
 			db: ctx.db,
 			stripeCli,
@@ -258,7 +193,6 @@ export const handlePaidProduct = async ({
 
 	subscriptions.push(sub);
 
-	// const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
 	const anchorToUnix = secondsToMs(sub.billing_cycle_anchor);
 
 	if (config.invoiceCheckout) {
@@ -283,8 +217,6 @@ export const handlePaidProduct = async ({
 				carryExistingUsages: config.carryUsage,
 				scenario: AttachScenario.New,
 				trialEndsAt: trialEndsAt || undefined,
-				// subscriptionScheduleIds: schedule ? [schedule.id] : undefined,
-				// startsAt: attachParams.now,
 				logger,
 			}),
 		);

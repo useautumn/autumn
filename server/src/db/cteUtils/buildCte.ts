@@ -194,7 +194,6 @@ export class CTEBuilder {
 			}
 		}
 
-		// Build the query
 		let query = sql`SELECT ${sql.join(selectFields, sql`, `)} FROM ${sql.identifier(tableName)}`;
 
 		// Add WHERE clause
@@ -424,7 +423,6 @@ export class CTEBuilder {
 			}
 		}
 
-		// Build the inner SELECT
 		let innerSelect = sql`SELECT ${sql.join(selectFields, sql`, `)} FROM ${sql.identifier(targetTableName)}`;
 
 		// Add WHERE clause (join condition + additional filters)
@@ -444,7 +442,6 @@ export class CTEBuilder {
 			innerSelect = sql`${innerSelect} ORDER BY ${sql.join(nestedConfig.orderBy, sql`, `)}`;
 		}
 
-		// Add LIMIT
 		if (nestedConfig.limit !== undefined) {
 			innerSelect = sql`${innerSelect} LIMIT ${sql.raw(String(nestedConfig.limit))}`;
 		}
@@ -488,7 +485,6 @@ export class CTEBuilder {
 			}
 		}
 
-		// Build the inner SELECT
 		let innerSelect = sql`SELECT ${sql.join(selectFields, sql`, `)} FROM ${sql.identifier(targetTableName)}`;
 
 		// Add WHERE clause (join condition + additional filters)
@@ -549,7 +545,6 @@ export class CTEBuilder {
 			subquery = sql`${subquery} AND ${nestedConfig.where}`;
 		}
 
-		// Add LIMIT
 		if (nestedConfig.limit !== undefined) {
 			subquery = sql`${subquery} LIMIT ${sql.raw(String(nestedConfig.limit))}`;
 		}

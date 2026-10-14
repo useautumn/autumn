@@ -27,6 +27,7 @@ export type { ApplyBillingPlanResult } from "./commands/applyBillingPlan/types/a
 export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
+	ExpectedProduct,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
 export {
 	type CheckAfterDeduction,

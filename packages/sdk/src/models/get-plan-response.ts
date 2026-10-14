@@ -213,10 +213,16 @@ export type GetPlanUpsertLicensePriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const GetPlanUpsertLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type GetPlanUpsertLicenseTierBehavior = OpenEnum<
   typeof GetPlanUpsertLicenseTierBehavior
 >;
@@ -271,6 +277,9 @@ export type GetPlanUpsertLicensePrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<GetPlanUpsertLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: GetPlanUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -993,10 +1002,16 @@ export type GetPlanLicensePriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const GetPlanLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type GetPlanLicenseTierBehavior = OpenEnum<
   typeof GetPlanLicenseTierBehavior
 >;
@@ -1051,6 +1066,9 @@ export type GetPlanLicensePrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<GetPlanLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: GetPlanLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.

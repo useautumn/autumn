@@ -4,6 +4,22 @@ import {
 	type KafkaTokenState,
 } from "./kafkaTokens.js";
 
+const LEADERSHIP_ELECTION =
+	"There is no leader for this topic-partition as we are in the middle of a leadership election";
+const COORDINATOR_NOT_AVAILABLE = "The group coordinator is not available";
+const NOT_COORDINATOR = "This is not the correct coordinator for this group";
+const COORDINATOR_LOADING =
+	"The coordinator is loading and hence can't process requests for this group";
+
+/** INFO so a coordinator move or election shows in prod logs; once a minute per client, as every refused request logs one. */
+const ONCE_A_MINUTE_REFUSALS: ReadonlySet<string> = new Set([
+	LEADERSHIP_ELECTION,
+	COORDINATOR_NOT_AVAILABLE,
+	NOT_COORDINATOR,
+	COORDINATOR_LOADING,
+]);
+const ONCE_A_MINUTE_MS = 60_000;
+
 /**
  * Refusals a broker hands out in the ordinary course of things, which the
  * client retries on its own: a coordinator still closing the previous
@@ -19,16 +35,10 @@ const ROUTINE_REFUSAL_LEVELS: ReadonlyMap<string, logLevel> = new Map([
 		logLevel.DEBUG,
 	],
 	["This server is not the leader for that topic-partition", logLevel.DEBUG],
-	[
-		"There is no leader for this topic-partition as we are in the middle of a leadership election",
-		logLevel.DEBUG,
-	],
-	["The group coordinator is not available", logLevel.DEBUG],
-	["This is not the correct coordinator for this group", logLevel.DEBUG],
-	[
-		"The coordinator is loading and hence can't process requests for this group",
-		logLevel.DEBUG,
-	],
+	[LEADERSHIP_ELECTION, logLevel.INFO],
+	[COORDINATOR_NOT_AVAILABLE, logLevel.INFO],
+	[NOT_COORDINATOR, logLevel.INFO],
+	[COORDINATOR_LOADING, logLevel.INFO],
 	["The request timed out", logLevel.WARN],
 	["The server disconnected before a response was received", logLevel.WARN],
 	["The group is rebalancing, so a rejoin is needed", logLevel.INFO],
@@ -38,18 +48,18 @@ export function routineRefusalMessages(): string[] {
 	return [...ROUTINE_REFUSAL_LEVELS.keys()];
 }
 
-/** The level an entry deserves: kafkajs's own unless it reports a routine refusal. */
-function effectiveKafkaLogLevel({ entry }: { entry: LogEntry }): logLevel {
+function findRoutineRefusal({
+	entry,
+}: {
+	entry: LogEntry;
+}): string | undefined {
 	const refusal = entry.log.error;
-	if (typeof refusal === "string") {
-		const level = ROUTINE_REFUSAL_LEVELS.get(refusal);
-		if (level !== undefined) return level;
-	}
+	if (typeof refusal === "string" && ROUTINE_REFUSAL_LEVELS.has(refusal))
+		return refusal;
 	// The producer folds the refusal into its own message ("Failed to send messages: ...").
-	for (const [message, level] of ROUTINE_REFUSAL_LEVELS) {
-		if (entry.log.message.includes(message)) return level;
+	for (const message of ROUTINE_REFUSAL_LEVELS.keys()) {
+		if (entry.log.message.includes(message)) return message;
 	}
-	return entry.level;
 }
 
 const AUTHORIZATION_REFUSAL = /authorization failed|not authorized to access/i;
@@ -131,16 +141,33 @@ function writeDebug(line: string): void {
 /**
  * kafkajs's default logger with routine refusals lowered. kafkajs drops entries
  * above the configured level before they get here, so a lowered entry is held
- * to the same bar: at the default INFO, a coordinator refusal is not written at
- * all, and at DEBUG it is written as DEBUG.
+ * to the same bar: at the default INFO, a concurrent-transaction refusal is not
+ * written at all, and at DEBUG it is written as DEBUG.
  */
 export function createKafkaLogCreator({
 	sink = consoleSink(),
 	readToken = describeProcessKafkaToken,
+	now = Date.now,
 }: {
 	sink?: KafkaLogSink;
 	readToken?: () => KafkaTokenState | null;
+	now?: () => number;
 } = {}): logCreator {
+	const refusalWrittenAt = new Map<string, number>();
+
+	/** The level an entry deserves: kafkajs's own unless it reports a routine refusal; a repeat within the minute is DEBUG. */
+	function effectiveKafkaLogLevel({ entry }: { entry: LogEntry }): logLevel {
+		const refusal = findRoutineRefusal({ entry });
+		if (refusal === undefined) return entry.level;
+		const level = ROUTINE_REFUSAL_LEVELS.get(refusal) ?? entry.level;
+		if (!ONCE_A_MINUTE_REFUSALS.has(refusal)) return level;
+		const writtenAt = refusalWrittenAt.get(refusal);
+		if (writtenAt !== undefined && now() - writtenAt < ONCE_A_MINUTE_MS)
+			return logLevel.DEBUG;
+		refusalWrittenAt.set(refusal, now());
+		return level;
+	}
+
 	function createLogger(configuredLevel: logLevel) {
 		function writeEntry(entry: LogEntry): void {
 			const level = effectiveKafkaLogLevel({ entry });

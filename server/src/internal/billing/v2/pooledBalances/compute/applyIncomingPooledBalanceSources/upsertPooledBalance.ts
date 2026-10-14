@@ -5,9 +5,11 @@ import {
 	type FullCustomerEntitlement,
 	featureOverridesAreSame,
 	isBooleanEntitlement,
+	isUnlimitedEntitlement,
 	type PooledBalanceIdentity,
 	pooledBalanceIdentityToKey,
 	RecaseError,
+	subtractSafe,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
@@ -30,6 +32,7 @@ export const upsertPooledBalance = ({
 	identity,
 	contributionAmounts,
 	nextResetAt,
+	competes,
 	now,
 }: {
 	ctx: AutumnContext;
@@ -39,6 +42,8 @@ export const upsertPooledBalance = ({
 	identity: PooledBalanceIdentity;
 	contributionAmounts: PooledBalanceContributionAmounts;
 	nextResetAt: number | null;
+	/** A competing share moves the pool once every share is known, in finalize. */
+	competes: boolean;
 	now: number;
 }): MutablePooledCustomerEntitlement => {
 	const existingPooledCustomerEntitlement =
@@ -55,7 +60,7 @@ export const upsertPooledBalance = ({
 	// pool it is leaving. Seed from the contribution instead, whether the grant
 	// lands back on the same pool or on a newly inserted one.
 	const replacesRemovedContribution = Array.from(
-		computeContext.pooledBalanceIdsWithRemovedContributions,
+		computeContext.pooledBalanceIdsWithReplacedContributions,
 	).some(
 		(poolId) =>
 			computeContext.pooledCustomerEntitlementByPoolId.get(poolId)
@@ -83,14 +88,32 @@ export const upsertPooledBalance = ({
 			existingContribution.pooled_balance_id,
 		);
 	const isLicenseKeyed = identity.customerLicenseLinkId != null;
-	const grantedDelta = isLicenseKeyed
-		? 0
-		: alreadyCountedByPool
-			? contributionAmounts.currentContribution -
-				(existingContribution.current_contribution ?? 0)
-			: contributionAmounts.currentContribution;
+	const grantedDelta =
+		isLicenseKeyed || competes
+			? 0
+			: alreadyCountedByPool
+				? contributionAmounts.currentContribution -
+					(existingContribution.current_contribution ?? 0)
+				: contributionAmounts.currentContribution;
 	if (alreadyCountedByPool || isLicenseKeyed) {
 		balanceDelta = 0;
+	}
+	// A competing grant's amount enters in finalize; only usage it already holds moves the pool now.
+	if (competes) {
+		const holdsOwnUsage =
+			tracksBalance &&
+			!isUnlimitedEntitlement({
+				entitlement: contributionCustomerEntitlement.entitlement,
+			}) &&
+			!existingContribution &&
+			!contributionCustomerEntitlement.pooled_contribution_id &&
+			!replacesRemovedContribution;
+		balanceDelta = holdsOwnUsage
+			? subtractSafe({
+					left: contributionCustomerEntitlement.balance ?? 0,
+					right: contributionAmounts.currentContribution,
+				})
+			: 0;
 	}
 
 	// A pool is priced by one rate card, so a contributor with a different one can't join it.
@@ -116,10 +139,14 @@ export const upsertPooledBalance = ({
 			customerProduct,
 			identity,
 			balanceDelta,
-			granted: isLicenseKeyed ? 0 : contributionAmounts.currentContribution,
+			granted:
+				isLicenseKeyed || competes
+					? 0
+					: contributionAmounts.currentContribution,
 			nextResetAt,
 			now,
 		});
+		if (competes) insertedPooledCustomerEntitlement.unlimited = false;
 
 		addInsertedPooledBalanceToComputeContext({
 			computeContext,

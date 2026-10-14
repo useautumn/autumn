@@ -17,6 +17,7 @@ import {
 } from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
+import { markBalanceWorkerRoutingSettled } from "./balanceWorkerRoutingStartup.js";
 import { getBalanceWorkerRolloutOverride } from "./getBalanceWorkerRolloutEnabled.js";
 
 const rolloutOverrideLabel = (): string => {
@@ -88,7 +89,11 @@ export async function startBalanceWorkerClient(): Promise<void> {
 	logger.info(
 		`[balance-worker] Client starting; rollout ${rolloutOverrideLabel()}`,
 	);
-	await getBalanceWorkerClient().start();
+	try {
+		await getBalanceWorkerClient().start();
+	} finally {
+		markBalanceWorkerRoutingSettled();
+	}
 }
 
 export async function stopBalanceWorkerClient(): Promise<void> {

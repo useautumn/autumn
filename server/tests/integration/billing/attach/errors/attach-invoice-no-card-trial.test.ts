@@ -4,7 +4,8 @@
  * Contract:
  *  - a no-card trial attached in invoice mode is accepted by preview and attach: it trials in
  *    Autumn with no Stripe sub, and stores collection_method send_invoice for the trial-end invoice
- *  - custom invoice options (finalize: false, invoice_template_id, non-default net_terms_days)
+ *  - custom invoice options (finalize: false, issue_method draft or finalize, invoice_template_id,
+ *    non-default net_terms_days)
  *    are rejected, since only the intent is stored for the trial-end invoice
  *  - invoice mode still needs a customer email
  *  - control: a card-required trial in invoice mode is unchanged
@@ -120,6 +121,8 @@ test.concurrent(
 
 		const customInvoiceOptions: Partial<InvoiceModeParams>[] = [
 			{ finalize: false },
+			{ issue_method: "draft", enable_plan_immediately: true },
+			{ issue_method: "finalize", enable_plan_immediately: true },
 			{ net_terms_days: 45 },
 			{ invoice_template_id: "tmpl_unsupported_for_trial" },
 		];

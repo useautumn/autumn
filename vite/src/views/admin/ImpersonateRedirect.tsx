@@ -6,7 +6,9 @@ import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
 import { getDefaultOrgPath, isSafeLocalPath } from "@/utils/genUtils";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
+import { findOrgMemberUserId } from "./adminUtils";
 import { useAdmin } from "./hooks/useAdmin";
+import { useEnterOrgAsAdmin } from "./hooks/useEnterOrgAsAdmin";
 
 const resolveDefaultRedirect = async (
 	axiosInstance: ReturnType<typeof useAxiosInstance>,
@@ -26,7 +28,9 @@ export function ImpersonateRedirect() {
 	const [status, setStatus] = useState("Impersonating...");
 	const [error, setError] = useState<string | null>(null);
 
-	const axiosInstance = useAxiosInstance();
+	// Lookups here are about the target org, so a sandbox selected for the current org must not ride along
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const enterOrg = useEnterOrgAsAdmin();
 	const hasRun = useRef(false);
 
 	const orgId = searchParams.get("org_id");
@@ -40,14 +44,23 @@ export function ImpersonateRedirect() {
 				return;
 			}
 
+			// If it isn't deployed to prod, land on its sandbox rather than a live
+			// route that doesn't exist for it.
+			const resolveLandingPath = async () =>
+				isSafeLocalPath(rawRedirect)
+					? rawRedirect
+					: await resolveDefaultRedirect(axiosInstance);
+
 			try {
 				// Step 1: Get a user ID for this org from the API
 				setStatus("Finding org member...");
-				const { data } = await axiosInstance.get(
-					`/admin/org-member?org_id=${orgId}`,
-				);
-				if (!data.userId) {
-					setError("No member found for this org");
+				const userId = await findOrgMemberUserId({ axiosInstance, orgId });
+
+				// No one to impersonate (e.g. an unclaimed keyless sandbox), so enter as the admin
+				if (!userId) {
+					setStatus("Entering organization as admin...");
+					await enterOrg(orgId);
+					window.location.href = await resolveLandingPath();
 					return;
 				}
 
@@ -67,7 +80,7 @@ export function ImpersonateRedirect() {
 				// Step 3: Impersonate the user
 				setStatus("Impersonating user...");
 				const impersonateResult = await authClient.admin.impersonateUser({
-					userId: data.userId,
+					userId,
 				});
 
 				if (impersonateResult.error) {
@@ -81,14 +94,9 @@ export function ImpersonateRedirect() {
 				setStatus("Setting active organization...");
 				await setActiveOrg(orgId);
 
-				// Step 5: Resolve the landing path against the target org. If it
-				// isn't deployed to prod, land on its sandbox rather than a live
-				// route that doesn't exist for it.
+				// Step 5: Resolve the landing path against the target org.
 				setStatus("Redirecting...");
-				const target = isSafeLocalPath(rawRedirect)
-					? rawRedirect
-					: await resolveDefaultRedirect(axiosInstance);
-				window.location.href = target;
+				window.location.href = await resolveLandingPath();
 			} catch (err: unknown) {
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error";
@@ -108,6 +116,7 @@ export function ImpersonateRedirect() {
 		isPending,
 		isCurrentlyImpersonating,
 		axiosInstance,
+		enterOrg,
 	]);
 
 	if (!isAdmin && isPending) {

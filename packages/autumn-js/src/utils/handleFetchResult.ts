@@ -24,26 +24,12 @@ export const handleFetchResult = async ({
 			// biome-ignore lint/complexity/noUselessCatch: idk
 			throw error;
 		}
-
-		// return {
-		//   data: null,
-		//   error: new AutumnError({
-		//     message: error.message,
-		//     code: error.code,
-		//   }),
-		//   statusCode: response.status,
-		// };
 	}
 
 	try {
 		const data = await response.json();
 
 		return data;
-		// return {
-		//   data: data,
-		//   error: null,
-		//   statusCode: response?.status,
-		// };
 	} catch (error) {
 		return null;
 	}

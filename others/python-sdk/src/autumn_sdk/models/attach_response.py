@@ -1104,6 +1104,14 @@ class AttachCustomize(BaseModel):
         return m
 
 
+AttachIssueMethod = Literal[
+    "draft",
+    "finalize",
+    "send",
+]
+r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
+
+
 AttachPaymentMethodType = Literal[
     "card",
     "customer_balance",
@@ -1123,7 +1131,9 @@ class AttachInvoiceModeTypedDict(TypedDict):
     enable_plan_immediately: NotRequired[bool]
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+    issue_method: NotRequired[AttachIssueMethod]
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
     invoice_template_id: NotRequired[str]
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
     net_terms_days: NotRequired[int]
@@ -1141,8 +1151,11 @@ class AttachInvoiceMode(BaseModel):
     enable_plan_immediately: Optional[bool] = False
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
 
-    finalize: Optional[bool] = True
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    finalize: Optional[bool] = None
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+
+    issue_method: Optional[AttachIssueMethod] = None
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
 
     invoice_template_id: Optional[str] = None
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
@@ -1159,6 +1172,7 @@ class AttachInvoiceMode(BaseModel):
             [
                 "enable_plan_immediately",
                 "finalize",
+                "issue_method",
                 "invoice_template_id",
                 "net_terms_days",
                 "payment_method_types",
@@ -1183,7 +1197,7 @@ AttachProrationBehavior = Literal[
     "none",
     "bill_difference",
 ]
-r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
 
 AttachRedirectMode = Literal[
@@ -1259,6 +1273,385 @@ class AttachCustomLineItem(BaseModel):
 
     description: str
     r"""Description for the line item."""
+
+
+AttachDirection = Literal[
+    "charge",
+    "refund",
+]
+r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+
+AttachPriceRemoveLineInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class AttachPriceRemoveLineTypedDict(TypedDict):
+    interval: NotRequired[AttachPriceRemoveLineInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class AttachPriceRemoveLine(BaseModel):
+    interval: Optional[AttachPriceRemoveLineInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+AttachPriceUnionTypedDict = TypeAliasType(
+    "AttachPriceUnionTypedDict", Union[AttachPriceRemoveLineTypedDict, bool]
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+AttachPriceUnion = TypeAliasType("AttachPriceUnion", Union[AttachPriceRemoveLine, bool])
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+AttachBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+AttachFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class AttachRemoveLineFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: AttachBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[AttachFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class AttachRemoveLineFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: AttachBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[AttachFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+AttachPriceLicenseQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class AttachPriceLicenseQuantityTypedDict(TypedDict):
+    interval: NotRequired[AttachPriceLicenseQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class AttachPriceLicenseQuantity(BaseModel):
+    interval: Optional[AttachPriceLicenseQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+AttachLicenseQuantityPriceUnionTypedDict = TypeAliasType(
+    "AttachLicenseQuantityPriceUnionTypedDict",
+    Union[AttachPriceLicenseQuantityTypedDict, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+AttachLicenseQuantityPriceUnion = TypeAliasType(
+    "AttachLicenseQuantityPriceUnion", Union[AttachPriceLicenseQuantity, bool]
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+AttachLicenseQuantityBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+AttachLicenseQuantityFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class AttachLicenseQuantityFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: AttachLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[AttachLicenseQuantityFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class AttachLicenseQuantityFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: AttachLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[AttachLicenseQuantityFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AttachRemoveLineLicenseQuantityTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+    price: NotRequired[AttachLicenseQuantityPriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[List[AttachLicenseQuantityFeatureQuantityTypedDict]]
+
+
+class AttachRemoveLineLicenseQuantity(BaseModel):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+
+    price: Optional[AttachLicenseQuantityPriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[AttachLicenseQuantityFeatureQuantity]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_quantities"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AttachRemoveLineTypedDict(TypedDict):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+    direction: NotRequired[AttachDirection]
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+    price: NotRequired[AttachPriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[List[AttachRemoveLineFeatureQuantityTypedDict]]
+    license_quantities: NotRequired[List[AttachRemoveLineLicenseQuantityTypedDict]]
+
+
+class AttachRemoveLine(BaseModel):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+
+    direction: Optional[AttachDirection] = None
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+    price: Optional[AttachPriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[AttachRemoveLineFeatureQuantity]] = None
+
+    license_quantities: Optional[List[AttachRemoveLineLicenseQuantity]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "entity_id",
+                "direction",
+                "price",
+                "feature_quantities",
+                "license_quantities",
+            ]
+        )
+        nullable_fields = set(["entity_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class AttachAddLineTypedDict(TypedDict):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+    period_start: NotRequired[int]
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+    period_end: NotRequired[int]
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+
+class AttachAddLine(BaseModel):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["period_start", "period_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 class AttachCarryOverBalancesTypedDict(TypedDict):
@@ -1548,7 +1941,7 @@ class AttachParamsTypedDict(TypedDict):
     invoice_mode: NotRequired[AttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[AttachProrationBehavior]
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
     redirect_mode: NotRequired[AttachRedirectMode]
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     subscription_id: NotRequired[str]
@@ -1573,6 +1966,10 @@ class AttachParamsTypedDict(TypedDict):
     r"""If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened."""
     custom_line_items: NotRequired[List[AttachCustomLineItemTypedDict]]
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+    remove_lines: NotRequired[List[AttachRemoveLineTypedDict]]
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+    add_lines: NotRequired[List[AttachAddLineTypedDict]]
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
     processor_subscription_id: NotRequired[str]
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
     carry_over_balances: NotRequired[AttachCarryOverBalancesTypedDict]
@@ -1627,7 +2024,7 @@ class AttachParams(BaseModel):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
     proration_behavior: Optional[AttachProrationBehavior] = None
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
     redirect_mode: Optional[AttachRedirectMode] = "if_required"
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
@@ -1664,6 +2061,12 @@ class AttachParams(BaseModel):
 
     custom_line_items: Optional[List[AttachCustomLineItem]] = None
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
+
+    remove_lines: Optional[List[AttachRemoveLine]] = None
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+
+    add_lines: Optional[List[AttachAddLine]] = None
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
 
     processor_subscription_id: Optional[str] = None
     r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
@@ -1727,6 +2130,8 @@ class AttachParams(BaseModel):
                 "checkout_session_params",
                 "long_lived_checkout",
                 "custom_line_items",
+                "remove_lines",
+                "add_lines",
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",

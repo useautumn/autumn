@@ -6,7 +6,7 @@ type Resource = { name: string; content: string };
 
 /** Datafiles that need secrets Local/QA instances don't have (Postgres copies, S3 sink). */
 const needsSecrets = ({ resource }: { resource: Resource }) =>
-	/tb_secret|events_s3/.test(resource.content);
+	/tb_secret|events_s3|s3_export_12oct26_alchemy/.test(resource.content);
 
 /**
  * Generates resources from server/tinybird.config.json in memory and POSTs them to /v1/build,

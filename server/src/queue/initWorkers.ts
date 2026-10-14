@@ -1,7 +1,5 @@
 import { getPostgresPools } from "@autumn/postgres";
 import "../sentry.js";
-import { flushErrorReports } from "@autumn/errors";
-
 import { ms, seconds, withTimeout } from "@autumn/shared";
 import {
 	ChangeMessageVisibilityCommand,
@@ -25,6 +23,7 @@ import {
 	JOB_QUEUE_IDS,
 } from "@/internal/misc/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
+import { flushTelemetry } from "@/utils/logging/initLogger.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { isActiveSlot } from "./blueGreen/blueGreenGate.js";
 import {
@@ -647,7 +646,7 @@ export const initWorkers = async ({
 		await stopBalanceShadow();
 		await shutdownSqsSendBatchers();
 		await getSqsJobs().shutdown();
-		await flushErrorReports({ timeoutMs: 2_000 });
+		await flushTelemetry();
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {

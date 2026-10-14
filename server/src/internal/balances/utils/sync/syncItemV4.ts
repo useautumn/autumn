@@ -113,7 +113,6 @@ export const syncItemV4 = async ({
 			customerId,
 			featureId,
 			customerEntitlementIds,
-			// readMaster: true,
 		});
 
 		if (outcome.kind !== "ok") {
@@ -138,12 +137,10 @@ export const syncItemV4 = async ({
 		allSubjectBalances.push(...outcome.value.balances);
 	}
 
-	// Build sync entries
 	const entries: SyncEntry[] = allSubjectBalances.map((subjectBalance) =>
 		subjectBalanceToSyncEntry({ subjectBalance }),
 	);
 
-	// Build rollover sync entries
 	const rolloverEntries: RolloverSyncEntry[] = [];
 	if (rolloverIds && rolloverIds.length > 0) {
 		const rolloverIdSet = new Set(rolloverIds);

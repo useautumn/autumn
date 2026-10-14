@@ -1,4 +1,7 @@
-import { type ChartConfig, ChartContainer } from "@autumn/ui";
+import {
+	type ChartConfig,
+	ChartContainer,
+} from "@autumn/ui/components/ui/chart";
 import type { ReactNode } from "react";
 import {
 	BarChart,

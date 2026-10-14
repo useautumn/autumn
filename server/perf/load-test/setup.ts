@@ -122,7 +122,6 @@ async function main() {
 						await autumn.customers.delete(customerId);
 					} catch {}
 
-					// Create Stripe customer
 					const stripeCus = await stripeCli.customers.create({
 						email: `${customerId}@loadtest.local`,
 						name: `Load Test ${padNumber(i)}`,

@@ -7,7 +7,7 @@ import type {
 	KafkaMessage,
 	OffsetsByTopicPartition,
 } from "kafkajs";
-import { KafkaJSNonRetriableError } from "kafkajs";
+import { KafkaJSNonRetriableError, KafkaJSProtocolError } from "kafkajs";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../src/consumer/createTopicConsumer.js";
 import type {
@@ -427,6 +427,65 @@ async function failedCommitDoesNotAdvanceProgress(): Promise<void> {
 	}
 }
 
+function groupRefusal({
+	type,
+	message,
+}: {
+	type: string;
+	message: string;
+}): KafkaJSProtocolError {
+	return new KafkaJSProtocolError(
+		Object.assign(new Error(message), { type, retriable: false }),
+	);
+}
+
+async function supersededGenerationCommitIsDropped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			groupRefusal({
+				type: "ILLEGAL_GENERATION",
+				message: "Specified group generation id is not valid",
+			}),
+		);
+		await fixture.deliverBatch({
+			records: [createRecord("13")],
+			lastOffset: "14",
+		});
+		expect(progress.read({ topic, partition })).toBeNull();
+		expect(fixture.commits).toEqual([]);
+
+		fixture.failNextCommit(
+			groupRefusal({
+				type: "REBALANCE_IN_PROGRESS",
+				message: "The group is rebalancing, so a rejoin is needed",
+			}),
+		);
+		await expect(
+			fixture.deliverBatch({ records: [createRecord("13")], lastOffset: "14" }),
+		).rejects.toThrow("The group is rebalancing");
+
+		await fixture.deliverBatch({
+			records: [createRecord("13")],
+			lastOffset: "14",
+		});
+		expect(progress.read({ topic, partition })).toBe(15n);
+		expect(fixture.commits).toEqual([[{ topic, partition, offset: "15" }]]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
 async function reconcilesInitialOffsetAndRejoins(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -736,6 +795,10 @@ function topicConsumerTests(): void {
 	test(
 		"failed commits do not publish catch-up progress and can be retried",
 		failedCommitDoesNotAdvanceProgress,
+	);
+	test(
+		"a batch commit refused for a superseded generation is dropped instead of forcing a rejoin",
+		supersededGenerationCommitIsDropped,
 	);
 	test(
 		"applies all records before committing offsets and publishing progress",

@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import {
 	DEFAULT_RESTRICTED_APL_STAGES,
 	RESTRICTED_APL_DANGEROUS_TEXT_PATTERNS,
@@ -388,7 +389,7 @@ class Parser {
 			this.index++;
 			this.expectSymbol("(");
 			const field = this.expectField();
-			if (field.kind !== "topLevel" || field.name !== "timestamp") {
+			if (!isTimestampField(field)) {
 				throw new Error("bin() only supports the timestamp field");
 			}
 			this.expectSymbol(",");
@@ -530,6 +531,7 @@ class Parser {
 				this.expectSymbol(")");
 				if (values.length === 0)
 					throw new Error("in requires at least one value");
+				for (const value of values) assertTimestampLiteral(field, value);
 				return { kind: "in", field, values };
 			}
 		}
@@ -538,12 +540,9 @@ class Parser {
 			// Lone "=" in a predicate is an unambiguous equality comparison.
 			const op = opToken.value === "=" ? "==" : opToken.value;
 			if (this.isCompareOperator(op)) {
-				return {
-					kind: "comparison",
-					field,
-					op,
-					value: this.expectLiteral(),
-				};
+				const value = this.expectLiteral();
+				assertTimestampLiteral(field, value);
+				return { kind: "comparison", field, op, value };
 			}
 		}
 
@@ -704,6 +703,26 @@ class Parser {
 	}
 }
 
+const isTimestampField = (field: RestrictedAplField) =>
+	field.kind === "topLevel" && field.name === "timestamp";
+
+const IsoTimestampLiteral = z.union([
+	z.iso.date(),
+	z.iso.datetime({ offset: true, local: true }),
+]);
+
+const assertTimestampLiteral = (
+	field: RestrictedAplField,
+	value: LiteralValue,
+) => {
+	if (
+		isTimestampField(field) &&
+		!IsoTimestampLiteral.safeParse(value).success
+	) {
+		throw new Error("timestamp must be compared to an ISO datetime string");
+	}
+};
+
 const topLevelFieldToApl = (field: RestrictedAplTopLevelField): string =>
 	RESTRICTED_APL_TOP_LEVEL_FIELDS[field].apl;
 
@@ -826,14 +845,22 @@ const literalToApl = (value: LiteralValue): string => {
 	return String(value);
 };
 
+const fieldLiteralToApl = (
+	field: RestrictedAplField,
+	value: LiteralValue,
+): string =>
+	isTimestampField(field)
+		? `datetime(${literalToApl(value)})`
+		: literalToApl(value);
+
 const exprToApl = (expr: RestrictedAplExpr): string => {
 	switch (expr.kind) {
 		case "comparison":
-			return `${fieldToComparisonApl(expr.field, expr.value)} ${expr.op} ${literalToApl(expr.value)}`;
+			return `${fieldToComparisonApl(expr.field, expr.value)} ${expr.op} ${fieldLiteralToApl(expr.field, expr.value)}`;
 		case "stringMatch":
 			return `${fieldToStringApl(expr.field)} ${expr.op} '${escapeAplString(expr.value)}'`;
 		case "in":
-			return `${fieldToInApl(expr.field, expr.values)} in (${expr.values.map(literalToApl).join(", ")})`;
+			return `${fieldToInApl(expr.field, expr.values)} in (${expr.values.map((value) => fieldLiteralToApl(expr.field, value)).join(", ")})`;
 		case "and":
 		case "or":
 			return `(${exprToApl(expr.left)} ${expr.kind} ${exprToApl(expr.right)})`;

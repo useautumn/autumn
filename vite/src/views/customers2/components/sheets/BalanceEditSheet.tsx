@@ -292,6 +292,7 @@ function UnlimitedBalanceForm({
 			/>
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
+				feature={selectedCusEnt.entitlement.feature}
 			/>
 		</div>
 	);
@@ -360,6 +361,7 @@ function BalanceEditForm({
 
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
+				feature={selectedCusEnt.entitlement.feature}
 			/>
 		</div>
 	);

@@ -61,6 +61,7 @@ export const executePooledBalancePlan = async ({
 			pooledCustomerEntitlement: fullCustomerEntitlement,
 			balanceDelta,
 			grantedDelta,
+			unlimited,
 		} of pooledBalancePlan.updatePoolBalances) {
 			const pooledBalance = fullCustomerEntitlement.pooled_balance;
 			if (!pooledBalance) {
@@ -74,6 +75,7 @@ export const executePooledBalancePlan = async ({
 				.set({
 					balance: sql`COALESCE(${customerEntitlements.balance}, 0) + ${balanceDelta}`,
 					cache_version: sql`${customerEntitlements.cache_version} + 1`,
+					...(unlimited === undefined ? {} : { unlimited }),
 				})
 				.where(eq(customerEntitlements.id, fullCustomerEntitlement.id));
 
@@ -104,6 +106,8 @@ export const executePooledBalancePlan = async ({
 						current_contribution: sql`excluded.current_contribution`,
 						next_cycle_contribution: sql`excluded.next_cycle_contribution`,
 						effective_at: sql`excluded.effective_at`,
+						competes: sql`excluded.competes`,
+						unlimited: sql`excluded.unlimited`,
 						updated_at: sql`excluded.updated_at`,
 					},
 				})
@@ -180,6 +184,8 @@ export const executePooledBalancePlan = async ({
 					current_contribution: contribution.current_contribution,
 					next_cycle_contribution: contribution.next_cycle_contribution,
 					effective_at: contribution.effective_at,
+					competes: contribution.competes,
+					unlimited: contribution.unlimited,
 					updated_at: contribution.updated_at,
 				})
 				.where(eq(pooledBalanceContributions.id, contribution.id));

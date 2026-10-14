@@ -79,9 +79,6 @@ const getCusProductsInfo = ({
 		return 0;
 	});
 
-	// customer.id === "e526e698-6d5d-4f0e-89e7-632f375663fb" &&
-	// 	console.log("activeProducts", activeProducts, "customer", customer);
-
 	if (activeProducts.length === 0) {
 		return <span className="text-tertiary-foreground"></span>;
 	}

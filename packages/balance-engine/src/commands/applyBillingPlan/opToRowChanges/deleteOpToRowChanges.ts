@@ -2,11 +2,13 @@ import { StaleMutationError } from "../../../errors.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { SubjectState } from "../../../models/subject/subjectState.js";
 import type { BillingPlanDeleteOp } from "../types/billingPlanOp.js";
+import { heldProductIsAsExpected } from "./heldProductIsAsExpected.js";
 import {
 	type PlanRowChangeContext,
 	rowKeyOf,
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
+import { rowHoldsExpectedColumns } from "./rowHoldsExpectedColumns.js";
 
 type StateDeleteOp = Exclude<
 	BillingPlanDeleteOp,
@@ -48,8 +50,58 @@ const cascadeOf = ({
 	return [...prices, ...grants];
 };
 
-const holdsRow = ({ state, row }: { state: SubjectState; row: DeletedRow }) =>
-	state[row.table].some(({ id }) => id === row.id);
+const findHeldRow = ({
+	state,
+	row,
+}: {
+	state: SubjectState;
+	row: DeletedRow;
+}): object | undefined =>
+	state[row.table].find(({ id }: { id: string }) => id === row.id);
+
+const grantGainedRollovers = ({
+	state,
+	op,
+}: {
+	state: SubjectState;
+	op: StateDeleteOp;
+}): boolean =>
+	op.table === "customerEntitlements" &&
+	op.withoutRollovers === true &&
+	rolloversOf({ state, customerEntitlementId: op.id }).length > 0;
+
+const grantProductIsAsExpected = ({
+	context,
+	op,
+	heldRow,
+}: {
+	context: PlanRowChangeContext;
+	op: StateDeleteOp;
+	heldRow: object;
+}): boolean =>
+	op.table !== "customerEntitlements" ||
+	heldProductIsAsExpected({
+		context,
+		customerProductId: Reflect.get(heldRow, "customer_product_id"),
+		expectProduct: op.expectProduct,
+	});
+
+const heldRowIsAsExpected = ({
+	context,
+	state,
+	op,
+}: {
+	context: PlanRowChangeContext;
+	state: SubjectState;
+	op: StateDeleteOp;
+}): boolean => {
+	const heldRow = findHeldRow({ state, row: op });
+	if (!heldRow) return false;
+	if (!rowHoldsExpectedColumns({ row: heldRow, expect: op.expect }))
+		return false;
+	if (!grantProductIsAsExpected({ context, op, heldRow })) return false;
+	return !grantGainedRollovers({ state, op });
+};
 
 /** A plan deletes rows it found, and each once: a row an earlier op already took with its parent is skipped. */
 export const deleteOpToRowChanges = ({
@@ -61,7 +113,7 @@ export const deleteOpToRowChanges = ({
 }): RowChange[] => {
 	const { state } = context;
 	if (wasDeletedByPlan({ context, table: op.table, id: op.id })) return [];
-	if (!state || !holdsRow({ state, row: op }))
+	if (!state || !heldRowIsAsExpected({ context, state, op }))
 		throw new StaleMutationError({ subject: op.id });
 
 	const rows = [...cascadeOf({ state, row: op }), op].filter(

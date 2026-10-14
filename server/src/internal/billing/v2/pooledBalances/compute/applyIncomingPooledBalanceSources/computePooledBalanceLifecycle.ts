@@ -48,15 +48,18 @@ const findExistingPoolResetCycleAnchor = ({
 	resetMode,
 	stripeSubscriptionId,
 	customerLicenseLinkId,
+	competes,
 }: {
 	computeContext: PooledBalanceComputeContext;
 	customerEntitlement: FullCustomerEntitlement;
 	resetMode: PooledBalanceResetMode;
 	stripeSubscriptionId: string | null;
 	customerLicenseLinkId: string | null;
+	competes: boolean;
 }) => {
 	const sourceIdentity = initCustomerEntitlementPooledIdentity({
 		customerEntitlement,
+		competes,
 		lifecycle: {
 			resetCycleAnchor: null,
 			resetMode,
@@ -74,7 +77,9 @@ const findExistingPoolResetCycleAnchor = ({
 			pooled_balance.reset_mode === resetMode &&
 			pooled_balance.stripe_subscription_id === stripeSubscriptionId &&
 			pooled_balance.customer_license_link_id === customerLicenseLinkId &&
-			pooled_balance.rollover_signature === sourceIdentity.rolloverSignature,
+			pooled_balance.rollover_signature === sourceIdentity.rolloverSignature &&
+			pooled_balance.feature_override_signature ===
+				sourceIdentity.featureOverrideSignature,
 	)?.pooled_balance.reset_cycle_anchor;
 };
 
@@ -127,6 +132,7 @@ const resolveResetCycleAnchor = ({
 	stripeSubscriptionId,
 	customerLicenseLinkId,
 	customerCreatedAt,
+	competes,
 }: {
 	computeContext: PooledBalanceComputeContext;
 	customerEntitlement: FullCustomerEntitlement;
@@ -134,6 +140,7 @@ const resolveResetCycleAnchor = ({
 	stripeSubscriptionId: string | null;
 	customerLicenseLinkId: string | null;
 	customerCreatedAt: number;
+	competes: boolean;
 }) => {
 	if (resetMode === PooledBalanceResetMode.Lifetime) return null;
 	return resolvePooledBalanceResetCycleAnchor({
@@ -143,6 +150,7 @@ const resolveResetCycleAnchor = ({
 			resetMode,
 			stripeSubscriptionId,
 			customerLicenseLinkId,
+			competes,
 		}),
 		anchorsToSource:
 			resetMode === PooledBalanceResetMode.Subscription ||
@@ -158,6 +166,7 @@ export const computePooledBalanceLifecycle = ({
 	customerProduct,
 	stripeSubscriptionId: existingStripeSubscriptionId,
 	customerCreatedAt,
+	competes,
 	now,
 }: {
 	computeContext: PooledBalanceComputeContext;
@@ -165,6 +174,8 @@ export const computePooledBalanceLifecycle = ({
 	customerProduct: FullCusProduct;
 	stripeSubscriptionId?: string;
 	customerCreatedAt: number;
+	/** A competing unlimited grant shares its limited rivals' pool, so it keeps their cycle. */
+	competes: boolean;
 	now: number;
 }): PooledBalanceLifecycle => {
 	const interval =
@@ -184,7 +195,7 @@ export const computePooledBalanceLifecycle = ({
 			stripeSubscriptionId: existingStripeSubscriptionId,
 		});
 
-	if (unlimited || isBoolean) {
+	if ((unlimited && !competes) || isBoolean) {
 		return {
 			resetMode,
 			resetCycleAnchor: null,
@@ -201,6 +212,7 @@ export const computePooledBalanceLifecycle = ({
 		stripeSubscriptionId,
 		customerLicenseLinkId,
 		customerCreatedAt,
+		competes,
 	});
 
 	if (

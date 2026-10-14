@@ -23,8 +23,6 @@ export interface PreviewItem {
 }
 
 export interface CheckProductPreview {
-	// title: string;
-	// message: string;
 	scenario: AttachScenario;
 	product_id: string;
 	product_name: string;

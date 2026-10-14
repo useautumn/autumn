@@ -17,6 +17,7 @@ import {
 	type WorkerRequestOutcome,
 	type WorkerRequestRouting,
 } from "../types/balanceWorkerClientErrors.js";
+import { awaitClaimedRoute } from "./awaitClaimedRoute.js";
 import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type {
 	RequestDeadline,
@@ -144,6 +145,7 @@ export function createTrackBatcher({
 		// Per batch, never shared: lanes for different partitions send concurrently, and one
 		// batch's hinted successor must not stop another's refresh.
 		let followingHint = false;
+		let ownershipCaughtUp = false;
 		// A NOT_READY from the owner is retried apart from the route attempts: the route was right.
 		let notReadyRetries = 0;
 		let lastRefusal: unknown;
@@ -152,6 +154,7 @@ export function createTrackBatcher({
 			refreshes: 0,
 			followedHint: false,
 			notReadyAnswers: 0,
+			ownerlessWaits: 0,
 		};
 		try {
 			for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
@@ -160,18 +163,30 @@ export function createTrackBatcher({
 				const batchAttempt = startAttempt({ items: pending, routing });
 				if (attempt > 0 && !followingHint) {
 					routing.refreshes += 1;
-					await refreshCommandRoute({
+					const refreshed = await refreshCommandRoute({
 						owners: ctx.owners,
 						deadline: attemptDeadline({ items: pending, batchAttempt }),
 						timeoutMs: ctx.routeRefreshTimeoutMs,
 					});
+					ownershipCaughtUp = refreshed === "settled";
 					pending = pending.filter(isLive);
 					if (pending.length === 0) return;
 				}
-				const resolved = resolveCommandRoute({
-					ctx,
-					command: pending[0].snapshot,
-				});
+				const resolved =
+					resolveCommandRoute({ ctx, command: pending[0].snapshot }) ??
+					(ownershipCaughtUp
+						? await awaitClaimedRoute({
+								ctx,
+								command: pending[0].snapshot,
+								deadline: {
+									expiresAt: earliestDeadline({ items: pending }).expiresAt,
+									signal: batchAttempt.controller.signal,
+								},
+								routing,
+							})
+						: undefined);
+				pending = pending.filter(isLive);
+				if (pending.length === 0) return;
 				if (!resolved) {
 					if (attempt === 0) {
 						attempt += 1;

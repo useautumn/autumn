@@ -44,7 +44,6 @@ export const applyPercentOffDiscountToLineItems = ({
 	}
 
 	return lineItems.map((item) => {
-		// Check if discount applies to this line item
 		if (!discountAppliesToLineItem({ discount, lineItem: item })) {
 			return item;
 		}

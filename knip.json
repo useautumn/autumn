@@ -37,12 +37,14 @@
 				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
 				"src/internal/billing/v2/providers/stripe/utils/sync/**/*.ts",
 				"src/trigger/metering/pushHourlyMetersTask.ts",
+				"src/trigger/init.ts",
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
 			"ignore": [
 				"src/external/tinybird/connections/eventsS3.ts",
+				"src/external/tinybird/connections/eventsHistoryExportS3.ts",
 				"src/external/connect/attachSandboxStripeAccount.ts",
 				"src/cron/resetCron/runClearExpiredResetCron.ts",
 				"src/external/stripe/common/simulateTestWebhookFailure.ts"

@@ -25,6 +25,10 @@ export const findLicensePooledBalanceId = async ({
 		eq(pooledBalances.interval_count, identity.intervalCount),
 		eq(pooledBalances.reset_mode, identity.resetMode),
 		eq(pooledBalances.rollover_signature, identity.rolloverSignature),
+		eq(
+			pooledBalances.feature_override_signature,
+			identity.featureOverrideSignature,
+		),
 	);
 	const isExactMatch = sql<boolean>`COALESCE(${facetsMatch}, false)`;
 

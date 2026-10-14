@@ -13,11 +13,11 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
+import { seedDivergedChildAnchors } from "../utils/atmnPutDirectVersions.js";
 import {
 	expectLatestPlanVersion,
 	expectLicenseLinkCorrect,
 } from "../utils/expectLicenseLinkCorrect.js";
-import { seedDivergedChildAnchors } from "../utils/atmnPutDirectVersions.js";
 import {
 	bumpChild,
 	getFullPlan,

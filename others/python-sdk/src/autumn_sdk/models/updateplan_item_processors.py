@@ -1743,6 +1743,7 @@ UpdatePlanVariantUpsertLicenseTierBehavior = Literal[
     "graduated",
     "volume",
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 UpdatePlanVariantUpsertLicenseAddItemPriceInterval = Literal[
@@ -1779,6 +1780,7 @@ class UpdatePlanVariantUpsertLicensePriceTypedDict(TypedDict):
     tiers: NotRequired[List[UpdatePlanVariantUpsertLicensePriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[UpdatePlanVariantUpsertLicenseTierBehavior]
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1808,6 +1810,7 @@ class UpdatePlanVariantUpsertLicensePrice(BaseModel):
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[UpdatePlanVariantUpsertLicenseTierBehavior] = None
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -3733,6 +3736,7 @@ UpdatePlanItemTierBehaviorResponse = Union[
     ],
     UnrecognizedStr,
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 UpdatePlanPriceItemIntervalResponse = Union[

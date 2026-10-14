@@ -14,21 +14,6 @@ export type UpdateLicenseParentParams = z.infer<
 	typeof UpdateLicenseParentParamsSchema
 >;
 
-// const UpdatePlanBaseFieldsSchema = z.object({
-// 	name: CreatePlanParamsV1Schema.shape.name.optional(),
-// 	description: CreatePlanParamsV1Schema.shape.description
-// 		.removeDefault()
-// 		.optional(),
-// 	group: CreatePlanParamsV1Schema.shape.group.removeDefault().optional(),
-// 	add_on: CreatePlanParamsV1Schema.shape.add_on.removeDefault().optional(),
-// 	auto_enable: CreatePlanParamsV1Schema.shape.auto_enable
-// 		.removeDefault()
-// 		.optional(),
-// 	price: CreatePlanParamsV1Schema.shape.price.optional(),
-// 	items: CreatePlanParamsV1Schema.shape.items.optional(),
-// 	free_trial: CreatePlanParamsV1Schema.shape.free_trial.optional(),
-// });
-
 export const UpdatePlanParamsV1Schema =
 	CreatePlanParamsV1Schema.partial().extend({
 		group: CreatePlanParamsV1Schema.shape.group.removeDefault().optional(),

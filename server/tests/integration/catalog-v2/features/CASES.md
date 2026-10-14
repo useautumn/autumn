@@ -187,3 +187,14 @@ see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
 | Mid-cycle switch to a non-1:1 plan itemizes the old balance and stamps the new one false | ✓ E5 |
 | Dashboard QA seeds (1:1, per-hundred, fractional, locked vs editable, playbook) | scenario `scenarios/balances/invoice-credit-stamp-scenario.test.ts` |
 
+
+## Update: combine — `update/update-feature-combine.test.ts`
+
+| Case | Covered |
+|---|---|
+| Create with `combine: min` stores it | ✓ t1 |
+| min→max previews `update` with `previous_attributes.combine`, applies | ✓ t1 |
+| Identical re-send → action `none` | ✓ t1 |
+| Back to sum unsets it | ✓ t1 |
+| sum→min on a feature customers hold is allowed; next plan change competes (48 + 24 → 24) | ✓ t2 |
+| Blocked: held feature min→sum and min→max (`attached_to_customer`, field `combine`) | ✓ t2 |

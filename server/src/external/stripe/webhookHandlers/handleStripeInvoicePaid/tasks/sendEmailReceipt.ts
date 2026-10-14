@@ -31,7 +31,6 @@ export const sendEmailReceipt = async ({
 		logger.debug("[invoice.paid] No stripeCustomer, skipping email receipt");
 		return;
 	}
-	// Check if customer is deleted
 	if (stripeCustomer.deleted) {
 		logger.debug(
 			"[invoice.paid] Stripe customer is deleted, skipping email receipt",

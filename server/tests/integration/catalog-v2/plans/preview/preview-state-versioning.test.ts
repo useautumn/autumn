@@ -353,7 +353,8 @@ test.concurrent(
 						{
 							plan_id: planId,
 							name: "New Name",
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 						},
 					],
 				}),

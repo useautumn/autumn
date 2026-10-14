@@ -1,28 +1,24 @@
 import { decryptData } from "@server/utils/encryptUtils.js";
-import { revenuecatAuthError } from "./revenuecatAuthError.js";
-import { callRcMcpTool } from "./revenuecatMcp.js";
 import type {
 	RevenueCatApp,
 	RevenueCatAppsResponse,
 	RevenueCatCreateInStoreBody,
 	RevenueCatCreateProductBody,
 	RevenueCatCreateProjectBody,
+	RevenueCatCreateWebhookBody,
 	RevenueCatPrice,
 	RevenueCatProduct,
-	RevenueCatProductsResponse,
 	RevenueCatProject,
 	RevenueCatProjectsResponse,
-	RevenueCatPurchase,
-	RevenueCatPurchasesResponse,
-	RevenueCatSubscription,
-	RevenueCatSubscriptionsResponse,
-	RevenueCatCreateWebhookBody,
 	RevenueCatPublicApiKey,
 	RevenueCatPublicApiKeysResponse,
+	RevenueCatPurchase,
+	RevenueCatSubscription,
 	RevenueCatUpdateProductBody,
 	RevenueCatWebhookIntegration,
-	RevenueCatWebhooksResponse,
 } from "../revenuecatTypes";
+import { revenuecatAuthError } from "./revenuecatAuthError.js";
+import { callRcMcpTool } from "./revenuecatMcp.js";
 
 type ListRevenuecatProductsResponse = {
 	products: { id: string; name: string; platforms: string[] }[];
@@ -74,6 +70,29 @@ export const initRevenuecatCli = ({
 			error.status = response.status;
 			throw error;
 		}
+	};
+
+	async function* listPages<T>(firstPage: string) {
+		let nextPage: string | null | undefined = firstPage;
+		while (nextPage) {
+			const response = await fetchImpl(
+				new URL(nextPage, "https://api.revenuecat.com"),
+				{ headers: authHeaders },
+			);
+			await checkOk(response);
+			const data = (await response.json()) as {
+				items: T[];
+				next_page?: string | null;
+			};
+			yield data.items;
+			nextPage = data.next_page;
+		}
+	}
+
+	const listAll = async <T>(firstPage: string): Promise<T[]> => {
+		const items: T[] = [];
+		for await (const page of listPages<T>(firstPage)) items.push(...page);
+		return items;
 	};
 
 	return {
@@ -135,93 +154,38 @@ export const initRevenuecatCli = ({
 			appId: string;
 			storeIdentifier: string;
 		}): Promise<RevenueCatProduct | null> => {
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/products?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatProductsResponse;
-
-				const match = data.items.find(
-					(p) =>
-						p.app_id === appId && p.store_identifier === storeIdentifier,
+			for await (const page of listPages<RevenueCatProduct>(
+				`/v2/projects/${projectId}/products?limit=100`,
+			)) {
+				const match = page.find(
+					(p) => p.app_id === appId && p.store_identifier === storeIdentifier,
 				);
 				if (match) return match;
-
-				nextPage = data.next_page;
 			}
 
 			return null;
 		},
 
 		listAllProducts: async (): Promise<RevenueCatProduct[]> => {
-			const items: RevenueCatProduct[] = [];
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/products?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatProductsResponse;
-				items.push(...data.items);
-				nextPage = data.next_page;
-			}
-
-			return items;
+			return listAll<RevenueCatProduct>(
+				`/v2/projects/${projectId}/products?limit=100`,
+			);
 		},
 
 		listCustomerSubscriptions: async (
 			customerId: string,
 		): Promise<RevenueCatSubscription[]> => {
-			const items: RevenueCatSubscription[] = [];
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/customers/${customerId}/subscriptions?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data =
-					(await response.json()) as RevenueCatSubscriptionsResponse;
-				items.push(...data.items);
-				nextPage = data.next_page;
-			}
-
-			return items;
+			return listAll<RevenueCatSubscription>(
+				`/v2/projects/${projectId}/customers/${customerId}/subscriptions?limit=100`,
+			);
 		},
 
 		listCustomerPurchases: async (
 			customerId: string,
 		): Promise<RevenueCatPurchase[]> => {
-			const items: RevenueCatPurchase[] = [];
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/customers/${customerId}/purchases?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatPurchasesResponse;
-				items.push(...data.items);
-				nextPage = data.next_page;
-			}
-
-			return items;
+			return listAll<RevenueCatPurchase>(
+				`/v2/projects/${projectId}/customers/${customerId}/purchases?limit=100`,
+			);
 		},
 
 		listProductPrices: async (
@@ -259,19 +223,10 @@ export const initRevenuecatCli = ({
 
 		listProductStoreIdentifiers: async (): Promise<Set<string>> => {
 			const ids = new Set<string>();
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/products?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatProductsResponse;
-				for (const product of data.items) ids.add(product.store_identifier);
-				nextPage = data.next_page;
+			for await (const page of listPages<RevenueCatProduct>(
+				`/v2/projects/${projectId}/products?limit=100`,
+			)) {
+				for (const product of page) ids.add(product.store_identifier);
 			}
 
 			return ids;
@@ -310,21 +265,9 @@ export const initRevenuecatCli = ({
 		},
 
 		listProducts: async () => {
-			const items: RevenueCatProduct[] = [];
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/products?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatProductsResponse;
-				items.push(...data.items);
-				nextPage = data.next_page;
-			}
+			const items = await listAll<RevenueCatProduct>(
+				`/v2/projects/${projectId}/products?limit=100`,
+			);
 
 			// Resolve each app's store type so products can be labelled by platform.
 			const appsUrl = new URL(
@@ -370,23 +313,9 @@ export const initRevenuecatCli = ({
 		listWebhookIntegrations: async (): Promise<
 			RevenueCatWebhookIntegration[]
 		> => {
-			const items: RevenueCatWebhookIntegration[] = [];
-			let nextPage:
-				| string
-				| null = `/v2/projects/${projectId}/integrations/webhooks?limit=100`;
-
-			while (nextPage) {
-				const response = await fetchImpl(
-					new URL(`https://api.revenuecat.com${nextPage}`),
-					{ headers: authHeaders },
-				);
-				await checkOk(response);
-				const data = (await response.json()) as RevenueCatWebhooksResponse;
-				items.push(...data.items);
-				nextPage = data.next_page;
-			}
-
-			return items;
+			return listAll<RevenueCatWebhookIntegration>(
+				`/v2/projects/${projectId}/integrations/webhooks?limit=100`,
+			);
 		},
 
 		createWebhookIntegration: async (

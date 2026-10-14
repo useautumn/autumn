@@ -57,9 +57,6 @@ export interface AttachBillingContext extends BillingContext {
 	insertPlanLicenses?: InsertPlanLicenseSpec[];
 }
 
-// export interface AttachBillingContextOverride {
-// 	fullCustomer?: FullCustomer;
-
 // 	stripeBillingContext?: StripeBillingContextOverride;
 
 // 	productContext?: {
@@ -67,12 +64,6 @@ export interface AttachBillingContext extends BillingContext {
 // 		customPrices?: Price[];
 // 		customEnts?: Entitlement[];
 // 	};
-
-// 	// transitionContext?: {
-// 	// 	currentCustomerProduct?: FullCusProduct;
-// 	// 	scheduledCustomerProduct?: FullCusProduct;
-// 	// 	planTiming: PlanTiming;
-// 	// };
 
 // 	featureQuantities?: FeatureOptions[];
 // 	transitionConfigs?: TransitionConfig[];

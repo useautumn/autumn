@@ -57,6 +57,12 @@ const subscriptionTargetFromSheetData = (
 	(sheetData?.subscriptionTarget as SetPlansSubscriptionTarget | undefined) ??
 	null;
 
+type RepeatedPhase = {
+	startsAt: number;
+	continuesFrom: number;
+	customerProductIds: string[];
+};
+
 const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled;
 
@@ -142,6 +148,11 @@ export function buildInitialValues({
 
 	const seededState = customerProductsToSetPlansState({
 		customerProducts,
+		repeatedPhases: savedRepeatedPhases({
+			schedules,
+			customerProducts,
+			nowMs,
+		}),
 		entities: customer?.entities ?? [],
 		products,
 	});
@@ -149,9 +160,14 @@ export function buildInitialValues({
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
 		const laterPhaseStartsAt = index > 0 ? phase.startsAt : null;
+		// A repeated phase only merges into the row it continues when saved with that row's anchor.
+		const anchorStartsAt =
+			seededState.repeatedPhases.find(
+				(repeated) => repeated.startsAt === laterPhaseStartsAt,
+			)?.continuesFrom ?? laterPhaseStartsAt;
 		const keepsCycleAnchor =
-			laterPhaseStartsAt != null &&
-			!resetsBillingCycleAt({ customerProducts, startsAt: laterPhaseStartsAt });
+			anchorStartsAt != null &&
+			!resetsBillingCycleAt({ customerProducts, startsAt: anchorStartsAt });
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
@@ -193,14 +209,49 @@ export function buildInitialValues({
 	};
 }
 
-/** The live plans are today's phase; each scheduled start, and each scheduled
- * end of a live plan that isn't a cancellation, is its own later phase. */
+/** Later saved phases where none of the scoped plans they hold starts: they only repeat the phase before. */
+const savedRepeatedPhases = ({
+	schedules,
+	customerProducts,
+	nowMs,
+}: {
+	schedules: FullCustomerSchedule[];
+	customerProducts: FullCusProduct[];
+	nowMs: number;
+}): RepeatedPhase[] =>
+	schedules
+		.flatMap((schedule) => schedule.phases)
+		.filter((phase) => phase.starts_at > nowMs)
+		.flatMap((phase) => {
+			const held = customerProducts.filter((customerProduct) =>
+				phase.customer_product_ids.includes(customerProduct.id),
+			);
+			const heldStarts = held.map(({ starts_at }) => starts_at);
+			const startsHere = heldStarts.some(
+				(startsAt) =>
+					truncateMsToSecondPrecision(startsAt) ===
+					truncateMsToSecondPrecision(phase.starts_at),
+			);
+			if (heldStarts.length === 0 || startsHere) return [];
+			return [
+				{
+					startsAt: phase.starts_at,
+					continuesFrom: Math.max(...heldStarts),
+					customerProductIds: held.map(({ id }) => id),
+				},
+			];
+		});
+
+/** The live plans are today's phase; each scheduled start, each scheduled end of a
+ * live plan that isn't a cancellation, and each saved schedule phase is a later phase. */
 function customerProductsToSetPlansState({
 	customerProducts,
+	repeatedPhases,
 	entities,
 	products,
 }: {
 	customerProducts: FullCusProduct[];
+	repeatedPhases: RepeatedPhase[];
 	entities: Entity[];
 	products: ProductV2[];
 }) {
@@ -222,20 +273,41 @@ function customerProductsToSetPlansState({
 			? [customerProduct.ended_at]
 			: [],
 	);
+	const rowStarts = [...new Set([...scheduledStarts, ...scheduledEnds])];
+	const repeatedOnly = repeatedPhases.filter(
+		({ startsAt }) =>
+			!rowStarts.some(
+				(rowStart) =>
+					truncateMsToSecondPrecision(rowStart) ===
+					truncateMsToSecondPrecision(startsAt),
+			),
+	);
 	const phaseStarts: PhaseStart[] = [
 		"now",
-		...[...new Set([...scheduledStarts, ...scheduledEnds])].sort(
-			(a, b) => a - b,
-		),
+		...[
+			...new Set([
+				...rowStarts,
+				...repeatedOnly.map(({ startsAt }) => startsAt),
+			]),
+		].sort((a, b) => a - b),
 	];
 
-	return customerProductsToCustomerState({
-		customerProducts,
-		phaseStarts,
-		canUnschedule: phaseStarts.length > 1,
-		entities,
-		products,
-	});
+	return {
+		...customerProductsToCustomerState({
+			customerProducts,
+			phaseStarts,
+			canUnschedule: phaseStarts.length > 1,
+			entities,
+			products,
+			heldCustomerProductIdsAt: new Map(
+				repeatedOnly.map(({ startsAt, customerProductIds }) => [
+					startsAt,
+					customerProductIds,
+				]),
+			),
+		}),
+		repeatedPhases: repeatedOnly,
+	};
 }
 
 function ScheduleSendInvoiceContent() {

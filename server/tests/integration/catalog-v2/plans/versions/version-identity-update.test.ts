@@ -81,7 +81,8 @@ const seedV1AndV2 = async ({
 		plans: [
 			{
 				plan_id: planId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				name: "V2",
 				items: [messagesItem(200)],
 			},
@@ -189,7 +190,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "V3",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
