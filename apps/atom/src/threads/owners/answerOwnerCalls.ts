@@ -45,6 +45,10 @@ const runOwnerCall = async ({
 		return slots
 			.processorFor({ customerId: call.customerId })
 			.setSubject({ customerId: call.customerId, body: call.body });
+	if (call.type === "receiveHandoff")
+		return slots
+			.processorFor({ customerId: call.customerId })
+			.receiveHandoff({ customerId: call.customerId, entries: call.entries });
 	if (call.type === "listSince")
 		return (
 			await slots.listSince({

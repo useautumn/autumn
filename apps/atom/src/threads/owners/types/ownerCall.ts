@@ -4,6 +4,7 @@ import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
+import type { HandedEntry } from "../../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -28,6 +29,7 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "track"; request: TrackRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
+	| { type: "receiveHandoff"; customerId: string; entries: HandedEntry[] }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
 	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
@@ -81,6 +83,7 @@ export type OwnerReply =
 				| CheckAnswer
 				| TrackResponseV3
 				| boolean
+				| { held: number }
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[];
 	  }

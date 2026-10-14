@@ -5,36 +5,43 @@ type JournalContext = { sqliteDb: Database };
 
 type JournalEntryRow = {
 	customerId: string;
+	writerId: string;
 	seq: bigint;
 	appendedAt: bigint;
 	commandJson: string;
 };
 
-/** Every entry or none, with each customer's highest seq raised in the same transaction. */
+/**
+ * Every entry or none. An entry this file minted raises its customer's highest seq in the same transaction; one handed
+ * over from another writer keeps that writer's seq and raises nothing here.
+ */
 export const insertJournalEntries = ({
 	ctx,
 	entries,
+	minted,
 }: {
 	ctx: JournalContext;
 	entries: JournalEntry[];
+	minted: boolean;
 }): void => {
 	const insertEntry = ctx.sqliteDb.query(
-		`INSERT INTO journal_entries (customer_id, seq, appended_at, command_json)
-		VALUES ($customerId, $seq, $appendedAt, $commandJson)`,
+		`INSERT INTO journal_entries (customer_id, writer_id, seq, appended_at, command_json)
+		VALUES ($customerId, $writerId, $seq, $appendedAt, $commandJson)`,
 	);
 	const raiseLastSeq = ctx.sqliteDb.query(
 		`INSERT INTO journal_seqs (customer_id, last_seq) VALUES ($customerId, $seq)
 		ON CONFLICT (customer_id) DO UPDATE SET last_seq = max(last_seq, excluded.last_seq)`,
 	);
 	ctx.sqliteDb.transaction(() => {
-		for (const { customerId, seq, appendedAt, command } of entries) {
+		for (const { customerId, writerId, seq, appendedAt, command } of entries) {
 			insertEntry.run({
 				customerId,
+				writerId,
 				seq,
 				appendedAt,
 				commandJson: JSON.stringify(command),
 			});
-			raiseLastSeq.run({ customerId, seq });
+			if (minted) raiseLastSeq.run({ customerId, seq });
 		}
 	})();
 };
@@ -47,12 +54,13 @@ export const readOwedJournalEntries = ({
 }): JournalEntry[] =>
 	ctx.sqliteDb
 		.query<JournalEntryRow, []>(
-			`SELECT customer_id AS customerId, seq, appended_at AS appendedAt, command_json AS commandJson
-			FROM journal_entries ORDER BY customer_id, seq`,
+			`SELECT customer_id AS customerId, writer_id AS writerId, seq, appended_at AS appendedAt, command_json AS commandJson
+			FROM journal_entries ORDER BY customer_id, appended_at, seq`,
 		)
 		.all()
 		.map((row) => ({
 			customerId: row.customerId,
+			writerId: row.writerId,
 			seq: Number(row.seq),
 			appendedAt: Number(row.appendedAt),
 			command: JSON.parse(row.commandJson),
@@ -89,17 +97,36 @@ export const readJournalWriterId = ({
 export const deleteJournalEntriesUpTo = ({
 	ctx,
 	customerId,
+	writerId,
 	seq,
 }: {
 	ctx: JournalContext;
 	customerId: string;
+	writerId: string;
 	seq: number;
 }): void => {
 	ctx.sqliteDb
 		.query(
-			"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq <= $seq",
+			"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq <= $seq",
 		)
-		.run({ customerId, seq });
+		.run({ customerId, writerId, seq });
+};
+
+/** The rows named, by their writer and seq: what a handoff moved to another journal. */
+export const deleteJournalEntries = ({
+	ctx,
+	entries,
+}: {
+	ctx: JournalContext;
+	entries: JournalEntry[];
+}): void => {
+	const deleteEntry = ctx.sqliteDb.query(
+		"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq = $seq",
+	);
+	ctx.sqliteDb.transaction(() => {
+		for (const { customerId, writerId, seq } of entries)
+			deleteEntry.run({ customerId, writerId, seq });
+	})();
 };
 
 export const deleteCustomerJournalEntries = ({

@@ -48,6 +48,9 @@ export const createSlotProcessor = ({
 			refuseUnwritten(request.params);
 			return track({ ctx, request });
 		},
+		receiveHandoff: async ({ entries }) => ({
+			held: await ctx.journal.appendForeign({ entries }),
+		}),
 		setSubject: async (params) => {
 			try {
 				return timeStage("pushApply", () => {

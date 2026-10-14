@@ -2,6 +2,7 @@ import type { TrackCommand } from "@autumn/balance-engine";
 import { timeStage } from "../../threads/stats/stageClock.js";
 import {
 	deleteCustomerJournalEntries,
+	deleteJournalEntries,
 	deleteJournalEntriesUpTo,
 	insertJournalEntries,
 	readJournalWriterId,
@@ -10,7 +11,7 @@ import {
 } from "../repos/journalEntries.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import { openJournalDatabase } from "./openJournalDatabase.js";
-import type { Journal, JournalEntry } from "./types/journal.js";
+import type { HandedEntry, Journal, JournalEntry } from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
 const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
@@ -109,7 +110,9 @@ export const openJournal = ({
 
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
-			timeStage("journalAppend", () => insertJournalEntries({ ctx, entries }));
+			timeStage("journalAppend", () =>
+				insertJournalEntries({ ctx, entries, minted: true }),
+			);
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
@@ -161,7 +164,7 @@ export const openJournal = ({
 	}): Promise<JournalEntry> {
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
-		const entry = { customerId, seq, appendedAt: now(), command };
+		const entry = { customerId, writerId, seq, appendedAt: now(), command };
 		owe({ entry });
 		try {
 			await groupCommit.add(entry);
@@ -208,6 +211,18 @@ export const openJournal = ({
 		);
 	}
 
+	/** How far Autumn has seen a writer's seqs for the customer, whatever atom id it holds them under. */
+	const seenUpTo = ({
+		atomSeqs,
+		writer,
+	}: {
+		atomSeqs: Record<string, Record<string, number>> | null;
+		writer: string;
+	}): number =>
+		Object.values(atomSeqs ?? {}).find((writerSeqs) => writer in writerSeqs)?.[
+			writer
+		] ?? 0;
+
 	function reconcile({
 		customerId,
 		atomSeqs,
@@ -215,17 +230,81 @@ export const openJournal = ({
 		customerId: string;
 		atomSeqs: Record<string, Record<string, number>> | null;
 	}): void {
-		const atomSeq = Object.values(atomSeqs ?? {}).find(
-			(writerSeqs) => writerId in writerSeqs,
-		)?.[writerId];
-		if (atomSeq === undefined) return;
 		const entries = owed({ customerId });
-		const unseen = entries.filter(({ seq }) => seq > atomSeq);
+		const seen = new Map(
+			[...new Set(entries.map((entry) => entry.writerId))].map((writer) => [
+				writer,
+				seenUpTo({ atomSeqs, writer }),
+			]),
+		);
+		const isSeen = (entry: JournalEntry) =>
+			entry.seq <= (seen.get(entry.writerId) ?? 0);
+		const unseen = entries.filter((entry) => !isSeen(entry));
 		if (unseen.length === entries.length) return;
-		deleteJournalEntriesUpTo({ ctx, customerId, seq: atomSeq });
-		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
+		for (const [writer, seq] of seen)
+			if (seq > 0)
+				deleteJournalEntriesUpTo({ ctx, customerId, writerId: writer, seq });
+		for (const entry of entries) if (isSeen(entry)) releaseUnsent(entry);
 		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
+	}
+
+	const isHeld = (entry: JournalEntry): boolean =>
+		owed({ customerId: entry.customerId }).some(
+			(held) => held.writerId === entry.writerId && held.seq === entry.seq,
+		);
+
+	/** Merged into the customer's owed entries by when they were granted: a new array, so a view replays it. */
+	async function appendForeign({
+		entries,
+	}: {
+		entries: HandedEntry[];
+	}): Promise<number> {
+		const fresh = entries.filter((entry) => !isHeld(entry));
+		if (fresh.length === 0) return 0;
+		const plain = fresh.map(({ sent: _, ...entry }) => entry);
+		timeStage("journalAppend", () =>
+			insertJournalEntries({ ctx, entries: plain, minted: false }),
+		);
+		for (const customerId of new Set(plain.map((entry) => entry.customerId)))
+			setOwed({
+				customerId,
+				entries: [
+					...owed({ customerId }),
+					...plain.filter((entry) => entry.customerId === customerId),
+				].sort((left, right) => left.appendedAt - right.appendedAt),
+			});
+		for (const entry of fresh)
+			if (!entry.sent) holdUnsent(plain[fresh.indexOf(entry)] as JournalEntry);
+		notifyCommitted();
+		return fresh.length;
+	}
+
+	function handoffs(): { customerId: string; entries: HandedEntry[] }[] {
+		return [...owedByCustomer].map(([customerId, entries]) => ({
+			customerId,
+			entries: entries.map((entry) => ({ ...entry, sent: !unsent.has(entry) })),
+		}));
+	}
+
+	/** The handed copies name entries by writer and seq; what leaves are the entries held here under those. */
+	function dropHandedOff({ entries }: { entries: JournalEntry[] }): void {
+		const keyOf = ({ writerId: writer, seq }: JournalEntry) =>
+			`${writer}/${seq}`;
+		const handed = new Set(entries.map(keyOf));
+		for (const customerId of new Set(
+			entries.map((entry) => entry.customerId),
+		)) {
+			const held = owed({ customerId });
+			const dropped = held.filter((entry) => handed.has(keyOf(entry)));
+			deleteJournalEntries({ ctx, entries: dropped });
+			for (const entry of dropped) releaseUnsent(entry);
+			oldestUnsent({ customerId });
+			setOwed({
+				customerId,
+				entries: held.filter((entry) => !handed.has(keyOf(entry))),
+			});
+		}
 	}
 
 	function forget({ customerId }: { customerId: string }): void {
@@ -255,6 +334,9 @@ export const openJournal = ({
 		},
 		isBackedUp,
 		reconcile,
+		appendForeign,
+		handoffs,
+		dropHandedOff,
 		forget,
 		close,
 	};

@@ -1,5 +1,6 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
+import type { Journal } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -78,6 +79,8 @@ export type Slots = {
 	maxAppliedAt(): number;
 	/** The slot files this thread owns in the folder: what it alone may drop rows from. */
 	ownedStores(): SqliteStore[];
+	/** The journals of the slots this thread owns: what it hands over when it leaves. */
+	ownedJournals(): Journal[];
 	/**
 	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
 	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only

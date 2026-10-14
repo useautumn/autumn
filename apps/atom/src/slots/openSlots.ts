@@ -88,6 +88,7 @@ export const openSlots = ({
 				.stored,
 	});
 	const journals: Journal[] = [];
+	const ownedJournals: Journal[] = [];
 	const forwardings: Forwarding[] = [];
 	const forwardedOf = ({ journal }: { journal: Journal }) => ({
 		journal,
@@ -110,6 +111,7 @@ export const openSlots = ({
 			databasePath: journalFilePath({ folder, slot, slotCount }),
 		});
 		journals.push(journal);
+		ownedJournals.push(journal);
 		forwardings.push(journalForwarder.forward(forwardedOf({ journal })));
 		return {
 			sqliteStore,
@@ -208,6 +210,7 @@ export const openSlots = ({
 		...serveReplicaReads({ ctx }),
 		ownedStores: () =>
 			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
+		ownedJournals: () => [...ownedJournals],
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

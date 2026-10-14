@@ -4,12 +4,17 @@ import type { TrackCommand } from "@autumn/balance-engine";
 export type JournalEntry = {
 	/** The customer as the Atom routes it: the command identity's customer id. */
 	customerId: string;
-	/** Per customer, strictly increasing; never reused, even once older entries are dropped. */
+	/** The journal that minted it: this file's, or another replica's when the entry was handed over with its customer. */
+	writerId: string;
+	/** Per customer and writer, strictly increasing; never reused, even once older entries are dropped. */
 	seq: number;
 	/** When the Atom granted it, by the journal's clock. */
 	appendedAt: number;
 	command: TrackCommand;
 };
+
+/** An owed entry as it crosses to another journal: with whether Autumn already took it, so the receiver sends it or not. */
+export type HandedEntry = JournalEntry & { sent: boolean };
 
 /** One slot's commands owed to Autumn, written only by the slot's owner thread. */
 export type Journal = {
@@ -40,6 +45,15 @@ export type Journal = {
 	markSent(params: { entries: JournalEntry[] }): void;
 	/** Called after every commit. */
 	onCommitted(listener: () => void): void;
+	/**
+	 * Entries another journal minted, handed over with their customer: held and forwarded under their own writer and seq,
+	 * so Autumn's per-writer watermark clears them wherever they were sent from. Ones already held are ignored.
+	 */
+	appendForeign(params: { entries: HandedEntry[] }): Promise<number>;
+	/** Every customer owing something, with each owed entry and whether Autumn already holds it: what a handoff carries. */
+	handoffs(): { customerId: string; entries: HandedEntry[] }[];
+	/** Entries handed to another journal, which holds them now: gone from this one. */
+	dropHandedOff(params: { entries: JournalEntry[] }): void;
 	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */
 	isBackedUp(params: { customerId: string }): boolean;
 	/**

@@ -94,8 +94,8 @@ export const createJournalForwarder = ({
 		if (!first) return;
 		await ctx.autumnClient.appendTracks({
 			tokenHash: first.forwarded.tokenHash(),
-			tracks: batch.map(({ forwarded, entry }) => ({
-				writerId: forwarded.journal.writerId,
+			tracks: batch.map(({ entry }) => ({
+				writerId: entry.writerId,
 				seq: entry.seq,
 				command: entry.command,
 			})),

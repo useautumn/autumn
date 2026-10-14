@@ -90,6 +90,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		| TrackResponseV3
 		| PushedSubject
 		| boolean
+		| { held: number }
 		| AppliedSubjectOnWire[]
 		| SubjectDigestOnWire[]
 	> {
@@ -133,6 +134,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					customerId,
 					body,
 				})) as PushedSubject,
+			receiveHandoff: async ({ customerId, entries }) =>
+				(await call({
+					type: "receiveHandoff",
+					atomId,
+					customerId,
+					entries,
+				})) as { held: number },
 		};
 	}
 

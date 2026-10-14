@@ -1,7 +1,10 @@
 import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
-import type { Journal } from "../../state/journal/types/journal.js";
+import type {
+	HandedEntry,
+	Journal,
+} from "../../state/journal/types/journal.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { FolderSubjectPulls } from "../../subjectPulls/types/subjectPulls.js";
@@ -42,4 +45,9 @@ export type SlotProcessor = {
 		customerId: string;
 		body: string;
 	}): Promise<PushedSubject>;
+	/** A customer's owed entries another replica handed over with it: held in this slot's journal under their own writer. */
+	receiveHandoff(params: {
+		customerId: string;
+		entries: HandedEntry[];
+	}): Promise<{ held: number }>;
 };

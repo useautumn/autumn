@@ -1,7 +1,9 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { peerRequestHeaders } from "../../replication/transport/peerSignature.js";
+import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
 import type { Membership } from "../membership/types/membership.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
+import { handOffJournals } from "./handOffJournals.js";
 import {
 	type LeavingAnnouncement,
 	PEER_LEAVING_PATH,
@@ -13,6 +15,8 @@ const ANNOUNCE_TIMEOUT_MS = 1_000;
 export type LeaveRingContext = {
 	ring: ReplicaRing;
 	membership: Membership;
+	/** This thread's folders: whose journals it hands over. */
+	folders: Pick<ReplicaFolders, "all">;
 	peer: { port: number; secret: string; fetch?: typeof fetch };
 	logger: Pick<AutumnLogger, "info" | "warn">;
 };
@@ -52,7 +56,8 @@ const announceTo = async ({
 /**
  * The first step of a planned stop: this replica owns nothing from now on (its public checks hop to the owners, hops
  * reaching it are refused as leaving), and every member is told, so they take its customers at once instead of when the
- * service name drops it. A peer the announcement does not reach learns from DNS, as today.
+ * service name drops it, and what this thread's journals owe goes to the new owners. A peer the announcement does not
+ * reach learns from DNS, as today, and gets nothing handed; those entries drain to Autumn.
  */
 export const leaveRing = async ({
 	ctx,
@@ -77,4 +82,5 @@ export const leaveRing = async ({
 		},
 		"This replica left the ring: its customers are owned by its peers",
 	);
+	await handOffJournals({ ctx });
 };

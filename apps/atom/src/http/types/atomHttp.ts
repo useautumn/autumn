@@ -3,6 +3,7 @@ import type { SecretKeys } from "../../auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../auth/types/auth.js";
 import type { ThreadHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
+import type { HandoffBarrier } from "../../replicas/handover/createHandoffBarrier.js";
 import type { Membership } from "../../replicas/membership/types/membership.js";
 import type { ReplicaRing } from "../../replicas/types/replicaRing.js";
 import type { Replication } from "../../replication/types/replication.js";
@@ -32,6 +33,8 @@ export type AtomHttpContext = {
 		ring: ReplicaRing;
 		/** Who counts as a ring member beyond the service name: announced leaves and completed joins. */
 		membership?: Membership;
+		/** Holds a moved customer's first requests until the old owner's entries for it have landed. */
+		barrier?: HandoffBarrier;
 		fetch?: typeof fetch;
 	};
 	/** True once this thread stops taking checks: one a peer hands on is refused, and so goes to the API. */
