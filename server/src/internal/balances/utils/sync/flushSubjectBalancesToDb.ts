@@ -8,9 +8,8 @@ import { tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { isTransactionRollbackError, planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { retryAsync } from "@/utils/retryAsync.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
-
-const FLUSH_ATTEMPTS = 3;
 
 export const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -111,15 +110,18 @@ export const flushSubjectBalancesToDb = async ({
 		rollover_updates: rolloverEntries,
 		usage_window_updates: usageWindowUpdates,
 	});
-	let error: Error | null = null;
-	for (let attempt = 1; attempt <= FLUSH_ATTEMPTS; attempt++) {
-		({ error } = await tryCatch(
-			db.execute(
-				sql`SELECT * FROM sync_balances_v2(${params}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
-			),
-		));
-		if (!error || !isTransactionRollbackError({ error })) break;
-	}
+	const { error } = await tryCatch(
+		retryAsync({
+			attempts: 3,
+			delayMs: 50,
+			maxDelayMs: 500,
+			shouldRetry: (error) => isTransactionRollbackError({ error }),
+			run: () =>
+				db.execute(
+					sql`SELECT * FROM sync_balances_v2(${params}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
+				),
+		}),
+	);
 
 	if (!error) {
 		const usageWindowRowCount = usageWindowUpdates.reduce(
