@@ -100,6 +100,13 @@ test.concurrent(
 			remaining: 1200,
 			usage: 3800,
 		});
+		// Usage reaches Postgres asynchronously; the cancel below must see it.
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId: TestFeature.CombineMaxMessages,
+			balance: 1200,
+		});
 
 		// ── The winner leaves: back to 1,000, usage kept, balance negative ──
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({

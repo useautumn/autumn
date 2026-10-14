@@ -69,6 +69,13 @@ test.concurrent(
 			granted: 5000,
 			remaining: 1000,
 		});
+		// Usage reaches Postgres asynchronously; the reset below must see it.
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId,
+			balance: 1000,
+		});
 
 		await expirePooledBalanceForReset({
 			ctx,
