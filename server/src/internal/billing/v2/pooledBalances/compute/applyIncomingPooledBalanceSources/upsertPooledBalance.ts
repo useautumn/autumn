@@ -96,6 +96,7 @@ export const upsertPooledBalance = ({
 		balanceDelta = 0;
 	}
 	// A competing grant's amount enters in finalize; only usage it already holds moves the pool now.
+	// A never-pooled source holds its own usage even when another share of this feature just left.
 	if (competes) {
 		const holdsOwnUsage =
 			tracksBalance &&
@@ -103,8 +104,7 @@ export const upsertPooledBalance = ({
 				entitlement: contributionCustomerEntitlement.entitlement,
 			}) &&
 			!existingContribution &&
-			!contributionCustomerEntitlement.pooled_contribution_id &&
-			!replacesRemovedContribution;
+			!contributionCustomerEntitlement.pooled_contribution_id;
 		balanceDelta = holdsOwnUsage
 			? subtractSafe({
 					left: contributionCustomerEntitlement.balance ?? 0,
