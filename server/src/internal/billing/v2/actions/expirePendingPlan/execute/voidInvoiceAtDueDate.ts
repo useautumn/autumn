@@ -5,7 +5,8 @@ import type { RepoContext } from "@/db/repoContext";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 const PENDING_PAYMENT_ERROR = "pending payments waiting to clear";
-const UNPAID_CLOSED_STATUSES = new Set(["void", "uncollectible"]);
+// Stripe still accepts payment on an uncollectible invoice, so only a void is final.
+const VOIDABLE_STATUSES = new Set(["open", "uncollectible"]);
 
 const isPendingPaymentError = (error: unknown) =>
 	error instanceof Error && error.message.includes(PENDING_PAYMENT_ERROR);
@@ -22,8 +23,8 @@ export const voidInvoiceAtDueDate = async ({
 	metadata: Metadata;
 	stripeInvoice: Stripe.Invoice;
 }): Promise<boolean> => {
-	if (UNPAID_CLOSED_STATUSES.has(stripeInvoice.status ?? "")) return true;
-	if (stripeInvoice.status !== "open") return false;
+	if (stripeInvoice.status === "void") return true;
+	if (!VOIDABLE_STATUSES.has(stripeInvoice.status ?? "")) return false;
 
 	try {
 		await stripeCli.invoices.voidInvoice(stripeInvoice.id);

@@ -9,8 +9,9 @@ const state = {
 	deletedMetadataIds: [] as string[],
 	metadataUpdates: [] as { id: string; expiresAt: number }[],
 	errorLogs: [] as string[],
-	invoiceStatus: "open" as "open" | "paid",
+	invoiceStatus: "open" as "open" | "paid" | "uncollectible",
 	pendingPayment: true,
+	voidedInvoiceIds: [] as string[],
 };
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -20,7 +21,8 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 				status: state.invoiceStatus,
 				subscription: null,
 			}),
-			voidInvoice: async () => {
+			voidInvoice: async (id: string) => {
+				state.voidedInvoiceIds.push(id);
 				if (state.pendingPayment) {
 					throw new Error(
 						"Invoices with pending payments waiting to clear cannot be paid, voided, or marked uncollectible.",
@@ -68,6 +70,7 @@ const resetState = () => {
 	state.errorLogs = [];
 	state.invoiceStatus = "open";
 	state.pendingPayment = true;
+	state.voidedInvoiceIds = [];
 };
 
 const runCron = () =>
@@ -115,5 +118,16 @@ test("cleans up after the pending payment later fails", async () => {
 	state.pendingPayment = false;
 	await runCron();
 
+	expect(state.deletedMetadataIds).toEqual([metadata.id]);
+});
+
+test("voids an uncollectible invoice before cleaning up, since it can still be paid", async () => {
+	resetState();
+	state.invoiceStatus = "uncollectible";
+	state.pendingPayment = false;
+
+	await runCron();
+
+	expect(state.voidedInvoiceIds).toEqual(["in_pending_payment"]);
 	expect(state.deletedMetadataIds).toEqual([metadata.id]);
 });
