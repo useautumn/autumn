@@ -1,5 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
-import { PRICE_VARIES_LABEL } from "@autumn/shared";
+import { type FrontendProduct, PRICE_VARIES_LABEL } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import {
 	type AdminPlanIds,

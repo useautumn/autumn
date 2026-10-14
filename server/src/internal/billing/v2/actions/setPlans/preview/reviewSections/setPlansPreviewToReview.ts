@@ -11,21 +11,15 @@ import { subscriptionReviewSection } from "./subscriptionReviewSection";
 export const setPlansPreviewToReview = ({
 	preview,
 	features,
-	nowMs,
+	currentEpochMs,
 	endsAt,
 }: {
 	preview: Omit<SetPlansPreviewResponse, "review">;
 	features: Feature[];
-	nowMs: number;
+	currentEpochMs: number;
 	endsAt?: number;
 }): SetPlansPreviewReview => ({
-	plans: plansReviewSection({
-		phases: preview.phases,
-		removedPhases: preview.removed_phases,
-		features,
-		currency: preview.currency,
-		nowMs,
-	}),
-	balances: balancesReviewSection({ phases: preview.phases, features }),
-	subscription: subscriptionReviewSection({ preview, nowMs, endsAt }),
+	plans: plansReviewSection({ preview, features, currentEpochMs }),
+	balances: balancesReviewSection({ preview, features }),
+	subscription: subscriptionReviewSection({ preview, currentEpochMs, endsAt }),
 });

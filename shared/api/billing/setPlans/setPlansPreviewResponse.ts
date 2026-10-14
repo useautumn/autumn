@@ -196,10 +196,7 @@ export const SetPlansPreviewChangesSchema = z.object({
 export const SetPlansPreviewResponseSchema = AttachPreviewResponseSchema.extend(
 	{
 		...SetPlansPreviewChangesSchema.shape,
-		review: SetPlansPreviewReviewSchema.meta({
-			description:
-				"The preview as the dashboard shows it, ready to render: plan, balance and subscription changes per phase.",
-		}),
+		review: SetPlansPreviewReviewSchema.meta({ internal: true }),
 	},
 );
 

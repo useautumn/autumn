@@ -42,7 +42,6 @@ export const SetPlansReviewRowSchema = z.object({
 	ongoing: z.boolean().optional(),
 	pooled: z
 		.object({
-			feature_name: z.string(),
 			previous_total: z.number().nullable(),
 			total: z.number(),
 			contributors: z.number(),

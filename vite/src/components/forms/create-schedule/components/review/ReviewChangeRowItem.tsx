@@ -59,7 +59,13 @@ const poolTotalLabel = ({ previous_total, total }: ReviewPooledBalance) =>
 		? numberWithCommas(total)
 		: `${numberWithCommas(previous_total)} → ${numberWithCommas(total)}`;
 
-function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
+function PooledChip({
+	featureName,
+	pooled,
+}: {
+	featureName: string;
+	pooled: ReviewPooledBalance;
+}) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -74,7 +80,7 @@ function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
 			</TooltipTrigger>
 			<TooltipContent side="top" className={REVIEW_RICH_TOOLTIP_CLASS}>
 				<div className="flex w-[250px] flex-col gap-0.5">
-					<span className="font-medium text-foreground">{`Shared ${pooled.feature_name} pool`}</span>
+					<span className="font-medium text-foreground">{`Shared ${featureName} pool`}</span>
 					<div className="flex justify-between gap-3 text-tertiary-foreground">
 						<span>Pool total</span>
 						<span className="tabular-nums">{poolTotalLabel(pooled)}</span>
@@ -121,7 +127,7 @@ function ReviewChangeRowTrailing({
 	return (
 		<>
 			{row.ongoing && <OngoingChip />}
-			{row.pooled && <PooledChip pooled={row.pooled} />}
+			{row.pooled && <PooledChip featureName={row.title} pooled={row.pooled} />}
 			{row.trial_ends_at !== undefined && (
 				<StatusChip tone="blue" glyph="clock" className="shrink-0">
 					{`Trial · ends ${format(row.trial_ends_at, "MMM d")}`}

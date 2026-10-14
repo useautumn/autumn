@@ -1,6 +1,6 @@
 type ScopedRow = { entity_id?: string | null };
 
-export type ReviewScopeGroup<Row extends ScopedRow> = {
+type ReviewScopeGroup<Row extends ScopedRow> = {
 	entityId: string | null;
 	rows: Row[];
 };

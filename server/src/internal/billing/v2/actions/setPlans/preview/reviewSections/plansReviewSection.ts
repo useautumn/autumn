@@ -1,15 +1,14 @@
 import type {
 	CustomerPlanChange,
 	Feature,
-	SetPlansPreviewPhase,
 	SetPlansPreviewPlan,
-	SetPlansPreviewRemovedPhase,
-	SetPlansReviewPhase,
+	SetPlansPreviewResponse,
 	SetPlansReviewRow,
 	SetPlansReviewSection,
 } from "@autumn/shared";
+import { findPlanChange } from "./findPlanChange";
 import { formatReviewMoney } from "./formatReviewMoney";
-import { findPlanChange, planChangeLines } from "./planChangeLines";
+import { planChangeLines } from "./planChangeLines";
 import { reviewPlanPrice } from "./reviewPlanPrice";
 import {
 	dateText,
@@ -53,9 +52,12 @@ const updatedChanges = ({
 	return change ? planChangeLines({ change, features, currency }) : undefined;
 };
 
-const endsLater = (plan: SetPlansPreviewPlan) =>
-	(plan.status === "starts" || plan.status === "updated") &&
-	plan.expires_at !== null;
+/** "Ends Nov 1, 2026" for a plan this phase starts or updates with an end date. */
+const endsLater = (plan: SetPlansPreviewPlan) => {
+	if (plan.status !== "starts" && plan.status !== "updated") return undefined;
+	if (plan.expires_at === null) return undefined;
+	return reviewText("Ends ", dateText(plan.expires_at));
+};
 
 const isChanged = (plan: SetPlansPreviewPlan) => plan.status !== "kept";
 
@@ -65,23 +67,21 @@ const planToRow = ({
 	planChanges,
 	features,
 	currency,
-	nowMs,
+	currentEpochMs,
 }: {
 	plan: SetPlansPreviewPlan;
 	rowKey: string;
 	planChanges: CustomerPlanChange[];
 	features: Feature[];
 	currency: string;
-	nowMs: number;
+	currentEpochMs: number;
 }): SetPlansReviewRow => ({
 	key: `${rowKey}-${plan.plan_id}`,
 	title: plan.name,
 	description: joinDetail([
 		planCreditDetail({ plan, currency }),
 		plan.custom ? "Custom" : undefined,
-		endsLater(plan) && plan.expires_at !== null
-			? reviewText("Ends ", dateText(plan.expires_at))
-			: undefined,
+		endsLater(plan),
 	]),
 	entity_id: plan.entity_id ?? null,
 	status: plan.status,
@@ -90,50 +90,27 @@ const planToRow = ({
 	trial_ends_at:
 		plan.status !== "ends" &&
 		plan.trial_ends_at !== null &&
-		plan.trial_ends_at > nowMs
+		plan.trial_ends_at > currentEpochMs
 			? plan.trial_ends_at
 			: undefined,
 	value: reviewPlanPrice({ prices: plan.prices, features }),
 });
 
-/** A phase repeating the one before it has no changes of its own, so it lists the plans it keeps. */
-const withRepeatedPhaseRows = (phases: SetPlansReviewPhase[]) => {
-	const filled: SetPlansReviewPhase[] = [];
-	for (const phase of phases) {
-		const previous = filled.at(-1);
-		if (phase.rows.length > 0 || !previous) {
-			filled.push(phase);
-			continue;
-		}
-		const keptRows = previous.rows
-			.filter((row) => row.status !== "ends")
-			.map((row) => ({
-				...row,
-				key: `${phase.key}-${row.key}`,
-				status: "kept" as const,
-				changes: undefined,
-				description: undefined,
-			}));
-		filled.push({ ...phase, rows: keptRows });
-	}
-	return filled;
-};
-
 export const plansReviewSection = ({
-	phases,
-	removedPhases,
+	preview: { phases, removed_phases: removedPhases, currency },
 	features,
-	currency,
-	nowMs,
+	currentEpochMs,
 }: {
-	phases: SetPlansPreviewPhase[];
-	removedPhases: SetPlansPreviewRemovedPhase[];
+	preview: Pick<
+		SetPlansPreviewResponse,
+		"phases" | "removed_phases" | "currency"
+	>;
 	features: Feature[];
-	currency: string;
-	nowMs: number;
+	currentEpochMs: number;
 }): SetPlansReviewSection => {
-	const requestPhases = withRepeatedPhaseRows(
-		phases.map((phase, phaseIndex) => ({
+	const requestPhases = phases.map((phase, phaseIndex) => ({
+		startsAt: phase.starts_at,
+		phase: {
 			key: `plans-${phaseIndex}`,
 			label: phaseLabel(phase),
 			rows: phase.plans.map((plan, planIndex) =>
@@ -143,13 +120,10 @@ export const plansReviewSection = ({
 					planChanges: phase.plan_changes,
 					features,
 					currency,
-					nowMs,
+					currentEpochMs,
 				}),
 			),
-		})),
-	).map((phase, phaseIndex) => ({
-		phase,
-		startsAt: phases[phaseIndex].starts_at,
+		},
 	}));
 	const removedReviewPhases = removedPhases.map((removedPhase) => ({
 		startsAt: removedPhase.starts_at,
@@ -164,7 +138,7 @@ export const plansReviewSection = ({
 					planChanges: [],
 					features,
 					currency,
-					nowMs,
+					currentEpochMs,
 				}),
 			),
 		},

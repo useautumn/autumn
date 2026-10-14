@@ -85,13 +85,15 @@ const phaseRange = ({
 
 const phaseBadge = ({
 	phase,
-	nowMs,
+	currentEpochMs,
 }: {
 	phase: SetPlansPreviewPhase;
-	nowMs: number;
+	currentEpochMs: number;
 }): SetPlansReviewPhase["badge"] => {
 	if (phase.ends_subscription) return "canceled";
-	return phase.starts_now || phase.starts_at <= nowMs ? "active" : "scheduled";
+	return phase.starts_now || phase.starts_at <= currentEpochMs
+		? "active"
+		: "scheduled";
 };
 
 const phaseItemSummary = (phase: SetPlansPreviewPhase) => {
@@ -150,11 +152,11 @@ const stripeIds = (preview: ProcessorPreview): StripeId[] => {
 /** What Stripe will hold in each phase: the end state, not a diff. */
 export const subscriptionReviewSection = ({
 	preview,
-	nowMs,
+	currentEpochMs,
 	endsAt,
 }: {
 	preview: ProcessorPreview;
-	nowMs: number;
+	currentEpochMs: number;
 	/** The request's end date, which the final phase runs until. */
 	endsAt?: number;
 }): SetPlansReviewSection => ({
@@ -167,7 +169,7 @@ export const subscriptionReviewSection = ({
 				nextPhase: preview.phases[phaseIndex + 1],
 				endsAt,
 			}),
-			badge: phaseBadge({ phase, nowMs }),
+			badge: phaseBadge({ phase, currentEpochMs }),
 			rows: phase.ends_subscription
 				? [subscriptionEndRow(phaseIndex)]
 				: phase.processor_items.map((item, itemIndex) =>

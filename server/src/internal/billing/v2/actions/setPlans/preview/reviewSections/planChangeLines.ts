@@ -2,6 +2,7 @@ import {
 	type ApiPlanItemV1,
 	type CustomerPlanChange,
 	type Feature,
+	findFeatureById,
 	intervalSuffix,
 	isAbbreviatedInterval,
 	numberWithCommas,
@@ -216,8 +217,7 @@ const itemLines = ({
 }): SetPlansReviewChangeLine[] =>
 	featureIdsInOrder(itemChanges).flatMap(
 		(featureId): SetPlansReviewChangeLine[] => {
-			const label =
-				features.find((feature) => feature.id === featureId)?.name ?? featureId;
+			const label = findFeatureById({ features, featureId })?.name ?? featureId;
 			const removed = itemsFor({ itemChanges, featureId, action: "deleted" });
 			const added = itemsFor({ itemChanges, featureId, action: "created" });
 
@@ -253,18 +253,3 @@ export const planChangeLines = ({
 		currency,
 	}),
 ];
-
-export const findPlanChange = ({
-	planChanges,
-	planId,
-	entityId,
-}: {
-	planChanges: CustomerPlanChange[];
-	planId: string;
-	entityId: string | null;
-}) =>
-	planChanges.find(
-		(change) =>
-			(change.subscription?.plan_id ?? change.purchase?.plan_id) === planId &&
-			(change.entity_id ?? null) === entityId,
-	);

@@ -4,7 +4,7 @@ import {
 	numberWithCommas,
 	type SetPlansPreviewBalance,
 	type SetPlansPreviewBalanceChange,
-	type SetPlansPreviewPhase,
+	type SetPlansPreviewResponse,
 	type SetPlansReviewRow,
 	type SetPlansReviewSection,
 	type SetPlansReviewValue,
@@ -96,7 +96,6 @@ const balanceChangeToRow = ({
 		status: change.behavior,
 		...(change.pooled && {
 			pooled: {
-				feature_name: featureName,
 				previous_total: change.pooled.previous_total,
 				total: change.pooled.total,
 				contributors: change.pooled.contributors,
@@ -108,10 +107,10 @@ const balanceChangeToRow = ({
 };
 
 export const balancesReviewSection = ({
-	phases,
+	preview: { phases },
 	features,
 }: {
-	phases: SetPlansPreviewPhase[];
+	preview: Pick<SetPlansPreviewResponse, "phases">;
 	features: Feature[];
 }): SetPlansReviewSection => {
 	const changes = phases.flatMap((phase) => phase.balance_changes);

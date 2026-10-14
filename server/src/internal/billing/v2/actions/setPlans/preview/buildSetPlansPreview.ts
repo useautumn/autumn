@@ -134,7 +134,7 @@ export const buildSetPlansPreview = async ({
 		review: setPlansPreviewToReview({
 			preview,
 			features: ctx.features,
-			nowMs: billingContext.currentEpochMs,
+			currentEpochMs: billingContext.currentEpochMs,
 			endsAt: billingContext.endsAt,
 		}),
 	};

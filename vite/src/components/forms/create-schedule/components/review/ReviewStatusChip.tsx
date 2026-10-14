@@ -13,11 +13,10 @@ import {
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { formatReviewText } from "../../utils/review/formatReviewText";
+import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
 type ReviewChangeStatus = NonNullable<SetPlansReviewRow["status"]>;
 type ReviewChangeLineState = SetPlansReviewChangeLine["state"];
-
-import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
 const REVIEW_STATUSES: Record<
 	ReviewChangeStatus,
