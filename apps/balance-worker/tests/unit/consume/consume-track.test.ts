@@ -222,4 +222,26 @@ describe("consumeTrack", () => {
 		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
 		expect(keys.released).toEqual([storageKey]);
 	});
+
+	test("an Atom's track under its own key claims nothing: its seq guards a resend; a sourced track under any other key still claims", async () => {
+		const { ctx, decided, keys } = createFixture();
+		const atomOwn = parseTrackCommand({
+			input: {
+				...commandOf({ commandId: "atom_req_1", requestId: "atom_req_1" }),
+				idempotency: { key: "track:atom_req_1", ttlMs: 60_000 },
+				source,
+			},
+		});
+		await consumeTrack({ ctx, command: atomOwn });
+		expect(keys.owners.size).toBe(0);
+		expect(
+			decided.map(({ commandId, value }) => `${commandId}:${value}`),
+		).toEqual(["atom_req_1:1"]);
+
+		await consumeTrack({
+			ctx,
+			command: sourced({ commandId: "c2", requestId: "r2" }),
+		});
+		expect(keys.owners.get(storageKey)).toBe("r2");
+	});
 });
