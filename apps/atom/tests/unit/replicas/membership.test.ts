@@ -4,7 +4,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
-import { createMembership } from "../../../src/replicas/membership/createMembership.js";
+import {
+	createMembership,
+	MEMBERSHIP_INTS,
+} from "../../../src/replicas/membership/createMembership.js";
 import { startReadinessProber } from "../../../src/replicas/membership/startReadinessProber.js";
 
 const A = "10.0.0.1";
@@ -139,6 +142,43 @@ describe("a listed peer becomes an owner", () => {
 
 		expect(membership.stateOf(A)).toBe("joined");
 		expect(handedOff).toEqual([`t0:${A}`, `t0:${A}`]);
+	});
+
+	test("a leaving peer that still answers from its old boot is not counted again by a thread that never marked it ready: the boot is read from the shared table", async () => {
+		// Two threads, one table: as deployed, each thread holds its own membership over the shared Int32Array.
+		const table = new Int32Array(MEMBERSHIP_INTS);
+		const onT0 = createMembership({ self: B, table });
+		const onT1 = createMembership({ self: B, table });
+		const handedOff: string[] = [];
+		const health = healthOf({ [A]: { status: 200, bootedAt: "boot-1" } });
+		const t0 = proberOf({
+			membership: onT0,
+			thread: 0,
+			threads: 2,
+			listed: [A],
+			health,
+			handedOff,
+		});
+		const t1 = proberOf({
+			membership: onT1,
+			thread: 1,
+			threads: 2,
+			listed: [A],
+			health,
+			handedOff,
+		});
+		await t0.probeOnce();
+		await t1.probeOnce();
+		expect(onT1.stateOf(A)).toBe("joined");
+		onT1.markLeaving(A);
+
+		// A drains, still answering /health 200 from boot-1; both threads probe it.
+		await t0.probeOnce();
+		await t1.probeOnce();
+
+		expect(onT0.stateOf(A)).toBe("leaving");
+		expect(onT1.stateOf(A)).toBe("leaving");
+		expect(handedOff).toHaveLength(2);
 	});
 
 	test("a leaving peer that still answers from its old boot is not counted again", async () => {
