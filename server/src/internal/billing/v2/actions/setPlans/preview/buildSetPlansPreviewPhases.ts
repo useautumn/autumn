@@ -107,30 +107,33 @@ export const buildSetPlansPreviewPhases = async ({
 		(billingContext.stripeSubscriptionSchedule
 			? liveScheduleAsUpdateAction(billingContext.stripeSubscriptionSchedule)
 			: undefined);
+	const scheduleParams = scheduleActionToParams(subscriptionScheduleAction);
 	const firstPhaseOnSchedule =
 		firstPhaseStartsInFuture({ billingContext }) &&
-		scheduleActionToParams(subscriptionScheduleAction) !== undefined;
-	const scheduledPhaseItems = scheduleActionToProcessorItems({
-		subscriptionScheduleAction,
-		phases: firstPhaseOnSchedule ? phases : phases.slice(1),
-		context: processorItemContext,
-	});
+		scheduleParams !== undefined;
+	const subscriptionItems = [
+		...subscriptionActionToProcessorItems({
+			subscriptionAction: stripeBillingPlan.subscriptionAction,
+			stripeSubscription,
+			context: processorItemContext,
+		}),
+		...checkoutSessionActionToProcessorItems({
+			checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
+			context: processorItemContext,
+		}),
+	];
+	const laterPhases = firstPhaseOnSchedule ? phases : phases.slice(1);
+	// Without a schedule, the subscription's end state is what Stripe holds at every later phase.
+	const scheduledPhaseItems = scheduleParams
+		? scheduleActionToProcessorItems({
+				subscriptionScheduleAction,
+				phases: laterPhases,
+				context: processorItemContext,
+			})
+		: laterPhases.map(() => subscriptionItems);
 	const processorItemsByPhase = firstPhaseOnSchedule
 		? scheduledPhaseItems
-		: [
-				[
-					...subscriptionActionToProcessorItems({
-						subscriptionAction: stripeBillingPlan.subscriptionAction,
-						stripeSubscription,
-						context: processorItemContext,
-					}),
-					...checkoutSessionActionToProcessorItems({
-						checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
-						context: processorItemContext,
-					}),
-				],
-				...scheduledPhaseItems,
-			];
+		: [subscriptionItems, ...scheduledPhaseItems];
 
 	return {
 		phases: phases.map((phase, phaseIndex) => ({

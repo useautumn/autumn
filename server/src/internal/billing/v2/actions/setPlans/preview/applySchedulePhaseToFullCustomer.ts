@@ -1,8 +1,11 @@
 import {
 	CusProductStatus,
 	cp,
+	EntInterval,
 	type FullCusProduct,
 	type FullCustomer,
+	type FullCustomerEntitlement,
+	getNextResetAt,
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -74,6 +77,35 @@ const carryExistingStatesIntoStartingProduct = ({
 	});
 };
 
+/** Resets due by the phase have run by then, so the next one is the first after it starts. */
+const rollResetsForwardToPhase = ({
+	fullCustomer,
+	phase,
+}: {
+	fullCustomer: FullCustomer;
+	phase: SchedulePhasePlan;
+}) => {
+	const customerEntitlements: FullCustomerEntitlement[] = [
+		...fullCustomer.customer_products.flatMap(
+			(customerProduct) => customerProduct.customer_entitlements,
+		),
+		...(fullCustomer.extra_customer_entitlements ?? []),
+	];
+	for (const customerEntitlement of customerEntitlements) {
+		const { next_reset_at: nextResetAt, entitlement } = customerEntitlement;
+		if (!nextResetAt || nextResetAt > phase.startsAt) continue;
+		if (!entitlement.interval || entitlement.interval === EntInterval.Lifetime)
+			continue;
+
+		customerEntitlement.next_reset_at = getNextResetAt({
+			curReset: nextResetAt,
+			interval: entitlement.interval,
+			intervalCount: entitlement.interval_count ?? 1,
+			now: phase.startsAt,
+		});
+	}
+};
+
 export const applySchedulePhaseToFullCustomer = ({
 	ctx,
 	fullCustomer,
@@ -84,6 +116,7 @@ export const applySchedulePhaseToFullCustomer = ({
 	phase: SchedulePhasePlan;
 }): FullCustomer => {
 	const phaseCustomer = structuredClone(fullCustomer);
+	rollResetsForwardToPhase({ fullCustomer: phaseCustomer, phase });
 	const startingIds = new Set(phase.customerProductIds);
 	const incomingCustomerProducts: FullCusProduct[] = [];
 	const outgoingCustomerProducts: FullCusProduct[] = [];
