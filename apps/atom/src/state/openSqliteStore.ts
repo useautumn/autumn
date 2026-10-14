@@ -177,6 +177,48 @@ export const openSqliteStore = ({
 		}
 	}
 
+	/** Upserts that reach the file while a commit is in flight wait for it, then go together as one transaction. */
+	let queued: {
+		writes: SubjectWrite[];
+		resolve: (results: SubjectWriteResult[]) => void;
+		reject: (error: unknown) => void;
+	}[] = [];
+	let committing = false;
+
+	async function commitQueued(): Promise<void> {
+		committing = true;
+		while (queued.length > 0) {
+			const batch = queued;
+			queued = [];
+			const writes = batch.flatMap((call) => call.writes);
+			try {
+				const encoded = encodeSubjectWrites({ writes, appliedAt: now() });
+				const answer = await file.write("upsertSubjects", encoded.payload);
+				const results = decodeSubjectWriteResults({
+					...encoded,
+					writes,
+					results: answer,
+				});
+				let at = 0;
+				for (const call of batch) {
+					call.resolve(results.slice(at, at + call.writes.length));
+					at += call.writes.length;
+				}
+			} catch (error) {
+				for (const call of batch) call.reject(error);
+			}
+		}
+		committing = false;
+	}
+
+	function commitWrites(writes: SubjectWrite[]): Promise<SubjectWriteResult[]> {
+		const { promise, resolve, reject } =
+			Promise.withResolvers<SubjectWriteResult[]>();
+		queued.push({ writes, resolve, reject });
+		if (!committing) void commitQueued();
+		return promise;
+	}
+
 	/**
 	 * After the commit: only the store decides which part settles a customer's version, and rows still mean "stored".
 	 * `onStored` runs in the same turn as the held copies change, so nothing reads them before it.
@@ -189,20 +231,14 @@ export const openSqliteStore = ({
 		onStored?: (stored: boolean[]) => void;
 	}): Promise<boolean[]> {
 		const writes = subjects.map(writeOf);
-		const encoded = encodeSubjectWrites({ writes, appliedAt: now() });
 		trackWriting(writes, 1);
-		let answer: string;
+		let results: SubjectWriteResult[];
 		try {
-			answer = await file.write("upsertSubjects", encoded.payload);
+			results = await commitWrites(writes);
 		} finally {
 			trackWriting(writes, -1);
 		}
 		return timeStage("pushApply", () => {
-			const results = decodeSubjectWriteResults({
-				...encoded,
-				writes,
-				results: answer,
-			});
 			writes.forEach((write, index) => {
 				const result = results[index];
 				if (result) holdWritten({ write, result });
