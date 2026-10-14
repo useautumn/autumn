@@ -1,7 +1,10 @@
 import type { FinalizeLockParamsV0 } from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
+import {
+	fetchLockReceipt,
+	lockNotFoundError,
+} from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
 import { getBalanceLock } from "./balanceWorker/getBalanceLock.js";
 import { runBalanceWorkerFinalize } from "./balanceWorker/runBalanceWorkerFinalize.js";
@@ -18,7 +21,11 @@ export const finalizeWhereTheLockLives = async ({
 	ctx,
 	params,
 }: RunFinalizeLockArgs) => {
-	const workerLock = await getBalanceLock({ ctx, lockId: params.lock_id });
+	const workerLock = await getBalanceLock({
+		ctx,
+		lockId: params.lock_id,
+		customerId: params.customer_id,
+	});
 	return workerLock
 		? runBalanceWorkerFinalize({ ctx, params, lock: workerLock })
 		: runFinalizeLockInner({ ctx, params });
@@ -52,6 +59,14 @@ export const runFinalizeLockInner = async ({
 		ctx,
 		lockId: params.lock_id,
 	});
+	if (
+		params.customer_id &&
+		fetchedReceipt.receipt.customer_id !== params.customer_id
+	) {
+		if (fetchedReceipt.claimed)
+			await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
+		throw lockNotFoundError({ lockId: params.lock_id });
+	}
 
 	return runFinalizeLockV2({
 		ctx,

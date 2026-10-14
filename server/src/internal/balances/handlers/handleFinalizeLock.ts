@@ -1,11 +1,21 @@
-import { FinalizeLockParamsV0Schema, RouteGroup, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	ApiVersion,
+	FinalizeLockParamsV0Schema,
+	RouteGroup,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { runFinalizeLock } from "../finalizeLock/runFinalizeLock.js";
 
 export const handleFinalizeLock = createRoute({
 	scopes: [Scopes.Balances.Write],
 	routeGroup: RouteGroup.Balances,
-	body: FinalizeLockParamsV0Schema,
+	versionedBody: {
+		latest: FinalizeLockParamsV0Schema,
+		[ApiVersion.V1_Beta]: FinalizeLockParamsV0Schema,
+	},
+	resource: AffectedResource.FinalizeLock,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");

@@ -34,6 +34,7 @@ export enum AffectedResource {
 	Event = "event",
 	Coupon = "coupon",
 	FeatureGrant = "feature_grant",
+	FinalizeLock = "finalize_lock",
 }
 
 /**

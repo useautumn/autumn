@@ -5,6 +5,10 @@ export const FinalizeLockParamsV0Schema = z
 		lock_id: z.string().meta({
 			description: "The lock ID that was passed into the previous check call.",
 		}),
+		customer_id: z.string().optional().meta({
+			description:
+				"The customer the lock belongs to. A lock of any other customer is not found.",
+		}),
 		action: z.enum(["confirm", "release"]).meta({
 			description:
 				"Use 'confirm' to commit the deduction, or 'release' to return the held balance.",

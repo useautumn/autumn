@@ -10,9 +10,12 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 export async function getBalanceLock({
 	ctx,
 	lockId,
+	customerId,
 }: {
 	ctx: AutumnContext;
 	lockId: string;
+	/** Only this customer's lock: a request that names its customer never finds another's. */
+	customerId?: string;
 }): Promise<WorkerLock | null> {
 	const [row] = await ctx.db
 		.select()
@@ -22,6 +25,7 @@ export async function getBalanceLock({
 				eq(balanceLocks.org_id, ctx.org.id),
 				eq(balanceLocks.env, ctx.env),
 				eq(balanceLocks.lock_id, lockId),
+				customerId ? eq(balanceLocks.customer_id, customerId) : undefined,
 			),
 		)
 		.limit(1);
