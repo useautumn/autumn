@@ -17,6 +17,7 @@ import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import { pendingSqliteWrites } from "../../../src/state/writer/getSqliteWriter.js";
 import {
 	createSubjectPulls,
 	PULL_HOLD_MS,
@@ -35,8 +36,11 @@ import {
 } from "../utils/atomFixtures.js";
 
 /** Every promise continuation already queued runs before a macrotask: a settled pull is fully stored after this. */
-const drainMicrotasks = () =>
-	new Promise<void>((resolve) => setImmediate(resolve));
+/** Runs what is queued, including the writer thread's answers to the writes it posts. */
+const drainMicrotasks = async () => {
+	do await new Promise<void>((resolve) => setImmediate(resolve));
+	while (pendingSqliteWrites() > 0);
+};
 
 type CheckParams = Partial<CheckRequest["params"]>;
 

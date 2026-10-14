@@ -77,7 +77,7 @@ describe("the SQLite writer thread", () => {
 		const database = new Database(databasePath, { readonly: true });
 		expect(
 			database
-				.query<{ seq: bigint }, []>("SELECT seq FROM journal_entries")
+				.query<{ seq: number }, []>("SELECT seq FROM journal_entries")
 				.all(),
 		).toEqual([{ seq: 1 }]);
 		database.close();
