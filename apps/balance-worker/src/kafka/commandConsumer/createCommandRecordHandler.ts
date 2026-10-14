@@ -1,4 +1,3 @@
-import type { WorkerLock } from "@autumn/balance-engine";
 import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
 import {
 	type CommandRecord,
@@ -9,7 +8,11 @@ import {
 	type TopicRecordResult,
 	type TopicResumePosition,
 } from "@autumn/kafka";
-import { consumeAtomFinalize } from "../../consume/consumeAtomFinalize.js";
+import {
+	type AtomFinalizeBatch,
+	consumeAtomFinalize,
+	prepareAtomFinalizeBatch,
+} from "../../consume/consumeAtomFinalize.js";
 import { consumeEvict } from "../../consume/consumeEvict.js";
 import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
@@ -42,10 +45,10 @@ type RecordPosition = { topic: string; partition: number; offset: string };
 /** A record's command, or why it could not be read. */
 type ParsedRecord = { command: CommandRecord } | { unreadable: unknown };
 
-/** A batch read once before its records apply: each record parsed by offset, and the lock rows its Atom finalizes name. */
+/** A batch read once before its records apply: each record parsed by offset, and what each command type prepared for it. */
 type CommandBatch = {
 	parsed: Map<string, ParsedRecord>;
-	lockRows: WorkerLock[];
+	atomFinalize: AtomFinalizeBatch;
 };
 
 const parseRecord = ({
@@ -91,7 +94,7 @@ export function createCommandRecordHandler({
 
 	const batchesByPartition = new Map<number, CommandBatch>();
 
-	/** Parses the batch once and reads every lock its Atom finalizes name in one query, before any record applies. */
+	/** Parses the batch once and lets each command type prepare for it, before any record applies. */
 	async function beginBatch({
 		partition,
 		messages,
@@ -101,19 +104,14 @@ export function createCommandRecordHandler({
 		const parsed = new Map(
 			messages.map((message) => [message.offset, parseRecord({ message })]),
 		);
-		const keys = [...parsed.values()].flatMap((record) => {
-			if (!("command" in record) || record.command.type !== "atomFinalize")
-				return [];
-			const { identity, lockId } = record.command;
-			return [{ orgId: identity.orgId, env: identity.env, lockId }];
+		const commands = [...parsed.values()].flatMap((record) =>
+			"command" in record ? [record.command] : [],
+		);
+		const atomFinalize = await prepareAtomFinalizeBatch({
+			commands,
+			process: (run) => runtime.process(run),
 		});
-		const lockRows =
-			keys.length === 0
-				? []
-				: await runtime.process((processor) =>
-						processor.readLockRows({ keys }),
-					);
-		batchesByPartition.set(partition, { parsed, lockRows });
+		batchesByPartition.set(partition, { parsed, atomFinalize });
 	}
 
 	async function settleBatch({
@@ -231,7 +229,7 @@ export function createCommandRecordHandler({
 					queued = await consumeAtomFinalize({
 						ctx: consumeCtx,
 						command,
-						lockRows: batch?.lockRows ?? [],
+						batch: batch?.atomFinalize,
 					});
 					break;
 				default:

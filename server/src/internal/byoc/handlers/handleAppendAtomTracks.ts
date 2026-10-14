@@ -5,7 +5,6 @@ import {
 import type { Context } from "hono";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import { rethrowBalanceWorkerError } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
-import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { atomTracksToCommands } from "../actions/tracks/atomTracksToCommands.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
@@ -14,21 +13,10 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 	const parsed = AtomTracksAppendRequestSchema.safeParse(
 		await c.req.json().catch(() => null),
 	);
-	const atom = c.get("atom");
-	const orgWithFeatures = await getOrgWithFeaturesCached({
-		db: c.get("ctx").db,
-		orgId: atom.orgId,
-		env: atom.env,
-	});
-	if (!orgWithFeatures)
-		return c.json(
-			{ code: AtomTracksAppendErrorCode.AtomUnknown, message: "Unknown Atom" },
-			401,
-		);
 	const commands = parsed.success
 		? atomTracksToCommands({
-				ctx: { ...c.get("ctx"), ...orgWithFeatures, env: atom.env },
-				atom,
+				ctx: c.get("ctx"),
+				atom: c.get("atom"),
 				request: parsed.data,
 			})
 		: null;
