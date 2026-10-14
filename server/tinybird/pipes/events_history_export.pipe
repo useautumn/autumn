@@ -3,6 +3,7 @@ DESCRIPTION >
     A chunk is [from, to) ranges on org_id, env, customer_id and timestamp; an omitted bound is
     unbounded. Defaults select nothing. Run by the Trigger.dev events history exporter.
     The WHERE must stay identical to events_history_export_count, which verifies each chunk.
+    JSON columns are exported as strings so every chunk's Parquet has the same schema.
 
 TOKEN events_history_export_runner READ
 
@@ -25,8 +26,8 @@ SQL >
         internal_entity_id,
         internal_product_id,
         customer_id,
-        properties,
-        deductions,
+        toJSONString(properties) AS properties,
+        toJSONString(deductions) AS deductions,
         {{ String(export_chunk_id, 'unset') }} AS export_chunk_id,
         {{ String(export_attempt, '0') }} AS export_attempt
     FROM events
