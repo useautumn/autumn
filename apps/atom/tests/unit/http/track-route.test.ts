@@ -128,7 +128,8 @@ describe("a track the balance covers", () => {
 		expect(commands[0]?.enforceOverdueBlock).not.toBe(true);
 	});
 
-	test("without an idempotency_key in the body is keyed by the Atom's request id, whatever Idempotency-Key header it carries", async () => {
+	// BENCH ONLY (idempotency spike): the header keys a track that has no body key, so the staging shadow's tracks are keyed.
+	test("without an idempotency_key in the body is keyed by its Idempotency-Key header", async () => {
 		const { replica, appended } = await replicaAt100();
 
 		await replica.app.request(
@@ -142,7 +143,28 @@ describe("a track the balance covers", () => {
 
 		const [entry] = appended;
 		expect(entry?.owner).toStartWith("atom_req_");
-		expect(entry?.key).toBe(`track:${entry?.owner}`);
+		expect(entry?.key).toBe("track:header_key");
+	});
+
+	test("a keyed track sent again is 409 duplicate_idempotency_key in the API's words, and journals once", async () => {
+		const { replica, appended } = await replicaAt100();
+		const send = () =>
+			replica.app.request(
+				"/v1/track",
+				trackOf({ body: { value: 10, idempotency_key: "evt_1" } }),
+			);
+
+		expect((await send()).status).toBe(202);
+		const again = await send();
+
+		expect(again.status).toBe(409);
+		expect(await again.json()).toEqual({
+			code: "duplicate_idempotency_key",
+			message:
+				"Another request with idempotency key evt_1 has already been received",
+		});
+		await until(() => appended.length === 1);
+		expect(appended).toHaveLength(1);
 	});
 
 	test("on a replica that does not own the customer is answered by the owner", async () => {

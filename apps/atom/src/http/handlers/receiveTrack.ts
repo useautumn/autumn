@@ -1,15 +1,27 @@
 import type { Context } from "hono";
 import { trackCallToRequest } from "../../lib/contracts/trackContract.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
-import { API_VERSION_HEADER, arrivalOf } from "./receiveCheck.js";
+import {
+	API_VERSION_HEADER,
+	arrivalOf,
+	IDEMPOTENCY_KEY_HEADER,
+} from "./receiveCheck.js";
 
 /** A track the balance covers is deducted and journaled here; one it does not cover is left to the API. */
 export async function receiveTrack(context: Context<AtomHttpEnv>) {
-	const request = trackCallToRequest({
+	const fromBody = trackCallToRequest({
 		body: context.get("body"),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		...arrivalOf(context),
 	});
+	// BENCH ONLY (idempotency spike): a track keyed only by its header is keyed too, so the staging shadow's are.
+	const request = {
+		...fromBody,
+		idempotencyKey:
+			fromBody.idempotencyKey ||
+			context.req.header(IDEMPOTENCY_KEY_HEADER) ||
+			null,
+	};
 	context.set("idempotencyKey", request.idempotencyKey);
 	const answer = await context
 		.get("slots")
