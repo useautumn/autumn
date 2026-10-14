@@ -27,10 +27,13 @@ export const fetchStoredLineItemsForSubscriptionBilling = async ({
 			db,
 			customerProductIds: [...outgoingCusProductIds, ...siblingIds],
 		});
-	const isKept = (row: { stripe_invoice_id: string | null }) =>
-		!excludeStripeInvoiceId || row.stripe_invoice_id !== excludeStripeInvoiceId;
+	const notExcluded = ({
+		stripe_invoice_id,
+	}: {
+		stripe_invoice_id: string | null;
+	}) => !excludeStripeInvoiceId || stripe_invoice_id !== excludeStripeInvoiceId;
 	return {
-		storedChargeLineItems: storedChargeLineItems.filter(isKept),
-		storedRefundLineItems: storedRefundLineItems.filter(isKept),
+		storedChargeLineItems: storedChargeLineItems.filter(notExcluded),
+		storedRefundLineItems: storedRefundLineItems.filter(notExcluded),
 	};
 };

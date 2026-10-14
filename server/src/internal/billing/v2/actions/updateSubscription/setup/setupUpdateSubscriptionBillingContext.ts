@@ -256,21 +256,19 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	const supersededPending = contextOverride.supersededPendingCustomerProduct;
+	const supersededMetadataId =
+		contextOverride.supersededPendingCustomerProduct?.metadata_id;
+	const supersededMetadata = supersededMetadataId
+		? await MetadataService.get({ db: ctx.db, id: supersededMetadataId })
+		: undefined;
+
 	const { storedChargeLineItems, storedRefundLineItems } =
 		await fetchStoredLineItemsForSubscriptionBilling({
 			db: ctx.db,
 			fullCustomer,
 			stripeSubscription,
 			outgoingCusProductIds: [customerProduct.id],
-			excludeStripeInvoiceId:
-				supersededPending?.metadata_id &&
-				(
-					await MetadataService.get({
-						db: ctx.db,
-						id: supersededPending.metadata_id,
-					})
-				)?.stripe_invoice_id,
+			excludeStripeInvoiceId: supersededMetadata?.stripe_invoice_id,
 		});
 
 	return {

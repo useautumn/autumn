@@ -37,6 +37,7 @@ export const pendingReplacementToLiveUpdate = async ({
 	);
 	if (!livePlan) return;
 
+	// Cancelling only discards the pending change, so the live plan previews unchanged.
 	if (params.cancel_action) {
 		const { customer_id, entity_id } = params;
 		return { customer_id, entity_id, customer_product_id: livePlan.id };

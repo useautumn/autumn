@@ -1,4 +1,5 @@
 import {
+	InternalError,
 	UpdateSubscriptionPreviewIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -6,7 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
-import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacement";
+import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
@@ -49,10 +50,15 @@ export const previewPendingPlanIfAny = async ({
 				preview: true,
 				contextOverride: { supersededPendingCustomerProduct: customerProduct },
 			});
+		if (!billingPlan) {
+			throw new InternalError({
+				message: "billingPlan not returned from updateSubscription preview",
+			});
+		}
 		return billingPlanToUpdateSubscriptionPreview({
 			ctx,
 			billingContext,
-			billingPlan: billingPlan!,
+			billingPlan,
 			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
 	}
