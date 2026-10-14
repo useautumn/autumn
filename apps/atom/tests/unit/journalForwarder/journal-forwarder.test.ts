@@ -101,7 +101,10 @@ const openForwardedSlot = async ({
 	const forwarding = forwarderTo({ sleep: sleeps.sleep, warnings }).forward({
 		journal: slot.journal,
 		tokenHash: () => "hash_folder",
-		pulls: { request: ({ customerId }) => void pulled.push(customerId) },
+		pulls: {
+			request() {},
+			settle: async ({ customerId }) => void pulled.push(customerId),
+		},
 	});
 	cleanups.push(() => {
 		forwarding.stop();
@@ -273,7 +276,7 @@ describe("one writer per journal file", () => {
 			const forwarding = forwarder.forward({
 				journal,
 				tokenHash: () => "hash_folder",
-				pulls: { request() {} },
+				pulls: { request() {}, settle: async () => {} },
 			});
 			cleanups.push(() => {
 				forwarding.stop();
@@ -331,6 +334,21 @@ describe("a sent deduction no push clears", () => {
 		});
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(await remainingOf({ processor })).toBe(990);
+	});
+
+	test("a pull that does not clear it is tried again after another grace, three times at most", async () => {
+		const { processor, journal, sleeps, pulled } = await openForwardedSlot();
+		await processor.check({ request: sendEvent() });
+		await until(() => nothingUnsent({ journal }));
+
+		for (let round = 1; round <= 3; round++) {
+			(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
+			await until(() => pulled.length === round);
+		}
+		await Bun.sleep(10);
+
+		expect(pulled).toEqual(["cus_1", "cus_1", "cus_1"]);
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
 	test("a push that clears it within the grace pulls nothing", async () => {

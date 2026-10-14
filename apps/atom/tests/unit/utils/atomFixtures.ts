@@ -194,7 +194,10 @@ export const freshHeld = () =>
 	createHeldSubjects({ budgetBytes: 64 * 1024 * 1024 });
 
 /** A folder whose misses are only forwarded, for tests not about pulls. */
-export const noFolderPulls: FolderSubjectPulls = { request() {} };
+export const noFolderPulls: FolderSubjectPulls = {
+	request() {},
+	settle: async () => {},
+};
 
 /** A thread whose loop is never behind, for tests not about refusing checks under load. */
 export const loopOnTime = { lagMs: () => 0 };

@@ -92,6 +92,7 @@ const createHarness = ({
 		},
 		miss: (customerId = "cus_1", entityId: string | null = null) =>
 			folder.request({ customerId, entityId }),
+		settle: (customerId: string) => folder.settle({ customerId }),
 	};
 };
 
@@ -124,6 +125,40 @@ describe("one pull per subject", () => {
 		await harness.calls[0]?.answer(NOT_HELD);
 		harness.miss(`cus_${MAX_PULLS_IN_FLIGHT}`);
 		expect(harness.calls.at(-1)?.customerId).toBe(`cus_${MAX_PULLS_IN_FLIGHT}`);
+	});
+});
+
+describe("a pull that settles what a journal owes", () => {
+	test("past the in-flight cap waits for a slot instead of being dropped, and is no miss", async () => {
+		const harness = createHarness();
+		for (let i = 0; i < MAX_PULLS_IN_FLIGHT; i++) harness.miss(`cus_${i}`);
+
+		const settled = harness.settle("cus_owing");
+		expect(harness.calls).toHaveLength(MAX_PULLS_IN_FLIGHT);
+
+		await harness.calls[0]?.answer("{}");
+		expect(harness.calls.at(-1)?.customerId).toBe("cus_owing");
+		await harness.calls.at(-1)?.answer("{}");
+		await settled;
+		expect(harness.applied.map(({ customerId }) => customerId)).toEqual([
+			"cus_0",
+			"cus_owing",
+		]);
+		expect(harness.counted).toMatchObject({
+			subjectMisses: MAX_PULLS_IN_FLIGHT,
+			subjectPulls: MAX_PULLS_IN_FLIGHT + 1,
+		});
+	});
+
+	test("once stopped, a settle waiting for a slot ends without pulling", async () => {
+		const harness = createHarness();
+		for (let i = 0; i < MAX_PULLS_IN_FLIGHT; i++) harness.miss(`cus_${i}`);
+		const settled = harness.settle("cus_owing");
+
+		harness.subjectPulls.stop();
+		await settled;
+
+		expect(harness.calls).toHaveLength(MAX_PULLS_IN_FLIGHT);
 	});
 });
 

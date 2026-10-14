@@ -404,6 +404,7 @@ describe("a push the slot could not store", () => {
 				logger: getAtomLogger(),
 				subjectPulls: {
 					request: ({ customerId }) => void pulled.push(customerId),
+					settle: async () => {},
 				},
 				journal,
 			},
