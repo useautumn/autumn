@@ -59,7 +59,10 @@ export const trackToCommand = ({
 	};
 };
 
-/** A lock keeps its overage behaviour for a finalize above it, as the API's does; the API refuses one on an allocated feature. */
+/**
+ * A lock granted here is handed in as granted (`overflow`), a capped one as capped; its row keeps the caller's overage
+ * behaviour for a finalize above it, as the API's does. The API refuses one on an allocated feature.
+ */
 const lockedTrackOf = ({
 	lock,
 	command,
@@ -75,9 +78,13 @@ const lockedTrackOf = ({
 	});
 	if (feature && featureUtils.isAllocated(feature))
 		throw new CannotAnswerError({ reason: "lock_unsupported" });
+	const overageBehavior = lock.overage_behavior ?? "reject";
 	return {
-		overageBehavior: lock.overage_behavior ?? "reject",
-		lock: lockParamsToTrackLock({ lock, occurredAt: command.occurredAt }),
+		overageBehavior: overageBehavior === "cap" ? "cap" : "overflow",
+		lock: {
+			...lockParamsToTrackLock({ lock, occurredAt: command.occurredAt }),
+			overageBehavior,
+		},
 	};
 };
 
