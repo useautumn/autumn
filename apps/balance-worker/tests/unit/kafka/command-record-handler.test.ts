@@ -529,4 +529,45 @@ describe("command record handler", () => {
 		expect(fixture.tracked).toEqual([command]);
 		await fixture.handler.settleBatch?.({ topic, partition });
 	});
+
+	test("a batch's track keys are claimed together before its first record applies; the records then decide in order", async () => {
+		const fixture = createFixture();
+		const claimed: string[] = [];
+		const claim = fixture.keys.keys.claim;
+		fixture.keys.keys.claim = (params) => {
+			claimed.push(params.owner ?? "");
+			return claim(params);
+		};
+		const batch = ["0", "1"].map((offset) =>
+			recordOf({
+				offset,
+				command: parseTrackCommand({
+					input: {
+						...createTrackCommand({
+							identity: testIdentity,
+							commandId: `cmd_${offset}`,
+							value: 1,
+						}),
+						idempotency: { key: `track:item_${offset}`, ttlMs: 60_000 },
+					},
+				}),
+			}),
+		);
+
+		await fixture.handler.beginBatch?.({
+			topic,
+			partition,
+			messages: batch.map(({ message }) => message),
+		});
+		expect(claimed).toEqual(["req_cmd_0", "req_cmd_1"]);
+		expect(fixture.tracked).toEqual([]);
+		for (const record of batch) await fixture.handler.applyRecord(record);
+		await fixture.handler.settleBatch?.({ topic, partition });
+
+		expect(claimed).toEqual(["req_cmd_0", "req_cmd_1"]);
+		expect(fixture.tracked.map(({ commandId }) => commandId)).toEqual([
+			"cmd_0",
+			"cmd_1",
+		]);
+	});
 });
