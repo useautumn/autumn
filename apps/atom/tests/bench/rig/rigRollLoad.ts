@@ -10,6 +10,7 @@ import { rigConfig } from "./rigConfig.js";
 import {
 	bucketOf,
 	emptyRollCounts,
+	emptyRollLockCounts,
 	type OwnerClass,
 	type RollCounts,
 	type RollLoadPlan,
@@ -67,13 +68,74 @@ const doublesFile = process.env.RIG_REPLAY_DOUBLES_FILE;
 const sendsOf = new Map<string, Record<string, unknown>[]>();
 const noteSend = (key: string, send: Record<string, unknown>) =>
 	sendsOf.set(key, [...(sendsOf.get(key) ?? []), send]);
+const locks = emptyRollLockCounts();
+const pendingFinalizes = new Set<Promise<unknown>>();
+
+/** Releases the lock on whichever replica is routed to then: after a move, the new owner must find the handed row. */
+const finalize = async ({
+	customerId,
+	lockId,
+}: {
+	customerId: string;
+	lockId: string;
+}) => {
+	const to = routed[Math.floor(Math.random() * routed.length)] ?? "a";
+	try {
+		const reply = await fetch(`${plan.replicaUrls[to]}/v1/balances.finalize`, {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				customer_id: customerId,
+				lock_id: lockId,
+				action: "release",
+			}),
+			keepalive: config.keepAlive,
+			signal: AbortSignal.timeout(config.requestTimeoutMs),
+		});
+		const body = (await reply.json().catch(() => null)) as {
+			code?: string;
+		} | null;
+		const forwarded = reply.headers.get("x-atom-forwarded");
+		if (forwarded) add(locks.finalizeForwarded, forwarded);
+		else if (reply.ok) locks.finalized++;
+		else
+			add(
+				locks.finalizeFailed,
+				body?.code ? `${reply.status} ${body.code}` : String(reply.status),
+			);
+	} catch (error) {
+		add(
+			locks.finalizeFailed,
+			error instanceof Error && error.name === "TimeoutError"
+				? "timeout"
+				: "error",
+		);
+	}
+};
+
+const finalizeLater = ({
+	customerId,
+	lockId,
+}: {
+	customerId: string;
+	lockId: string;
+}) => {
+	const settled = Bun.sleep(plan.lockFinalizeAfterMs).then(() =>
+		finalize({ customerId, lockId }),
+	);
+	pendingFinalizes.add(settled);
+	void settled.finally(() => pendingFinalizes.delete(settled));
+};
 
 const send = async ({
 	customerId,
 	deducts,
+	lock = false,
 }: {
 	customerId: string;
 	deducts: boolean;
+	/** A deducting check that also holds its unit under a lock id, released `lockFinalizeAfterMs` later. */
+	lock?: boolean;
 }) => {
 	const sentAt = Date.now();
 	const second = Math.floor((sentAt - plan.startAt) / 1000);
@@ -90,6 +152,7 @@ const send = async ({
 			? `${plan.index}-${nextKey++}`
 			: null;
 	if (key && !isReplay) lastKeyOf.set(customerId, key);
+	const lockId = lock && key && !isReplay ? `lock-${key}` : null;
 	const startedAt = performance.now();
 	try {
 		const reply = await fetch(`${plan.replicaUrls[to]}/v1/balances.check`, {
@@ -100,6 +163,7 @@ const send = async ({
 				feature_id: "messages",
 				required_balance: 1,
 				...(deducts && { send_event: true }),
+				...(lockId && { lock: { enabled: true, lock_id: lockId } }),
 			}),
 			keepalive: config.keepAlive,
 			signal: AbortSignal.timeout(config.requestTimeoutMs),
@@ -176,7 +240,13 @@ const send = async ({
 		if (reply.ok && body?.allowed) {
 			into.allowed++;
 			keys.allowed.push(key);
+			if (lockId) {
+				locks.taken++;
+				finalizeLater({ customerId, lockId });
+			}
 		} else if (!reply.ok) keys.ambiguous.push(key);
+		if (lockId && !(reply.ok && body?.allowed))
+			add(locks.takeFailed, body?.code ?? String(reply.status));
 	} catch (error) {
 		into.histogram[bucketOf(performance.now() - startedAt)]++;
 		add(
@@ -195,6 +265,7 @@ const send = async ({
 			});
 			keys.ambiguous.push(key);
 		}
+		if (lockId) add(locks.takeFailed, "error");
 	}
 };
 
@@ -247,6 +318,7 @@ const pickCustomer = (): string => {
 };
 
 const owed = { deductions: 0, reads: 0 };
+let deductionsSent = 0;
 await Bun.sleep(Math.max(0, plan.startAt - Date.now()));
 let last = performance.now();
 for (;;) {
@@ -257,13 +329,18 @@ for (;;) {
 	owed.deductions += total * dtS;
 	owed.reads += total * plan.readChecksPerDeduction * dtS;
 	for (; owed.deductions >= 1; owed.deductions--)
-		void send({ customerId: pickCustomer(), deducts: true });
+		void send({
+			customerId: pickCustomer(),
+			deducts: true,
+			lock: plan.lockEvery > 0 && ++deductionsSent % plan.lockEvery === 0,
+		});
 	for (; owed.reads >= 1; owed.reads--)
 		void send({ customerId: pickCustomer(), deducts: false });
 	flushSettled();
 	await Bun.sleep(2);
 }
 await Bun.sleep(config.requestTimeoutMs + 500);
+await Promise.all([...pendingFinalizes]);
 for (const second of [...seconds.keys()].sort((x, y) => x - y)) {
 	const held = seconds.get(second);
 	if (held) console.log(JSON.stringify({ type: "second", second, ...held }));
@@ -290,5 +367,6 @@ console.log(
 		),
 	}),
 );
+console.log(JSON.stringify({ type: "locks", locks }));
 console.log(JSON.stringify({ type: "done" }));
 process.exit(0);
