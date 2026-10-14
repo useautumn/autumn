@@ -2,6 +2,7 @@
  * A planned ownership move between two replicas (handoffs/atom-replica-handover-design.md): the leaving replica announces
  * itself, the survivor owns its customers at once, and the leaving replica's public port keeps answering by hopping.
  */
+
 import { afterEach, describe, expect, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
@@ -161,6 +162,29 @@ describe("a replica leaving the ring", () => {
 		);
 		expect(reply.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
 		expect(autumn.calls).toEqual(["/v1/balances.check"]);
+	});
+
+	test("stays out of the ring while the service name drops and relists it, and is counted again once its leave has aged out", async () => {
+		let clock = 1_000_000;
+		const listed = [A];
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: listed,
+			now: () => clock,
+		});
+		b.membership.markLeaving(A);
+		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
+
+		listed.length = 0;
+		expect(await b.ring.members()).toEqual([B]);
+		listed.push(A);
+		clock += 45_000 - 1;
+		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
+
+		clock += 1;
+		expect(b.membership.isLeaving(A)).toBe(false);
+		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
 	});
 });
 
