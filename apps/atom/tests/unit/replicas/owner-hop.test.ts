@@ -235,6 +235,40 @@ describe("a check handed to an owner that is stopping", () => {
 	});
 });
 
+describe("a check handed to an owner that has not caught up yet", () => {
+	test("is refused there as not ready, so the replica that handed it on leaves it to the API: nothing stale is answered", async () => {
+		const autumn = countingAutumn();
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			ready: false,
+		});
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		// A's files are behind: the copy it holds predates the one B holds.
+		await storeOnly({
+			replica: a,
+			customerId: CUSTOMER,
+			readAt: 1600,
+			balance: 3,
+		});
+		await storeOnly({ replica: b, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b], autumn: autumn.autumn });
+
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
+		// The API's answer, not A's stale balance of 3.
+		expect(await reply.json()).toEqual({});
+		expect(autumn.calls).toEqual(["/v1/balances.check"]);
+		expect(b.stats().ownerUnavailable).toBe(1);
+	});
+});
+
 describe("a check that reached the owner from another replica", () => {
 	test("is answered there even when that replica's ring names someone else: one hop, never a loop", async () => {
 		const autumn = countingAutumn();
