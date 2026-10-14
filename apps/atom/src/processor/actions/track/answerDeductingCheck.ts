@@ -1,6 +1,7 @@
 import { computeCheck } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { Journal } from "../../../state/journal/types/journal.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type {
 	AnswerableCheck,
 	CheckDecided,
@@ -44,7 +45,9 @@ export const answerDeductingCheck = async ({
 		idempotencyKey,
 		kind,
 	});
-	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	const result = timeStage("engineStep", () =>
+		computeCheck({ fullSubject: subject.fullSubject, command }),
+	);
 	if (!result.allowed && kind === "track")
 		throw new CannotAnswerError({ reason: "track_denied" });
 	if (!result.allowed)

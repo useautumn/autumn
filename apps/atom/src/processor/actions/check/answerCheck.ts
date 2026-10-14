@@ -15,6 +15,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { AnswerableCheck, CheckDecided } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
@@ -92,14 +93,16 @@ export const renderCheck = ({
 	subject: CurrentSubject;
 	isDeductingCheck?: boolean;
 }): CheckDecided => {
-	const { response } = checkResultToApiResponse({
-		ctx: toRenderContext({ ctx, check, subject }),
-		apiVersion: check.apiVersion,
-		command,
-		result,
-		fullSubject: subject.fullSubject,
-		isDeductingCheck,
-	});
+	const { response } = timeStage("viewRender", () =>
+		checkResultToApiResponse({
+			ctx: toRenderContext({ ctx, check, subject }),
+			apiVersion: check.apiVersion,
+			command,
+			result,
+			fullSubject: subject.fullSubject,
+			isDeductingCheck,
+		}),
+	);
 	return { response, result };
 };
 
@@ -114,6 +117,8 @@ export const answerCheck = ({
 	subject: CurrentSubject;
 }): CheckDecided => {
 	const command = checkToCommand({ check, subject });
-	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	const result = timeStage("engineStep", () =>
+		computeCheck({ fullSubject: subject.fullSubject, command }),
+	);
 	return renderCheck({ ctx, check, command, result, subject });
 };

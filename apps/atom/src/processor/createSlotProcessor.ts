@@ -1,5 +1,6 @@
 import { subjectPushToStoredSubject } from "../lib/contracts/subjectContract.js";
 import { CannotAnswerError } from "../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
@@ -25,7 +26,9 @@ export const createSlotProcessor = ({
 			}
 			const { response, result } = await check({ ctx, request });
 			return {
-				json: checkResponseToJson({ response }),
+				json: timeStage("httpParseRespond", () =>
+					checkResponseToJson({ response }),
+				),
 				allowed: response.allowed,
 				denial: response.allowed
 					? null
@@ -33,9 +36,10 @@ export const createSlotProcessor = ({
 			};
 		},
 		setSubject: async (params) => {
-			const subject = subjectPushToStoredSubject(params);
 			try {
-				const stored = setSubject({ ctx, subject });
+				const stored = timeStage("pushApply", () =>
+					setSubject({ ctx, subject: subjectPushToStoredSubject(params) }),
+				);
 				unwritten.delete(params.customerId);
 				return stored;
 			} catch (error) {

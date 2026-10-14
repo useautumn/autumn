@@ -1,4 +1,5 @@
 import type { TrackCommand } from "@autumn/balance-engine";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import { deepFreeze } from "../deepFreeze.js";
 import {
 	deleteCustomerJournalEntries,
@@ -74,7 +75,7 @@ export const openJournal = ({
 
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
-			insertJournalEntries({ ctx, entries });
+			timeStage("journalAppend", () => insertJournalEntries({ ctx, entries }));
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
