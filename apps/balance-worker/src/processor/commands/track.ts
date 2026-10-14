@@ -9,6 +9,7 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import { addDecideStep } from "../../logging/benchDecideSteps.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
@@ -40,23 +41,39 @@ export async function decideTrack({
 		customerKey,
 		ensure: () => ensureSubjectCurrent({ scope, command }),
 		attempt: () =>
-			ctx.writer.decide<never>({
-				command,
-				// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
-				durability: command.lock ? "store" : "log",
-				mutate: ({ state }) =>
-					timeSync({ label: "track.decide" }, () =>
-						mutateTrack({
-							scope,
-							state,
-							customerKey,
-							command,
-							decidedAgainst,
-						}),
-					),
-			}),
+			timeCompute({ commandId: command.commandId }, () =>
+				ctx.writer.decide<never>({
+					command,
+					// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
+					durability: command.lock ? "store" : "log",
+					mutate: ({ state }) =>
+						timeSync({ label: "track.decide" }, () =>
+							mutateTrack({
+								scope,
+								state,
+								customerKey,
+								command,
+								decidedAgainst,
+							}),
+						),
+				}),
+			),
 	});
 	return { ...decided, decidedAgainst };
+}
+
+// BENCH-ONLY: the writer's synchronous decide for one queued command.
+function timeCompute<T>({ commandId }: { commandId: string }, run: () => T): T {
+	const started = performance.now();
+	try {
+		return run();
+	} finally {
+		addDecideStep({
+			commandId,
+			step: "computeMs",
+			ms: performance.now() - started,
+		});
+	}
 }
 
 /** Sync: decide, then answer once the deduction is committed. */

@@ -1,3 +1,4 @@
+import { addDecideStep } from "../../../logging/benchDecideSteps.js";
 import type { PartitionProcessorScope } from "../../types/partitionProcessor.js";
 import { advanceResets, type TriggeringCommand } from "./advanceResets.js";
 import { resetMayBeDue } from "./earliestResetAt.js";
@@ -11,12 +12,26 @@ export const ensureSubjectCurrent = async ({
 	scope: PartitionProcessorScope;
 	command: TriggeringCommand;
 }): Promise<void> => {
+	const hydrateStartedAt = performance.now();
 	await scope.ctx.subjectHydrator.ensure({ identity: command.identity });
+	const commandId = command.commandId ?? command.requestId;
+	addDecideStep({
+		commandId,
+		step: "hydrateMs",
+		ms: performance.now() - hydrateStartedAt,
+	});
 	// No row's cycle has ended before this command's clock: the reset would decide nothing, so it is not asked.
 	const state = scope.ctx.writer.readFreshestState({
 		identity: command.identity,
 	});
 	if (state && !resetMayBeDue({ state, asOf: command.occurredAt })) return;
+	const resetStartedAt = performance.now();
 	const inputs = await readResetInputs({ scope, command });
 	advanceResets({ scope, command, inputs });
+	addDecideStep({ commandId, step: "resetDue", ms: 1 });
+	addDecideStep({
+		commandId,
+		step: "resetMs",
+		ms: performance.now() - resetStartedAt,
+	});
 };

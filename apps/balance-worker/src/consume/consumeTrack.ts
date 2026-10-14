@@ -6,6 +6,7 @@ import {
 	type IdempotencyKeyStore,
 	withIdempotencyKey,
 } from "@autumn/dynamodb";
+import { timeDecideStep } from "../logging/benchDecideSteps.js";
 import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
@@ -106,10 +107,19 @@ export async function consumeTrack({
 	claims?: TrackClaims;
 }): Promise<QueuedCommand | null> {
 	const claim = claimOf({ command });
+	const store = storeFor({ ctx, claim, claims });
 	let decided: QueuedCommand["decided"] | null;
 	try {
 		decided = await withIdempotencyKey({
-			store: storeFor({ ctx, claim, claims }),
+			store: {
+				...store,
+				claim: (params) =>
+					timeDecideStep({
+						commandId: command.commandId,
+						step: "claimMs",
+						run: () => store.claim(params),
+					}),
+			},
 			claim,
 			run: () => ctx.processor.decideTrack({ command }),
 			onDuplicate: () => null,

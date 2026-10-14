@@ -22,6 +22,10 @@ import {
 	settleQueuedFailure,
 } from "../../consume/settleQueuedFailure.js";
 import type { QueuedCommand } from "../../consume/types/queuedCommand.js";
+import {
+	type DecideSteps,
+	takeDecideSteps,
+} from "../../logging/benchDecideSteps.js";
 import { getBalanceWorkerLogger } from "../../logging/getBalanceWorkerLogger.js";
 import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
@@ -65,6 +69,9 @@ type BatchStageTiming = {
 	hopMs: number;
 	decideMs: number;
 	commitMs: number[];
+	consumeMs: number;
+	steps: DecideSteps;
+	kinds: Record<string, number>;
 };
 
 const newBatchStageTiming = (): BatchStageTiming => ({
@@ -77,9 +84,20 @@ const newBatchStageTiming = (): BatchStageTiming => ({
 	hopMs: 0,
 	decideMs: 0,
 	commitMs: [],
+	consumeMs: 0,
+	steps: { claimMs: 0, hydrateMs: 0, resetMs: 0, resetDue: 0, computeMs: 0 },
+	kinds: {},
 });
 
 const round = (ms: number) => Math.round(ms * 100) / 100;
+
+const recordKindOf = ({ command }: { command: CommandRecord }): string => {
+	if (command.type !== "track") return command.type;
+	if (!command.source) return "apiTrack";
+	return command.idempotency?.key === `track:${command.requestId}`
+		? "atomKeyless"
+		: "atomKeyed";
+};
 
 /** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
@@ -104,6 +122,9 @@ export function createCommandRecordHandler({
 		const existing = stageTimings.get(partition);
 		if (existing) return existing;
 		const created = newBatchStageTiming();
+		const settledAt = lastSettledAt.get(partition);
+		created.betweenBatchesMs =
+			settledAt === undefined ? null : created.startedAt - settledAt;
 		stageTimings.set(partition, created);
 		return created;
 	};
@@ -137,7 +158,6 @@ export function createCommandRecordHandler({
 		const settledAt = lastSettledAt.get(partition);
 		timing.betweenBatchesMs =
 			settledAt === undefined ? null : timing.startedAt - settledAt;
-		timing.batchSize = messages.length;
 		const bookmark = ctx.readCommandNextOffset({ partition });
 		const tracks = messages.flatMap((message) => {
 			const offset = parseKafkaOffset({ offset: message.offset });
@@ -214,6 +234,7 @@ export function createCommandRecordHandler({
 		message,
 	}: TopicRecord): Promise<TopicRecordResult> {
 		const offset = parseKafkaOffset({ offset: message.offset });
+		timingOf(partition).batchSize += 1;
 		const runtime = ctx.findOwnedRuntime({ partition });
 		if (!runtime)
 			throw new CommandPartitionUnavailableError({ topic, partition });
@@ -277,6 +298,10 @@ export function createCommandRecordHandler({
 			idempotencyKeys: ctx.idempotencyKeys,
 			logger: ctx.logger,
 		};
+		const timing = timingOf(position.partition);
+		const kind = recordKindOf({ command });
+		timing.kinds[kind] = (timing.kinds[kind] ?? 0) + 1;
+		const consumeStartedAt = performance.now();
 		let queued: QueuedCommand | null = null;
 		try {
 			switch (command.type) {
@@ -309,6 +334,15 @@ export function createCommandRecordHandler({
 		} catch (cause) {
 			settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 		}
+		timing.consumeMs += performance.now() - consumeStartedAt;
+		const steps = takeDecideSteps({
+			commandId:
+				"commandId" in command && typeof command.commandId === "string"
+					? command.commandId
+					: command.requestId,
+		});
+		for (const step of Object.keys(steps) as (keyof DecideSteps)[])
+			timing.steps[step] += steps[step];
 		return queued && { command, queued };
 	}
 
@@ -444,6 +478,13 @@ export function createCommandRecordHandler({
 			commitMsP50: at(0.5),
 			commitMsP99: at(0.99),
 			commitMsMax: round(commits.at(-1) ?? 0),
+			consumeMs: round(timing.consumeMs),
+			claimMs: round(timing.steps.claimMs),
+			hydrateMs: round(timing.steps.hydrateMs),
+			resetMs: round(timing.steps.resetMs),
+			resetDue: timing.steps.resetDue,
+			computeMs: round(timing.steps.computeMs),
+			kinds: timing.kinds,
 		});
 	}
 
