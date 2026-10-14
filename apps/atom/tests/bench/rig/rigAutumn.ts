@@ -5,11 +5,16 @@
  */
 import {
 	applyMutation,
+	computeAtomFinalize,
 	computeTrack,
+	findLockInsertInMutation,
+	parseAtomFinalizeCommand,
 	type SubjectState,
 	subjectStateToFullSubject,
 	type TrackCommand,
+	type WorkerLock,
 } from "@autumn/balance-engine";
+import type { AtomFinalize } from "@autumn/byoc";
 import {
 	ATOM_CUSTOMER_ID_HEADER,
 	ATOM_KEYS_PATH,
@@ -35,8 +40,15 @@ const states = new Map<string, SubjectState>();
 let logOffset = 10n;
 let readAt = 2_000;
 const pushLag = logNormalOf({ p50: stub.pushLagP50Ms, p99: stub.pushLagP99Ms });
+/** Autumn's balance_locks rows, by lock_id, with the track that took each: a finalize settles the row, as the worker does. */
+const locks = new Map<string, { row: WorkerLock; track: TrackCommand }>();
+/** Any handed-in track, for the org and feature ids a finalize of a lock Autumn never held is read with. */
+let lastTrack: TrackCommand | null = null;
 const counts = {
 	tracks: 0,
+	lockTracks: 0,
+	finalizes: 0,
+	finalizesWithoutRow: 0,
 	appends: 0,
 	pushes: 0,
 	pushFailed: 0,
@@ -54,6 +66,9 @@ const stateOf = (customerId: string): SubjectState => {
 	};
 };
 
+const fullSubjectOf = (state: SubjectState) =>
+	subjectStateToFullSubject({ state, catalog: template.catalog });
+
 const applyTrack = ({
 	command,
 	writerId,
@@ -66,13 +81,75 @@ const applyTrack = ({
 	const customerId = command.identity.customerId;
 	const state = stateOf(customerId);
 	const mutation = computeTrack({
-		fullSubject: subjectStateToFullSubject({
-			state,
-			catalog: template.catalog,
-		}),
+		fullSubject: fullSubjectOf(state),
 		command: { ...command, source: { atomId: tenant.atomId, writerId, seq } },
 	});
 	states.set(customerId, applyMutation({ state, mutation }));
+	lastTrack = command;
+	const row = findLockInsertInMutation({ mutation });
+	if (!row || !command.lock) return;
+	counts.lockTracks++;
+	locks.set(command.lock.lockId, { row, track: command });
+};
+
+/** As the server reads an Atom's finalize into the worker's atomFinalize, settled from Autumn's own row for the lock. */
+const applyFinalize = ({
+	finalize,
+	writerId,
+	seq,
+}: {
+	finalize: AtomFinalize;
+	writerId: string;
+	seq: number;
+}) => {
+	const held = locks.get(finalize.lock_id);
+	const track = held?.track ?? lastTrack;
+	if (!track)
+		throw new Error(`finalize of ${finalize.lock_id} before any track`);
+	const state = stateOf(finalize.customer_id);
+	const command = parseAtomFinalizeCommand({
+		input: {
+			schemaVersion: 1,
+			type: "atomFinalize",
+			requestId: finalize.requestId,
+			commandId: finalize.requestId,
+			occurredAt: finalize.occurredAt,
+			identity: {
+				...track.identity,
+				customerId: finalize.customer_id,
+				entityId: finalize.entity_id,
+			},
+			org: track.org,
+			lockId: finalize.lock_id,
+			featureId: finalize.feature_id,
+			internalFeatureId: track.internalFeatureId,
+			finalValue: finalize.finalValue,
+			properties: finalize.properties ?? null,
+			source: { atomId: tenant.atomId, writerId, seq },
+		},
+	});
+	const mutation = computeAtomFinalize({
+		fullSubject: fullSubjectOf(state),
+		command,
+		lock: held?.row ?? null,
+	});
+	states.set(finalize.customer_id, applyMutation({ state, mutation }));
+	counts.finalizes++;
+	if (!held) counts.finalizesWithoutRow++;
+	locks.delete(finalize.lock_id);
+};
+
+const balanceOf = (state: SubjectState) =>
+	state.customerEntitlements.reduce((sum, row) => sum + row.balance, 0);
+
+/** P1 for the hot customer: what its balance moved, against the locks still open at Autumn. */
+const hotLedger = () => {
+	const state = stateOf(rigConfig.customers.hotCustomerId);
+	return {
+		drawn: balanceOf(template.state) - balanceOf(state),
+		openLocks: state.openLocks.length,
+		lockRowsHeld: locks.size,
+	};
 };
 
 const subjectOf = (customerId: string) => {
@@ -142,9 +219,15 @@ const appendTracks = async (request: Request) => {
 	if (!parsed.success)
 		return Response.json({ code: "unreadable" }, { status: 400 });
 	const touched = new Set<string>();
-	for (const { writerId, seq, command } of parsed.data.tracks) {
-		applyTrack({ command, writerId, seq });
-		touched.add(command.identity.customerId);
+	for (const handedIn of parsed.data.tracks) {
+		const { writerId, seq } = handedIn;
+		if ("finalize" in handedIn) {
+			applyFinalize({ finalize: handedIn.finalize, writerId, seq });
+			touched.add(handedIn.finalize.customer_id);
+			continue;
+		}
+		applyTrack({ command: handedIn.command, writerId, seq });
+		touched.add(handedIn.command.identity.customerId);
 	}
 	counts.appends++;
 	counts.tracks += parsed.data.tracks.length;
@@ -194,7 +277,11 @@ Bun.serve({
 		if (pathname === "/__rig/seed")
 			return Response.json({ seeded: await seed() });
 		if (pathname === "/__rig/stats")
-			return Response.json({ ...counts, queue: queue.stats() });
+			return Response.json({
+				...counts,
+				hot: hotLedger(),
+				queue: queue.stats(),
+			});
 		if (pathname.startsWith("/v1/")) return answerForwarded(request, pathname);
 		return new Response("no such route", { status: 404 });
 	},

@@ -80,6 +80,8 @@ export type StepCounts = {
 	shed: number;
 	failed: number;
 	forwardReasons: Record<string, number>;
+	/** Lock mode: each lock and finalize answer by status and allowed/code, e.g. "lock 200 allowed", "finalize 200". */
+	outcomes: Record<string, number>;
 	histogram: number[];
 };
 
@@ -90,6 +92,7 @@ export const emptyCounts = (): StepCounts => ({
 	shed: 0,
 	failed: 0,
 	forwardReasons: {},
+	outcomes: {},
 	histogram: new Array(BUCKETS).fill(0),
 });
 
@@ -101,6 +104,8 @@ export const mergeCounts = (into: StepCounts, from: StepCounts): StepCounts => {
 	into.failed += from.failed;
 	for (const [reason, n] of Object.entries(from.forwardReasons))
 		into.forwardReasons[reason] = (into.forwardReasons[reason] ?? 0) + n;
+	for (const [outcome, n] of Object.entries(from.outcomes))
+		into.outcomes[outcome] = (into.outcomes[outcome] ?? 0) + n;
 	for (const [bucket, n] of from.histogram.entries())
 		into.histogram[bucket] = (into.histogram[bucket] ?? 0) + n;
 	return into;

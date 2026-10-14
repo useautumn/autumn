@@ -46,6 +46,8 @@ const defaults = {
 		maxRatePerSec: 2_500,
 		stepSeconds: 10,
 		readChecksPerDeduction: 0.6,
+		/** Each hot deduction is a 2.6 lock check, finalized (confirm) `gapMs` after it is held: a step's hot req/s is locks + finalizes. */
+		lockFinalize: { enabled: false, gapMs: 200, ttlMs: 60_000 },
 	},
 	/** How a deduction is sent: a send_event check, as the shadow mirrors one, or `/v1/track`. */
 	deductionRoute: "check" as "check" | "track",

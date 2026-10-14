@@ -58,7 +58,105 @@ const headers = {
 	"x-api-version": LATEST_VERSION,
 };
 
-const send = async ({
+type Leg = "lock" | "finalize";
+type Answer = { status: number; json: Record<string, unknown> | null };
+
+const lockFinalize = config.hot.lockFinalize;
+/** A finalize counts in its lock's step, so a step's hot req/s is its locks plus their finalizes; flush only once both settled. */
+const flushDelayMs = lockFinalize.enabled
+	? 2 * config.requestTimeoutMs + lockFinalize.gapMs + 500
+	: config.requestTimeoutMs + 500;
+const lockPairs = new Set<Promise<void>>();
+let locksTaken = 0;
+
+const jsonOf = (text: string): Answer["json"] => {
+	try {
+		const value = JSON.parse(text);
+		return typeof value === "object" && value !== null ? value : null;
+	} catch {
+		return null;
+	}
+};
+
+const outcomeOf = ({
+	leg,
+	answer,
+	forwarded,
+}: {
+	leg: Leg;
+	answer: Answer;
+	forwarded: string | null;
+}) => {
+	const { status, json } = answer;
+	const detail =
+		json?.allowed === true
+			? " allowed"
+			: json?.allowed === false
+				? " denied"
+				: typeof json?.code === "string"
+					? ` ${json.code}`
+					: "";
+	return `${leg} ${status}${detail}${forwarded ? ` fwd:${forwarded}` : ""}`;
+};
+
+const post = async ({
+	path,
+	body,
+	step,
+	hot,
+	leg,
+}: {
+	path: string;
+	body: Record<string, unknown>;
+	step: number;
+	hot: boolean;
+	leg?: Leg;
+}): Promise<Answer | null> => {
+	const into = step < 0 ? null : countsOf(step)[hot ? "hot" : "others"];
+	if (into) into.sent++;
+	const url =
+		plan.replicaUrls[Math.floor(Math.random() * plan.replicaUrls.length)];
+	const sentAt = performance.now();
+	try {
+		const reply = await fetch(`${url}${path}`, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(body),
+			keepalive: config.keepAlive,
+			signal: AbortSignal.timeout(config.requestTimeoutMs),
+		});
+		const text = await reply.text();
+		const answer: Answer = {
+			status: reply.status,
+			json: leg ? jsonOf(text) : null,
+		};
+		if (!into) return answer;
+		into.histogram[bucketOf(performance.now() - sentAt)]++;
+		const forwarded = reply.headers.get("x-atom-forwarded");
+		if (forwarded) {
+			into.forwarded++;
+			into.forwardReasons[forwarded] =
+				(into.forwardReasons[forwarded] ?? 0) + 1;
+		} else if (reply.ok) into.answered++;
+		else if (reply.status === 503) into.shed++;
+		else into.failed++;
+		if (leg) {
+			const key = outcomeOf({ leg, answer, forwarded });
+			into.outcomes[key] = (into.outcomes[key] ?? 0) + 1;
+		}
+		return answer;
+	} catch (error) {
+		if (!into) return null;
+		into.failed++;
+		if (leg) {
+			const key = `${leg} ${error instanceof Error && error.name === "TimeoutError" ? "timeout" : "error"}`;
+			into.outcomes[key] = (into.outcomes[key] ?? 0) + 1;
+		}
+		return null;
+	}
+};
+
+const send = ({
 	customerId,
 	deducts,
 	step,
@@ -69,10 +167,6 @@ const send = async ({
 	step: number;
 	hot: boolean;
 }) => {
-	const into = step < 0 ? null : countsOf(step)[hot ? "hot" : "others"];
-	if (into) into.sent++;
-	const url =
-		plan.replicaUrls[Math.floor(Math.random() * plan.replicaUrls.length)];
 	const asTrack = deducts && config.deductionRoute === "track";
 	const body = asTrack
 		? { customer_id: customerId, feature_id: "messages", value: 1 }
@@ -82,32 +176,56 @@ const send = async ({
 				required_balance: 1,
 				...(deducts && { send_event: true }),
 			};
-	const sentAt = performance.now();
-	try {
-		const reply = await fetch(
-			`${url}/v1/${asTrack ? "track" : "balances.check"}`,
-			{
-				method: "POST",
-				headers,
-				body: JSON.stringify(body),
-				keepalive: config.keepAlive,
-				signal: AbortSignal.timeout(config.requestTimeoutMs),
+	return post({
+		path: asTrack ? "/v1/track" : "/v1/balances.check",
+		body,
+		step,
+		hot,
+	});
+};
+
+/** A 2.6 lock check on the hot customer; once held, confirmed `gapMs` later, the finalize counted in the lock's step. */
+const lockThenFinalize = async ({ step }: { step: number }) => {
+	const lockId = `rig_${process.pid}_${++locksTaken}`;
+	const customerId = config.customers.hotCustomerId;
+	const answer = await post({
+		path: "/v1/balances.check",
+		body: {
+			customer_id: customerId,
+			feature_id: "messages",
+			required_balance: 1,
+			lock: {
+				lock_id: lockId,
+				enabled: true,
+				expires_at: Date.now() + lockFinalize.ttlMs,
 			},
-		);
-		await reply.arrayBuffer();
-		if (!into) return;
-		into.histogram[bucketOf(performance.now() - sentAt)]++;
-		const forwarded = reply.headers.get("x-atom-forwarded");
-		if (forwarded) {
-			into.forwarded++;
-			into.forwardReasons[forwarded] =
-				(into.forwardReasons[forwarded] ?? 0) + 1;
-		} else if (reply.ok) into.answered++;
-		else if (reply.status === 503) into.shed++;
-		else into.failed++;
-	} catch {
-		if (into) into.failed++;
-	}
+		},
+		step,
+		hot: true,
+		leg: "lock",
+	});
+	if (answer?.status !== 200 || answer.json?.allowed !== true) return;
+	await Bun.sleep(lockFinalize.gapMs);
+	await post({
+		path: "/v1/balances.finalize",
+		body: { lock_id: lockId, customer_id: customerId, action: "confirm" },
+		step,
+		hot: true,
+		leg: "finalize",
+	});
+};
+
+const sendHotDeduction = ({ step }: { step: number }) => {
+	if (!lockFinalize.enabled)
+		return void send({
+			customerId: config.customers.hotCustomerId,
+			deducts: true,
+			step,
+			hot: true,
+		});
+	const pair = lockThenFinalize({ step });
+	lockPairs.add(pair);
+	void pair.finally(() => lockPairs.delete(pair));
 };
 
 const flush = (step: number) => {
@@ -138,7 +256,7 @@ while (true) {
 	const step = timeline.stepAt(elapsedS);
 	if (step !== lastStep) {
 		const finished = lastStep;
-		setTimeout(() => flush(finished), config.requestTimeoutMs + 500);
+		setTimeout(() => flush(finished), flushDelayMs);
 		lastStep = step;
 	}
 	const backgroundRate = total * timeline.backgroundShareAt(elapsedS);
@@ -154,12 +272,7 @@ while (true) {
 	for (; owed.backgroundReads >= 1; owed.backgroundReads--)
 		void send({ customerId: pickCustomer(), deducts: false, step, hot: false });
 	for (; owed.hotDeductions >= 1; owed.hotDeductions--)
-		void send({
-			customerId: config.customers.hotCustomerId,
-			deducts: true,
-			step,
-			hot: true,
-		});
+		sendHotDeduction({ step });
 	for (; owed.hotReads >= 1; owed.hotReads--)
 		void send({
 			customerId: config.customers.hotCustomerId,
@@ -170,6 +283,7 @@ while (true) {
 	await Bun.sleep(2);
 }
 await Bun.sleep(config.requestTimeoutMs + 500);
+await Promise.all(lockPairs);
 flush(lastStep);
 console.log(JSON.stringify({ type: "done" }));
 process.exit(0);

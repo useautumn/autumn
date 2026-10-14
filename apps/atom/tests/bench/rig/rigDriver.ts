@@ -185,6 +185,7 @@ const summaryOf = (counts: StepCounts) => ({
 	p50Ms: percentileOf({ histogram: counts.histogram, p: 0.5 }),
 	p99Ms: percentileOf({ histogram: counts.histogram, p: 0.99 }),
 	forwardReasons: counts.forwardReasons,
+	outcomes: counts.outcomes,
 });
 const receiveStep = (line: {
 	step: number;
