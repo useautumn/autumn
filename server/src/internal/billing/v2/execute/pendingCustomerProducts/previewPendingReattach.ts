@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { handleUnknownFeatureQuantityErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUnknownFeatureQuantityErrors";
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
@@ -48,10 +49,19 @@ export const previewPendingReattach = async ({
 		preview: true,
 	});
 
+	const replacementProduct =
+		replacementPreview.billingContext?.fullProducts?.[0];
+	// Checked here, before a rebilling edit discards the pending payment for an attach that would drop the quantity.
+	if (replacementProduct)
+		handleUnknownFeatureQuantityErrors({
+			fullProduct: replacementProduct,
+			params,
+		});
+
 	const rebills = pendingPlanRebills({
 		ctx,
 		customerProduct,
-		replacementProduct: replacementPreview.billingContext?.fullProducts?.[0],
+		replacementProduct,
 		replacementQuantities:
 			replacementPreview.billingContext?.featureQuantities ?? [],
 	});

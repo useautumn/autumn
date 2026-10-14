@@ -100,7 +100,6 @@ export function HeadlessInitFlow() {
 						typesPath: result.sdkTypesPath,
 					});
 				} else {
-					// Write empty config
 					writeEmptyConfig();
 					setSyncResult({ features: 0, plans: 0 });
 				}

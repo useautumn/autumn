@@ -33,7 +33,6 @@ export function transformTypeScriptCodeSample(source: string): string {
 		result = result.replace(asyncWrapperMatch[0], innerContent);
 	}
 
-	// Remove console.log
 	result = result.replace(/\s*console\.log\(result\);?/g, "");
 
 	// Clean up extra blank lines

@@ -76,7 +76,6 @@ export const renew = async ({
 				}
 			: undefined,
 
-		// feature_quantities: attachParams.optionsList,
 		cancel_action: "uncancel",
 		redirect_mode: "if_required",
 	};

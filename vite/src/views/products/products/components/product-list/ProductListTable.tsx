@@ -116,7 +116,6 @@ export function ProductListTable() {
 				return acc;
 			}, [] as ProductListItem[]);
 
-			// Add counts to products
 			const productsWithCounts = deduplicated?.map((product) => ({
 				...product,
 				active_count: counts[product.id]?.active || 0,

@@ -12,32 +12,6 @@ type FooterColumn = {
 };
 
 const footerColumns: FooterColumn[] = [
-	// {
-	// 	title: "PRODUCT",
-	// 	links: [
-	// 		{ label: "FEATURES", href: "#" },
-	// 		{ label: "INTEGRATIONS", href: "#" },
-	// 		{ label: "PRICING", href: "#" },
-	// 		{ label: "CHANGELOG", href: "#" },
-	// 		{ label: "ROADMAP", href: "#" },
-	// 	],
-	// },
-	// {
-	// 	title: "COMPANY",
-	// 	links: [
-	// 		{ label: "OUR TEAM", href: "#" },
-	// 		{ label: "OUR VALUES", href: "/privacy" },
-	// 		{ label: "BLOG", href: "/blog" },
-	// 	],
-	// },
-	// {
-	// 	title: "RESOURCES",
-	// 	links: [
-	// 		{ label: "DOWNLOADS", href: "https://useautumn.com/" },
-	// 		{ label: "DOCUMENTATION", href: "https://docs.useautumn.com/welcome" },
-	// 		{ label: "CONTACT", href: "https://cal.com/ayrod/a?user=ayrod" },
-	// 	],
-	// },
 ];
 
 export default function Footer() {

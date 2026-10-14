@@ -10,7 +10,6 @@ export async function ensureStripeProductsWithEnv({
 }) {
 	const { db, org, env, logger } = ctx;
 
-	// let existingStripeProducts = await stripe.products.list();
 	const fullProducts = await ProductService.listFull({
 		db,
 		orgId: org.id,

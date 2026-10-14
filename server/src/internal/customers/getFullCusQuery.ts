@@ -577,7 +577,6 @@ export const getFullCusQuery = ({
 
 	// Add customer products CTE
 	sqlChunks.push(sql`, `);
-	// sqlChunks.push(buildCusProductsCTE(inStatuses));
 	sqlChunks.push(
 		buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }),
 	);

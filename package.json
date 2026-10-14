@@ -68,6 +68,7 @@
 			"@tailwindcss/vite": "4.2.1",
 			"@vitejs/plugin-react": "5.2.0",
 			"@sentry/bun": "10.38.0",
+			"@sentry/core": "10.38.0",
 			"@clickhouse/client": "1.11.2",
 			"@date-fns/utc": "2.1.0",
 			"@better-auth/core": "1.6.25",

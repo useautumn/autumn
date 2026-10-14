@@ -101,7 +101,6 @@ const getCusEntBalance = ({
 	};
 };
 
-// Get related cusPrice
 export const getRelatedCusPrice = (
 	cusEnt: FullCustomerEntitlement,
 	cusPrices: FullCustomerPrice[],
@@ -325,7 +324,6 @@ export const getTotalNegativeBalance = ({
 	return totalNegative;
 };
 
-// GET EXISTING USAGE
 export const getExistingUsageFromCusProducts = ({
 	entitlement,
 	cusProducts,

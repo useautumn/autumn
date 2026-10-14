@@ -106,14 +106,5 @@ export const freeTrialsAreSame = ({
 
 	const freeTrialsAreDiff = Object.values(diffs).some((d) => d.condition);
 
-	// if (freeTrialsAreDiff) {
-	// 	console.log("Free trials different");
-	// 	console.log(
-	// 		"Differences:",
-	// 		Object.values(diffs)
-	// 			.filter((d) => d.condition)
-	// 			.map((d) => d.message),
-	// 	);
-	// }
 	return !freeTrialsAreDiff;
 };

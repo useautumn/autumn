@@ -5,6 +5,7 @@ import type {
 	PartitionsContext,
 	PartitionsState,
 } from "../types/partitionState.js";
+import type { PartitionFailure } from "../types/partitions.js";
 import { PartitionHandoffCancelledError } from "./partitionLifecycleErrors.js";
 import { startPartitions } from "./startPartitions.js";
 import { closePartitionAdmission } from "./stopPartitions.js";
@@ -147,7 +148,8 @@ async function handOffPartition({
 }): Promise<void> {
 	const { partition } = entry;
 	const cancel = entry.handoffAbort.signal;
-	const successor = announced ?? (await awaitSuccessor({ ctx, entry, cancel }));
+	const successor =
+		announced ?? (await awaitSuccessor({ ctx, state, entry, cancel }));
 	if (cancel.aborted) return;
 	entry.withdrawn = true;
 	state.directory.withdraw({ partition });
@@ -234,33 +236,45 @@ async function announceDraining({
 }
 
 /** The successor's endpoint, or null when none announced in time and the old release path applies.
- *  The timeout covers silence: a successor that has said it is preparing is on its way, and this
- *  worker keeps serving for it up to the drain cap rather than releasing a partition that a
- *  grow or rebalance already assigned elsewhere. */
+ *  A running worker never gives up: it keeps serving until a successor is ready. Only a stopping one
+ *  releases after silence, up to the drain cap for a successor that said it is preparing. */
 async function awaitSuccessor({
 	ctx,
+	state,
 	entry,
 	cancel,
 }: {
 	ctx: PartitionsContext;
+	state: PartitionsState;
 	entry: PartitionEntry;
 	cancel: AbortSignal;
 }): Promise<string | null> {
 	const timeout = new AbortController();
 	const signal = AbortSignal.any([cancel, timeout.signal]);
+	let waitMs = ctx.config.handoffReadyTimeoutMs;
 	function expire(): void {
+		if (state.status === "running") {
+			timer = setTimeout(expire, waitMs);
+			return;
+		}
 		timeout.abort(new HandoffReadyTimeoutError({ partition: entry.partition }));
 	}
-	let timer = setTimeout(expire, ctx.config.handoffReadyTimeoutMs);
+	let timer = setTimeout(expire, waitMs);
 	function holdForPreparation(): void {
 		if (timeout.signal.aborted) return;
 		clearTimeout(timer);
-		timer = setTimeout(expire, ctx.config.handoffDrainCapMs);
+		waitMs = ctx.config.handoffDrainCapMs;
+		timer = setTimeout(expire, waitMs);
 	}
-	const preparing = entry.publication.awaitPreparing({ signal });
-	void preparing.then(holdForPreparation, noop);
-	if (entry.publication.readActivePreparation()) holdForPreparation();
+	function giveUpOnFailure(failure: PartitionFailure): void {
+		timeout.abort(failure.cause);
+	}
+	const unsubscribeFailure =
+		entry.runtime.subscribeUnavailable(giveUpOnFailure);
 	try {
+		const preparing = entry.publication.awaitPreparing({ signal });
+		void preparing.then(holdForPreparation, noop);
+		if (entry.publication.readActivePreparation()) holdForPreparation();
 		const { endpoint } = await entry.publication.awaitReady({ signal });
 		return endpoint;
 	} catch (cause) {
@@ -268,6 +282,7 @@ async function awaitSuccessor({
 			reportPartitionError({ ctx, cause });
 		return null;
 	} finally {
+		unsubscribeFailure();
 		clearTimeout(timer);
 		timeout.abort(new HandoffReadyTimeoutError({ partition: entry.partition }));
 	}

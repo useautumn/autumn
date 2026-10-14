@@ -135,7 +135,6 @@ export const planItemV0ToProductItem = ({
 		throw new FeatureNotFoundError({ featureId: planItem.feature_id });
 	}
 
-	// Get interval
 	const resetInterval = planItemV0ToResetProductItemInterval({
 		planItemV0: planItem,
 	});

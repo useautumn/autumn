@@ -4,11 +4,6 @@ import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
 import { hasCreditDimensionRules } from "./featureUtils/classifyFeature/hasCreditDimensionRules.js";
 import { creditSystemContainsFeature } from "./featureUtils/creditSystemUtils.js";
-// import {
-// 	constructBooleanFeature,
-// 	constructCreditSystem,
-// 	constructMeteredFeature,
-// } from "./featureUtils/constructFeatureUtils.js";
 
 export const toApiFeature = ({ feature }: { feature: Feature }) => {
 	// return FeatureResponseSchema.parse(feature);

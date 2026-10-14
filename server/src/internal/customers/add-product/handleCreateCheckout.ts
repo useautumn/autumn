@@ -63,7 +63,6 @@ export const handleCreateCheckout = async ({
 		"quantity" in item ? item.quantity !== 0 : true,
 	);
 
-	// Insert metadata
 	const metadata = await attachParamsToMetadata({
 		db,
 		attachParams,
@@ -232,26 +231,4 @@ export const handleCreateCheckout = async ({
 
 		checkoutSession: checkout,
 	});
-
-	// if (returnCheckout || !res) {
-	// 	return checkout;
-	// }
-
-	// if (req.apiVersion.gte(ApiVersion.V1_1)) {
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse({
-	// 			checkout_url: checkout.url,
-	// 			code: SuccessCode.CheckoutCreated,
-	// 			message: `Successfully created checkout for customer ${
-	// 				customer.id || customer.internal_id
-	// 			}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
-	// 			product_ids: attachParams.products.map((p) => p.id),
-	// 			customer_id: customer.id || customer.internal_id,
-	// 		}),
-	// 	);
-	// } else {
-	// 	res.status(200).json({
-	// 		checkout_url: checkout.url,
-	// 	});
-	// }
 };

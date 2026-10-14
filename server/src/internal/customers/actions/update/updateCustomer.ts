@@ -84,7 +84,6 @@ export const updateCustomer = async ({
 	}
 
 	if (notNullish(newCustomerId) && originalCustomer.id !== newCustomerId) {
-		// Fetch for existing customer
 		const existingCustomer = await CusService.get({
 			db,
 			idOrInternalId: newCustomerId,

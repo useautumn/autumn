@@ -36,6 +36,12 @@ const InvoiceModeSchema = z.object({
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
+/** A send_invoice subscription's own terms, which invoice a change when the request leaves invoice_mode out. */
+export type SubscriptionInvoiceTerms = Pick<
+	InvoiceMode,
+	"daysUntilDue" | "paymentMethodTypes"
+>;
+
 export enum BillingVersion {
 	V1 = "v1",
 	V2 = "v2",
@@ -70,6 +76,7 @@ export interface BillingContext {
 	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	transitionConfig?: TransitionConfig;
 	invoiceMode?: InvoiceMode;
+	subscriptionInvoiceTerms?: SubscriptionInvoiceTerms;
 
 	// Timestamps...
 	currentEpochMs: number;

@@ -56,13 +56,14 @@ export const createInvoiceForBilling = async ({
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const { addLineParams } = stripeInvoiceAction;
-	const { invoiceMode } = billingContext;
+	const { invoiceMode, subscriptionInvoiceTerms } = billingContext;
 
 	const shouldFinalizeInvoice = invoiceMode
 		? invoiceMode.finalizeInvoice
 		: true;
 
-	const isInvoiceMode = Boolean(invoiceMode);
+	// A send_invoice subscription invoices a change like its renewals, instead of charging now.
+	const isInvoiceMode = Boolean(invoiceMode ?? subscriptionInvoiceTerms);
 
 	const collectionMethod = isInvoiceMode
 		? "send_invoice"
@@ -116,8 +117,11 @@ export const createInvoiceForBilling = async ({
 			? undefined
 			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
-		daysUntilDue: invoiceMode?.daysUntilDue,
-		paymentMethodTypes: invoiceMode?.paymentMethodTypes,
+		daysUntilDue:
+			invoiceMode?.daysUntilDue ?? subscriptionInvoiceTerms?.daysUntilDue,
+		paymentMethodTypes:
+			invoiceMode?.paymentMethodTypes ??
+			subscriptionInvoiceTerms?.paymentMethodTypes,
 		footer: invoiceMode?.footer,
 		description: invoiceMode?.memo,
 		metadata: invoiceMetadata,

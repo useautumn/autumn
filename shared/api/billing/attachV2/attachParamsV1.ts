@@ -59,7 +59,6 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	}),
 
 	processor_subscription_id: z.string().optional().meta({
-		// internal: true,
 		description:
 			"The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.",
 	}),

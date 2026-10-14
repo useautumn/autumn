@@ -45,7 +45,6 @@ export const getOptionsFromCheckoutSession = async ({
 			const relatedEnt = getPriceEntitlement(price, ents);
 
 			if (priceIsOneOffAndTiered(price, relatedEnt)) {
-				// quantity = lineItem.quantity || 0;
 				continue;
 			} else {
 				quantity = lineItem.quantity || 0;

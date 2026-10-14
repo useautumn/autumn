@@ -309,7 +309,6 @@ function parseSchema({
 			string,
 			unknown
 		>[];
-		// Find the non-null variant
 		const nonNullVariant = variants.find(
 			(v) => v.type !== "null" && !v.$ref?.toString().includes("null"),
 		);
@@ -399,7 +398,6 @@ function parseField({
 			description =
 				description ?? (refSchema.description as string | undefined);
 
-			// Check for enum
 			if (refSchema.enum) {
 				enumValues = refSchema.enum as string[];
 			}

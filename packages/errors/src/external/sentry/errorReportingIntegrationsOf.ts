@@ -6,7 +6,13 @@ const REQUEST_TRACING_INTEGRATIONS = new Set([
 	"RequestData",
 ]);
 
-/** Sentry's defaults with `rejectionHandler` in place of its own, and without the per-request tracers unless asked for. */
+// Each installs a process-level handler that can exit the process.
+const PROCESS_ERROR_INTEGRATIONS = new Set([
+	"OnUncaughtException",
+	"OnUnhandledRejection",
+]);
+
+/** Sentry's defaults with `rejectionHandler` in place of its own; without one, the host keeps its process handlers. */
 export function errorReportingIntegrationsOf<
 	Integration extends { name: string },
 >({
@@ -15,14 +21,21 @@ export function errorReportingIntegrationsOf<
 	tracesRequests,
 }: {
 	defaults: Integration[];
-	rejectionHandler: Integration;
+	rejectionHandler?: Integration;
 	tracesRequests: boolean;
 }): Integration[] {
 	function isKept(integration: Integration): boolean {
-		const isReplaced = integration.name === rejectionHandler.name;
+		const handlesProcessErrors = PROCESS_ERROR_INTEGRATIONS.has(
+			integration.name,
+		);
+		const isReplaced =
+			rejectionHandler === undefined
+				? handlesProcessErrors
+				: integration.name === rejectionHandler.name;
 		const tracesEachRequest =
 			!tracesRequests && REQUEST_TRACING_INTEGRATIONS.has(integration.name);
 		return !isReplaced && !tracesEachRequest;
 	}
-	return [...defaults.filter(isKept), rejectionHandler];
+	const kept = defaults.filter(isKept);
+	return rejectionHandler ? [...kept, rejectionHandler] : kept;
 }

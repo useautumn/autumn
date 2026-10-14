@@ -19,6 +19,7 @@
 		"@autumn/logging": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@sentry/bun": "catalog:",
+		"@sentry/core": "catalog:",
 		"pino": "^9.6.0",
 		"zod": "^3.25.23"
 	},
