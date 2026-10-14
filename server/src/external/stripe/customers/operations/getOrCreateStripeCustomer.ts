@@ -98,8 +98,7 @@ export const getOrCreateStripeCustomer = async ({
 
 	if (error instanceof Stripe.errors.StripeIdempotencyError) {
 		throw new RecaseError({
-			message:
-				"Another request is creating this customer in Stripe. Retry this request.",
+			message: `Another request is already creating the Stripe customer for customer '${customer.id || customer.internal_id}'. Retry in a few seconds; the retry will return that same customer.`,
 			code: ErrCode.StripeCreateCustomerFailed,
 			statusCode: StatusCodes.CONFLICT,
 		});
