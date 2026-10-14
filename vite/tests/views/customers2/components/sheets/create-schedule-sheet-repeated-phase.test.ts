@@ -33,6 +33,7 @@ const row = ({
 	startsAt,
 	endedAt = null,
 	internalEntityId,
+	billingCycleAnchorResetsAt = null,
 }: {
 	id: string;
 	productId: string;
@@ -40,6 +41,7 @@ const row = ({
 	startsAt: number;
 	endedAt?: number | null;
 	internalEntityId: string;
+	billingCycleAnchorResetsAt?: number | null;
 }) =>
 	({
 		id,
@@ -51,6 +53,7 @@ const row = ({
 		status,
 		starts_at: startsAt,
 		ended_at: endedAt,
+		billing_cycle_anchor_resets_at: billingCycleAnchorResetsAt,
 		canceled_at: null,
 		is_custom: false,
 		options: [],
@@ -79,29 +82,37 @@ const scheduleWithPhases = (
 		})),
 	}) as unknown as FullCustomerSchedule;
 
-const customer = {
-	internal_id: "int_cus",
-	id: "cus",
-	env: AppEnv.Sandbox,
-	entities: [{ id: "main", internal_id: "ety_main" }],
-	customer_products: [
-		row({
-			id: "cp_now",
-			productId: "enterprise",
-			status: CusProductStatus.Active,
-			startsAt: PHASE_START,
-			endedAt: NEXT_PHASE,
-			internalEntityId: "ety_main",
-		}),
-		row({
-			id: "cp_next",
-			productId: "enterprise",
-			status: CusProductStatus.Scheduled,
-			startsAt: NEXT_PHASE,
-			internalEntityId: "ety_main",
-		}),
-	],
-} as unknown as FullCustomer;
+const customerWith = ({
+	nextResetsCycle,
+}: {
+	nextResetsCycle: boolean;
+}): FullCustomer =>
+	({
+		internal_id: "int_cus",
+		id: "cus",
+		env: AppEnv.Sandbox,
+		entities: [{ id: "main", internal_id: "ety_main" }],
+		customer_products: [
+			row({
+				id: "cp_now",
+				productId: "enterprise",
+				status: CusProductStatus.Active,
+				startsAt: PHASE_START,
+				endedAt: NEXT_PHASE,
+				internalEntityId: "ety_main",
+			}),
+			row({
+				id: "cp_next",
+				productId: "enterprise",
+				status: CusProductStatus.Scheduled,
+				startsAt: NEXT_PHASE,
+				internalEntityId: "ety_main",
+				billingCycleAnchorResetsAt: nextResetsCycle ? NEXT_PHASE : null,
+			}),
+		],
+	}) as unknown as FullCustomer;
+
+const customer = customerWith({ nextResetsCycle: true });
 
 test("a saved phase that repeats the one before it reopens as its own phase", () => {
 	const form = buildInitialValues({
@@ -149,5 +160,46 @@ test("a saved phase holding none of the scoped plans adds no phase", () => {
 	expect(form.phases.map((phase) => phase.startsAt)).toEqual([
 		PHASE_START,
 		NEXT_PHASE,
+	]);
+});
+
+test("a repeated phase reopens with the anchor of the phase it repeats", () => {
+	const form = buildInitialValues({
+		customer: customerWith({ nextResetsCycle: false }),
+		products: [plan("enterprise")],
+		nowMs: NOW,
+		schedules: [
+			scheduleWithPhases([
+				{ startsAt: NEXT_PHASE, customerProductIds: ["cp_next"] },
+				{ startsAt: LATER_PHASE, customerProductIds: ["cp_next"] },
+			]),
+		],
+	});
+
+	expect(form.phases.map((phase) => phase.keepsCycleAnchor)).toEqual([
+		false,
+		true,
+		true,
+	]);
+});
+
+test("a repeated phase hours after another boundary still reopens", () => {
+	const sameDay = NEXT_PHASE + 12 * 60 * 60 * 1000;
+	const form = buildInitialValues({
+		customer,
+		products: [plan("enterprise")],
+		nowMs: NOW,
+		schedules: [
+			scheduleWithPhases([
+				{ startsAt: NEXT_PHASE, customerProductIds: ["cp_next"] },
+				{ startsAt: sameDay, customerProductIds: ["cp_next"] },
+			]),
+		],
+	});
+
+	expect(form.phases.map((phase) => phase.startsAt)).toEqual([
+		PHASE_START,
+		NEXT_PHASE,
+		sameDay,
 	]);
 });

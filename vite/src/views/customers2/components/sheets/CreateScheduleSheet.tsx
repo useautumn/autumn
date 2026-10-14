@@ -57,6 +57,8 @@ const subscriptionTargetFromSheetData = (
 	(sheetData?.subscriptionTarget as SetPlansSubscriptionTarget | undefined) ??
 	null;
 
+type RepeatedPhase = { startsAt: number; continuesFrom: number };
+
 const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled;
 
@@ -142,7 +144,7 @@ export function buildInitialValues({
 
 	const seededState = customerProductsToSetPlansState({
 		customerProducts,
-		savedPhaseStarts: savedLaterPhaseStarts({
+		repeatedPhases: savedRepeatedPhases({
 			schedules,
 			customerProducts,
 			nowMs,
@@ -154,14 +156,14 @@ export function buildInitialValues({
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
 		const laterPhaseStartsAt = index > 0 ? phase.startsAt : null;
-		// A repeated phase only merges into the row it continues when saved on its phase_start anchor.
+		// A repeated phase only merges into the row it continues when saved with that row's anchor.
+		const anchorStartsAt =
+			seededState.repeatedPhases.find(
+				(repeated) => repeated.startsAt === laterPhaseStartsAt,
+			)?.continuesFrom ?? laterPhaseStartsAt;
 		const keepsCycleAnchor =
-			laterPhaseStartsAt != null &&
-			!resetsBillingCycleAt({
-				customerProducts,
-				startsAt: laterPhaseStartsAt,
-			}) &&
-			!seededState.repeatedPhaseStarts.includes(laterPhaseStartsAt);
+			anchorStartsAt != null &&
+			!resetsBillingCycleAt({ customerProducts, startsAt: anchorStartsAt });
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
@@ -203,8 +205,8 @@ export function buildInitialValues({
 	};
 }
 
-/** Later phases the saved schedule holds for these plans, including ones that only repeat the phase before. */
-const savedLaterPhaseStarts = ({
+/** Later saved phases where none of the scoped plans they hold starts: they only repeat the phase before. */
+const savedRepeatedPhases = ({
 	schedules,
 	customerProducts,
 	nowMs,
@@ -212,28 +214,37 @@ const savedLaterPhaseStarts = ({
 	schedules: FullCustomerSchedule[];
 	customerProducts: FullCusProduct[];
 	nowMs: number;
-}): number[] =>
+}): RepeatedPhase[] =>
 	schedules
 		.flatMap((schedule) => schedule.phases)
-		.filter(
-			(phase) =>
-				phase.starts_at > nowMs &&
-				phase.customer_product_ids.some((id) =>
-					customerProducts.some((customerProduct) => customerProduct.id === id),
-				),
-		)
-		.map((phase) => phase.starts_at);
+		.filter((phase) => phase.starts_at > nowMs)
+		.flatMap((phase) => {
+			const heldStarts = customerProducts
+				.filter((customerProduct) =>
+					phase.customer_product_ids.includes(customerProduct.id),
+				)
+				.map((customerProduct) => customerProduct.starts_at);
+			const startsHere = heldStarts.some(
+				(startsAt) =>
+					truncateMsToSecondPrecision(startsAt) ===
+					truncateMsToSecondPrecision(phase.starts_at),
+			);
+			if (heldStarts.length === 0 || startsHere) return [];
+			return [
+				{ startsAt: phase.starts_at, continuesFrom: Math.max(...heldStarts) },
+			];
+		});
 
 /** The live plans are today's phase; each scheduled start, each scheduled end of a
  * live plan that isn't a cancellation, and each saved schedule phase is a later phase. */
 function customerProductsToSetPlansState({
 	customerProducts,
-	savedPhaseStarts,
+	repeatedPhases,
 	entities,
 	products,
 }: {
 	customerProducts: FullCusProduct[];
-	savedPhaseStarts: number[];
+	repeatedPhases: RepeatedPhase[];
 	entities: Entity[];
 	products: ProductV2[];
 }) {
@@ -256,15 +267,22 @@ function customerProductsToSetPlansState({
 			: [],
 	);
 	const rowStarts = [...new Set([...scheduledStarts, ...scheduledEnds])];
-	const repeatedStarts = savedPhaseStarts.filter(
-		(startsAt) =>
+	const repeatedOnly = repeatedPhases.filter(
+		({ startsAt }) =>
 			!rowStarts.some(
-				(rowStart) => Math.abs(rowStart - startsAt) <= MAX_PHASE_START_DRIFT_MS,
+				(rowStart) =>
+					truncateMsToSecondPrecision(rowStart) ===
+					truncateMsToSecondPrecision(startsAt),
 			),
 	);
 	const phaseStarts: PhaseStart[] = [
 		"now",
-		...[...new Set([...rowStarts, ...repeatedStarts])].sort((a, b) => a - b),
+		...[
+			...new Set([
+				...rowStarts,
+				...repeatedOnly.map(({ startsAt }) => startsAt),
+			]),
+		].sort((a, b) => a - b),
 	];
 
 	return {
@@ -275,7 +293,7 @@ function customerProductsToSetPlansState({
 			entities,
 			products,
 		}),
-		repeatedPhaseStarts: repeatedStarts,
+		repeatedPhases: repeatedOnly,
 	};
 }
 
