@@ -2,6 +2,9 @@ DESCRIPTION >
     On-demand full-history export of `events` to the lake landing bucket, one chunk per run.
     A chunk is [from, to) ranges on org_id, env, customer_id and timestamp; an omitted bound is
     unbounded. Defaults select nothing. Run by the Trigger.dev events history exporter.
+    The WHERE must stay identical to events_history_export_count, which verifies each chunk.
+
+TOKEN events_history_export_runner READ
 
 NODE export
 SQL >
@@ -25,7 +28,7 @@ SQL >
         properties,
         deductions,
         {{ String(export_chunk_id, 'unset') }} AS export_chunk_id,
-        {{ Int32(export_attempt, 0) }} AS export_attempt
+        {{ String(export_attempt, '0') }} AS export_attempt
     FROM events
     WHERE timestamp >= toDateTime64({{ String(start_ts, '1970-01-01 00:00:00') }}, 6)
       AND timestamp < toDateTime64({{ String(end_ts, '1970-01-01 00:00:00') }}, 6)
