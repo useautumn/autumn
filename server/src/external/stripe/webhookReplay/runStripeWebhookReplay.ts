@@ -4,6 +4,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { stripeEventMatchesEnv } from "../common/stripeEventMatchesEnv.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
 import { isStripeWebhookLockRequired } from "../webhookMiddlewares/classifyStripeWebhookAckMode.js";
 import {
@@ -50,6 +51,7 @@ export const runStripeWebhookReplay = async ({
 }) => {
 	const { stripeEvent } = payload;
 	const { logger } = ctx;
+	if (!stripeEventMatchesEnv({ event: stripeEvent, env: ctx.env })) return;
 
 	const webhookCtx: StripeWebhookContext = {
 		...ctx,

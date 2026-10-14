@@ -7,12 +7,14 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	getByAccountId: undefined as (() => Promise<unknown>) | undefined,
+	getByAccountIdCalls: 0,
 	getWebhookSecretCalls: 0,
 };
 
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getByAccountId: async () => {
+			mockState.getByAccountIdCalls++;
 			if (!mockState.getByAccountId) throw new Error("not configured");
 			return mockState.getByAccountId();
 		},
@@ -85,6 +87,7 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 		process.env.NODE_ENV = "test";
 		mockState.getByAccountId = undefined;
+		mockState.getByAccountIdCalls = 0;
 		mockState.getWebhookSecretCalls = 0;
 	});
 
@@ -152,6 +155,7 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 
 			expect(response.status).toBe(200);
 			expect(didHandlerRun()).toBe(runs);
+			expect(mockState.getByAccountIdCalls).toBe(runs ? 1 : 0);
 		},
 	);
 

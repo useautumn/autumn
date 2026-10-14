@@ -123,3 +123,9 @@ test("runs a lock-required replay once the claim succeeds", async () => {
 	).resolves.toBeUndefined();
 	expect(state.handlerRuns).toBe(1);
 });
+
+test("drops a replay whose livemode does not match its env", async () => {
+	state.claim = "claimed";
+	await replay({ stripeEvent: { ...checkoutCompleted, livemode: true } });
+	expect(state.handlerRuns).toBe(0);
+});
