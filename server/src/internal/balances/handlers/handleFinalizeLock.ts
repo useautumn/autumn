@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	ApiVersion,
 	FinalizeLockParamsV0Schema,
+	FinalizeLockParamsV1Schema,
 	RouteGroup,
 	Scopes,
 } from "@autumn/shared";
@@ -12,8 +13,8 @@ export const handleFinalizeLock = createRoute({
 	scopes: [Scopes.Balances.Write],
 	routeGroup: RouteGroup.Balances,
 	versionedBody: {
-		latest: FinalizeLockParamsV0Schema,
-		[ApiVersion.V1_Beta]: FinalizeLockParamsV0Schema,
+		latest: FinalizeLockParamsV1Schema,
+		[ApiVersion.V2_5]: FinalizeLockParamsV0Schema,
 	},
 	resource: AffectedResource.FinalizeLock,
 	handler: async (c) => {
