@@ -6,7 +6,7 @@
  *     draft → draft, auto_advance off · finalize → open, auto_advance off · send → open, auto_advance on
  *   a send_invoice subscription keeps its own terms (days until due, payment methods) when
  *   drafting or finalizing a change without terms of its own, instead of the org defaults
- *   errors: issue_method without enabled: true → 400; finalize with a change waiting for payment → 400
+ *   errors: issue_method without enabled: true → 400
  */
 
 import { test } from "bun:test";
@@ -154,7 +154,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("update issue_method errors: needs invoice mode enabled, and finalize can't leave a change waiting for payment")}`,
+	`${chalk.yellowBright("update issue_method errors: needs invoice mode enabled")}`,
 	async () => {
 		const customerId = "update-issue-method-errors";
 		const scenario = await setupPaidPro({ customerId });
@@ -166,17 +166,6 @@ test.concurrent(
 					scenario,
 					customerId,
 					invoiceMode: { enabled: false, issue_method: "send" },
-				}),
-		});
-
-		await expectAutumnError({
-			errMessage:
-				"issue_method: finalize can't be combined with a plan that waits for payment",
-			func: () =>
-				raisePrice({
-					scenario,
-					customerId,
-					invoiceMode: { enabled: true, issue_method: "finalize" },
 				}),
 		});
 	},

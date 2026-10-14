@@ -10,7 +10,8 @@
  *     finalize → open, auto_advance off; plan active
  *   precedence: issue_method wins over the deprecated finalize
  *   back compat: finalize: false alone still drafts
- *   errors: issue_method without enabled: true → 400; finalize with a plan waiting for payment → 400
+ *   finalize with a plan waiting for payment: allowed, invoice open without auto_advance, plan pending
+ *   errors: issue_method without enabled: true → 400
  */
 
 import { test } from "bun:test";
@@ -28,8 +29,6 @@ import chalk from "chalk";
 
 const ISSUE_METHOD_WITHOUT_INVOICE_MODE_ERROR =
 	"issue_method requires invoice_mode.enabled: true";
-const FINALIZE_DEFERRED_ERROR =
-	"issue_method: finalize can't be combined with a plan that waits for payment";
 
 type InvoiceModeInput = NonNullable<AttachParamsV1Input["invoice_mode"]>;
 
@@ -252,7 +251,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("attach issue_method errors: needs invoice mode enabled, and finalize can't leave a plan waiting for payment")}`,
+	`${chalk.yellowBright("attach issue_method errors: needs invoice mode enabled")}`,
 	async () => {
 		const customerId = "attach-issue-method-errors";
 		const scenario = await setupPlan({ customerId });
@@ -266,19 +265,35 @@ test.concurrent(
 					invoiceMode: { enabled: false, issue_method: "draft" },
 				}),
 		});
+	},
+);
 
-		await expectAutumnError({
-			errMessage: FINALIZE_DEFERRED_ERROR,
-			func: () =>
-				attachWithInvoiceMode({
-					scenario,
-					customerId,
-					invoiceMode: {
-						enabled: true,
-						issue_method: "finalize",
-						enable_plan_immediately: false,
-					},
-				}),
+test.concurrent(
+	`${chalk.yellowBright("attach issue_method: finalize with a plan waiting for payment → open without auto_advance, plan pending")}`,
+	async () => {
+		const customerId = "attach-issue-method-finalize-deferred";
+		const scenario = await setupPlan({ customerId });
+
+		await attachWithInvoiceMode({
+			scenario,
+			customerId,
+			invoiceMode: {
+				enabled: true,
+				issue_method: "finalize",
+				enable_plan_immediately: false,
+			},
+		});
+
+		await expectInvoicesIssuedAs({
+			autumnV2_3: scenario.autumnV2_3,
+			customerId,
+			issueMethod: "finalize",
+			count: 1,
+		});
+		await expectPlanStatus({
+			customerId,
+			planId: scenario.planId,
+			status: CusProductStatus.Pending,
 		});
 	},
 );

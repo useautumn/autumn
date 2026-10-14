@@ -20,7 +20,7 @@ export const InvoiceModeParamsSchema = z
 		}),
 		issue_method: InvoiceIssueMethodSchema.optional().meta({
 			description:
-				"How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe; it requires enable_plan_immediately: true. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.",
+				"How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.",
 		}),
 		invoice_template_id: z.string().optional().meta({
 			description:
