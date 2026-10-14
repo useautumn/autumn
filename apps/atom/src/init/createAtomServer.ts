@@ -10,6 +10,7 @@ import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { createReplicaRing } from "../replicas/createReplicaRing.js";
 import { leaveRing } from "../replicas/handover/leaveRing.js";
+import { startReadinessProber } from "../replicas/membership/startReadinessProber.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -68,6 +69,22 @@ export const createAtomServer = ({
 		},
 	});
 	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
+	const handoverContext = {
+		ring,
+		membership,
+		folders: ctx.folders,
+		threads: env.ATOM_THREADS,
+		peer,
+		logger: ctx.logger,
+	};
+	const prober = startReadinessProber({
+		ctx: {
+			...handoverContext,
+			replication: ctx.replication,
+			thread: ctx.health.thread,
+			publicPort: env.ATOM_PORT,
+		},
+	});
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
@@ -125,6 +142,7 @@ export const createAtomServer = ({
 		listen();
 		receiving = pushReceiver?.run();
 		void diskEvictor.run();
+		void prober.run();
 	}
 
 	/**
@@ -133,16 +151,8 @@ export const createAtomServer = ({
 	 * then do the listeners and the files close.
 	 */
 	async function stop(): Promise<void> {
-		await leaveRing({
-			ctx: {
-				ring,
-				membership,
-				folders: ctx.folders,
-				threads: env.ATOM_THREADS,
-				peer,
-				logger: ctx.logger,
-			},
-		});
+		prober.stop();
+		await leaveRing({ ctx: handoverContext });
 		pushReceiver?.stop();
 		await receiving;
 		await ctx.journalForwarder.drainAll({ deadlineMs: DRAIN_DEADLINE_MS });
@@ -158,5 +168,5 @@ export const createAtomServer = ({
 		ctx.auth.close();
 	}
 
-	return { start, stop };
+	return { start, stop, probePeers: () => prober.probeOnce() };
 };

@@ -11,4 +11,9 @@ export type ReplicaRing = {
 	movedFrom(params: { customerId: string }): Promise<string | null>;
 	/** The member that takes the customer once this replica leaves; null when it is alone. */
 	ownerAfterLeaving(params: { customerId: string }): Promise<string | null>;
+	/** The owner among the members plus `peer`, as the ring will be once the peer is counted. */
+	ownerOnceJoined(params: {
+		customerId: string;
+		peer: string;
+	}): Promise<string>;
 };

@@ -128,6 +128,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	async function start(): Promise<void> {
 		await server.start();
 		await replicas.sync.catchUp();
+		await server.probePeers?.();
 		Atomics.store(health.threadsReady, index, 1);
 		void replicas.sync.runPasses();
 	}
