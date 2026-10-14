@@ -40,6 +40,7 @@ import { CustomerPageTitle } from "./CustomerPageTitle";
 import { CustomerSheets } from "./CustomerSheets";
 import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
+import { usePreloadEntityView } from "./hooks/usePreloadEntityView";
 import { Workbench } from "./workbench/Workbench";
 
 export default function CustomerView2() {
@@ -52,6 +53,7 @@ export default function CustomerView2() {
 	useCusReferralQuery();
 	useCusRewardsQuery();
 	const { entityId, setEntityId } = useEntity();
+	const { isLoading: entityViewLoading } = usePreloadEntityView({ entityId });
 	useApprovalSheetFromUrl({
 		resolveSubscriptionItemId: (planId) =>
 			planId
@@ -67,7 +69,9 @@ export default function CustomerView2() {
 
 	const env = useEnv();
 
-	if (cusLoading && !customer) return <LoadingScreen />;
+	if ((cusLoading && !customer) || entityViewLoading) {
+		return <LoadingScreen />;
+	}
 
 	if (!customer) {
 		return (

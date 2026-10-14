@@ -17,8 +17,10 @@ export type ProductListItem = ProductV2 &
  */
 export const useProductsQuery = ({
 	allVersions = false,
+	enabled = true,
 }: {
 	allVersions?: boolean;
+	enabled?: boolean;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -42,6 +44,7 @@ export const useProductsQuery = ({
 	}>({
 		queryKey: buildKey(["products", allVersions ? "all" : "latest"]),
 		queryFn: fetchProducts,
+		enabled,
 	});
 
 	const {
@@ -51,6 +54,7 @@ export const useProductsQuery = ({
 	} = useQuery<Record<string, ProductCounts>>({
 		queryKey: buildKey(["product_counts"]),
 		queryFn: fetchProductCounts,
+		enabled,
 	});
 
 	/**

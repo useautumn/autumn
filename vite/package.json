@@ -44,6 +44,7 @@
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/react-form": "^1.23.8",
 		"@tanstack/react-query": "catalog:",
+		"@tanstack/react-query-persist-client": "5.101.1",
 		"@tanstack/react-table": "^8.21.3",
 		"@tanstack/react-virtual": "^3.13.18",
 		"@trigger.dev/react-hooks": "4.4.5",

@@ -1,12 +1,18 @@
 import "scraps-ui/scraps.css";
 import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./contexts/ThemeProvider";
+import { idbPersister } from "./lib/queryPersistence/idbPersister";
+import {
+	PERSISTED_CACHE_MAX_AGE_MS,
+	shouldPersistQuery,
+} from "./lib/queryPersistence/persistedQueries";
 import { reloadOnStaleChunk } from "./utils/staleChunkReload";
 
 declare const __APP_ENV__: string;
@@ -41,10 +47,14 @@ if (__APP_ENV__ === "prod") {
 
 window.addEventListener("vite:preloadError", reloadOnStaleChunk);
 
+// The dashboard used AutumnProvider's client until it shared this one, so keep its defaults.
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
+			staleTime: 1000 * 60,
+			retry: false,
 			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
 		},
 	},
 });
@@ -61,7 +71,16 @@ createRoot(document.getElementById("root")!, {
 	onCaughtError: reportRenderError,
 }).render(
 	<StrictMode>
-		<QueryClientProvider client={queryClient}>
+		<PersistQueryClientProvider
+			client={queryClient}
+			persistOptions={{
+				persister: idbPersister,
+				maxAge: PERSISTED_CACHE_MAX_AGE_MS,
+				// The entry chunk's hashed URL changes every deploy, so a new build never reads an old cache shape.
+				buster: import.meta.url,
+				dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+			}}
+		>
 			<ThemeProvider>
 				{/* <App /> */}
 				{shouldInitializePostHog ? (
@@ -81,6 +100,6 @@ createRoot(document.getElementById("root")!, {
 				)}
 				{/* <ReactQueryDevtools initialIsOpen={false} /> */}
 			</ThemeProvider>
-		</QueryClientProvider>
+		</PersistQueryClientProvider>
 	</StrictMode>,
 );

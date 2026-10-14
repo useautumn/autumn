@@ -16,6 +16,7 @@ import {
 } from "@/lib/orgSync";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { useActiveOrgId } from "./useActiveOrgId";
 
 export {
 	clearLastSwitchedOrgId,
@@ -47,7 +48,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox });
 	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
 	const { data: session } = useSession();
-	const activeOrgId = session?.session.activeOrganizationId;
+	const { activeOrgId } = useActiveOrgId();
 	const sandboxOrgId =
 		!skipSandbox && env === AppEnv.Sandbox ? (activeSandbox?.id ?? null) : null;
 
@@ -68,6 +69,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
 		staleTime: 30_000,
+		retry: 3,
 		enabled: !!activeOrgId,
 	});
 	const lastOrgId = getLastSwitchedOrgId();
@@ -82,7 +84,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 	const expectedOrgId = sandboxOrgId ?? activeOrgId;
 	const orgIsReady =
 		!!org && !!activeOrgId && org.id === expectedOrgId && !pendingOrgSwitch;
-	const orgLoading = !session || (!!activeOrgId && !orgIsReady);
+	const orgLoading = activeOrgId ? !orgIsReady : !session;
 
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {

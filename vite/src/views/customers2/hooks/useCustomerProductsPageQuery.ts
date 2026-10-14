@@ -21,12 +21,14 @@ export function useCustomerProductsPageQuery({
 	statuses,
 	kind,
 	initialPage,
+	enabled = true,
 }: {
 	cursor: string;
 	pageSize: CustomerProductsPageSize;
 	statuses: CustomerProductsStatusOption[];
 	kind: CustomerProductsKindFilter;
 	initialPage?: CustomerProductsPage;
+	enabled?: boolean;
 }) {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();
@@ -77,7 +79,7 @@ export function useCustomerProductsPageQuery({
 				entityId,
 			]),
 			queryFn: fetcher,
-			enabled: !!customer_id,
+			enabled: enabled && !!customer_id,
 			initialData: seedPage,
 			initialDataUpdatedAt: 0,
 			placeholderData: keepPreviousData,

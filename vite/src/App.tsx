@@ -8,9 +8,12 @@ import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
+import { idbPersister } from "./lib/queryPersistence/idbPersister";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
+import { loadCustomerView } from "./views/customers2/customer/loadCustomerView";
 import LoadingScreen from "./views/general/LoadingScreen";
+import { loadPlanEditorView } from "./views/products/plan/loadPlanEditorView";
 // Eager: the command bar already bundles it, so lazy only added a fallback frame on load.
 import { SettingsView } from "./views/settings/SettingsView";
 
@@ -78,9 +81,7 @@ const LogsView = React.lazy(() =>
 		default: LogsView,
 	})),
 );
-const CustomerView2 = React.lazy(
-	() => import("./views/customers2/customer/CustomerView2"),
-);
+const CustomerView2 = React.lazy(loadCustomerView);
 const CustomerPlanEditor = React.lazy(
 	() => import("./views/customers2/customer-plan/CustomerPlanEditor"),
 );
@@ -117,9 +118,7 @@ const QuickstartView = React.lazy(
 	() => import("./views/onboarding4/QuickstartView"),
 );
 const ProductsView = React.lazy(() => import("./views/products/ProductsView"));
-const PlanEditorView = React.lazy(
-	() => import("./views/products/plan/PlanEditorView"),
-);
+const PlanEditorView = React.lazy(loadPlanEditorView);
 const TerminalView = React.lazy(() =>
 	import("./views/TerminalView").then(({ TerminalView }) => ({
 		default: TerminalView,
@@ -150,7 +149,11 @@ const envRoutes = (
 ];
 
 export default function App() {
-	const { data } = useSession();
+	const { data, isPending } = useSession();
+
+	useEffect(() => {
+		if (!isPending && !data) void idbPersister.removeClient();
+	}, [isPending, data]);
 
 	useEffect(() => {
 		if (data?.user) {

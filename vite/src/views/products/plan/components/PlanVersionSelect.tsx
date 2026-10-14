@@ -10,6 +10,7 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useProductVersionsQuery } from "@/hooks/queries/useProductVersionsQuery";
 import {
@@ -17,6 +18,7 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
+import { useProductDataQueryOptions } from "../../product/hooks/useProductDataQueryOptions";
 import {
 	useAllVariantsView,
 	useProductQuery,
@@ -35,7 +37,9 @@ export const PlanVersionSelect = ({
 	onMigrateCustomers: () => void;
 }) => {
 	const product = useProductStore((s) => s.product);
-	const { versionCounts } = useProductQuery();
+	const { versionCounts, isSwitchingVersion } = useProductQuery();
+	const queryClient = useQueryClient();
+	const productDataQueryOptions = useProductDataQueryOptions();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const showAllVariants = useAllVariantsView();
@@ -54,6 +58,18 @@ export const PlanVersionSelect = ({
 		return (right.version ?? 0) - (left.version ?? 0);
 	});
 
+	// Pin unless we know the row is active; a missing flag must not read as active.
+	const versionQueryParam = (row: (typeof sortedRows)[number]) =>
+		Boolean(row.active) && !isCusPlanEditor ? null : row.version;
+
+	const prefetchVersion = (row: (typeof sortedRows)[number]) =>
+		queryClient.prefetchQuery(
+			productDataQueryOptions({
+				productId: product.id,
+				version: versionQueryParam(row),
+			}),
+		);
+
 	const handleVersionChange = (version: string) => {
 		if (version === MIGRATE_CUSTOMERS) {
 			onMigrateCustomers();
@@ -61,12 +77,9 @@ export const PlanVersionSelect = ({
 		}
 		const versionNumber = Number.parseInt(version, 10);
 		const selected = sortedRows.find((row) => row.version === versionNumber);
-		// Pin unless we know the row is active; a missing flag must not read as active.
-		if (Boolean(selected?.active) && !isCusPlanEditor) {
-			setQueryStates({ version: null });
-			return;
-		}
-		setQueryStates({ version: versionNumber });
+		setQueryStates({
+			version: selected ? versionQueryParam(selected) : versionNumber,
+		});
 	};
 
 	const currentRow =
@@ -85,7 +98,11 @@ export const PlanVersionSelect = ({
 	const triggerContent = (
 		<SelectTrigger className="w-32 !h-6" size="sm">
 			<span className="flex min-w-0 items-center gap-1.5">
-				{currentRow.active ? <ActiveVersionDot active /> : null}
+				{isSwitchingVersion ? (
+					<SmallSpinner size={10} className="text-tertiary-foreground" />
+				) : currentRow.active ? (
+					<ActiveVersionDot active />
+				) : null}
 				<span className="truncate">
 					{versionLabel({
 						versionSlug: currentRow.version_slug,
@@ -128,6 +145,8 @@ export const PlanVersionSelect = ({
 								value={String(row.version)}
 								indicator={false}
 								className={cn("*:last:w-full", selected && "bg-accent/70")}
+								onPointerEnter={() => prefetchVersion(row)}
+								onFocus={() => prefetchVersion(row)}
 							>
 								<PlanVersionOption
 									label={versionLabel({
