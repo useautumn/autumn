@@ -8,7 +8,7 @@ import {
  * The rows alone. The revision is the worker's count since it last loaded the customer, which a resend or a reload
  * moves; atom_seqs only the worker's apply of an Atom's track writes, never the Atom's own replay of it.
  */
-const rowsOf = (state: SubjectState) => ({
+export const subjectStateRowsOf = (state: SubjectState) => ({
 	...state,
 	revision: undefined,
 	customer: { ...state.customer, atom_seqs: undefined },
@@ -23,6 +23,6 @@ export const findSubjectStateDifference = ({
 	right: SubjectState;
 }): StructuralDifference | null =>
 	findStructuralDifference({
-		left: rowsOf(left),
-		right: rowsOf(right),
+		left: subjectStateRowsOf(left),
+		right: subjectStateRowsOf(right),
 	});
