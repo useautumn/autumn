@@ -5,7 +5,10 @@ import { newSqliteConnection } from "./newSqliteConnection.js";
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
 /** A completed checkpoint cuts the log back to this, so 128 logs never sit at their high-water mark. */
-export const JOURNAL_SIZE_LIMIT_BYTES = 1024 * 1024;
+// BENCH ONLY (rig WAL-sizing arm, never merged): RIG_JOURNAL_SIZE_LIMIT overrides it; negative means no limit.
+export const JOURNAL_SIZE_LIMIT_BYTES = Number(
+	process.env.RIG_JOURNAL_SIZE_LIMIT ?? 1024 * 1024,
+);
 
 /** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
 const WAL_SWITCH_ATTEMPTS = 50;
