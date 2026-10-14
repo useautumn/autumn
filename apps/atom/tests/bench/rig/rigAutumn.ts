@@ -15,9 +15,12 @@ import {
 	ATOM_KEYS_PATH,
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TRACKS_APPEND_PATH,
+	AtomPushType,
 	AtomTracksAppendRequestSchema,
+	atomPushMessageToPayload,
 } from "@autumn/byoc";
 import { rigConfig } from "./rigConfig.js";
+import { createRigQueue } from "./rigQueue.js";
 import { customerIdsOf, logNormalOf } from "./rigShared.js";
 import { resendSubjectOf } from "./rigSubjects.js";
 
@@ -25,6 +28,7 @@ const replicaUrls = (process.argv[2] ?? "").split(",").filter(Boolean);
 if (replicaUrls.length === 0)
 	throw new Error("Usage: rig:autumn <replicaUrl,replicaUrl>");
 const { tenant, stub } = rigConfig;
+const queue = createRigQueue();
 
 const template = resendSubjectOf({ customerId: "template" });
 const states = new Map<string, SubjectState>();
@@ -71,20 +75,38 @@ const applyTrack = ({
 	states.set(customerId, applyMutation({ state, mutation }));
 };
 
-const bodyOf = (customerId: string): string => {
+const subjectOf = (customerId: string) => {
 	const state = stateOf(customerId);
-	return JSON.stringify({
+	return {
 		state,
 		catalog: template.catalog,
 		org: template.org,
 		log_offset: String(logOffset++),
 		read_at: readAt++,
 		atom_seqs: state.customer.atom_seqs?.[tenant.atomId] ?? null,
-	});
+	};
 };
+
+const bodyOf = (customerId: string): string =>
+	JSON.stringify(subjectOf(customerId));
 
 const randomReplica = () =>
 	replicaUrls[Math.floor(Math.random() * replicaUrls.length)] as string;
+
+/** As herald queues it: the receiving thread of whichever replica pulls it applies it, and the relay carries it to the other. */
+const enqueuePush = ({ customerId }: { customerId: string }) => {
+	queue.send(
+		atomPushMessageToPayload({
+			message: {
+				type: AtomPushType.SetSubject,
+				atomId: tenant.atomId,
+				customerId,
+				body: subjectOf(customerId),
+			},
+		}),
+	);
+	counts.pushes++;
+};
 
 const push = async ({ customerId }: { customerId: string }) => {
 	try {
@@ -127,7 +149,13 @@ const appendTracks = async (request: Request) => {
 	counts.appends++;
 	counts.tracks += parsed.data.tracks.length;
 	for (const customerId of touched)
-		setTimeout(() => void push({ customerId }), pushLag());
+		setTimeout(
+			() =>
+				stub.pushVia === "queue"
+					? enqueuePush({ customerId })
+					: void push({ customerId }),
+			pushLag(),
+		);
 	return new Response(null, { status: 204 });
 };
 
@@ -151,6 +179,7 @@ Bun.serve({
 	port: stub.port,
 	idleTimeout: 60,
 	fetch: async (request) => {
+		if (queue.isQueueCall(request)) return queue.handle(request);
 		const { pathname } = new URL(request.url);
 		if (pathname === ATOM_TRACKS_APPEND_PATH) return appendTracks(request);
 		if (pathname === ATOM_SUBJECT_READ_PATH) {
@@ -164,7 +193,8 @@ Bun.serve({
 		}
 		if (pathname === "/__rig/seed")
 			return Response.json({ seeded: await seed() });
-		if (pathname === "/__rig/stats") return Response.json(counts);
+		if (pathname === "/__rig/stats")
+			return Response.json({ ...counts, queue: queue.stats() });
 		if (pathname.startsWith("/v1/")) return answerForwarded(request, pathname);
 		return new Response("no such route", { status: 404 });
 	},

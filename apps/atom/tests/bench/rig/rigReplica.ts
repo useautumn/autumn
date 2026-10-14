@@ -38,6 +38,16 @@ if (!listed(self) || !listed(peer))
 const sha256 = (text: string) =>
 	createHash("sha256").update(text).digest("hex");
 const { replica, tenant } = rigConfig;
+/** In queue mode the replicas read pushes from the stub's queue, as the shadow reads its linked `pushes` SQS queue. */
+const pushQueueEnv =
+	rigConfig.stub.pushVia === "queue"
+		? {
+				ALIEN_PUSHES_BINDING: JSON.stringify({
+					service: "sqs",
+					queueUrl: `${stub}/000000000000/pushes`,
+				}),
+			}
+		: {};
 const dataDir = mkdtempSync(join(tmpdir(), "atom-rig-"));
 const logDir = join(homedir(), "atom-rig");
 mkdirSync(logDir, { recursive: true });
@@ -53,6 +63,7 @@ console.log(
 		peer,
 		stub,
 		threads: replica.threads,
+		pushVia: rigConfig.stub.pushVia,
 		dataDir,
 		log: logPath,
 	}),
@@ -77,6 +88,7 @@ const atom = Bun.spawn(
 			ATOM_PEER_SECRET: peerSecret,
 			ATOM_DATA_DIR: dataDir,
 			AUTUMN_API_URL: stub,
+			...pushQueueEnv,
 			...replica.bunJscFlags,
 			...replica.extraEnv,
 		},
