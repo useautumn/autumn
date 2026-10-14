@@ -1,8 +1,19 @@
 import { matchPath } from "react-router";
 import { stripSandboxPrefix } from "@/hooks/sandbox/sandboxUrl";
-import { CustomerViewRoute } from "@/views/customers2/customer/loadCustomerView";
-import { PlanEditorRoute } from "@/views/products/plan/loadPlanEditorView";
-import { CustomersListRoute, ProductsListRoute } from "./listRoutes";
+import { lazyWithPreload } from "@/lib/lazyWithPreload";
+
+export const ProductsListRoute = lazyWithPreload(
+	() => import("@/views/products/ProductsView"),
+);
+export const PlanEditorRoute = lazyWithPreload(
+	() => import("@/views/products/plan/PlanEditorView"),
+);
+export const CustomersListRoute = lazyWithPreload(
+	() => import("@/views/customers/CustomersPage"),
+);
+export const CustomerViewRoute = lazyWithPreload(
+	() => import("@/views/customers2/customer/CustomerView2"),
+);
 
 const ROUTE_CHUNKS = [
 	{ pattern: "/products", route: ProductsListRoute },

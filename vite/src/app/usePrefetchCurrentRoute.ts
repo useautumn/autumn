@@ -3,8 +3,7 @@ import { matchPath, useLocation } from "react-router";
 import { stripSandboxPrefix } from "@/hooks/sandbox/sandboxUrl";
 import { usePrefetchCustomerPage } from "@/views/customers2/customer/hooks/usePrefetchCustomerPage";
 import { usePrefetchPlanPage } from "@/views/products/plan/hooks/usePrefetchPlanPage";
-import { CustomersListRoute } from "./listRoutes";
-import { routeChunkForPath } from "./routeChunks";
+import { CustomersListRoute, routeChunkForPath } from "./routeChunks";
 
 /**
  * On a direct load, starts the page's chunk and data while the org loads, and

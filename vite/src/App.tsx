@@ -6,15 +6,18 @@ import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
-import { CustomersListRoute, ProductsListRoute } from "./app/listRoutes";
 import { OnboardingLayout } from "./app/OnboardingLayout";
+import {
+	CustomersListRoute,
+	CustomerViewRoute,
+	PlanEditorRoute,
+	ProductsListRoute,
+} from "./app/routeChunks";
 import { useSession } from "./lib/auth-client";
 import { idbPersister } from "./lib/queryPersistence/idbPersister";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
-import { CustomerViewRoute } from "./views/customers2/customer/loadCustomerView";
 import LoadingScreen from "./views/general/LoadingScreen";
-import { PlanEditorRoute } from "./views/products/plan/loadPlanEditorView";
 // Eager: the command bar already bundles it, so lazy only added a fallback frame on load.
 import { SettingsView } from "./views/settings/SettingsView";
 
