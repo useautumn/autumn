@@ -49,6 +49,9 @@ const buildMockFetchImpl = (fixtures: {
 
 	return (async (input: RequestInfo | URL) => {
 		const url = new URL(input.toString());
+		if (url.host !== "api.revenuecat.com") {
+			throw new TypeError(`getaddrinfo ENOTFOUND ${url.host}`);
+		}
 		const path = url.pathname;
 		const page = url.searchParams.get("mock_page");
 
