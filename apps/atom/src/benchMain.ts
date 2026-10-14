@@ -25,45 +25,49 @@ writeFileSync(`${RUN_DIR}/hotCustomerBench.js`, hotSource);
 writeFileSync(`${RUN_DIR}/workerAutumn.js`, workerAutumnSource);
 writeFileSync(`${RUN_DIR}/bunfig.toml`, bunfigSource);
 
-const cpuModel =
-	(await Bun.file("/proc/cpuinfo").text())
-		.split("\n")
-		.find((line) => /CPU part|model name/i.test(line)) ?? "unknown";
-const machine = { host: hostname(), arch: process.arch, bun: Bun.version, revision: Bun.revision, cpuModel };
-const results: string[] = [];
+const main = async () => {
+	const cpuModel =
+		(await Bun.file("/proc/cpuinfo").text())
+			.split("\n")
+			.find((line) => /CPU part|model name/i.test(line)) ?? "unknown";
+	const machine = { host: hostname(), arch: process.arch, bun: Bun.version, revision: Bun.revision, cpuModel };
+	const results: string[] = [];
 
-const emit = (line: string) => console.log(`BENCHRESULT ${line}`);
+	const emit = (line: string) => console.log(`BENCHRESULT ${line}`);
 
-const runOne = async ({ kind, round, args }: { kind: string; round: number; args: string[] }) => {
-	const child = Bun.spawn([process.execPath, `${RUN_DIR}/${kind}.js`, ...args], {
-		cwd: RUN_DIR,
-		env: { ...process.env, BUN_BE_BUN: "1", NODE_ENV: "production", TMPDIR: `${RUN_DIR}/tmp` },
-		stdout: "pipe",
-		stderr: "ignore",
-	});
-	const out = await new Response(child.stdout).text();
-	const exitCode = await child.exited;
-	const json = out
-		.split("\n")
-		.map((line) => line.trim())
-		.filter((line) => line.startsWith("{"));
-	const line = JSON.stringify({ machine, kind, round, args, exitCode, result: json.length ? JSON.parse(json.join("")) : null });
-	results.push(line);
-	emit(line);
+	const runOne = async ({ kind, round, args }: { kind: string; round: number; args: string[] }) => {
+		const child = Bun.spawn([process.execPath, `${RUN_DIR}/${kind}.js`, ...args], {
+			cwd: RUN_DIR,
+			env: { ...process.env, BUN_BE_BUN: "1", NODE_ENV: "production", TMPDIR: `${RUN_DIR}/tmp` },
+			stdout: "pipe",
+			stderr: "ignore",
+		});
+		const out = await new Response(child.stdout).text();
+		const exitCode = await child.exited;
+		const json = out
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.startsWith("{"));
+		const line = JSON.stringify({ machine, kind, round, args, exitCode, result: json.length ? JSON.parse(json.join("")) : null });
+		results.push(line);
+		emit(line);
+	};
+
+	emit(JSON.stringify({ machine, phase: "start" }));
+	for (let round = 1; round <= 3; round++)
+		for (const shape of ["simple", "complex"])
+			for (const rate of ["1000", "1500"])
+				await runOne({ kind: "stagesBench", round, args: [rate, "20", shape, "1500", "0.2"] });
+	for (const rate of ["500", "1000", "1500"])
+		for (let round = 1; round <= 3; round++)
+			await runOne({ kind: "hotCustomerBench", round, args: [rate, "20", "1500"] });
+	emit(JSON.stringify({ machine, phase: "done", runs: results.length }));
+
+	const startedAt = Date.now();
+	const timer = setInterval(() => {
+		for (const line of results) emit(line);
+		if (Date.now() - startedAt > REPRINT_FOR_MS) clearInterval(timer);
+	}, REPRINT_EVERY_MS);
 };
 
-emit(JSON.stringify({ machine, phase: "start" }));
-for (let round = 1; round <= 3; round++)
-	for (const shape of ["simple", "complex"])
-		for (const rate of ["1000", "1500"])
-			await runOne({ kind: "stagesBench", round, args: [rate, "20", shape, "1500", "0.2"] });
-for (const rate of ["500", "1000", "1500"])
-	for (let round = 1; round <= 3; round++)
-		await runOne({ kind: "hotCustomerBench", round, args: [rate, "20", "1500"] });
-emit(JSON.stringify({ machine, phase: "done", runs: results.length }));
-
-const startedAt = Date.now();
-const timer = setInterval(() => {
-	for (const line of results) emit(line);
-	if (Date.now() - startedAt > REPRINT_FOR_MS) clearInterval(timer);
-}, REPRINT_EVERY_MS);
+void main();
