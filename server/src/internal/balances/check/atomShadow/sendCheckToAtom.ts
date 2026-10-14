@@ -1,4 +1,10 @@
 import type { ApiVersionClass, CheckParams } from "@autumn/shared";
+import {
+	ATOM_DENY_REASON_HEADER,
+	ATOM_FORWARDED_HEADER,
+	ATOM_LIMIT_TYPE_HEADER,
+	postToAtom,
+} from "./postToAtom.js";
 import type {
 	AtomCheckReply,
 	AtomShadowTarget,
@@ -10,9 +16,6 @@ const ATOM_SHADOW_TIMEOUT_MS = 300;
 const ATOM_SHADOW_ABANDON_MS = 5_000;
 /** Past this many open requests a check is shed as a timeout rather than dialled: bounds the Atom's queue below the timeout. */
 const ATOM_SHADOW_MAX_IN_FLIGHT = 16;
-
-/** Set when Atom had the API answer instead, so the body is not Atom's own. */
-const FORWARDED_HEADER = "x-atom-forwarded";
 
 let requestsInFlight = 0;
 
@@ -34,7 +37,7 @@ const replyWithinTimeout = (reply: Promise<AtomCheckReply>) => {
 	return Promise.race([reply, timeout]).finally(() => clearTimeout(timer));
 };
 
-/** The caller's check as the caller sent it, minus its secret key: Atom forwards nothing without one. */
+/** The caller's check, shed past ATOM_SHADOW_MAX_IN_FLIGHT and timed out at ATOM_SHADOW_TIMEOUT_MS. */
 export const sendCheckToAtom = ({
 	target,
 	params,
@@ -58,27 +61,27 @@ const requestCheck = async ({
 }: Parameters<typeof sendCheckToAtom>[0]): Promise<AtomCheckReply> => {
 	requestsInFlight++;
 	try {
-		const response = await fetch(
-			new URL(`/v1/balances.check${search}`, target.endpointUrl),
-			{
-				method: "POST",
-				headers: {
-					"content-type": "application/json",
-					"x-atom-token": target.token,
-					"x-api-version": apiVersion.semver,
-				},
-				body: JSON.stringify(params),
-				signal: AbortSignal.timeout(ATOM_SHADOW_ABANDON_MS),
-			},
-		);
-		const forwardReason = response.headers.get(FORWARDED_HEADER);
+		const response = await postToAtom({
+			target,
+			path: "/v1/balances.check",
+			body: params,
+			search,
+			apiVersion,
+			signal: AbortSignal.timeout(ATOM_SHADOW_ABANDON_MS),
+		});
+		const forwardReason = response.headers.get(ATOM_FORWARDED_HEADER);
 		if (forwardReason || !response.ok) {
 			await response.arrayBuffer();
 			return forwardReason
 				? { kind: "atom_error", reason: `forwarded_${forwardReason}` }
 				: { kind: "atom_error", reason: `http_${response.status}` };
 		}
-		return { kind: "answered", body: await response.json() };
+		return {
+			kind: "answered",
+			body: await response.json(),
+			limitType: response.headers.get(ATOM_LIMIT_TYPE_HEADER),
+			denyReason: response.headers.get(ATOM_DENY_REASON_HEADER),
+		};
 	} catch (error) {
 		if (errorToReason(error) === "TimeoutError") return { kind: "timeout" };
 		return { kind: "atom_error", reason: errorToReason(error) };

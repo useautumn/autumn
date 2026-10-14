@@ -12,11 +12,13 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { withAtomShadowDeduction } from "@/internal/balances/atomShadowDeduct/withAtomShadowDeduction.js";
 import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queueAtomShadowCheck.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import {
 	type CheckFailOpenReason,
@@ -110,25 +112,52 @@ export const handleCheck = createRoute({
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
+			const search = new URL(c.req.url).search;
 			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
 			// A lock must settle its reservation, so a lock check never answers without the worker.
 			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
-			const { result, failedOpen } =
-				await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
-					ctx,
-					source: "check",
-					run: runOnWorker,
-					fallback: async ({ error, reason }) =>
-						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
-				});
-			if (!failedOpen)
-				queueAtomShadowCheck({
-					ctx,
-					params: rawBody,
-					search: new URL(c.req.url).search,
-					apiResponse: result,
-				});
-			return c.json(result, failedOpen ? 202 : 200);
+			// The middleware already claimed a client's key, so a hand-in under it would be skipped: those stay on the API.
+			const hasClientKey = Boolean(c.req.header("idempotency-key"));
+			const { body, status } = await withAtomShadowDeduction({
+				ctx,
+				call:
+					rawBody.send_event === true && !hasClientKey
+						? { route: "check", params: rawBody }
+						: null,
+				search,
+				idempotencyKey: undefined,
+				// The fallback claims the key Atom journaled under, as the API's middleware claims an SDK's on its fallback.
+				runOnApi: ({ idempotencyKey }) =>
+					withIdempotencyKey({
+						ctx,
+						idempotencyKey,
+						routeGroup: RouteGroup.Balances,
+						run: async () => {
+							const { result, failedOpen } =
+								await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
+									ctx,
+									source: "check",
+									run: runOnWorker,
+									fallback: async ({ error, reason }) =>
+										checkFailOpenResponse({
+											ctx,
+											params: rawBody,
+											error,
+											reason,
+										}),
+								});
+							if (!failedOpen)
+								queueAtomShadowCheck({
+									ctx,
+									params: rawBody,
+									search,
+									apiResponse: result,
+								});
+							return { body: result, status: failedOpen ? 202 : 200 };
+						},
+					}),
+			});
+			return c.json(body, status);
 		}
 
 		const body: ParsedCheckParams = parseCheckParamsForLock({

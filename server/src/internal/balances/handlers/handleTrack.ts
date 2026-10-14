@@ -10,6 +10,7 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { withAtomShadowDeduction } from "@/internal/balances/atomShadowDeduct/withAtomShadowDeduction.js";
 import { trackOnBalanceWorker } from "@/internal/balances/track/balanceWorker/trackOnBalanceWorker.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
@@ -41,12 +42,20 @@ async function track(
 	const featureDeductions = getValidatedTrackFeatureDeductions({ ctx, body });
 
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
-		const { result, status } = await trackOnBalanceWorker({
+		const response = await withAtomShadowDeduction({
 			ctx,
-			body,
-			isAsync,
+			call: { route: "track", params: body },
+			idempotencyKey: body.idempotency_key,
+			runOnApi: async ({ idempotencyKey }) => {
+				const { result, status } = await trackOnBalanceWorker({
+					ctx,
+					body: { ...body, idempotency_key: idempotencyKey },
+					isAsync,
+				});
+				return { body: result, status };
+			},
 		});
-		return c.json(result, status);
+		return c.json(response.body, response.status);
 	}
 
 	if (isAsync) {

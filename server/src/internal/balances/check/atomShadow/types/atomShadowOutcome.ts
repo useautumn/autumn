@@ -1,6 +1,11 @@
 /** What one `/v1/balances.check` to the shadow Atom came back with. */
 export type AtomCheckReply =
-	| { kind: "answered"; body: unknown }
+	| {
+			kind: "answered";
+			body: unknown;
+			limitType: string | null;
+			denyReason: string | null;
+	  }
 	| { kind: "timeout"; shed?: true }
 	| { kind: "atom_error"; reason: string };
 

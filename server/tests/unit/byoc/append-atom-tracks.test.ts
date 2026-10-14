@@ -52,11 +52,18 @@ beforeEach(() => {
 });
 afterEach(() => {
 	for (const spy of spies.splice(0)) spy.mockRestore();
+	appendLogs.length = 0;
 });
 
+const appendLogs: Record<string, unknown>[] = [];
+const logger = {
+	info: (_message: string, meta: Record<string, unknown>) => {
+		if (meta?.type === "atom_tracks_append") appendLogs.push(meta);
+	},
+};
 const app = new Hono<HonoEnv>();
 app.use("*", async (c, next) => {
-	c.set("ctx", { db: {}, id: "req_append" } as never);
+	c.set("ctx", { db: {}, id: "req_append", logger } as never);
 	await next();
 });
 app.route("/atom", atomRouter);
@@ -102,6 +109,39 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 		[
 			{ ...first, source: { atomId: "atom_1", writerId: "w_1", seq: 3 } },
 			{ ...second, source: { atomId: "atom_1", writerId: "w_1", seq: 4 } },
+		],
+	]);
+	expect(appendLogs).toEqual([
+		expect.objectContaining({
+			atom_id: "atom_1",
+			writer: "w_1",
+			tracks: 2,
+			first_seq: 3,
+			last_seq: 4,
+			queued: true,
+		}),
+	]);
+	expect(appendLogs[0].lag_ms).toBeGreaterThanOrEqual(0);
+});
+
+test("a request carrying several journals stamps each command with its own entry's writer", async () => {
+	const first = journaled("atom_req_1");
+	const second = journaled("atom_req_2");
+
+	const reply = await append({
+		body: {
+			tracks: [
+				{ writer: "w_1", seq: 3, command: first },
+				{ writer: "w_2", seq: 1, command: second },
+			],
+		},
+	});
+
+	expect(reply.status).toBe(204);
+	expect(queued).toEqual([
+		[
+			{ ...first, source: { atomId: "atom_1", writerId: "w_1", seq: 3 } },
+			{ ...second, source: { atomId: "atom_1", writerId: "w_2", seq: 1 } },
 		],
 	]);
 });
