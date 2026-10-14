@@ -46,6 +46,7 @@ import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOve
 import { buildReissueLines } from "./reissue/buildReissueLines";
 import { previewReissue } from "./reissue/previewReissue";
 import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
+import { resolveReissueSubscriptionId } from "./reissue/resolveReissueSubscriptionId";
 import { resolveReissueTax } from "./reissue/resolveReissueTax";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
@@ -218,7 +219,12 @@ const createReplacementDraft = async ({
 	lines: Stripe.InvoiceAddLinesParams.Line[];
 	dropDeferredPointer: boolean;
 }) => {
-	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	const { stripeSubId, subscriptionEnded } = await resolveReissueSubscriptionId(
+		{
+			stripeCli,
+			stripeInvoice,
+		},
+	);
 	const stripeCusId = stripeRefToId(stripeInvoice.customer);
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
@@ -252,7 +258,11 @@ const createReplacementDraft = async ({
 				? (paymentMethodTypes as never)
 				: undefined,
 		metadata: {
-			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
+			...inheritedMetadata({
+				stripeInvoice,
+				// With the subscription gone there is no plan left to fulfil.
+				dropDeferredPointer: dropDeferredPointer || subscriptionEnded,
+			}),
 			autumn_reissued_from: stripeInvoice.id,
 			autumn_source_billing_reason: stripeInvoice.billing_reason ?? "",
 		},
@@ -860,7 +870,8 @@ const storeReplacementInAutumn = async ({
  * Retires the original (void, a credit note when paid, or parked when a draft) and replaces it with a
  * copy issued per issue_method. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
- * effect the original payment would have had.
+ * effect the original payment would have had. Once that subscription has ended,
+ * the replacement is issued standalone without them.
  *
  * A sent or finalized replacement is issued before the original is voided, so a
  * failure never leaves the customer without a payable invoice.
