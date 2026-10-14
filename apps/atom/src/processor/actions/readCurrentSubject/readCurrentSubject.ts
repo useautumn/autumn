@@ -22,7 +22,7 @@ import {
 	foldAcrossPush,
 } from "./foldAcrossPush.js";
 import { freshestCatalog } from "./freshestCatalog.js";
-import { replayOwed } from "./replayOwed.js";
+import { replayOwedSteps } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
@@ -257,6 +257,7 @@ const joinCurrentSubject = ({
 			? {
 					state: joined.customerState,
 					applied: joined.applied,
+					statesAfter: joined.statesAfter,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
 			: null;
@@ -265,8 +266,13 @@ const joinCurrentSubject = ({
 		viewFoldReplayedKept += carried.applied - carriedBase.applied;
 	if (isRebuild) viewFoldReplayedRebuilt += owed.length;
 	const base: ReplayBase = carriedBase ??
-		continued ?? { state: customer.state, applied: 0, fullSubject: null };
-	const { current, customerState } = joinSubject({
+		continued ?? {
+			state: customer.state,
+			applied: 0,
+			statesAfter: [],
+			fullSubject: null,
+		};
+	const { current, customerState, statesAfter } = joinSubject({
 		customer,
 		entity,
 		shared,
@@ -283,6 +289,7 @@ const joinCurrentSubject = ({
 		shared,
 		owed,
 		applied: owed.length,
+		statesAfter,
 		customerState,
 		current,
 	};
@@ -330,19 +337,26 @@ const joinSubject = ({
 	catalog: Catalog;
 	entityId: string | null;
 	replayStage: "engineFoldStep" | "engineFoldRebuild";
-}): { current: CurrentSubject; customerState: SubjectState } => {
+}): {
+	current: CurrentSubject;
+	customerState: SubjectState;
+	statesAfter: readonly SubjectState[];
+} => {
 	// Only a customer's own deductions are owed, and they move only the customer's own rows.
 	const unapplied = owed.slice(base.applied);
-	const customerState =
+	const steps =
 		unapplied.length === 0
-			? base.state
-			: replayOwed({
+			? []
+			: replayOwedSteps({
 					owed: unapplied,
 					state: base.state,
 					catalog,
 					fullSubject: base.fullSubject,
 					stage: replayStage,
 				});
+	const customerState = steps.at(-1) ?? base.state;
+	const statesAfter =
+		steps.length === 0 ? base.statesAfter : [...base.statesAfter, ...steps];
 
 	const current: CurrentSubject = {
 		fullSubject: subjectStateToFullSubject({
@@ -361,7 +375,7 @@ const joinSubject = ({
 		}),
 		org: customer.org,
 	};
-	return { current, customerState };
+	return { current, customerState, statesAfter };
 };
 
 /**
