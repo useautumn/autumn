@@ -8,14 +8,19 @@ import type { CheckRequest } from "../../processor/types/check.js";
 import { CannotAnswerError } from "../forward/cannotAnswerError.js";
 
 /** `x-api-version` as the API reads it: absent is null, unreadable is undefined. */
+const versionsByHeader = new Map<string, ApiVersionClass | undefined>();
+
 export const headerToApiVersion = ({
 	header,
 }: {
 	header: string | undefined;
 }): ApiVersionClass | null | undefined => {
 	if (!header) return null;
+	if (versionsByHeader.has(header)) return versionsByHeader.get(header);
 	const version = parseVersion({ versionStr: header });
-	return version ? new ApiVersionClass(version) : undefined;
+	const parsed = version ? new ApiVersionClass(version) : undefined;
+	if (versionsByHeader.size < 64) versionsByHeader.set(header, parsed);
+	return parsed;
 };
 
 /**

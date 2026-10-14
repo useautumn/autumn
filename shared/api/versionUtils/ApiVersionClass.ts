@@ -20,7 +20,7 @@ import {
 export class ApiVersionClass {
 	private readonly version: ApiVersion;
 	private readonly metadata: VersionMetadata;
-	private readonly sortedVersions: ApiVersion[];
+	private readonly sortedVersions: readonly ApiVersion[];
 
 	constructor(version: ApiVersion) {
 		if (!API_VERSIONS.includes(version)) {

@@ -30,10 +30,13 @@ export function isValidVersion(params: {
 	return API_VERSIONS.includes(params.version as ApiVersion);
 }
 
-export function getVersionsSorted(): ApiVersion[] {
-	return Object.values(VERSION_REGISTRY)
-		.sort((a, b) => a.releasedAt - b.releasedAt)
-		.map((meta) => meta.semver);
+/** The registry is static, so its release order is computed once. */
+const VERSIONS_SORTED: readonly ApiVersion[] = Object.values(VERSION_REGISTRY)
+	.sort((a, b) => a.releasedAt - b.releasedAt)
+	.map((meta) => meta.semver);
+
+export function getVersionsSorted(): readonly ApiVersion[] {
+	return VERSIONS_SORTED;
 }
 
 export function getVersionsBetween({
