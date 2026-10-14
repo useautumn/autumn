@@ -41,6 +41,8 @@ const total = Number(args.total ?? 10_000);
 const claimMs = Number(args.claimMs ?? 0);
 /** The AWS SDK's default socket pool per client: claims beyond it queue. */
 const claimSockets = Number(args.claimSockets ?? 50);
+/** Every Nth track carries a client key, as an Atom journals a keyed check: `track:<K>`, still claimed. */
+const keyedPercent = Number(args.keyedPercent ?? 0);
 const appendMs = Number(args.appendMs ?? 10);
 const applyMs = Number(args.applyMs ?? 5);
 const fetchMs = Number(args.fetchMs ?? 2);
@@ -73,6 +75,9 @@ await bench.processor.initialize({
 	}),
 });
 
+const isKeyed = (n: number) =>
+	keyedPercent > 0 && n % Math.round(100 / keyedPercent) === 0;
+
 /** As the Atom hands a track in: its own requestId, idempotency key and journal seq (trackToCommand.ts:39–42). */
 const atomTrack = (n: number): TrackCommand => ({
 	...createTrackCommand({
@@ -85,7 +90,10 @@ const atomTrack = (n: number): TrackCommand => ({
 		occurredAt: 1_700_000_000_000 + n,
 	}),
 	source: { atomId: "atom_1", writerId: "writer_1", seq: n + 1 },
-	idempotency: { key: `track:atomreq_${n}`, ttlMs: 86_400_000 },
+	idempotency: {
+		key: isKeyed(n) ? `track:client_${n}` : `track:atomreq_${n}`,
+		ttlMs: 86_400_000,
+	},
 });
 
 const log: KafkaMessage[] = Array.from({ length: total }, (_, n) => {
@@ -300,6 +308,7 @@ console.log(
 				total,
 				claimMs,
 				claimSockets,
+				keyedPercent,
 				appendMs,
 				applyMs,
 				fetchMs,
