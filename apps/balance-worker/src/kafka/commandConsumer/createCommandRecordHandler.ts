@@ -22,6 +22,7 @@ import {
 	settleQueuedFailure,
 } from "../../consume/settleQueuedFailure.js";
 import type { QueuedCommand } from "../../consume/types/queuedCommand.js";
+import { getBalanceWorkerLogger } from "../../logging/getBalanceWorkerLogger.js";
 import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
@@ -53,6 +54,33 @@ const isAtomTrackOfNothing = ({
 	committed.mutation.command.type === "track" &&
 	committed.mutation.command.value === 0;
 
+// BENCH-ONLY: where one consumed batch's wall time went, per stage.
+type BatchStageTiming = {
+	startedAt: number;
+	betweenBatchesMs: number | null;
+	batchSize: number;
+	records: number;
+	beginMs: number;
+	waitForRoomMs: number;
+	hopMs: number;
+	decideMs: number;
+	commitMs: number[];
+};
+
+const newBatchStageTiming = (): BatchStageTiming => ({
+	startedAt: performance.now(),
+	betweenBatchesMs: null,
+	batchSize: 0,
+	records: 0,
+	beginMs: 0,
+	waitForRoomMs: 0,
+	hopMs: 0,
+	decideMs: 0,
+	commitMs: [],
+});
+
+const round = (ms: number) => Math.round(ms * 100) / 100;
+
 /** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
 
@@ -69,6 +97,16 @@ export function createCommandRecordHandler({
 	/** Per partition, the Atom tracks this batch landed as nothing: a resend can be a whole journal, so one line per batch. */
 	const atomTracksOfNothing = new Map<number, number>();
 	const trackClaimsByPartition = new Map<number, TrackClaims>();
+	// BENCH-ONLY (bench/bw-stage-timing-363): per-batch stage timing for one partition's queued apply.
+	const stageTimings = new Map<number, BatchStageTiming>();
+	const lastSettledAt = new Map<number, number>();
+	const timingOf = (partition: number): BatchStageTiming => {
+		const existing = stageTimings.get(partition);
+		if (existing) return existing;
+		const created = newBatchStageTiming();
+		stageTimings.set(partition, created);
+		return created;
+	};
 
 	function deferredLogsOf({
 		partition,
@@ -94,6 +132,12 @@ export function createCommandRecordHandler({
 		partition: number;
 		messages: TopicRecord["message"][];
 	}): void {
+		const timing = newBatchStageTiming();
+		stageTimings.set(partition, timing);
+		const settledAt = lastSettledAt.get(partition);
+		timing.betweenBatchesMs =
+			settledAt === undefined ? null : timing.startedAt - settledAt;
+		timing.batchSize = messages.length;
 		const bookmark = ctx.readCommandNextOffset({ partition });
 		const tracks = messages.flatMap((message) => {
 			const offset = parseKafkaOffset({ offset: message.offset });
@@ -109,6 +153,7 @@ export function createCommandRecordHandler({
 			partition,
 			claimTrackBatch({ ctx, commands: tracks }),
 		);
+		timing.beginMs = performance.now() - timing.startedAt;
 	}
 
 	async function settleBatch({
@@ -119,14 +164,29 @@ export function createCommandRecordHandler({
 		partition: number;
 	}): Promise<void> {
 		trackClaimsByPartition.delete(partition);
-		const deferred = deferredLogsByPartition.get(partition);
-		if (!deferred) return;
-		deferredLogsByPartition.delete(partition);
-		if (deferred.runtime !== ctx.findOwnedRuntime({ partition })) return;
+		const timing = timingOf(partition);
+		stageTimings.delete(partition);
+		const settleStartedAt = performance.now();
 		try {
-			await deferred.logs.settle();
-		} catch (cause) {
-			parkOrRethrow({ topic, partition, cause });
+			const deferred = deferredLogsByPartition.get(partition);
+			if (!deferred) return;
+			deferredLogsByPartition.delete(partition);
+			if (deferred.runtime !== ctx.findOwnedRuntime({ partition })) return;
+			try {
+				await deferred.logs.settle();
+			} catch (cause) {
+				parkOrRethrow({ topic, partition, cause });
+			}
+		} finally {
+			const settledAt = performance.now();
+			lastSettledAt.set(partition, settledAt);
+			logBatchStageTiming({
+				timing,
+				topic,
+				partition,
+				settleMs: settledAt - settleStartedAt,
+				settledAt,
+			});
 		}
 		const count = atomTracksOfNothing.get(partition);
 		atomTracksOfNothing.delete(partition);
@@ -160,17 +220,32 @@ export function createCommandRecordHandler({
 		const bookmark = ctx.readCommandNextOffset({ partition });
 		if (bookmark !== null && offset < bookmark) return { nextOffset: bookmark };
 		const deferredLogs = deferredLogsOf({ partition, runtime });
+		const timing = timingOf(partition);
+		const roomStartedAt = performance.now();
 		await deferredLogs.waitForRoom();
+		const processStartedAt = performance.now();
+		timing.waitForRoomMs += processStartedAt - roomStartedAt;
+		timing.records += 1;
 		const position = { topic, partition, offset: offset.toString() };
 		try {
-			const decided = await runtime.process((processor) =>
-				processor.execute({
+			let decideStartedAt = processStartedAt;
+			const decided = await runtime.process((processor) => {
+				decideStartedAt = performance.now();
+				return processor.execute({
 					source: { commandOffset: position.offset },
 					run: (processor) => decideRecord({ processor, message, position }),
 					deferredLogs,
-				}),
-			);
-			if (decided) deferredLogs.add(settleCommit({ ...decided, partition }));
+				});
+			});
+			const decidedAt = performance.now();
+			timing.hopMs += decideStartedAt - processStartedAt;
+			timing.decideMs += decidedAt - decideStartedAt;
+			if (decided)
+				deferredLogs.add(
+					settleCommit({ ...decided, partition }).finally(() =>
+						timing.commitMs.push(performance.now() - decidedAt),
+					),
+				);
 		} catch (cause) {
 			parkOrRethrow({ topic, partition, offset, cause });
 		}
@@ -327,6 +402,49 @@ export function createCommandRecordHandler({
 		);
 		ctx.markUnavailable({ partition, cause });
 		return undefined;
+	}
+
+	function logBatchStageTiming({
+		timing,
+		topic,
+		partition,
+		settleMs,
+		settledAt,
+	}: {
+		timing: BatchStageTiming;
+		topic: string;
+		partition: number;
+		settleMs: number;
+		settledAt: number;
+	}): void {
+		if (timing.records === 0) return;
+		const commits = [...timing.commitMs].sort((a, b) => a - b);
+		const at = (p: number) =>
+			round(
+				commits[Math.min(commits.length - 1, Math.floor(commits.length * p))] ??
+					0,
+			);
+		getBalanceWorkerLogger().info("Queued batch stage timing", {
+			event: "balance_worker.queued_batch_timing",
+			topic,
+			partition,
+			batchSize: timing.batchSize,
+			records: timing.records,
+			wallMs: round(settledAt - timing.startedAt),
+			betweenBatchesMs:
+				timing.betweenBatchesMs === null
+					? null
+					: round(timing.betweenBatchesMs),
+			beginMs: round(timing.beginMs),
+			waitForRoomMs: round(timing.waitForRoomMs),
+			hopMs: round(timing.hopMs),
+			decideMs: round(timing.decideMs),
+			settleMs: round(settleMs),
+			commits: commits.length,
+			commitMsP50: at(0.5),
+			commitMsP99: at(0.99),
+			commitMsMax: round(commits.at(-1) ?? 0),
+		});
 	}
 
 	return { readResumeOffset, beginBatch, applyRecord, settleBatch };
