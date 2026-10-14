@@ -13,7 +13,15 @@
 		"bench:deduct": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/deductBench.ts",
 		"bench:replicas": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/replicaBench.ts",
 		"bench:hot": "NODE_ENV=production bun --config=./bunfig.toml tests/bench/hotCustomerBench.ts",
-		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts"
+		"bench:feedback-autumn": "bun tests/bench/feedbackAutumn.ts",
+		"rig:replica": "bun tests/bench/rig/rigReplica.ts",
+		"rig:driver": "bun tests/bench/rig/rigDriver.ts",
+		"rig:autumn": "bun tests/bench/rig/rigAutumn.ts",
+		"rig:load": "bun tests/bench/rig/rigLoad.ts",
+		"rig:report": "bun tests/bench/rig/rigReport.ts",
+		"rig:roll": "bun tests/bench/rig/rigRoll.ts",
+		"rig:rollload": "bun tests/bench/rig/rigRollLoad.ts",
+		"rig:rollreport": "bun tests/bench/rig/rigRollReport.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",
