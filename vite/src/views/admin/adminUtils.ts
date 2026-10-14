@@ -12,6 +12,7 @@ import type {
 } from "@autumn/shared";
 import { type AxiosInstance, isAxiosError } from "axios";
 import { toast } from "sonner";
+import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg, setLastSwitchedOrgId } from "@/lib/orgSync";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
@@ -121,6 +122,8 @@ export const enterOrgAsAdmin = async ({
 	await axiosInstance.post(`/admin/orgs/${organizationId}/enter`);
 	// DashboardGate and useOrg would otherwise switch back to the remembered org
 	setLastSwitchedOrgId(organizationId);
+	// A sandbox of the previous org would be rejected for the new one
+	setActiveSandbox(null);
 };
 
 export const getCusEntHoverTexts = ({

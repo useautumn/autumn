@@ -43,8 +43,9 @@ import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { enterOrgAsAdmin, impersonateUser } from "@/views/admin/adminUtils";
+import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useEnterOrgAsAdmin } from "@/views/admin/hooks/useEnterOrgAsAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
@@ -114,6 +115,7 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
+	const enterOrg = useEnterOrgAsAdmin();
 	const {
 		isAdmin,
 		isCurrentlyImpersonating,
@@ -932,11 +934,7 @@ const CommandBar = () => {
 																	isCurrentlyImpersonating,
 																});
 															} else {
-																await enterOrgAsAdmin({
-																	axiosInstance,
-																	organizationId: org.id,
-																	isCurrentlyImpersonating,
-																});
+																await enterOrg(org.id);
 																window.location.reload();
 															}
 															closeDialog();
