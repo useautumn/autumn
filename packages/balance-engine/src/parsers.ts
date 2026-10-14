@@ -3,6 +3,10 @@ import {
 	applyBillingPlanRequestSchema,
 } from "./commands/applyBillingPlan/types/applyBillingPlanRequest.js";
 import {
+	type AtomFinalizeCommand,
+	atomFinalizeCommandSchema,
+} from "./commands/atomFinalize/types/atomFinalizeCommand.js";
+import {
 	type CheckCommand,
 	checkCommandSchema,
 } from "./commands/check/types/checkCommand.js";
@@ -55,10 +59,6 @@ import {
 	type CatalogRow,
 	catalogRowSchema,
 } from "./models/catalog/catalogRow.js";
-import {
-	type AtomFinalizeCommand,
-	atomFinalizeCommandSchema,
-} from "./models/command/atomFinalizeCommand.js";
 import {
 	type MeteringIdentity,
 	meteringIdentitySchema,

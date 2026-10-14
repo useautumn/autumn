@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import type { AtomFinalizeCommand, TrackCommand } from "@autumn/balance-engine";
 import {
+	ATOM_SUBJECT_READ_PATH,
 	ATOM_TOKEN_HASH_HEADER,
 	ATOM_TRACKS_APPEND_PATH,
 	AtomTracksAppendErrorCode,
@@ -47,14 +48,19 @@ const release = ({ featureId = "messages" }: { featureId?: string } = {}) => ({
 });
 
 let queued: (TrackCommand | AtomFinalizeCommand)[][];
+let orgLookups: number;
 const spies: { mockRestore(): void }[] = [];
 beforeEach(() => {
 	queued = [];
+	orgLookups = 0;
 	spies.push(
-		spyOn(orgCache, "getOrgWithFeaturesCached").mockResolvedValue({
-			org: { id: "org_1", slug: "org-1", config: OrgConfigSchema.parse({}) },
-			features: [{ id: "messages", internal_id: "feat_messages" }],
-		} as never),
+		spyOn(orgCache, "getOrgWithFeaturesCached").mockImplementation(async () => {
+			orgLookups++;
+			return {
+				org: { id: "org_1", slug: "org-1", config: OrgConfigSchema.parse({}) },
+				features: [{ id: "messages", internal_id: "feat_messages" }],
+			} as never;
+		}),
 		spyOn(cacheDeploymentRepo, "findByTokenHash").mockImplementation(
 			async ({ tokenHash }) => (tokenHash === TOKEN_HASH ? atom : null),
 		),
@@ -83,11 +89,13 @@ app.route("/atom", atomRouter);
 const append = ({
 	tokenHash = TOKEN_HASH,
 	body,
+	path = ATOM_TRACKS_APPEND_PATH,
 }: {
 	tokenHash?: string | null;
 	body: unknown;
+	path?: string;
 }) =>
-	app.request(ATOM_TRACKS_APPEND_PATH, {
+	app.request(path, {
 		method: "POST",
 		headers: {
 			"content-type": "application/json",
@@ -253,5 +261,21 @@ test("no hash or an unknown one is 401 atom_unknown, and nothing is queued", asy
 			code: AtomTracksAppendErrorCode.AtomUnknown,
 		});
 	}
+	expect(queued).toEqual([]);
+});
+
+test("an Atom whose org is gone is 401 atom_unknown on every Atom route, before its body is read, from one org lookup", async () => {
+	spyOn(orgCache, "getOrgWithFeaturesCached").mockImplementation(async () => {
+		orgLookups++;
+		return null;
+	});
+	for (const path of [ATOM_TRACKS_APPEND_PATH, ATOM_SUBJECT_READ_PATH]) {
+		const reply = await append({ path, body: { unreadable: true } });
+		expect(reply.status).toBe(401);
+		expect(await reply.json()).toMatchObject({
+			code: AtomTracksAppendErrorCode.AtomUnknown,
+		});
+	}
+	expect(orgLookups).toBe(2);
 	expect(queued).toEqual([]);
 });

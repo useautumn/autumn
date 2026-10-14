@@ -1,16 +1,16 @@
 import { z } from "zod/v4";
-import { propertiesSchema } from "../common/json.js";
+import { atomSourceSchema } from "../../../models/command/atomSource.js";
+import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
+import { commandOrgSchema } from "../../../models/command/commandOrg.js";
+import { propertiesSchema } from "../../../models/common/json.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
-} from "../common/primitives.js";
-import { atomSourceSchema } from "./atomSource.js";
-import { mutatingCommandSchema } from "./baseCommand.js";
-import { commandOrgSchema } from "./commandOrg.js";
+} from "../../../models/common/primitives.js";
 
 /**
- * An Atom settles a lock it took, naming it as the API does: the identity's customer and entity, the lock id and
- * its feature. Never decided as itself: the worker settles Autumn's own row with a finalize, then lands the seq.
+ * An Atom settles a lock it took, naming it as the API does: the identity's customer and entity, the lock id and its feature.
+ * Not a MutatingCommand: it is logged as the finalize or the track of nothing it decides into, so every log reader is unchanged.
  */
 export const atomFinalizeCommandSchema = mutatingCommandSchema
 	.extend({
