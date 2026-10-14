@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
-import type {
-	SetPlansPreviewPhase,
-	SetPlansPreviewPlan,
-	SetPlansPreviewResponse,
+import {
+	type SetPlansPreviewPhase,
+	type SetPlansPreviewPlan,
+	type SetPlansPreviewResponse,
+	SetPlansPreviewReviewSchema,
 } from "@autumn/shared";
 import { setPlansPreviewToReview } from "@/internal/billing/v2/actions/setPlans/preview/reviewSections/setPlansPreviewToReview";
+import { randomSetPlansPreviews } from "./randomSetPlansPreviews";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 14);
@@ -63,4 +65,22 @@ test("a phase repeating the one before it lists the plans it keeps", () => {
 		[["Enterprise", "updated"]],
 		[["Enterprise", "kept"]],
 	]);
+});
+
+test("any preview produces a review that matches its schema", () => {
+	const invalid = randomSetPlansPreviews({ count: 2000, seed: 7 }).filter(
+		({ preview, features, nowMs, endsAt }) =>
+			!SetPlansPreviewReviewSchema.safeParse(
+				setPlansPreviewToReview({
+					preview: preview as unknown as Omit<
+						SetPlansPreviewResponse,
+						"review"
+					>,
+					features: features as never,
+					nowMs,
+					endsAt,
+				}),
+			).success,
+	);
+	expect(invalid).toEqual([]);
 });
