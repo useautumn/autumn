@@ -23,8 +23,7 @@ import {
 } from "../utils/replicaSet/useReplicaSet.js";
 import { startTraffic } from "../utils/startTraffic.js";
 
-// On this subnet the ring gives atom-replica-boot3 to replica 0, so a check replica 1 takes while it boots hops to its owner.
-const replicaSet = useReplicaSet({ size: 2, subnet: 1 });
+const replicaSet = useReplicaSet({ size: 2 });
 /** A replica boots in well under a second here, so a few tries make sure some checks land in that window. */
 const BOOT_ATTEMPTS = 5;
 
@@ -110,16 +109,18 @@ test.skipIf(!replicaSetRunsHere)(
 				sendEvent: true,
 			});
 
-		replicaSet().routeTo(1);
+		// A replica hands a check to a ready peer as starting only for a customer it owns; any other goes to its owner.
+		const booting = await replicaSet().ownerIndexOf({ customerId });
+		replicaSet().routeTo(booting);
 		const answers: Awaited<ReturnType<typeof sendEventCheck>>[] = [];
 		for (let attempt = 0; attempt < BOOT_ATTEMPTS; attempt++) {
-			await replicaSet().stop(1);
+			await replicaSet().stop(booting);
 			const traffic = startTraffic({
 				send: sendEventCheck,
 				everyMs: 10,
 				lanes: 4,
 			});
-			await replicaSet().start(1);
+			await replicaSet().start(booting);
 			answers.push(...(await traffic.stop()));
 			if (answers.some(({ proxied }) => proxied === "starting")) break;
 		}
