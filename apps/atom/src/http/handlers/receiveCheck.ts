@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { RIG_ID_HEADER } from "../../bench/rigTrace.js";
 import { checkCallToRequest } from "../../lib/contracts/checkContract.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
@@ -33,6 +34,8 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 		idempotencyKey: context.req.header(IDEMPOTENCY_KEY_HEADER),
 		...arrivalOf(context),
 	});
+	const rigId = context.req.header(RIG_ID_HEADER);
+	if (rigId) request.rigId = rigId;
 	context.set("idempotencyKey", request.idempotencyKey);
 	const processor = context
 		.get("slots")

@@ -10,6 +10,8 @@ import type {
 export type CheckRequest = {
 	requestId: string;
 	occurredAt: number;
+	/** BENCH-ONLY: the rig's id for this request, so each thread's trace lines join. */
+	rigId?: string;
 	/** The caller's Idempotency-Key, read as the API reads it; null when it sent none. */
 	idempotencyKey: string | null;
 	params: CheckParams;

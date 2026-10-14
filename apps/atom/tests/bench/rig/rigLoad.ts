@@ -2,6 +2,8 @@
  * One of the driver's load processes: its slice of the background customers at their weights, and its share of the hot
  * customer, sent to a random replica each. Prints one JSON line per finished step. Spawned by rig:driver.
  */
+import { appendFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { LATEST_VERSION } from "@autumn/shared";
 import { rigConfig } from "./rigConfig.js";
 import {
@@ -21,6 +23,19 @@ type LoadPlan = {
 };
 
 const plan: LoadPlan = await Bun.file(process.argv[2] as string).json();
+/** The hot customer's requests, one line each: the client's send and receive, to join with the replicas' trace lines. */
+const hotTracePath = join(
+	dirname(process.argv[2] as string),
+	`hot-trace-${process.pid}.jsonl`,
+);
+let hotTrace: string[] = [];
+let rigSeq = 0;
+const flushHotTrace = () => {
+	if (hotTrace.length === 0) return;
+	appendFileSync(hotTracePath, `${hotTrace.join("\n")}\n`);
+	hotTrace = [];
+};
+setInterval(flushHotTrace, 1_000).unref();
 const config = rigConfig;
 const timeline = timelineOf({ config });
 const cumulative: number[] = [];
@@ -83,18 +98,35 @@ const send = async ({
 				...(deducts && { send_event: true }),
 			};
 	const sentAt = performance.now();
+	const rig = hot && step >= 0 ? `${process.pid}-${rigSeq++}` : null;
+	const sentWall = Date.now();
+	const traced = (status: number | null, timedOut: boolean) => {
+		if (rig)
+			hotTrace.push(
+				JSON.stringify({
+					rig,
+					step,
+					deducts,
+					sent: sentWall,
+					recv: Date.now(),
+					status,
+					timedOut,
+				}),
+			);
+	};
 	try {
 		const reply = await fetch(
 			`${url}/v1/${asTrack ? "track" : "balances.check"}`,
 			{
 				method: "POST",
-				headers,
+				headers: rig ? { ...headers, "x-rig-id": rig } : headers,
 				body: JSON.stringify(body),
 				keepalive: config.keepAlive,
 				signal: AbortSignal.timeout(config.requestTimeoutMs),
 			},
 		);
 		await reply.arrayBuffer();
+		traced(reply.status, false);
 		if (!into) return;
 		into.histogram[bucketOf(performance.now() - sentAt)]++;
 		const forwarded = reply.headers.get("x-atom-forwarded");
@@ -108,6 +140,7 @@ const send = async ({
 		} else if (reply.status === 503) into.shed++;
 		else into.failed++;
 	} catch (error) {
+		traced(null, error instanceof Error && error.name === "TimeoutError");
 		if (!into) return;
 		into.failed++;
 		if (error instanceof Error && error.name === "TimeoutError")
@@ -176,5 +209,6 @@ while (true) {
 }
 await Bun.sleep(config.requestTimeoutMs + 500);
 flush(lastStep);
+flushHotTrace();
 console.log(JSON.stringify({ type: "done" }));
 process.exit(0);

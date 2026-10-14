@@ -1,5 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
+import { RIG_ID_HEADER, rigTrace } from "../../../bench/rigTrace.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -42,6 +43,16 @@ export function requestLogMiddleware({
 		}
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
 		const statusCode = context.res.status;
+		const rigId = context.req.header(RIG_ID_HEADER);
+		if (rigId)
+			rigTrace({
+				k: "h",
+				rig: rigId,
+				relayed: context.get("relayed") === true,
+				status: statusCode,
+				t0: startedAt,
+				t1: Date.now(),
+			});
 		const forwarded = forwardedReason({ context });
 		countRequest({
 			counters: ctx.counters,

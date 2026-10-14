@@ -1,4 +1,5 @@
 import type { Auth } from "../../auth/types/auth.js";
+import { rigTrace } from "../../bench/rigTrace.js";
 import {
 	isThreadReady,
 	type ThreadHealthSource,
@@ -92,8 +93,13 @@ export const answerOwnerCalls = ({
 	): Promise<void> {
 		const call: OwnerCall =
 			typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+		const dequeuedAt = Date.now();
+		const rigId =
+			(call.type === "check" || call.type === "track") && call.request.rigId;
 		try {
 			const value = await runOwnerCall({ ctx, call });
+			if (rigId)
+				rigTrace({ k: "o", rig: rigId, t0: dequeuedAt, t1: Date.now() });
 			port.postMessage({ id: call.id, ok: true, value });
 		} catch (error) {
 			port.postMessage(errorToReply({ id: call.id, error }));

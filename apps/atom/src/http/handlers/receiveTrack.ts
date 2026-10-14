@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { RIG_ID_HEADER } from "../../bench/rigTrace.js";
 import { trackCallToRequest } from "../../lib/contracts/trackContract.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 import { API_VERSION_HEADER, arrivalOf } from "./receiveCheck.js";
@@ -10,6 +11,8 @@ export async function receiveTrack(context: Context<AtomHttpEnv>) {
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		...arrivalOf(context),
 	});
+	const rigId = context.req.header(RIG_ID_HEADER);
+	if (rigId) request.rigId = rigId;
 	context.set("idempotencyKey", request.idempotencyKey);
 	const answer = await context
 		.get("slots")
