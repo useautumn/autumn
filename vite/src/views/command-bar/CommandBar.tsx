@@ -14,10 +14,12 @@ import {
 	ArrowsClockwiseIcon,
 	AtIcon,
 	CursorClickIcon,
+	DownloadSimpleIcon,
 	FingerprintIcon,
 	GearIcon,
 	ShieldIcon,
 	StarIcon,
+	UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
@@ -42,9 +44,10 @@ import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonation
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useEnterOrgAsAdmin } from "@/views/admin/hooks/useEnterOrgAsAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
@@ -58,6 +61,8 @@ import {
 	useSelectSandbox,
 } from "@/views/main-sidebar/EnvDropdown";
 import { EnvironmentIcon } from "@/views/main-sidebar/env-dropdown/EnvironmentIcon";
+import { ExportCatalogDialog } from "@/views/products/catalog-transfer/components/ExportCatalogDialog";
+import { ImportCatalogDialog } from "@/views/products/catalog-transfer/components/ImportCatalogDialog";
 
 type User = {
 	id: string;
@@ -114,6 +119,7 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
+	const enterOrg = useEnterOrgAsAdmin();
 	const {
 		isAdmin,
 		isCurrentlyImpersonating,
@@ -122,6 +128,9 @@ const CommandBar = () => {
 	} = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
+	const [catalogDialog, setCatalogDialog] = useState<
+		"export" | "import" | null
+	>(null);
 
 	const cycleTheme = useCallback(() => {
 		const themeOrder = ["light", "dark", "system"] as const;
@@ -627,6 +636,24 @@ const CommandBar = () => {
 						closeDialog();
 					},
 				},
+				{
+					title: "Export catalog",
+					subtext: "Copy this org's catalog as JSON",
+					icon: <UploadSimpleIcon />,
+					onSelect: () => {
+						setCatalogDialog("export");
+						closeDialog();
+					},
+				},
+				{
+					title: "Import catalog",
+					subtext: "Paste, preview, apply",
+					icon: <DownloadSimpleIcon />,
+					onSelect: () => {
+						setCatalogDialog("import");
+						closeDialog();
+					},
+				},
 			]
 		: [];
 
@@ -900,7 +927,8 @@ const CommandBar = () => {
 											const firstNonAdminUser = org.users?.find(
 												(user) => user.role !== "admin",
 											);
-											if (!firstNonAdminUser) return null;
+											const hasNoMembers = (org.users?.length ?? 0) === 0;
+											if (!firstNonAdminUser && !hasNoMembers) return null;
 
 											return (
 												<CommandRow
@@ -917,19 +945,34 @@ const CommandBar = () => {
 														)
 													}
 													title={org.name}
-													subtext={org.slug}
+													subtext={
+														hasNoMembers
+															? `${org.slug} · no members, enter as admin`
+															: org.slug
+													}
 													onSelect={async () => {
 														try {
-															await impersonateUser({
-																userId: firstNonAdminUser.id,
-																organizationId: org.id,
-																isCurrentlyImpersonating,
-															});
+															if (firstNonAdminUser) {
+																await impersonateUser({
+																	userId: firstNonAdminUser.id,
+																	organizationId: org.id,
+																	isCurrentlyImpersonating,
+																});
+															} else {
+																await enterOrg(org.id);
+																window.location.reload();
+															}
 															closeDialog();
 														} catch (error) {
 															console.error(
-																"Failed to impersonate user:",
+																"Failed to open organization:",
 																error,
+															);
+															toast.error(
+																getBackendErr(
+																	error,
+																	"Failed to open organization",
+																),
 															);
 														}
 													}}
@@ -1113,29 +1156,43 @@ const CommandBar = () => {
 	);
 
 	return (
-		<CommandDialog open={open} onOpenChange={handleOpenChange} size="compact">
-			<CommandInput
-				placeholder={PAGE_PLACEHOLDERS[currentPage]}
-				value={search}
-				onValueChange={setSearch}
-				onKeyDown={handleInputKeyDown}
-			/>
-			<CommandList>
-				{/* Use last rendered content during transition to prevent flash */}
-				{isTransitioningRef.current && lastRenderedContentRef.current
-					? lastRenderedContentRef.current
-					: currentContent}
-			</CommandList>
-			<CommandFooter>
-				<CommandHint>
-					Navigate <CommandKbd>↑</CommandKbd>
-					<CommandKbd>↓</CommandKbd>
-				</CommandHint>
-				<CommandHint>
-					Open <CommandKbd>↵</CommandKbd>
-				</CommandHint>
-			</CommandFooter>
-		</CommandDialog>
+		<>
+			<CommandDialog open={open} onOpenChange={handleOpenChange} size="compact">
+				<CommandInput
+					placeholder={PAGE_PLACEHOLDERS[currentPage]}
+					value={search}
+					onValueChange={setSearch}
+					onKeyDown={handleInputKeyDown}
+				/>
+				<CommandList>
+					{/* Use last rendered content during transition to prevent flash */}
+					{isTransitioningRef.current && lastRenderedContentRef.current
+						? lastRenderedContentRef.current
+						: currentContent}
+				</CommandList>
+				<CommandFooter>
+					<CommandHint>
+						Navigate <CommandKbd>↑</CommandKbd>
+						<CommandKbd>↓</CommandKbd>
+					</CommandHint>
+					<CommandHint>
+						Open <CommandKbd>↵</CommandKbd>
+					</CommandHint>
+				</CommandFooter>
+			</CommandDialog>
+			{isAdmin && (
+				<>
+					<ExportCatalogDialog
+						open={catalogDialog === "export"}
+						onOpenChange={(next) => !next && setCatalogDialog(null)}
+					/>
+					<ImportCatalogDialog
+						open={catalogDialog === "import"}
+						onOpenChange={(next) => !next && setCatalogDialog(null)}
+					/>
+				</>
+			)}
+		</>
 	);
 };
 

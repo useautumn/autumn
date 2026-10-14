@@ -108,10 +108,6 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	if (!paramDiscounts?.length) {
 		return existingDiscounts;
-		// return filterDeletedCouponDiscounts({
-		// 	stripeCli,
-		// 	discounts: existingDiscounts,
-		// });
 	}
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({

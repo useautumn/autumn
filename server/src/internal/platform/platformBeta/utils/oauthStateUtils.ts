@@ -144,7 +144,6 @@ export const consumeOAuthState = async ({
 		return null;
 	}
 
-	// Delete the key
 	await deleteOAuthStateData({ stateKey });
 
 	return stateData;

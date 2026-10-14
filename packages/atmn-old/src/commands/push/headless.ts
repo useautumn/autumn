@@ -750,7 +750,6 @@ async function _headlessPushImpl(
 
 	const envLabel = environment === AppEnv.Live ? "production" : "sandbox";
 
-	// Load config
 	console.log(chalk.dim(`Loading autumn.config.ts...`));
 	const config = await loadLocalConfig(cwd);
 	console.log(

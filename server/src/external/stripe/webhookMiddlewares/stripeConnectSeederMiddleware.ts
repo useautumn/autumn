@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	AuthType,
 	ErrCode,
 	type Feature,
@@ -52,9 +52,6 @@ export const stripeConnectSeederMiddleware = async (
 
 	let event: Stripe.Event;
 	if (skipVerify) {
-		// logger.warn(
-		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
-		// );
 		try {
 			event = JSON.parse(rawBody) as Stripe.Event;
 		} catch (err: unknown) {
@@ -82,7 +79,27 @@ export const stripeConnectSeederMiddleware = async (
 			return c.json({ error: message }, 400);
 		}
 	}
-	// const event = (await c.req.json()) as Stripe.Event;
+
+	// Live Connect endpoints also receive connected accounts' test events; those belong to the sandbox endpoint.
+	if (
+		typeof event.livemode === "boolean" &&
+		event.livemode !== (env === AppEnv.Live)
+	) {
+		logger.warn(`Skipping Stripe webhook ${event.id}: livemode mismatch`, {
+			data: {
+				eventId: event.id,
+				eventType: event.type,
+				accountId: event.account,
+				env,
+			},
+		});
+		return c.json(
+			{
+				message: `Skipping livemode=${event.livemode} event on ${env} endpoint`,
+			},
+			200,
+		);
+	}
 
 	// Step 4: Get org from account ID
 	const accountId = event.account;

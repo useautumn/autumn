@@ -8,6 +8,7 @@ import {
 	punctuationText,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
+import { isCustomLineItem } from "@/internal/billing/v2/utils/lineItems/isCustomLineItem";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import { warningText } from "./warningText";
 
@@ -15,6 +16,7 @@ const chargesOngoingPlanNow = (lineItems: LineItem[]) =>
 	lineItems.some(
 		(lineItem) =>
 			lineItem.chargeImmediately &&
+			!isCustomLineItem(lineItem) &&
 			!isOneOffPrice(lineItem.context.price) &&
 			lineItem.amountAfterDiscounts > 0,
 	);

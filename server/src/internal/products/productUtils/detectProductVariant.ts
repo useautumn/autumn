@@ -42,7 +42,6 @@ export const detectBaseVariant = async ({
 		env: curProduct.env,
 	})) as FullProduct[];
 
-	// if (product.base_variant_id == baseVariantId) {
 	const curPrices = curProduct.prices;
 	const intervals = curPrices.map((price) => price.config.interval);
 

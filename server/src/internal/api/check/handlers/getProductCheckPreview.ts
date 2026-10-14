@@ -106,8 +106,6 @@ const attachToCheckPreview = async ({
 	}
 
 	const checkPreview: CheckProductPreview = {
-		// title: "Check",
-		// message: "Check",
 		scenario,
 
 		// Meta
@@ -145,7 +143,6 @@ export const getProductCheckPreview = async ({
 }) => {
 	const { org, features, db } = ctx;
 
-	// Build attach params
 	const attachParams = await checkToAttachParams({
 		ctx,
 		customer,

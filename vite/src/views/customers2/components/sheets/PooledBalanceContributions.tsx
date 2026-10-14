@@ -1,6 +1,9 @@
 import {
 	type ApiPooledBalanceContributionV0,
 	type DbPooledBalance,
+	type Feature,
+	FeatureCombine,
+	featureToCombine,
 	numberWithCommas,
 } from "@autumn/shared";
 import {
@@ -20,24 +23,31 @@ import {
 	usePooledBalanceContributionsQuery,
 } from "@/hooks/queries/usePooledBalanceContributionsQuery";
 import { useDebounce } from "@/hooks/useDebounce";
+import { cn } from "@/lib/utils";
 import { useGoToEntity } from "../../customer/hooks/useGoToEntity";
 
 /** The plans feeding a pooled balance, labelled by source (entity or customer) and plan. */
 export function PooledBalanceContributions({
 	pooledBalance,
+	feature,
 }: {
 	pooledBalance: DbPooledBalance | undefined;
+	feature: Pick<Feature, "config">;
 }) {
 	const [page, setPage] = useState(0);
 	const [search, setSearch] = useState("");
 	const goToEntity = useGoToEntity();
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
-	const { contributions, totalCount, totalFilteredCount } =
-		usePooledBalanceContributionsQuery({
-			pooledBalanceId: pooledBalance?.id,
-			page,
-			search: debouncedSearch,
-		});
+	const {
+		contributions,
+		totalCount,
+		totalFilteredCount,
+		winningContributionId,
+	} = usePooledBalanceContributionsQuery({
+		pooledBalanceId: pooledBalance?.id,
+		page,
+		search: debouncedSearch,
+	});
 
 	if (!pooledBalance || totalCount === 0) return null;
 
@@ -51,6 +61,19 @@ export function PooledBalanceContributions({
 	const planLabel = (contribution: ApiPooledBalanceContributionV0) =>
 		contribution.plan_name ?? contribution.plan_id;
 
+	const combine = featureToCombine({ feature });
+
+	const amountLabel = (contribution: ApiPooledBalanceContributionV0) => {
+		if (contribution.competes) {
+			return contribution.unlimited
+				? "Unlimited"
+				: numberWithCommas(contribution.current_contribution);
+		}
+		return pooledBalance.unlimited
+			? "Unlimited"
+			: `+${numberWithCommas(contribution.current_contribution)}`;
+	};
+
 	return (
 		<>
 			<div className="px-4">
@@ -59,7 +82,7 @@ export function PooledBalanceContributions({
 			<SheetSection withSeparator={false}>
 				<h3 className="text-sub mb-3">Pooling</h3>
 				<div className="flex flex-col gap-4">
-					<PoolingCriteria pooledBalance={pooledBalance} />
+					<PoolingCriteria pooledBalance={pooledBalance} combine={combine} />
 
 					<div className="flex flex-col gap-1.5">
 						<Subheading>Contributions</Subheading>
@@ -86,26 +109,29 @@ export function PooledBalanceContributions({
 								No contributions match your search
 							</p>
 						) : (
-							<div className="flex flex-col">
+							<div className="flex flex-col gap-1.5">
 								{contributions.map((contribution) => {
 									const entityId = contribution.entity_id;
+									const outcompeted =
+										contribution.competes &&
+										contribution.id !== winningContributionId;
 									return (
 										<div
 											key={contribution.id}
-											className="flex items-center justify-between h-9 gap-2 text-sm"
+											className="flex items-center justify-between gap-2 text-sm"
 										>
 											{entityId ? (
 												<Button
 													variant="skeleton"
 													onClick={() => goToEntity(entityId)}
-													className="font-medium hover:text-purple-600 cursor-pointer min-w-0 px-0! hover:bg-transparent active:bg-transparent active:border-none"
+													className="h-auto text-tertiary-foreground font-normal hover:text-purple-600 cursor-pointer min-w-0 px-0! hover:bg-transparent active:bg-transparent active:border-none"
 												>
 													<span className="truncate">
 														{sourceLabel(contribution)}
 													</span>
 												</Button>
 											) : (
-												<span className="font-medium truncate">
+												<span className="text-tertiary-foreground truncate">
 													{sourceLabel(contribution)}
 												</span>
 											)}
@@ -113,10 +139,15 @@ export function PooledBalanceContributions({
 												<span className="text-tertiary-foreground truncate max-w-[140px]">
 													{planLabel(contribution)}
 												</span>
-												<span className="text-foreground font-medium tabular-nums">
-													{pooledBalance.unlimited
-														? "Unlimited"
-														: `+${numberWithCommas(contribution.current_contribution)}`}
+												<span
+													className={cn(
+														"tabular-nums",
+														outcompeted
+															? "text-tertiary-foreground line-through"
+															: "text-foreground",
+													)}
+												>
+													{amountLabel(contribution)}
 												</span>
 											</div>
 										</div>
@@ -144,7 +175,7 @@ export function PooledBalanceContributions({
 
 function Subheading({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex items-center gap-1.5 text-tertiary-foreground text-sm font-medium">
+		<div className="flex items-center gap-1.5 text-foreground text-sm font-medium">
 			{children}
 		</div>
 	);
@@ -154,8 +185,10 @@ function Subheading({ children }: { children: ReactNode }) {
  * so surface this pool's actual values as the match criteria. */
 function PoolingCriteria({
 	pooledBalance,
+	combine,
 }: {
 	pooledBalance: DbPooledBalance;
+	combine: FeatureCombine;
 }) {
 	const criteria: { label: string; value: string }[] = [
 		{ label: "Reset", value: resetLabel(pooledBalance) },
@@ -165,6 +198,13 @@ function PoolingCriteria({
 		criteria.push({
 			label: "Rollover",
 			value: rolloverSignatureToLabel(pooledBalance.rollover_signature),
+		});
+	}
+
+	if (combine !== FeatureCombine.Sum) {
+		criteria.push({
+			label: "Combine",
+			value: combine === FeatureCombine.Min ? "Min" : "Max",
 		});
 	}
 
@@ -188,7 +228,7 @@ function PoolingCriteria({
 					className="flex items-center justify-between text-sm gap-2"
 				>
 					<span className="text-tertiary-foreground">{row.label}</span>
-					<span className="text-foreground font-medium text-right truncate">
+					<span className="text-foreground text-right truncate">
 						{row.value}
 					</span>
 				</div>

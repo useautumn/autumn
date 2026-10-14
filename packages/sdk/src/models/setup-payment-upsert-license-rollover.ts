@@ -81,7 +81,7 @@ export type SetupPaymentFreeTrialParams = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const SetupPaymentPriceInterval = {
+export const SetupPaymentPriceCustomizeInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -92,8 +92,8 @@ export const SetupPaymentPriceInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type SetupPaymentPriceInterval = ClosedEnum<
-  typeof SetupPaymentPriceInterval
+export type SetupPaymentPriceCustomizeInterval = ClosedEnum<
+  typeof SetupPaymentPriceCustomizeInterval
 >;
 
 export type SetupPaymentAdditionalCurrency = {
@@ -118,7 +118,7 @@ export type SetupPaymentBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: SetupPaymentPriceInterval;
+  interval: SetupPaymentPriceCustomizeInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -208,10 +208,16 @@ export type SetupPaymentItemPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const SetupPaymentItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type SetupPaymentItemTierBehavior = ClosedEnum<
   typeof SetupPaymentItemTierBehavior
 >;
@@ -264,6 +270,9 @@ export type SetupPaymentItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<SetupPaymentItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: SetupPaymentItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -798,10 +807,16 @@ export type SetupPaymentAddItemPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const SetupPaymentAddItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type SetupPaymentAddItemTierBehavior = ClosedEnum<
   typeof SetupPaymentAddItemTierBehavior
 >;
@@ -856,6 +871,9 @@ export type SetupPaymentAddItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<SetupPaymentAddItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: SetupPaymentAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1848,10 +1866,16 @@ export type SetupPaymentUpsertLicensePriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const SetupPaymentUpsertLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type SetupPaymentUpsertLicenseTierBehavior = ClosedEnum<
   typeof SetupPaymentUpsertLicenseTierBehavior
 >;
@@ -1906,6 +1930,9 @@ export type SetupPaymentUpsertLicensePrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<SetupPaymentUpsertLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: SetupPaymentUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -2096,9 +2123,9 @@ export function setupPaymentFreeTrialParamsToJSON(
 }
 
 /** @internal */
-export const SetupPaymentPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentPriceInterval
-> = z.enum(SetupPaymentPriceInterval);
+export const SetupPaymentPriceCustomizeInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentPriceCustomizeInterval
+> = z.enum(SetupPaymentPriceCustomizeInterval);
 
 /** @internal */
 export type SetupPaymentAdditionalCurrency$Outbound = {
@@ -2142,7 +2169,7 @@ export const SetupPaymentBasePrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: SetupPaymentPriceInterval$outboundSchema,
+    interval: SetupPaymentPriceCustomizeInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => SetupPaymentAdditionalCurrency$outboundSchema)),

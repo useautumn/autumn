@@ -14,6 +14,7 @@ type ContributionsPage =
 	PagePaginatedResponse<ApiPooledBalanceContributionV0> & {
 		total_count: number;
 		total_filtered_count: number;
+		winning_contribution_id: string | null;
 	};
 
 /** One page of a pool's contributions, labelled by source entity and plan.
@@ -59,6 +60,7 @@ export const usePooledBalanceContributionsQuery = ({
 		contributions: data?.list ?? EMPTY_CONTRIBUTIONS,
 		totalCount: data?.total_count ?? 0,
 		totalFilteredCount: data?.total_filtered_count ?? 0,
+		winningContributionId: data?.winning_contribution_id ?? null,
 		isLoading,
 	};
 };

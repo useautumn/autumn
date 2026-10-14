@@ -1,8 +1,13 @@
 import {
 	type Customer,
+	ErrCode,
 	orgDisableStripeWrites,
 	ProcessorType,
+	RecaseError,
 } from "@autumn/shared";
+import { tryCatch } from "@shared/utils";
+import { StatusCodes } from "http-status-codes";
+import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
@@ -81,13 +86,24 @@ export const getOrCreateStripeCustomer = async ({
 
 	logger.info(`Creating new stripe customer for ${customer.id}`);
 
-	const stripeCustomer = await createStripeCustomer({
-		ctx,
-		customer,
-		options: {
-			expandTax: resolvedOptions.expandTax,
-		},
-	});
+	const { data: stripeCustomer, error } = await tryCatch(
+		createStripeCustomer({
+			ctx,
+			customer,
+			options: {
+				expandTax: resolvedOptions.expandTax,
+			},
+		}),
+	);
+
+	if (error instanceof Stripe.errors.StripeIdempotencyError) {
+		throw new RecaseError({
+			message: `Another request is already creating the Stripe customer for customer '${customer.id || customer.internal_id}'. Retry in a few seconds; the retry will return that same customer.`,
+			code: ErrCode.StripeCreateCustomerFailed,
+			statusCode: StatusCodes.CONFLICT,
+		});
+	}
+	if (error) throw error;
 
 	if (resolvedOptions.updateDb) {
 		await CusService.update({

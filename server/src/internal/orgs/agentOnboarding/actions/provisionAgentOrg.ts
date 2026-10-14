@@ -17,8 +17,6 @@ import {
 import { hashAgentClaimToken } from "../agentAuthUtils.js";
 import { createPendingAgentOrg } from "../repos/agentOrgRepo.js";
 
-const CLAIM_TTL_MS = 72 * 60 * 60 * 1000;
-
 /** Stripe requires a contact email; a keyless org has no owner until it's claimed. */
 const AGENT_ORG_CONTACT_EMAIL = "support@useautumn.com";
 
@@ -34,12 +32,10 @@ export const provisionAgentOrg = async ({
 	db,
 	name,
 	slug,
-	now = new Date(),
 }: {
 	db: DrizzleCli;
 	name: string;
 	slug: string;
-	now?: Date;
 }) => {
 	const claimToken = createClaimToken();
 	const createOrgAndKey = (orgSlug: string) =>
@@ -52,7 +48,6 @@ export const provisionAgentOrg = async ({
 					name,
 					slug: orgSlug,
 					claimTokenHash: hashAgentClaimToken({ claimToken }),
-					claimExpiresAt: new Date(now.getTime() + CLAIM_TTL_MS),
 				},
 			});
 			const apiKey = await createKey({
@@ -113,6 +108,5 @@ export const provisionAgentOrg = async ({
 		organization: provisioned,
 		apiKey,
 		claimToken,
-		claimExpiresAt: provisioned.claim_expires_at!,
 	};
 };

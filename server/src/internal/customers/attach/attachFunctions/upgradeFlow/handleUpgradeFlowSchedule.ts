@@ -120,11 +120,6 @@ export const handleUpgradeFlowSchedule = async ({
 		return;
 	}
 
-	// await logPhases({
-	//   phases: newItems.phases,
-	//   db: req.db,
-	// });
-
 	await updateCurSchedule({
 		ctx,
 		attachParams,

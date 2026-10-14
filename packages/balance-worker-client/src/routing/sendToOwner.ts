@@ -13,6 +13,7 @@ import {
 	type WorkerRequestOutcome,
 	type WorkerRequestRouting,
 } from "../types/balanceWorkerClientErrors.js";
+import { awaitClaimedRoute } from "./awaitClaimedRoute.js";
 import { resolveCommandRoute } from "./resolveCommandRoute.js";
 import type { RoutedCommand, RoutingContext } from "./types/routing.js";
 import {
@@ -55,6 +56,7 @@ export async function sendToOwner<Response>({
 		refreshes: 0,
 		followedHint: false,
 		notReadyAnswers: 0,
+		ownerlessWaits: 0,
 	};
 	try {
 		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
@@ -64,6 +66,7 @@ export async function sendToOwner<Response>({
 		// and the next stale answer waits on the same refresh again. An answer that
 		// names the successor skips the refresh: the old owner wrote that claim itself.
 		let followingHint = false;
+		let ownershipCaughtUp = false;
 		let notReadyRetries = 0;
 		let lastRefusal: unknown;
 		for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; ) {
@@ -71,14 +74,24 @@ export async function sendToOwner<Response>({
 			assertRequestDeadline({ deadline, outcome });
 			if (attempt > 0 && !followingHint) {
 				routing.refreshes += 1;
-				await refreshCommandRoute({
+				const refreshed = await refreshCommandRoute({
 					owners: ctx.owners,
 					deadline,
 					timeoutMs: ctx.routeRefreshTimeoutMs,
 				});
+				ownershipCaughtUp = refreshed === "settled";
 			}
 			followingHint = false;
-			const resolved = resolveCommandRoute({ ctx, command: snapshot });
+			const resolved =
+				resolveCommandRoute({ ctx, command: snapshot }) ??
+				(ownershipCaughtUp
+					? await awaitClaimedRoute({
+							ctx,
+							command: snapshot,
+							deadline,
+							routing,
+						})
+					: undefined);
 			if (!resolved) {
 				if (attempt === 0) {
 					attempt += 1;

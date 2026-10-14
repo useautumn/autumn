@@ -11,16 +11,16 @@ import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-import {
-	expectPlanPreviewRowCorrect,
-	parsePlanPreview,
-} from "../preview/utils/expectPlanPreview.js";
 import {
 	messagesItem,
 	seedTwoParents,
 	withCatalogPlans,
 } from "../licenses/utils/seedLicensePlans.js";
+import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../preview/utils/expectPlanPreview.js";
+import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import {
 	seedBaseWithVariant,
 	seedVariantNewVersion,
@@ -138,9 +138,7 @@ test.concurrent(
 								active: true,
 								items: [messagesItem(200)],
 								propagate: {
-									license_parents: [
-										{ plan_id: followId, version: 1 },
-									],
+									license_parents: [{ plan_id: followId, version: 1 }],
 								},
 							},
 						],

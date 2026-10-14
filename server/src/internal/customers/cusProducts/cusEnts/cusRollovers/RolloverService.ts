@@ -80,7 +80,6 @@ export class RolloverService {
 		ctx,
 		cusEntID,
 	}: {
-		// db: DrizzleCli;
 		ctx: CronContext;
 		cusEntID: string;
 	}) {

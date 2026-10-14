@@ -1,7 +1,10 @@
 import { findDuplicate } from "@utils/utils";
 import { z } from "zod/v4";
 import { BasePriceParamsSchema } from "../../api/products/components/basePrice/basePrice";
-import { CreatePlanItemParamsV1Schema } from "../../api/products/items/crud/createPlanItemParamsV1";
+import {
+	CreatePlanItemParamsV1Schema,
+	PlanItemParamsV1ResponseSchema,
+} from "../../api/products/items/crud/createPlanItemParamsV1";
 import { PlanItemFilterSchema } from "../../api/products/items/filter/planItemFilter";
 
 /** Diff-style customize applied on top of the license plan's own items —
@@ -10,6 +13,10 @@ export const LicenseCustomizeSchema = z.object({
 	price: BasePriceParamsSchema.nullable().optional(),
 	add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
 	remove_items: z.array(PlanItemFilterSchema).optional(),
+});
+
+export const LicenseCustomizeResponseSchema = LicenseCustomizeSchema.extend({
+	add_items: z.array(PlanItemParamsV1ResponseSchema).optional(),
 });
 
 export const PlanLicenseSchema = z.object({
@@ -33,6 +40,11 @@ export const CustomizePlanLicenseSchema = z.object({
 	customize: LicenseCustomizeSchema.nullish(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
+
+export const CustomizePlanLicenseResponseSchema =
+	CustomizePlanLicenseSchema.extend({
+		customize: LicenseCustomizeResponseSchema.nullish(),
+	});
 
 /** A planLicense dropped from a parent. Parallel to remove_items. */
 export const RemovePlanLicenseSchema = z.object({

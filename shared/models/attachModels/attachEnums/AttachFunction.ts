@@ -6,7 +6,6 @@ export enum AttachFunction {
 	ScheduleProduct = "schedule_product",
 	UpdatePrepaidQuantity = "update_prepaid_quantity",
 	Renew = "renew",
-	// UpdateProduct = "update_product", // update product
 
 	UpgradeSameInterval = "upgrade_same_interval",
 	UpgradeDiffInterval = "upgrade_diff_interval",

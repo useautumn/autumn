@@ -21,9 +21,7 @@ const toCappedBucket = ({
 }) => {
 	const countCapped = capped || count > FEATURE_USAGE_COUNT_CAP;
 	return {
-		count: countCapped
-			? Math.min(count, FEATURE_USAGE_COUNT_CAP)
-			: count,
+		count: countCapped ? Math.min(count, FEATURE_USAGE_COUNT_CAP) : count,
 		count_capped: countCapped,
 		samples: samples.slice(0, FEATURE_USAGE_SAMPLE_LIMIT),
 	};
@@ -40,7 +38,10 @@ const usageKey = ({
 const uniqueCandidates = (
 	candidates: { key: string; internalProductIds: string[] }[],
 ) => {
-	const byKey = new Map<string, { key: string; internalProductIds: string[] }>();
+	const byKey = new Map<
+		string,
+		{ key: string; internalProductIds: string[] }
+	>();
 	for (const candidate of candidates) {
 		byKey.set(candidate.key, candidate);
 	}
@@ -60,8 +61,7 @@ export const setupPlanUsagePersisted = async ({
 	const summaries: Record<string, PersistedPlanUsage> = {};
 
 	const removeCandidates = params.remove_plans.map((entry) => {
-		const versions =
-			productStatesContext.versionsByPlanId[entry.plan_id] ?? [];
+		const versions = productStatesContext.versionsByPlanId[entry.plan_id] ?? [];
 		const targeted =
 			entry.version === undefined
 				? versions

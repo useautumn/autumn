@@ -19,6 +19,7 @@ export type PartitionLoadSource = {
 	snapshot(): ReadonlyMap<number, number>;
 	/** The partitions this member serves right now; absent, the ones it reports weight for stand in. */
 	owned?(): ReadonlySet<number>;
+	assigned?(): ReadonlySet<number> | undefined;
 };
 
 export type WeightedPartition = {
@@ -30,7 +31,11 @@ export type WeightedPartition = {
 
 type Cluster = Parameters<PartitionAssigner>[0]["cluster"];
 type GroupMember = { memberId: string; memberMetadata: Buffer };
-type MemberReport = { weights: Map<number, number>; owned: Set<number> };
+type MemberReport = {
+	weights: Map<number, number>;
+	owned: Set<number>;
+	assigned?: Set<number>;
+};
 
 /**
  * Partition n of every subscribed topic still lands on one member, but the
@@ -71,9 +76,19 @@ export function createLoadAwareAssigner({
 			const reported = reportedWeightsOf({ reports });
 			const owners = ownersOf({ reports, memberIds });
 			const weighted = weigh({ partitions, reported, owners });
-			const dealt = balancePartitions({ partitions: weighted, memberIds });
+			const membershipChanged = membershipChangedOf({
+				reports,
+				memberIds,
+				partitions,
+			});
+			const dealt = balancePartitions({
+				partitions: weighted,
+				memberIds,
+				relieveLoad: membershipChanged,
+			});
 			logger.info("Load-aware partition assignment", {
 				reportedPartitions: reported.size,
+				membershipChanged,
 				...movementOf({ dealt, weighted }),
 				members: summarize({ dealt, weighted }),
 			});
@@ -109,6 +124,7 @@ export function createLoadAwareAssigner({
 					userData: encodeUserData({
 						weights: loads.snapshot(),
 						owned: loads.owned?.(),
+						assigned: loads.assigned?.(),
 					}),
 				}),
 			};
@@ -128,13 +144,16 @@ export function createLoadAwareAssigner({
  * with room, or swaps with a lighter one there, when that leaves both members
  * at least MIN_IMPROVEMENT under the source's load; the move that leaves the
  * lowest peak wins, a plain move beating a swap. Repeats until nothing improves.
+ * Load relief runs only when asked, so a rebalance nobody joined or left moves nothing.
  */
 export function balancePartitions({
 	partitions,
 	memberIds,
+	relieveLoad = true,
 }: {
 	partitions: readonly WeightedPartition[];
 	memberIds: readonly string[];
+	relieveLoad?: boolean;
 }): Map<string, number[]> {
 	const dealt = new Map<string, number[]>();
 	if (memberIds.length === 0) return dealt;
@@ -175,7 +194,7 @@ export function balancePartitions({
 		}
 		place({ memberId: chosen, entry, dealt, totals });
 	}
-	relieve({ memberIds, dealt, totals, weightOf, capacity });
+	if (relieveLoad) relieve({ memberIds, dealt, totals, weightOf, capacity });
 	evenOutCounts({ memberIds, dealt, totals, weightOf });
 	for (const owned of dealt.values()) owned.sort(ascending);
 	return dealt;
@@ -504,8 +523,62 @@ function reportedWeightsOf({
 	return weights;
 }
 
-/** Who serves each partition now: of the members claiming it, the one that has done the most on it, then the lower id. */
 function ownersOf({
+	reports,
+	memberIds,
+}: {
+	reports: ReadonlyMap<string, MemberReport>;
+	memberIds: readonly string[];
+}): Map<number, string> {
+	const owners = servingOwnersOf({ reports, memberIds });
+	for (const [partition, memberId] of soleAssigneesOf({ reports, memberIds })) {
+		owners.set(partition, memberId);
+	}
+	return owners;
+}
+
+function soleAssigneesOf({
+	reports,
+	memberIds,
+}: {
+	reports: ReadonlyMap<string, MemberReport>;
+	memberIds: readonly string[];
+}): Map<number, string> {
+	const assignees = new Map<number, string>();
+	const contested = new Set<number>();
+	for (const memberId of memberIds) {
+		for (const partition of reports.get(memberId)?.assigned ?? []) {
+			if (assignees.has(partition)) contested.add(partition);
+			else assignees.set(partition, memberId);
+		}
+	}
+	for (const partition of contested) assignees.delete(partition);
+	return assignees;
+}
+
+function membershipChangedOf({
+	reports,
+	memberIds,
+	partitions,
+}: {
+	reports: ReadonlyMap<string, MemberReport>;
+	memberIds: readonly string[];
+	partitions: readonly number[];
+}): boolean {
+	const covered = new Set<number>();
+	for (const memberId of memberIds) {
+		const assigned = reports.get(memberId)?.assigned;
+		if (assigned === undefined) return true;
+		for (const partition of assigned) covered.add(partition);
+	}
+	for (const partition of partitions) {
+		if (!covered.has(partition)) return true;
+	}
+	return false;
+}
+
+/** Of the members claiming a partition, the one that has done the most on it, then the lower id. */
+function servingOwnersOf({
 	reports,
 	memberIds,
 }: {
@@ -568,9 +641,11 @@ function medianOf(values: readonly number[]): number {
 function encodeUserData({
 	weights,
 	owned,
+	assigned,
 }: {
 	weights: ReadonlyMap<number, number>;
 	owned: ReadonlySet<number> | undefined;
+	assigned: ReadonlySet<number> | undefined;
 }): Buffer {
 	const entries: [number, number][] = [];
 	for (const [partition, weight] of weights) {
@@ -590,8 +665,10 @@ function encodeUserData({
 		version: number;
 		weights: [number, number][];
 		owned?: number[];
+		assigned?: number[];
 	} = { version: USER_DATA_VERSION, weights: entries };
 	if (owned) userData.owned = [...owned].sort(ascending);
+	if (assigned) userData.assigned = [...assigned].sort(ascending);
 	return Buffer.from(JSON.stringify(userData), "utf8");
 }
 
@@ -652,7 +729,15 @@ function decodeUserData(memberMetadata: Buffer): MemberReport {
 			if (weight > 0) owned.add(partition);
 		}
 	}
-	return { weights, owned };
+	if (!("assigned" in parsed) || !Array.isArray(parsed.assigned)) {
+		return { weights, owned };
+	}
+	const assigned = new Set<number>();
+	for (const partition of parsed.assigned) {
+		if (Number.isSafeInteger(partition) && partition >= 0)
+			assigned.add(partition);
+	}
+	return { weights, owned, assigned };
 }
 
 function movementOf({

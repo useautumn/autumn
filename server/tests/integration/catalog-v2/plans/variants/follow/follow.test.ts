@@ -13,8 +13,11 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { expectCatalogResultsCorrect } from "../../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import {
+	dashboardItem,
+	messagesItem,
+} from "../../licenses/utils/seedLicensePlans.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
-import { dashboardItem, messagesItem } from "../../licenses/utils/seedLicensePlans.js";
 import { expectVariantPlanCorrect } from "../utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 

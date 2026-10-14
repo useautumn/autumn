@@ -51,16 +51,6 @@ const disableCurrentDefault = async ({
 				message: `You have another default trial product in this group (${curDefault.id}). Please remove default from that product first.`,
 			});
 		}
-		// if (curDefault) {
-		// 	logger.info(
-		// 		`Disabling trial on cur default trial product: ${curDefault.id}`,
-		// 	);
-		// 	await ProductService.updateByInternalId({
-		// 		db,
-		// 		internalId: curDefault.internal_id,
-		// 		update: { is_default: false },
-		// 	});
-		// }
 	} else if (type === "free") {
 		const curDefault = defaults?.free;
 		if (curDefault) {
@@ -68,14 +58,6 @@ const disableCurrentDefault = async ({
 				message: `You have another default product (${curDefault.id}). Please remove default from that product first.`,
 			});
 		}
-		// if (curDefault) {
-		// 	logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
-		// 	await ProductService.updateByInternalId({
-		// 		db,
-		// 		internalId: curDefault.internal_id,
-		// 		update: { is_default: false },
-		// 	});
-		// }
 	}
 };
 

@@ -545,6 +545,19 @@ export type AttachCustomize = {
   removeLicenses?: Array<AttachRemoveLicense> | undefined;
 };
 
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export const AttachIssueMethod = {
+  Draft: "draft",
+  Finalize: "finalize",
+  Send: "send",
+} as const;
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export type AttachIssueMethod = ClosedEnum<typeof AttachIssueMethod>;
+
 export const AttachPaymentMethodType = {
   Card: "card",
   CustomerBalance: "customer_balance",
@@ -571,9 +584,13 @@ export type AttachInvoiceMode = {
    */
   enablePlanImmediately?: boolean | undefined;
   /**
-   * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+   * Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.
    */
   finalize?: boolean | undefined;
+  /**
+   * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+   */
+  issueMethod?: AttachIssueMethod | undefined;
   /**
    * ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
    */
@@ -589,7 +606,7 @@ export type AttachInvoiceMode = {
 };
 
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export const AttachProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -597,7 +614,7 @@ export const AttachProrationBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export type AttachProrationBehavior = ClosedEnum<
   typeof AttachProrationBehavior
@@ -656,6 +673,246 @@ export type AttachCustomLineItem = {
    * Description for the line item.
    */
   description: string;
+};
+
+/**
+ * Only remove charges or only remove refunds (credits). Omit to remove both.
+ */
+export const AttachDirection = {
+  Charge: "charge",
+  Refund: "refund",
+} as const;
+/**
+ * Only remove charges or only remove refunds (credits). Omit to remove both.
+ */
+export type AttachDirection = ClosedEnum<typeof AttachDirection>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const AttachPriceRemoveLineInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type AttachPriceRemoveLineInterval = ClosedEnum<
+  typeof AttachPriceRemoveLineInterval
+>;
+
+export type AttachPriceRemoveLine = {
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: AttachPriceRemoveLineInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Remove the base price line. Pass true, or an object to narrow by interval.
+ */
+export type AttachPriceUnion = boolean | AttachPriceRemoveLine;
+
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export const AttachBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export type AttachBillingBehavior = ClosedEnum<typeof AttachBillingBehavior>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const AttachFeatureQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type AttachFeatureQuantityInterval = ClosedEnum<
+  typeof AttachFeatureQuantityInterval
+>;
+
+export type AttachRemoveLineFeatureQuantity = {
+  /**
+   * The feature whose line to remove.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: AttachBillingBehavior;
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: AttachFeatureQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const AttachPriceLicenseQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type AttachPriceLicenseQuantityInterval = ClosedEnum<
+  typeof AttachPriceLicenseQuantityInterval
+>;
+
+export type AttachPriceLicenseQuantity = {
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: AttachPriceLicenseQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Remove the base price line. Pass true, or an object to narrow by interval.
+ */
+export type AttachLicenseQuantityPriceUnion =
+  | boolean
+  | AttachPriceLicenseQuantity;
+
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export const AttachLicenseQuantityBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export type AttachLicenseQuantityBillingBehavior = ClosedEnum<
+  typeof AttachLicenseQuantityBillingBehavior
+>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const AttachLicenseQuantityFeatureQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type AttachLicenseQuantityFeatureQuantityInterval = ClosedEnum<
+  typeof AttachLicenseQuantityFeatureQuantityInterval
+>;
+
+export type AttachLicenseQuantityFeatureQuantity = {
+  /**
+   * The feature whose line to remove.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: AttachLicenseQuantityBillingBehavior;
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: AttachLicenseQuantityFeatureQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type AttachRemoveLineLicenseQuantity = {
+  /**
+   * The license plan linked to the parent plan.
+   */
+  licensePlanId: string;
+  /**
+   * Remove the base price line. Pass true, or an object to narrow by interval.
+   */
+  price?: boolean | AttachPriceLicenseQuantity | undefined;
+  featureQuantities?: Array<AttachLicenseQuantityFeatureQuantity> | undefined;
+};
+
+/**
+ * Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+ */
+export type AttachRemoveLine = {
+  /**
+   * The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request.
+   */
+  planId: string;
+  /**
+   * The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+   */
+  entityId?: string | null | undefined;
+  /**
+   * Only remove charges or only remove refunds (credits). Omit to remove both.
+   */
+  direction?: AttachDirection | undefined;
+  /**
+   * Remove the base price line. Pass true, or an object to narrow by interval.
+   */
+  price?: boolean | AttachPriceRemoveLine | undefined;
+  featureQuantities?: Array<AttachRemoveLineFeatureQuantity> | undefined;
+  licenseQuantities?: Array<AttachRemoveLineLicenseQuantity> | undefined;
+};
+
+/**
+ * A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+ */
+export type AttachAddLine = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+  /**
+   * Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+   */
+  periodStart?: number | undefined;
+  /**
+   * End of the period this charge covers, in milliseconds. Given together with period_start.
+   */
+  periodEnd?: number | undefined;
 };
 
 /**
@@ -822,7 +1079,7 @@ export type AttachParams = {
    */
   invoiceMode?: AttachInvoiceMode | undefined;
   /**
-   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
    */
   prorationBehavior?: AttachProrationBehavior | undefined;
   /**
@@ -873,6 +1130,14 @@ export type AttachParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<AttachCustomLineItem> | undefined;
+  /**
+   * Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+   */
+  removeLines?: Array<AttachRemoveLine> | undefined;
+  /**
+   * Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
+   */
+  addLines?: Array<AttachAddLine> | undefined;
   /**
    * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
    */
@@ -2212,6 +2477,11 @@ export function attachCustomizeToJSON(
 }
 
 /** @internal */
+export const AttachIssueMethod$outboundSchema: z.ZodMiniEnum<
+  typeof AttachIssueMethod
+> = z.enum(AttachIssueMethod);
+
+/** @internal */
 export const AttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
   typeof AttachPaymentMethodType
 > = z.enum(AttachPaymentMethodType);
@@ -2220,7 +2490,8 @@ export const AttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
 export type AttachInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
-  finalize: boolean;
+  finalize?: boolean | undefined;
+  issue_method?: string | undefined;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
   payment_method_types?: Array<string> | undefined;
@@ -2234,7 +2505,8 @@ export const AttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.object({
     enabled: z.boolean(),
     enablePlanImmediately: z._default(z.boolean(), false),
-    finalize: z._default(z.boolean(), true),
+    finalize: z.optional(z.boolean()),
+    issueMethod: z.optional(AttachIssueMethod$outboundSchema),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
     paymentMethodTypes: z.optional(
@@ -2244,6 +2516,7 @@ export const AttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
+      issueMethod: "issue_method",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
       paymentMethodTypes: "payment_method_types",
@@ -2343,6 +2616,351 @@ export function attachCustomLineItemToJSON(
   return JSON.stringify(
     AttachCustomLineItem$outboundSchema.parse(attachCustomLineItem),
   );
+}
+
+/** @internal */
+export const AttachDirection$outboundSchema: z.ZodMiniEnum<
+  typeof AttachDirection
+> = z.enum(AttachDirection);
+
+/** @internal */
+export const AttachPriceRemoveLineInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachPriceRemoveLineInterval
+> = z.enum(AttachPriceRemoveLineInterval);
+
+/** @internal */
+export type AttachPriceRemoveLine$Outbound = {
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const AttachPriceRemoveLine$outboundSchema: z.ZodMiniType<
+  AttachPriceRemoveLine$Outbound,
+  AttachPriceRemoveLine
+> = z.pipe(
+  z.object({
+    interval: z.optional(AttachPriceRemoveLineInterval$outboundSchema),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachPriceRemoveLineToJSON(
+  attachPriceRemoveLine: AttachPriceRemoveLine,
+): string {
+  return JSON.stringify(
+    AttachPriceRemoveLine$outboundSchema.parse(attachPriceRemoveLine),
+  );
+}
+
+/** @internal */
+export type AttachPriceUnion$Outbound =
+  | boolean
+  | AttachPriceRemoveLine$Outbound;
+
+/** @internal */
+export const AttachPriceUnion$outboundSchema: z.ZodMiniType<
+  AttachPriceUnion$Outbound,
+  AttachPriceUnion
+> = smartUnion([
+  z.boolean(),
+  z.lazy(() => AttachPriceRemoveLine$outboundSchema),
+]);
+
+export function attachPriceUnionToJSON(
+  attachPriceUnion: AttachPriceUnion,
+): string {
+  return JSON.stringify(
+    AttachPriceUnion$outboundSchema.parse(attachPriceUnion),
+  );
+}
+
+/** @internal */
+export const AttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof AttachBillingBehavior
+> = z.enum(AttachBillingBehavior);
+
+/** @internal */
+export const AttachFeatureQuantityInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachFeatureQuantityInterval
+> = z.enum(AttachFeatureQuantityInterval);
+
+/** @internal */
+export type AttachRemoveLineFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const AttachRemoveLineFeatureQuantity$outboundSchema: z.ZodMiniType<
+  AttachRemoveLineFeatureQuantity$Outbound,
+  AttachRemoveLineFeatureQuantity
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    billingBehavior: AttachBillingBehavior$outboundSchema,
+    interval: z.optional(AttachFeatureQuantityInterval$outboundSchema),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingBehavior: "billing_behavior",
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachRemoveLineFeatureQuantityToJSON(
+  attachRemoveLineFeatureQuantity: AttachRemoveLineFeatureQuantity,
+): string {
+  return JSON.stringify(
+    AttachRemoveLineFeatureQuantity$outboundSchema.parse(
+      attachRemoveLineFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export const AttachPriceLicenseQuantityInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachPriceLicenseQuantityInterval
+> = z.enum(AttachPriceLicenseQuantityInterval);
+
+/** @internal */
+export type AttachPriceLicenseQuantity$Outbound = {
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const AttachPriceLicenseQuantity$outboundSchema: z.ZodMiniType<
+  AttachPriceLicenseQuantity$Outbound,
+  AttachPriceLicenseQuantity
+> = z.pipe(
+  z.object({
+    interval: z.optional(AttachPriceLicenseQuantityInterval$outboundSchema),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachPriceLicenseQuantityToJSON(
+  attachPriceLicenseQuantity: AttachPriceLicenseQuantity,
+): string {
+  return JSON.stringify(
+    AttachPriceLicenseQuantity$outboundSchema.parse(attachPriceLicenseQuantity),
+  );
+}
+
+/** @internal */
+export type AttachLicenseQuantityPriceUnion$Outbound =
+  | boolean
+  | AttachPriceLicenseQuantity$Outbound;
+
+/** @internal */
+export const AttachLicenseQuantityPriceUnion$outboundSchema: z.ZodMiniType<
+  AttachLicenseQuantityPriceUnion$Outbound,
+  AttachLicenseQuantityPriceUnion
+> = smartUnion([
+  z.boolean(),
+  z.lazy(() => AttachPriceLicenseQuantity$outboundSchema),
+]);
+
+export function attachLicenseQuantityPriceUnionToJSON(
+  attachLicenseQuantityPriceUnion: AttachLicenseQuantityPriceUnion,
+): string {
+  return JSON.stringify(
+    AttachLicenseQuantityPriceUnion$outboundSchema.parse(
+      attachLicenseQuantityPriceUnion,
+    ),
+  );
+}
+
+/** @internal */
+export const AttachLicenseQuantityBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof AttachLicenseQuantityBillingBehavior
+> = z.enum(AttachLicenseQuantityBillingBehavior);
+
+/** @internal */
+export const AttachLicenseQuantityFeatureQuantityInterval$outboundSchema:
+  z.ZodMiniEnum<typeof AttachLicenseQuantityFeatureQuantityInterval> = z.enum(
+    AttachLicenseQuantityFeatureQuantityInterval,
+  );
+
+/** @internal */
+export type AttachLicenseQuantityFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const AttachLicenseQuantityFeatureQuantity$outboundSchema: z.ZodMiniType<
+  AttachLicenseQuantityFeatureQuantity$Outbound,
+  AttachLicenseQuantityFeatureQuantity
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    billingBehavior: AttachLicenseQuantityBillingBehavior$outboundSchema,
+    interval: z.optional(
+      AttachLicenseQuantityFeatureQuantityInterval$outboundSchema,
+    ),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingBehavior: "billing_behavior",
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachLicenseQuantityFeatureQuantityToJSON(
+  attachLicenseQuantityFeatureQuantity: AttachLicenseQuantityFeatureQuantity,
+): string {
+  return JSON.stringify(
+    AttachLicenseQuantityFeatureQuantity$outboundSchema.parse(
+      attachLicenseQuantityFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachRemoveLineLicenseQuantity$Outbound = {
+  license_plan_id: string;
+  price?: boolean | AttachPriceLicenseQuantity$Outbound | undefined;
+  feature_quantities?:
+    | Array<AttachLicenseQuantityFeatureQuantity$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const AttachRemoveLineLicenseQuantity$outboundSchema: z.ZodMiniType<
+  AttachRemoveLineLicenseQuantity$Outbound,
+  AttachRemoveLineLicenseQuantity
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    price: z.optional(smartUnion([
+      z.boolean(),
+      z.lazy(() => AttachPriceLicenseQuantity$outboundSchema),
+    ])),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      AttachLicenseQuantityFeatureQuantity$outboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+      featureQuantities: "feature_quantities",
+    });
+  }),
+);
+
+export function attachRemoveLineLicenseQuantityToJSON(
+  attachRemoveLineLicenseQuantity: AttachRemoveLineLicenseQuantity,
+): string {
+  return JSON.stringify(
+    AttachRemoveLineLicenseQuantity$outboundSchema.parse(
+      attachRemoveLineLicenseQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachRemoveLine$Outbound = {
+  plan_id: string;
+  entity_id?: string | null | undefined;
+  direction?: string | undefined;
+  price?: boolean | AttachPriceRemoveLine$Outbound | undefined;
+  feature_quantities?:
+    | Array<AttachRemoveLineFeatureQuantity$Outbound>
+    | undefined;
+  license_quantities?:
+    | Array<AttachRemoveLineLicenseQuantity$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const AttachRemoveLine$outboundSchema: z.ZodMiniType<
+  AttachRemoveLine$Outbound,
+  AttachRemoveLine
+> = z.pipe(
+  z.object({
+    planId: z.string(),
+    entityId: z.optional(z.nullable(z.string())),
+    direction: z.optional(AttachDirection$outboundSchema),
+    price: z.optional(smartUnion([
+      z.boolean(),
+      z.lazy(() => AttachPriceRemoveLine$outboundSchema),
+    ])),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      AttachRemoveLineFeatureQuantity$outboundSchema
+    ))),
+    licenseQuantities: z.optional(z.array(z.lazy(() =>
+      AttachRemoveLineLicenseQuantity$outboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      planId: "plan_id",
+      entityId: "entity_id",
+      featureQuantities: "feature_quantities",
+      licenseQuantities: "license_quantities",
+    });
+  }),
+);
+
+export function attachRemoveLineToJSON(
+  attachRemoveLine: AttachRemoveLine,
+): string {
+  return JSON.stringify(
+    AttachRemoveLine$outboundSchema.parse(attachRemoveLine),
+  );
+}
+
+/** @internal */
+export type AttachAddLine$Outbound = {
+  amount: number;
+  description: string;
+  period_start?: number | undefined;
+  period_end?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddLine$outboundSchema: z.ZodMiniType<
+  AttachAddLine$Outbound,
+  AttachAddLine
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    description: z.string(),
+    periodStart: z.optional(z.int()),
+    periodEnd: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      periodStart: "period_start",
+      periodEnd: "period_end",
+    });
+  }),
+);
+
+export function attachAddLineToJSON(attachAddLine: AttachAddLine): string {
+  return JSON.stringify(AttachAddLine$outboundSchema.parse(attachAddLine));
 }
 
 /** @internal */
@@ -2631,6 +3249,8 @@ export type AttachParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   long_lived_checkout?: boolean | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
+  remove_lines?: Array<AttachRemoveLine$Outbound> | undefined;
+  add_lines?: Array<AttachAddLine$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: AttachCarryOverBalances$Outbound | undefined;
   carry_over_usages?: AttachCarryOverUsages$Outbound | undefined;
@@ -2679,6 +3299,10 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
     ),
+    removeLines: z.optional(
+      z.array(z.lazy(() => AttachRemoveLine$outboundSchema)),
+    ),
+    addLines: z.optional(z.array(z.lazy(() => AttachAddLine$outboundSchema))),
     processorSubscriptionId: z.optional(z.string()),
     carryOverBalances: z.optional(
       z.lazy(() => AttachCarryOverBalances$outboundSchema),
@@ -2723,6 +3347,8 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       longLivedCheckout: "long_lived_checkout",
       customLineItems: "custom_line_items",
+      removeLines: "remove_lines",
+      addLines: "add_lines",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",

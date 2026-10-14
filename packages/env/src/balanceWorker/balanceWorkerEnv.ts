@@ -3,6 +3,7 @@ import { resolveDatabaseUrl } from "../database.js";
 import { createKafkaAuthEnv } from "../kafkaAuth.js";
 import { isStagingEnv } from "../staging.js";
 import {
+	BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS,
 	BALANCE_WORKER_CATALOG_MAX_BYTES,
 	BALANCE_WORKER_CATALOG_TTL_MS,
 	BALANCE_WORKER_CHECKPOINT_INTERVAL_MS,
@@ -95,12 +96,31 @@ const adminS3 = z.object({
 	S3_REGION: z.string().trim().min(1).default("us-east-2"),
 });
 
+const catalog = z.object({
+	BALANCE_WORKER_CATALOG_MAX_BYTES: positiveInteger.default(
+		BALANCE_WORKER_CATALOG_MAX_BYTES,
+	),
+	BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS: positiveInteger.default(
+		BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS,
+	),
+});
+
+const runtime = z.object({
+	/** Works around oven-sh/bun#43279; set "false" to compare a canary without it. */
+	BALANCE_WORKER_DEDUPE_CJS_CHILDREN: z
+		.enum(["true", "false"])
+		.default("true")
+		.transform((value) => value === "true"),
+});
+
 const balanceWorkerEnvSchema = kafka
 	.merge(listener)
 	.merge(state)
 	.merge(postgres)
 	.merge(adminS3)
 	.merge(dynamo)
+	.merge(catalog)
+	.merge(runtime)
 	.superRefine(validateBalanceWorkerEnv);
 
 export function createBalanceWorkerEnv(
@@ -139,7 +159,6 @@ export function createBalanceWorkerEnv(
 		BALANCE_WORKER_CHECKPOINT_INTERVAL_MS,
 		BALANCE_WORKER_DATABASE_POOL_SIZE,
 		BALANCE_WORKER_CATALOG_TTL_MS,
-		BALANCE_WORKER_CATALOG_MAX_BYTES,
 		BALANCE_WORKER_ENDPOINT: env.BALANCE_WORKER_ENDPOINT
 			? new URL(env.BALANCE_WORKER_ENDPOINT).origin
 			: `http://${host}:${env.BALANCE_WORKER_PORT}`,

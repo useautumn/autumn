@@ -52,7 +52,6 @@ export const listPlatformUsers = createRoute({
 
 		// Map results to API format
 		const users: ApiPlatformUser[] = results.map((user) => ({
-			// name: user.name,
 			email: user.email,
 			created_at: new Date(user.created_at).getTime(),
 			...(shouldExpandOrgs &&

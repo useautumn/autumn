@@ -49,10 +49,7 @@ const g1Expected = ({
 		filter: {
 			customer: {
 				plan: orPlanFilter({
-					branches: [
-						{ plan_id: childId },
-						{ plan_id: teamId, version: 2 },
-					],
+					branches: [{ plan_id: childId }, { plan_id: teamId, version: 2 }],
 				}),
 			},
 		},
@@ -295,7 +292,8 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: {
 								license_parents: [{ plan_id: teamId, version: 2 }],
 							},
@@ -347,7 +345,8 @@ test.concurrent(
 						},
 						{
 							plan_id: teamId,
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							name: "Team v2",
 						},
 					],

@@ -5,6 +5,7 @@
 // watches never connects. Kept well under the ECS health-check grace period so
 // the timeout latch always beats ECS's task-kill timer.
 export const STARTUP_GATE_MAX_WAIT_MS = 20_000;
+export const STARTUP_ROUTING_MAX_WAIT_MS = 5_000;
 
 /** Pure decision for the startup gate. `redisReady`/`redisV2Ready` already fold
  *  in "not configured" as ready. Once `elapsedMs` reaches the max wait we serve
@@ -15,16 +16,26 @@ export const STARTUP_GATE_MAX_WAIT_MS = 20_000;
 export const evaluateStartupGate = ({
 	redisReady,
 	redisV2Ready,
+	routingReady,
 	elapsedMs,
 	maxWaitMs = STARTUP_GATE_MAX_WAIT_MS,
 }: {
 	redisReady: boolean;
 	redisV2Ready: boolean;
+	routingReady: boolean;
 	elapsedMs: number;
 	maxWaitMs?: number;
-}): { ready: boolean; reason: string | null } => {
-	if (redisReady && redisV2Ready) {
-		return { ready: true, reason: "Redis ready" };
+}): { ready: boolean; reason: string } => {
+	const redisAllReady = redisReady && redisV2Ready;
+	if (redisAllReady && routingReady) {
+		return { ready: true, reason: "Redis ready, worker routing ready" };
+	}
+	if (redisAllReady && elapsedMs >= STARTUP_ROUTING_MAX_WAIT_MS) {
+		return {
+			ready: true,
+			reason:
+				"Redis ready; worker routing still catching up, serving via runtime fail-open",
+		};
 	}
 	if (elapsedMs >= maxWaitMs) {
 		return {
@@ -32,5 +43,8 @@ export const evaluateStartupGate = ({
 			reason: "max wait elapsed; serving via runtime fail-open",
 		};
 	}
-	return { ready: false, reason: null };
+	return {
+		ready: false,
+		reason: redisAllReady ? "Worker routing not ready" : "Redis not ready",
+	};
 };

@@ -41,19 +41,37 @@ export const promoteDuePooledContributions = async ({
 		granted: number | string;
 		due_count: number | string;
 	}>(sql`
-		WITH totals AS (
+		WITH shares AS (
 			SELECT
-				COALESCE(SUM(CASE
-					WHEN effective_at IS NOT NULL AND effective_at <= ${now}::numeric
-					THEN next_cycle_contribution
-					ELSE current_contribution
-				END), 0) AS granted,
+				c.competes,
+				c.unlimited,
+				c.effective_at,
+				CASE
+					WHEN c.effective_at IS NOT NULL AND c.effective_at <= ${now}::numeric
+					THEN c.next_cycle_contribution
+					ELSE c.current_contribution
+				END AS amount,
+				f.config ->> 'combine' AS combine
+			FROM pooled_balance_contributions c
+			JOIN pooled_balances pb ON pb.id = c.pooled_balance_id
+			JOIN features f ON f.internal_id = pb.internal_feature_id
+			WHERE c.pooled_balance_id = ${pooledBalance.id}
+		),
+		totals AS (
+			SELECT
+				COALESCE(SUM(amount) FILTER (WHERE NOT competes), 0)
+				+ COALESCE(
+					CASE WHEN MAX(combine) = 'min'
+						THEN MIN(amount) FILTER (WHERE competes AND NOT unlimited)
+						ELSE MAX(amount) FILTER (WHERE competes AND NOT unlimited)
+					END,
+					0
+				) AS granted,
 				COUNT(*) AS total_count,
 				COUNT(*) FILTER (
 					WHERE effective_at IS NOT NULL AND effective_at <= ${now}::numeric
 				) AS due_count
-			FROM pooled_balance_contributions
-			WHERE pooled_balance_id = ${pooledBalance.id}
+			FROM shares
 		),
 		pool_update AS (
 			UPDATE pooled_balances

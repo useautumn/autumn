@@ -19,6 +19,7 @@ import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
+import { handleInvoiceLineEditsErrors } from "@/internal/billing/v2/common/errors/handleInvoiceLineEditsErrors";
 import { handleLicenseAttachTargetErrors } from "@/internal/billing/v2/common/errors/handleLicenseAttachTargetErrors";
 import { handleRemoveDiscountsErrors } from "@/internal/billing/v2/common/errors/handleRemoveDiscountsErrors";
 import { handleRevertTrialErrors } from "@/internal/billing/v2/common/errors/handleRevertTrialErrors";
@@ -119,6 +120,7 @@ export const handleAttachV2Errors = async ({
 		billingContext,
 		billingPlan,
 	});
+	handleInvoiceLineEditsErrors({ params, billingContext, billingPlan });
 
 	// 13. Revert trial errors (card_required + revert, missing existing plan)
 	handleRevertTrialErrors({ billingContext });

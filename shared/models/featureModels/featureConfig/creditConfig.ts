@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { FeatureUsageType } from "../featureEnums.js";
+import { FeatureCombine, FeatureUsageType } from "../featureEnums.js";
 
 export const CreditTierSchema = z.object({
 	to: z.union([z.number(), z.literal("inf")]),
@@ -116,6 +116,7 @@ export const CreditSystemConfigSchema = z.object({
 	usage_type: z.nativeEnum(FeatureUsageType),
 	default_markup: z.number().min(-100).optional(),
 	provider_markups: ProviderMarkupsSchema,
+	combine: z.enum(FeatureCombine).optional(),
 });
 
 /**

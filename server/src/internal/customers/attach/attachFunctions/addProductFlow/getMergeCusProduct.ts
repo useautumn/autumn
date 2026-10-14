@@ -32,10 +32,6 @@ export const getMergeCusProduct = async ({
 		cusProduct: mergeCusProduct,
 		stripeCli,
 	});
-	// let mergeSubs = await getStripeSubs({
-	//   stripeCli,
-	//   subIds: mergeCusProduct?.subscription_ids,
-	// });
 
 	return {
 		mergeCusProduct,

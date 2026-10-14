@@ -3,6 +3,7 @@ import {
 	FeatureType,
 	type FeatureUpdateBlocker,
 	keyToTitle,
+	leavesCompetingCombine,
 	notNullish,
 } from "@autumn/shared";
 import type { ObjectsUsingFeature } from "./getObjectsUsingFeature.js";
@@ -26,7 +27,18 @@ export const isBlockableFeatureChange = ({
 		feature.type !== FeatureType.Boolean &&
 		updates.type !== FeatureType.Boolean &&
 		feature.config?.usage_type !== updates.config?.usage_type;
-	return isChangingType || isChangingId || isChangingUsageType;
+	const isLeavingCompetingCombine =
+		notNullish(updates.config) &&
+		leavesCompetingCombine({
+			current: feature,
+			next: { config: updates.config },
+		});
+	return (
+		isChangingType ||
+		isChangingId ||
+		isChangingUsageType ||
+		isLeavingCompetingCombine
+	);
 };
 
 /**
@@ -147,6 +159,20 @@ export const detectFeatureUpdateBlockers = ({
 				message: `Cannot set to ${usageTypeTitle} because it is / was used by customers`,
 			});
 		}
+	}
+
+	const isLeavingCompetingCombine =
+		notNullish(updates.config) &&
+		leavesCompetingCombine({
+			current: feature,
+			next: { config: updates.config },
+		});
+	if (isLeavingCompetingCombine && cusEnts.length > 0) {
+		blockers.push({
+			field: "combine",
+			code: "attached_to_customer",
+			message: `Cannot change combine of feature ${feature.id} away from ${feature.config?.combine} because customers hold it`,
+		});
 	}
 
 	return blockers;

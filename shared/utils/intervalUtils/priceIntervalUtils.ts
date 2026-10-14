@@ -132,7 +132,6 @@ export const intervalsDifferent = ({
 	intervalA: IntervalConfig | null;
 	intervalB: IntervalConfig | null;
 }) => {
-	// return compareBillingIntervals({ configA: intervalA, configB: intervalB }) !== 0;
 	if (nullish(intervalA) && nullish(intervalB)) {
 		return false;
 	}

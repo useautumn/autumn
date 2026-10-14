@@ -3,7 +3,10 @@ import { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useDiscardItemAndClose } from "@/hooks/stores/useProductStore";
+import {
+	useDiscardItemAndClose,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import { useProductSync } from "@/hooks/stores/useProductSync";
 import {
 	useSheetCleanup,
@@ -32,6 +35,11 @@ export default function PlanEditorView() {
 
 	// Sync store with backend data
 	useProductSync({ product: originalProduct });
+	// The editor reads the store, so wait for the first sync rather than paint a blank plan.
+	// Only the id is compared: a version switch must not remount the editor.
+	const storeSynced = useProductStore(
+		(s) => s.product?.id === originalProduct?.id,
+	);
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const openAddFeatureSheet = useOpenAddFeatureSheet();
@@ -59,7 +67,9 @@ export default function PlanEditorView() {
 	// Close sheet when navigating away from this view
 	useSheetCleanup();
 
-	if (featuresLoading || productLoading) return <LoadingScreen />;
+	if (featuresLoading || productLoading || (originalProduct && !storeSynced)) {
+		return <LoadingScreen />;
+	}
 
 	if (error || !originalProduct) {
 		// Handle 500 errors from backend when product doesn't exist

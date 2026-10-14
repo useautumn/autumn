@@ -31,31 +31,31 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	const productContext = useOptionalProductContext();
 	const pageCatalogLicenses = productContext?.catalogLicenses;
 
+	const needsFallback = !isLicense && !pageCatalogLicenses;
 	const { planLicenses: fallbackPlanLicenses } = usePlanLicensesQuery(
-		isLicense || pageCatalogLicenses ? undefined : product?.id,
+		needsFallback ? product?.id : undefined,
 	);
-	const { products } = useProductsQuery({ allVersions: true });
+	// Persisted links pin exact versions, which only the all-versions list has;
+	// staged links resolve against the same latest list the link menu offers.
+	const { products: allVersionProducts } = useProductsQuery({
+		allVersions: true,
+		enabled: needsFallback,
+	});
+	const { products: latestProducts } = useProductsQuery();
 	const { pendingLicenseIds } = usePendingLicenseLinks();
 	const initialPatches = useInitialLicensePatches();
 
 	return useMemo(() => {
 		if (isLicense || !product) return [];
 
-		// Staged links can point at any plan, so fall back to the full plans list.
 		const licenseById = new Map(
-			products.map((license) => [license.id, license]),
+			latestProducts.map((license) => [license.id, license]),
 		);
-		for (const license of products) {
-			const latest = licenseById.get(license.id);
-			if (!latest || license.version > latest.version) {
-				licenseById.set(license.id, license);
-			}
-		}
 		const persistedLicenses = pageCatalogLicenses
 			? pageCatalogLicenses.map((entry) => ({ ...entry, isPendingLink: false }))
 			: fallbackPlanLicenses.flatMap((planLicense) => {
 					const license = resolvePlanLicenseProduct({
-						products,
+						products: allVersionProducts,
 						planId: planLicense.license_plan_id,
 						version: planLicense.version,
 					});
@@ -87,7 +87,8 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	}, [
 		isLicense,
 		product,
-		products,
+		latestProducts,
+		allVersionProducts,
 		pageCatalogLicenses,
 		fallbackPlanLicenses,
 		pendingLicenseIds,

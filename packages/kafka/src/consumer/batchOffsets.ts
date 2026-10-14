@@ -1,4 +1,4 @@
-import type { EachBatchPayload } from "kafkajs";
+import { type EachBatchPayload, KafkaJSProtocolError } from "kafkajs";
 import {
 	parseKafkaOffset,
 	parseKafkaTimestamp,
@@ -64,9 +64,11 @@ export async function commitBatchOffsets({
 		return;
 	const offset = readPendingOffset(payload);
 	if (offset !== null && commitsGroupOffsets({ ctx })) {
-		await payload.commitOffsetsIfNecessary({
-			topics: [{ topic, partitions: [{ partition, offset }] }],
+		const committed = await commitUnlessSuperseded({
+			payload,
+			offsets: { topics: [{ topic, partitions: [{ partition, offset }] }] },
 		});
+		if (!committed) return;
 	}
 	if (
 		!payload.isRunning() ||
@@ -89,6 +91,28 @@ export async function commitBatchOffsets({
 		}),
 	});
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
+}
+
+async function commitUnlessSuperseded({
+	payload,
+	offsets,
+}: {
+	payload: EachBatchPayload;
+	offsets: Parameters<EachBatchPayload["commitOffsetsIfNecessary"]>[0];
+}): Promise<boolean> {
+	try {
+		await payload.commitOffsetsIfNecessary(offsets);
+		return true;
+	} catch (cause) {
+		if (isSupersededGeneration(cause)) return false;
+		throw cause;
+	}
+}
+
+function isSupersededGeneration(cause: unknown): boolean {
+	return (
+		cause instanceof KafkaJSProtocolError && cause.type === "ILLEGAL_GENERATION"
+	);
 }
 
 function commitsGroupOffsets({ ctx }: { ctx: TopicConsumerContext }): boolean {

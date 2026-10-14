@@ -26,6 +26,7 @@ export const computeLicensePooledBalancePlan = ({
 }): PooledBalancePlan | undefined => {
 	const computeContext = setupPooledBalanceComputeContext({
 		pooledCustomerEntitlements: fullCustomer.pooled_customer_entitlements ?? [],
+		customerProducts: fullCustomer.customer_products,
 	});
 
 	applyLicensePooledBalances({

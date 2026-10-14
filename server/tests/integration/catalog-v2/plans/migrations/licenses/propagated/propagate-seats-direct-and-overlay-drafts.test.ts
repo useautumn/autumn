@@ -11,7 +11,6 @@ import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	messagesItem,
 	messagesOverride,
@@ -19,6 +18,7 @@ import {
 	seedSeatAssignmentOnChild,
 	withCatalogPlans,
 } from "../../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	childItemOp,
 	expectLicenseDraftCase,
@@ -129,10 +129,7 @@ test.concurrent(
 							filter: {
 								customer: {
 									plan: orVersionPinnedFilter({
-										branches: [
-											{ planId: childId },
-											{ planId: teamId },
-										],
+										branches: [{ planId: childId }, { planId: teamId }],
 									}),
 								},
 							},
@@ -203,7 +200,10 @@ test.concurrent(
 							plan_id: childId,
 							items: [messagesItem(1000)],
 							propagate: {
-								license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+								license_parents: [
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: scaleId, version: 1 },
+								],
 							},
 							migration: { draft: true },
 						},

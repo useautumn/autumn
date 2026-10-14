@@ -107,6 +107,13 @@ export const billingUpdateCustomLineItemSchema = z.object({
 	description: z.string(),
 });
 
+export const billingUpdateAddLineSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	periodStart: z.union([z.number(), z.undefined()]).optional(),
+	periodEnd: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const billingUpdateBillingCycleAnchorSchema = z.union([
 	z.string(),
 	z.number(),
@@ -378,7 +385,8 @@ export const billingUpdateRemoveLicenseOutboundSchema = z.object({
 export const billingUpdateInvoiceModeOutboundSchema = z.object({
 	enabled: z.boolean(),
 	enable_plan_immediately: z.boolean(),
-	finalize: z.boolean(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issue_method: z.union([z.string(), z.undefined()]).optional(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
 	payment_method_types: z
@@ -398,6 +406,90 @@ export const billingUpdateRemoveDiscountOutboundSchema = z.object({
 export const billingUpdateCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
 	description: z.string(),
+});
+
+export const billingUpdatePriceRemoveLineOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	billingUpdatePriceRemoveLineOutboundSchema,
+]);
+
+export const billingUpdateRemoveLineFeatureQuantityOutboundSchema = z.object({
+	feature_id: z.string(),
+	billing_behavior: z.string(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePriceLicenseQuantityOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateLicenseQuantityPriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	billingUpdatePriceLicenseQuantityOutboundSchema,
+]);
+
+export const billingUpdateLicenseQuantityFeatureQuantityOutboundSchema =
+	z.object({
+		feature_id: z.string(),
+		billing_behavior: z.string(),
+		interval: z.union([z.string(), z.undefined()]).optional(),
+		interval_count: z.union([z.number(), z.undefined()]).optional(),
+	});
+
+export const billingUpdateRemoveLineLicenseQuantityOutboundSchema = z.object({
+	license_plan_id: z.string(),
+	price: z
+		.union([
+			z.boolean(),
+			billingUpdatePriceLicenseQuantityOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(billingUpdateLicenseQuantityFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateRemoveLineOutboundSchema = z.object({
+	plan_id: z.string(),
+	entity_id: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([z.string(), z.undefined()]).optional(),
+	price: z
+		.union([
+			z.boolean(),
+			billingUpdatePriceRemoveLineOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(billingUpdateRemoveLineFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	license_quantities: z
+		.union([
+			z.array(billingUpdateRemoveLineLicenseQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateAddLineOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	period_start: z.union([z.number(), z.undefined()]).optional(),
+	period_end: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const billingUpdateBillingCycleAnchorOutboundSchema = z.union([
@@ -738,12 +830,17 @@ export const billingUpdateCustomizeSchema = z.object({
 		.optional(),
 });
 
+export const billingUpdateIssueMethodSchema = closedEnumSchema;
+
 export const billingUpdatePaymentMethodTypeSchema = closedEnumSchema;
 
 export const billingUpdateInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issueMethod: z
+		.union([billingUpdateIssueMethodSchema, z.undefined()])
+		.optional(),
 	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
 	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
 	paymentMethodTypes: z
@@ -754,6 +851,105 @@ export const billingUpdateInvoiceModeSchema = z.object({
 export const billingUpdateProrationBehaviorSchema = closedEnumSchema;
 
 export const billingUpdateRedirectModeSchema = closedEnumSchema;
+
+export const billingUpdateDirectionSchema = closedEnumSchema;
+
+export const billingUpdatePriceRemoveLineIntervalSchema = closedEnumSchema;
+
+export const billingUpdatePriceRemoveLineSchema = z.object({
+	interval: z
+		.union([billingUpdatePriceRemoveLineIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePriceUnionSchema = z.union([
+	z.boolean(),
+	billingUpdatePriceRemoveLineSchema,
+]);
+
+export const billingUpdateBillingBehaviorSchema = closedEnumSchema;
+
+export const billingUpdateFeatureQuantityIntervalSchema = closedEnumSchema;
+
+export const billingUpdateRemoveLineFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: billingUpdateBillingBehaviorSchema,
+	interval: z
+		.union([billingUpdateFeatureQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePriceLicenseQuantityIntervalSchema = closedEnumSchema;
+
+export const billingUpdatePriceLicenseQuantitySchema = z.object({
+	interval: z
+		.union([billingUpdatePriceLicenseQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateLicenseQuantityPriceUnionSchema = z.union([
+	z.boolean(),
+	billingUpdatePriceLicenseQuantitySchema,
+]);
+
+export const billingUpdateLicenseQuantityBillingBehaviorSchema =
+	closedEnumSchema;
+
+export const billingUpdateLicenseQuantityFeatureQuantityIntervalSchema =
+	closedEnumSchema;
+
+export const billingUpdateLicenseQuantityFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: billingUpdateLicenseQuantityBillingBehaviorSchema,
+	interval: z
+		.union([
+			billingUpdateLicenseQuantityFeatureQuantityIntervalSchema,
+			z.undefined(),
+		])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateRemoveLineLicenseQuantitySchema = z.object({
+	licensePlanId: z.string(),
+	price: z
+		.union([
+			z.boolean(),
+			billingUpdatePriceLicenseQuantitySchema,
+			z.undefined(),
+		])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(billingUpdateLicenseQuantityFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateRemoveLineSchema = z.object({
+	planId: z.string(),
+	entityId: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([billingUpdateDirectionSchema, z.undefined()]).optional(),
+	price: z
+		.union([z.boolean(), billingUpdatePriceRemoveLineSchema, z.undefined()])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(billingUpdateRemoveLineFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+	licenseQuantities: z
+		.union([
+			z.array(billingUpdateRemoveLineLicenseQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
 
 export const billingUpdateCancelActionSchema = closedEnumSchema;
 
@@ -790,6 +986,12 @@ export const updateSubscriptionParamsSchema = z.object({
 		.optional(),
 	customLineItems: z
 		.union([z.array(billingUpdateCustomLineItemSchema), z.undefined()])
+		.optional(),
+	removeLines: z
+		.union([z.array(billingUpdateRemoveLineSchema), z.undefined()])
+		.optional(),
+	addLines: z
+		.union([z.array(billingUpdateAddLineSchema), z.undefined()])
 		.optional(),
 	cancelAction: z
 		.union([billingUpdateCancelActionSchema, z.undefined()])
@@ -956,6 +1158,12 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 		.optional(),
 	custom_line_items: z
 		.union([z.array(billingUpdateCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_lines: z
+		.union([z.array(billingUpdateRemoveLineOutboundSchema), z.undefined()])
+		.optional(),
+	add_lines: z
+		.union([z.array(billingUpdateAddLineOutboundSchema), z.undefined()])
 		.optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	billing_cycle_anchor: z

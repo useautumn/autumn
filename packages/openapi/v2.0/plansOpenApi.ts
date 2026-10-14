@@ -9,7 +9,6 @@ import { z } from "zod/v4";
 
 export const ApiPlanWithMeta = ApiPlanV0Schema.meta({
 	id: "Plan",
-	// examples: [PLAN_EXAMPLE],
 });
 
 export const plansOpenApi = {

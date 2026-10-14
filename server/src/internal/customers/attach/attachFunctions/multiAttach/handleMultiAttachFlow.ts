@@ -201,21 +201,4 @@ export const handleMultiAttachFlow = async ({
 			? attachToInvoiceResponse({ invoice: latestInvoice })
 			: undefined,
 	});
-	// if (res) {
-	// 	const invoice = latestInvoice;
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse(
-	// 			AttachResultSchema.parse({
-	// 				message: `Successfully created subscriptions and attached ${attachParams.products.map((p) => p.name).join(", ")} to ${attachParams.customer.name}`,
-	// 				code: SuccessCode.NewProductAttached,
-	// 				product_ids: attachParams.products.map((p) => p.id),
-	// 				customer_id:
-	// 					attachParams.customer.id || attachParams.customer.internal_id,
-	// 				invoice: attachParams.invoiceOnly
-	// 					? attachToInvoiceResponse({ invoice })
-	// 					: undefined,
-	// 			}),
-	// 		),
-	// 	);
-	// }
 };

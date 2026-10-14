@@ -86,7 +86,6 @@ export function productToBillingPlan({
 	orgCurrency: string;
 	metadata?: Record<string, any>;
 }): VercelBillingPlan {
-	// const paymentMethodRequired = false;
 	const productV2 = mapToProductV2({ product });
 	const basePrice = productV2ToBasePrice({ product: productV2 });
 
@@ -105,7 +104,6 @@ export function productToBillingPlan({
 			const d = getProductItemDisplay({
 				item: x,
 				features: product.entitlements.map((e) => e.feature),
-				// fullDisplay: true,
 			});
 
 			return {
@@ -217,20 +215,6 @@ const listVercelPlansForOrg = async ({
 				metadata,
 			}),
 		),
-		// ...((canCancel
-		// 	? [
-		// 			{
-		// 				id: "cancel_plan",
-		// 				type: "subscription",
-		// 				name: "Cancel plan",
-		// 				description:
-		// 					"Select this to immediately cancel your subscription and lose access.",
-		// 				cost: undefined,
-		// 				highlightedDetails: [],
-		// 				disabled: false,
-		// 			},
-		// 		]
-		// 	: []) as VercelBillingPlan[]),
 	] satisfies VercelBillingPlan[];
 };
 

@@ -95,7 +95,6 @@ export const validateSqlFunctions = async ({
 		result.map((row) => [row.function_name, row.definition]),
 	);
 
-	// Check for missing functions
 	const missingFunctions = requiredFunctions.filter(
 		(fn) => !dbFunctions.has(fn.name),
 	);

@@ -181,6 +181,32 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** The entry is refused when it matches every `whenEquals`,
+			 * `whenStated` and `whenUnstated` path. */
+			readonly kind: "refusedWhen";
+			readonly whenEquals: Readonly<Record<string, string>>;
+			readonly whenStated: readonly string[];
+			readonly whenUnstated: readonly string[];
+			readonly because: string;
+	  }
+	| {
+			/** `field` names a row of top-level collection `in` by `matching`. The
+			 * entry is refused when that row's `target` equals `equals` and the entry
+			 * matches every `whenEquals`, `whenStated` and `whenUnstated` path. */
+			readonly kind: "targetForbids";
+			readonly field: string;
+			readonly in: string;
+			readonly matching: string;
+			readonly target: string;
+			readonly equals: string | boolean;
+			readonly whenEquals: Readonly<Record<string, string>>;
+			readonly whenStated: readonly string[];
+			/** At least one of these is stated; a `*` segment matches any list element. */
+			readonly whenAnyStated?: readonly string[];
+			readonly whenUnstated: readonly string[];
+			readonly because: string;
+	  }
+	| {
 			/** `field` names a row of top-level collection `in` by `matching`,
 			 * shown in the message as `label`; that row's `target` must not be
 			 * `true`. Skipped when the entry's own parent already has
@@ -250,7 +276,8 @@ type Walk = {
 const isEntry = (value: unknown): value is Entry =>
 	value !== null && typeof value === "object" && !Array.isArray(value);
 
-/** Dotted lookup, so a rule can name a field inside a union branch. */
+/** Dotted lookup, so a rule can name a field inside a union branch; a numeric
+ * segment indexes an array. */
 const valueAtPath = ({
 	entry,
 	path,
@@ -260,6 +287,10 @@ const valueAtPath = ({
 }): unknown => {
 	let current: unknown = entry;
 	for (const segment of path.split(".")) {
+		if (Array.isArray(current)) {
+			current = current[Number(segment)];
+			continue;
+		}
 		if (!isEntry(current)) return undefined;
 		current = current[segment];
 	}
@@ -463,6 +494,39 @@ const COMPARE = {
 	">=": { holds: (a: number, b: number) => a >= b, words: "at least" },
 } as const;
 
+/** Whether an entry matches a rule's `when*` paths; zero, false and null count as unstated. */
+const entryMatchesWhen = ({
+	entry,
+	rule,
+}: {
+	entry: Entry;
+	rule: Extract<LintRule, { kind: "refusedWhen" | "targetForbids" }>;
+}): boolean => {
+	const isStatedValue = (value: unknown) =>
+		value !== undefined && value !== null && value !== 0 && value !== false;
+	const isStated = (path: string): boolean => {
+		const [head, tail] = path.split(".*.");
+		if (tail === undefined) return isStatedValue(valueAtPath({ entry, path }));
+		const list = valueAtPath({ entry, path: head as string });
+		return (
+			Array.isArray(list) &&
+			list.some((element) => isEntry(element) && isStatedValue(element[tail]))
+		);
+	};
+	const anyStated =
+		"whenAnyStated" in rule && rule.whenAnyStated
+			? rule.whenAnyStated.some(isStated)
+			: true;
+	return (
+		Object.entries(rule.whenEquals).every(
+			([path, value]) => valueAtPath({ entry, path }) === value,
+		) &&
+		rule.whenStated.every(isStated) &&
+		anyStated &&
+		!rule.whenUnstated.some(isStated)
+	);
+};
+
 const entryRuleFailures = ({
 	entry,
 	rule,
@@ -617,6 +681,21 @@ const entryRuleFailures = ({
 			if (parent?.[rule.parentGuard] === true) return [];
 			return [
 				`${rule.label} ${show(entry[rule.field])} is ${rule.target}. Unarchive it, or archive ${rule.parentLabel} ${show(parent?.[rule.parentIdField])}. ${rule.because}`,
+			];
+		}
+		case "refusedWhen":
+			return entryMatchesWhen({ entry, rule }) ? [rule.because] : [];
+		case "targetForbids": {
+			if (!entryMatchesWhen({ entry, rule })) return [];
+			const target = document[rule.in];
+			if (!Array.isArray(target)) return [];
+			const row = target.find(
+				(candidate) =>
+					isEntry(candidate) && candidate[rule.matching] === entry[rule.field],
+			);
+			if (!row || row[rule.target] !== rule.equals) return [];
+			return [
+				`${rule.in} ${show(entry[rule.field])} has ${rule.target} ${show(rule.equals)}, so this is refused. ${rule.because}`,
 			];
 		}
 		case "unique":

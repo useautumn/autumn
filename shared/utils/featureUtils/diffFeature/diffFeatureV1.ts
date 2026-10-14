@@ -126,6 +126,10 @@ const fieldComparisons: FieldComparison[] = [
 			(from.consumable ?? false) === (to.consumable ?? false),
 	},
 	{
+		key: "combine",
+		isSame: (from, to) => (from.combine ?? "sum") === (to.combine ?? "sum"),
+	},
+	{
 		key: "archived",
 		isSame: (from, to) => (from.archived ?? false) === (to.archived ?? false),
 	},

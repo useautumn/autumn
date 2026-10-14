@@ -108,6 +108,13 @@ export const setupPaymentCustomLineItemSchema = z.object({
 	description: z.string(),
 });
 
+export const setupPaymentAddLineSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	periodStart: z.union([z.number(), z.undefined()]).optional(),
+	periodEnd: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const setupPaymentCarryOverBalancesSchema = z.object({
 	enabled: z.boolean(),
 	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
@@ -402,6 +409,90 @@ export const setupPaymentBillingCycleAnchorOutboundSchema = z.union([
 export const setupPaymentCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
 	description: z.string(),
+});
+
+export const setupPaymentPriceRemoveLineOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentPriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	setupPaymentPriceRemoveLineOutboundSchema,
+]);
+
+export const setupPaymentRemoveLineFeatureQuantityOutboundSchema = z.object({
+	feature_id: z.string(),
+	billing_behavior: z.string(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentPriceLicenseQuantityOutboundSchema = z.object({
+	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentLicenseQuantityPriceUnionOutboundSchema = z.union([
+	z.boolean(),
+	setupPaymentPriceLicenseQuantityOutboundSchema,
+]);
+
+export const setupPaymentLicenseQuantityFeatureQuantityOutboundSchema =
+	z.object({
+		feature_id: z.string(),
+		billing_behavior: z.string(),
+		interval: z.union([z.string(), z.undefined()]).optional(),
+		interval_count: z.union([z.number(), z.undefined()]).optional(),
+	});
+
+export const setupPaymentRemoveLineLicenseQuantityOutboundSchema = z.object({
+	license_plan_id: z.string(),
+	price: z
+		.union([
+			z.boolean(),
+			setupPaymentPriceLicenseQuantityOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(setupPaymentLicenseQuantityFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const setupPaymentRemoveLineOutboundSchema = z.object({
+	plan_id: z.string(),
+	entity_id: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([z.string(), z.undefined()]).optional(),
+	price: z
+		.union([
+			z.boolean(),
+			setupPaymentPriceRemoveLineOutboundSchema,
+			z.undefined(),
+		])
+		.optional(),
+	feature_quantities: z
+		.union([
+			z.array(setupPaymentRemoveLineFeatureQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	license_quantities: z
+		.union([
+			z.array(setupPaymentRemoveLineLicenseQuantityOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const setupPaymentAddLineOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+	period_start: z.union([z.number(), z.undefined()]).optional(),
+	period_end: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentCarryOverBalancesOutboundSchema = z.object({
@@ -780,6 +871,101 @@ export const setupPaymentCustomizeSchema = z.object({
 
 export const setupPaymentProrationBehaviorSchema = closedEnumSchema;
 
+export const setupPaymentDirectionSchema = closedEnumSchema;
+
+export const setupPaymentPriceRemoveLineIntervalSchema = closedEnumSchema;
+
+export const setupPaymentPriceRemoveLineSchema = z.object({
+	interval: z
+		.union([setupPaymentPriceRemoveLineIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentPriceUnionSchema = z.union([
+	z.boolean(),
+	setupPaymentPriceRemoveLineSchema,
+]);
+
+export const setupPaymentBillingBehaviorSchema = closedEnumSchema;
+
+export const setupPaymentFeatureQuantityIntervalSchema = closedEnumSchema;
+
+export const setupPaymentRemoveLineFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: setupPaymentBillingBehaviorSchema,
+	interval: z
+		.union([setupPaymentFeatureQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentPriceLicenseQuantityIntervalSchema = closedEnumSchema;
+
+export const setupPaymentPriceLicenseQuantitySchema = z.object({
+	interval: z
+		.union([setupPaymentPriceLicenseQuantityIntervalSchema, z.undefined()])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentLicenseQuantityPriceUnionSchema = z.union([
+	z.boolean(),
+	setupPaymentPriceLicenseQuantitySchema,
+]);
+
+export const setupPaymentLicenseQuantityBillingBehaviorSchema =
+	closedEnumSchema;
+
+export const setupPaymentLicenseQuantityFeatureQuantityIntervalSchema =
+	closedEnumSchema;
+
+export const setupPaymentLicenseQuantityFeatureQuantitySchema = z.object({
+	featureId: z.string(),
+	billingBehavior: setupPaymentLicenseQuantityBillingBehaviorSchema,
+	interval: z
+		.union([
+			setupPaymentLicenseQuantityFeatureQuantityIntervalSchema,
+			z.undefined(),
+		])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentRemoveLineLicenseQuantitySchema = z.object({
+	licensePlanId: z.string(),
+	price: z
+		.union([z.boolean(), setupPaymentPriceLicenseQuantitySchema, z.undefined()])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(setupPaymentLicenseQuantityFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const setupPaymentRemoveLineSchema = z.object({
+	planId: z.string(),
+	entityId: z.union([z.string(), z.undefined()]).optional().nullable(),
+	direction: z.union([setupPaymentDirectionSchema, z.undefined()]).optional(),
+	price: z
+		.union([z.boolean(), setupPaymentPriceRemoveLineSchema, z.undefined()])
+		.optional(),
+	featureQuantities: z
+		.union([
+			z.array(setupPaymentRemoveLineFeatureQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+	licenseQuantities: z
+		.union([
+			z.array(setupPaymentRemoveLineLicenseQuantitySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const setupPaymentTaxExemptSchema = closedEnumSchema;
 
 export const setupPaymentBillingDetailsSchema = z.object({
@@ -821,6 +1007,12 @@ export const setupPaymentParamsSchema = z.object({
 		.optional(),
 	customLineItems: z
 		.union([z.array(setupPaymentCustomLineItemSchema), z.undefined()])
+		.optional(),
+	removeLines: z
+		.union([z.array(setupPaymentRemoveLineSchema), z.undefined()])
+		.optional(),
+	addLines: z
+		.union([z.array(setupPaymentAddLineSchema), z.undefined()])
 		.optional(),
 	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
 	carryOverBalances: z
@@ -975,6 +1167,12 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.optional(),
 	custom_line_items: z
 		.union([z.array(setupPaymentCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_lines: z
+		.union([z.array(setupPaymentRemoveLineOutboundSchema), z.undefined()])
+		.optional(),
+	add_lines: z
+		.union([z.array(setupPaymentAddLineOutboundSchema), z.undefined()])
 		.optional(),
 	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	carry_over_balances: z

@@ -589,7 +589,10 @@ const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
 		request.invoice_mode === true || invoiceMode.enabled === true
 			? "billed by invoice"
 			: null,
-		invoiceMode.finalize === false ? "draft invoice" : null,
+		(invoiceMode.issue_method ??
+			(invoiceMode.finalize === false ? "draft" : undefined)) === "draft"
+			? "draft invoice"
+			: null,
 		enableImmediately === true
 			? "access starts immediately"
 			: enableImmediately === false
