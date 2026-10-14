@@ -598,6 +598,25 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
 	});
 
+	test("a push with the rows the deductions leave but another revision keeps the fold, counting on from Autumn's revision", async () => {
+		const slot = await openDeducting({ deductions: 5 });
+		const before = readViewFoldThreadStats();
+
+		const state = await slot.push({
+			acknowledged: 3,
+			edit: (pushed) => ({ ...pushed, revision: 0 }),
+		});
+		const view = slot.read();
+
+		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(JSON.stringify(view.fullSubject)).toBe(
+			JSON.stringify(
+				rebuiltView({ journal: slot.journal, state, catalog: view.catalog }),
+			),
+		);
+		expect(view.fullSubject.revision).toBe(2);
+	});
+
 	test.each([
 		[
 			"a changed balance",
@@ -610,15 +629,6 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 			}),
 			1050,
 			"viewFoldRebuiltState",
-		],
-		[
-			"another revision",
-			(state: SubjectState): SubjectState => ({
-				...state,
-				revision: state.revision + 1,
-			}),
-			950,
-			"viewFoldRebuiltRevision",
 		],
 	])(
 		"a push acknowledging the deductions that also carries %s rebuilds the view from the push, counted by the guard it failed",

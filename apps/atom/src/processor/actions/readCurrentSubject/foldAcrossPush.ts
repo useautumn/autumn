@@ -26,7 +26,7 @@ const trimmedCountOf = ({
 
 /** Which guard a push failed, so the fold was replayed from it: and where Autumn's copy first differs, when that is known. */
 export type FoldRebuilt = {
-	rebuiltFor: "trim" | "revision" | "catalog" | "state";
+	rebuiltFor: "trim" | "catalog" | "state";
 	difference: StructuralDifference | null;
 };
 
@@ -47,17 +47,6 @@ export const foldAcrossPush = ({
 }): { kept: ReplayBase } | FoldRebuilt => {
 	const trimmed = trimmedCountOf({ fold, owed });
 	if (trimmed === null) return { rebuiltFor: "trim", difference: null };
-	// Each applied track moves the revision once, so anything else Autumn applied shows here before any replay.
-	const revision = fold.customer.state.revision + trimmed;
-	if (customer.state.revision !== revision)
-		return {
-			rebuiltFor: "revision",
-			difference: {
-				path: "revision",
-				left: revision,
-				right: customer.state.revision,
-			},
-		};
 	const catalogDifference = findStructuralDifference({
 		left: fold.current.catalog,
 		right: catalog,
@@ -78,11 +67,14 @@ export const foldAcrossPush = ({
 	});
 	if (stateDifference)
 		return { rebuiltFor: "state", difference: stateDifference };
+	// The fold's own steps past the acknowledged ones, counted on from Autumn's revision so the next replay starts there.
+	const stepsPastPush = fold.customerState.revision - acknowledged.revision;
 	return {
 		kept: {
 			// The worker's apply of the trimmed entries raised the push's atom_seqs; the Atom's replay never writes it.
 			state: {
 				...fold.customerState,
+				revision: customer.state.revision + stepsPastPush,
 				customer: {
 					...fold.customerState.customer,
 					atom_seqs: customer.state.customer.atom_seqs,
