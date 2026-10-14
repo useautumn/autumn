@@ -11,10 +11,10 @@ const TICK_MS = 1000;
 export const TICKS_PER_FILE = 30;
 /** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
  * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
-export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
+export const CHECKPOINT_WAL_BYTES = 4 * 1024 * 1024;
 /** BENCH ONLY (#369 pacing spike, never merge): log bytes copied per tick on average, so the copies never burst past
  * the volume's throughput; a tick may overdraw, and the next ones wait until the budget recovers. */
-const COPY_BYTES_PER_TICK = 48 * 1024 * 1024;
+const COPY_BYTES_PER_TICK = 24 * 1024 * 1024;
 const WAL_SUFFIX = "-wal";
 
 const walBytesOf = ({ path }: { path: string }): number => {
