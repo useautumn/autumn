@@ -202,7 +202,15 @@ export function LineItemsContent<T extends BillingLineItem>({
 												</span>
 											</div>
 											{lineEdits &&
-												(addedIndex !== -1 ? (
+												// Stale rows would map to shifted indexes until the refetch lands.
+												(addedIndex !== -1 && isRefreshing ? (
+													<span className="flex size-5 shrink-0 items-center justify-center text-tertiary-foreground">
+														<CircleNotchIcon
+															size={12}
+															className="animate-spin"
+														/>
+													</span>
+												) : addedIndex !== -1 ? (
 													<RowIconButton
 														label="Delete added line"
 														onClick={() =>
