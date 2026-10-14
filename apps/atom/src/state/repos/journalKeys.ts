@@ -84,3 +84,21 @@ export const deleteCustomerJournalKeys = ({
 		.run({ customerId });
 	return "";
 };
+
+/** Bounded by age as well, so a row the prune has not reached yet is already new. */
+export const readJournalKey = ({
+	ctx,
+	customerId,
+	key,
+	appendedSince,
+}: {
+	ctx: JournalContext;
+	customerId: string;
+	key: string;
+	appendedSince: number;
+}): boolean =>
+	ctx.sqliteDb
+		.query<{ held: bigint }, [string, Uint8Array, number]>(
+			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
+		)
+		.get(customerId, journalKeyHash({ key }), appendedSince) !== null;

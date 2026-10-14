@@ -57,4 +57,6 @@ export type Journal = {
 	/** The customer is gone from Autumn: nothing it owes can ever apply. */
 	forget(params: { customerId: string }): Promise<void>;
 	close(): void;
+	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
+	holdsKey(params: { customerId: string; key: string }): boolean;
 };
