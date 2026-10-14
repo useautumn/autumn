@@ -33,6 +33,7 @@ export {
 	checkAfterDeduction,
 } from "./commands/check/checkAfterDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
+export { trackResultToCheckResult } from "./commands/check/trackResultToCheckResult.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
 export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
