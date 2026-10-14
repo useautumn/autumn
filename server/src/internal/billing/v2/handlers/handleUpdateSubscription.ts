@@ -8,6 +8,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { targetsPendingPlan } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
@@ -41,7 +42,10 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		if (isCollectionMethodSwitch(body)) {
+		if (
+			isCollectionMethodSwitch(body) &&
+			!(await targetsPendingPlan({ ctx, params: body }))
+		) {
 			return c.json(
 				await billingActions.switchCollectionMethod({ ctx, params: body }),
 				200,

@@ -63,3 +63,25 @@ export const findPendingCustomerProduct = async ({
 		);
 	});
 };
+
+/** A request naming a pending plan edits that plan, even when invoice_mode is its only change. */
+export const targetsPendingPlan = async ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: {
+		customer_id: string;
+		entity_id?: string;
+		customer_product_id?: string;
+	};
+}) =>
+	Boolean(
+		params.customer_product_id &&
+			(await findPendingCustomerProduct({
+				ctx,
+				customerId: params.customer_id,
+				entityId: params.entity_id,
+				customerProductId: params.customer_product_id,
+			})),
+	);

@@ -9,6 +9,10 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
+import {
+	findLivePlanReplacedByPending,
+	pendingReplacementToLiveUpdateParams,
+} from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacement";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
 import { checkoutActions } from "@/internal/checkouts/actions";
@@ -35,6 +39,27 @@ export const updatePendingCustomerProduct = async ({
 	if (params.cancel_action || !deferredData) {
 		await discardPendingCustomerProduct({ ctx, customerProduct });
 		return {};
+	}
+
+	const livePlan = await findLivePlanReplacedByPending({
+		ctx,
+		params,
+		customerProduct,
+	});
+	if (livePlan) {
+		const liveUpdateParams = pendingReplacementToLiveUpdateParams({
+			ctx,
+			params,
+			customerProduct,
+			deferredData,
+			livePlan,
+		});
+		await discardPendingCustomerProduct({ ctx, customerProduct });
+		return (await billingActions.updateSubscription({
+			ctx,
+			params: liveUpdateParams,
+			preview: false,
+		})) as PendingUpdateResult;
 	}
 
 	const { attachParams, longLivedCheckout, rebills } =
