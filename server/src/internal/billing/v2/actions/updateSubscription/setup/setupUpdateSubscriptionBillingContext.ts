@@ -1,6 +1,5 @@
 import {
 	BillingVersion,
-	type DbInvoiceLineItem,
 	hasCustomItems,
 	orgDisableStripeWrites,
 	stripeRefToId,
@@ -256,19 +255,14 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	const storedLineItems = await fetchStoredLineItemsForSubscriptionBilling({
-		db: ctx.db,
-		fullCustomer,
-		stripeSubscription,
-		outgoingCusProductIds: [customerProduct.id],
-	});
-	const isKept = (row: DbInvoiceLineItem) =>
-		!contextOverride.discardedStripeInvoiceId ||
-		row.stripe_invoice_id !== contextOverride.discardedStripeInvoiceId;
-	const storedChargeLineItems =
-		storedLineItems.storedChargeLineItems.filter(isKept);
-	const storedRefundLineItems =
-		storedLineItems.storedRefundLineItems.filter(isKept);
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForSubscriptionBilling({
+			db: ctx.db,
+			fullCustomer,
+			stripeSubscription,
+			outgoingCusProductIds: [customerProduct.id],
+			excludeStripeInvoiceId: contextOverride.discardedStripeInvoiceId,
+		});
 
 	return {
 		intent,

@@ -9,10 +9,7 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
-import {
-	findLivePlanReplacedByPending,
-	pendingReplacementToLiveUpdateParams,
-} from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacement";
+import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacement";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
 import { checkoutActions } from "@/internal/checkouts/actions";
@@ -36,30 +33,26 @@ export const updatePendingCustomerProduct = async ({
 		customerProduct,
 	});
 
-	if (params.cancel_action || !deferredData) {
-		await discardPendingCustomerProduct({ ctx, customerProduct });
-		return {};
-	}
-
-	const livePlan = await findLivePlanReplacedByPending({
-		ctx,
-		params,
-		customerProduct,
-	});
-	if (livePlan) {
-		const liveUpdateParams = pendingReplacementToLiveUpdateParams({
+	const liveUpdate =
+		deferredData &&
+		!params.cancel_action &&
+		(await pendingReplacementToLiveUpdate({
 			ctx,
 			params,
 			customerProduct,
 			deferredData,
-			livePlan,
-		});
+		}));
+	if (liveUpdate) {
 		await discardPendingCustomerProduct({ ctx, customerProduct });
 		return (await billingActions.updateSubscription({
 			ctx,
-			params: liveUpdateParams,
-			preview: false,
+			params: liveUpdate,
 		})) as PendingUpdateResult;
+	}
+
+	if (params.cancel_action || !deferredData) {
+		await discardPendingCustomerProduct({ ctx, customerProduct });
+		return {};
 	}
 
 	const { attachParams, longLivedCheckout, rebills } =

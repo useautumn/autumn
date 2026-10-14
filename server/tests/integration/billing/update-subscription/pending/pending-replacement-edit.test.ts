@@ -199,51 +199,6 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pending replacement: cancelling previews nothing due and keeps the live plan")}`,
-	async () => {
-		const {
-			autumnV2_2,
-			ctx,
-			customerId,
-			dedicated,
-			live,
-			pending,
-			listRows,
-			pendingInvoiceId,
-		} = await setupPendingReplacement({ name: "pending-repl-cancel" });
-		const invoiceId = await pendingInvoiceId(pending);
-		const cancel: UpdateSubscriptionV1ParamsInput = {
-			customer_id: customerId,
-			customer_product_id: pending.id,
-			plan_id: dedicated.id,
-			cancel_action: "cancel_immediately",
-		};
-
-		const preview =
-			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
-				cancel,
-			);
-		expect(preview.total).toBe(0);
-		expect(
-			preview.line_items.filter(
-				(lineItem: { total: number }) => lineItem.total !== 0,
-			),
-		).toHaveLength(0);
-
-		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
-			cancel,
-		);
-
-		const rows = await listRows();
-		expect(rows.map((row) => [row.id, row.status])).toEqual([
-			[live.id, CusProductStatus.Active],
-		]);
-		const invoice = await ctx.stripeCli.invoices.retrieve(invoiceId!);
-		expect(invoice.status).toBe("void");
-	},
-);
-
-test.concurrent(
 	`${chalk.yellowBright("pending replacement: enabling the unpaid change immediately applies it and keeps its invoice to collect")}`,
 	async () => {
 		const { autumnV2_2, ctx, customerId, dedicated, live, pending, listRows } =
@@ -276,42 +231,54 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("pending replacement: an entity's unpaid change cancels without touching its live plan")}`,
-	async () => {
-		const {
-			autumnV2_2,
-			customerId,
-			entityId,
-			dedicated,
-			live,
-			pending,
-			listRows,
-		} = await setupPendingReplacement({
-			name: "pending-repl-entity",
-			onEntity: true,
-		});
-		expect(pending.internal_entity_id).toBeTruthy();
+for (const onEntity of [false, true]) {
+	test.concurrent(
+		`${chalk.yellowBright(`pending replacement: cancelling ${onEntity ? "an entity's" : "the"} unpaid change previews nothing due and keeps the live plan`)}`,
+		async () => {
+			const {
+				autumnV2_2,
+				ctx,
+				customerId,
+				entityId,
+				dedicated,
+				live,
+				pending,
+				listRows,
+				pendingInvoiceId,
+			} = await setupPendingReplacement({
+				name: `pending-repl-cancel-${onEntity ? "entity" : "customer"}`,
+				onEntity,
+			});
+			const invoiceId = await pendingInvoiceId(pending);
+			const cancel: UpdateSubscriptionV1ParamsInput = {
+				customer_id: customerId,
+				entity_id: entityId,
+				customer_product_id: pending.id,
+				plan_id: dedicated.id,
+				cancel_action: "cancel_immediately",
+			};
 
-		const cancel: UpdateSubscriptionV1ParamsInput = {
-			customer_id: customerId,
-			entity_id: entityId,
-			customer_product_id: pending.id,
-			plan_id: dedicated.id,
-			cancel_action: "cancel_immediately",
-		};
-		const preview =
-			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+			const preview =
+				await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+					cancel,
+				);
+			expect(preview.total).toBe(0);
+			expect(
+				preview.line_items.filter(
+					(lineItem: { total: number }) => lineItem.total !== 0,
+				),
+			).toHaveLength(0);
+
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
 				cancel,
 			);
-		expect(preview.total).toBe(0);
-		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
-			cancel,
-		);
 
-		const rows = await listRows();
-		expect(rows.map((row) => [row.id, row.status])).toEqual([
-			[live.id, CusProductStatus.Active],
-		]);
-	},
-);
+			const rows = await listRows();
+			expect(rows.map((row) => [row.id, row.status])).toEqual([
+				[live.id, CusProductStatus.Active],
+			]);
+			const invoice = await ctx.stripeCli.invoices.retrieve(invoiceId!);
+			expect(invoice.status).toBe("void");
+		},
+	);
+}
