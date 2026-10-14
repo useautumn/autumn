@@ -73,13 +73,13 @@ export class UnsupportedCommandError extends Error {
 	}
 }
 
-/** The customer already holds an open lock under this id; nothing was deducted. */
-export class LockAlreadyExistsError extends Error {
+/** The customer holds an open lock under this id taken on other terms; nothing was deducted. */
+export class LockTermsConflictError extends Error {
 	readonly lockId: string;
 
 	constructor({ lockId }: { lockId: string }) {
-		super(`Lock already exists: ${lockId}`);
-		this.name = "LockAlreadyExistsError";
+		super(`Lock id already used with different terms: ${lockId}`);
+		this.name = "LockTermsConflictError";
 		this.lockId = lockId;
 	}
 }

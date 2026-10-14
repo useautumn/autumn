@@ -3,15 +3,20 @@ import type { DeductionDecision } from "../../deduction/types/deductionDecision.
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
 import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import {
-	LockAlreadyExistsError,
+	LockTermsConflictError,
 	UnsupportedCommandError,
 } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
+import type { WorkerLock } from "../../models/subject/rows/workerLock.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
+import { retriesOpenLock } from "./retriesOpenLock.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
-import { atomReplayAsNothing } from "./trackSourceToRowChange.js";
+import {
+	atomReplayAsNothing,
+	trackOfNothing,
+} from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** No grant funds the feature; an overdue block that removed every grant is a refusal instead. */
@@ -23,26 +28,48 @@ const fundsNothing = ({ outcome }: { outcome: DeductionOutcome }): boolean =>
 const isDeductingCheck = ({ command }: { command: TrackCommand }): boolean =>
 	command.enforceOverdueBlock === true;
 
+/**
+ * Checked before the deduction, for a lock id already open: with its row, the same terms are the same lock retried and
+ * move nothing, other terms conflict. Without it, an Atom's track moves nothing (its client was answered); the API's conflicts.
+ */
+const asLockRetry = ({
+	fullSubject,
+	command,
+	heldLock,
+}: {
+	fullSubject: WorkerFullSubject;
+	command: TrackCommand;
+	heldLock: WorkerLock | null;
+}): TrackCommand => {
+	const { lock } = command;
+	const isOpen = fullSubject.open_locks.some(
+		(openLock) => openLock.lock_id === lock?.lockId,
+	);
+	if (!lock || !isOpen) return command;
+	const isSameLock = heldLock
+		? retriesOpenLock({ fullSubject, command, lock, heldLock })
+		: command.source !== undefined;
+	if (isSameLock) return trackOfNothing({ command });
+	throw new LockTermsConflictError({ lockId: lock.lockId });
+};
+
 /** Pure: the same subject and command always yield the same decision. Dedup is the writer's job. */
 export const computeTrackDecision = ({
 	fullSubject,
 	command,
+	heldLock = null,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
+	/** Autumn's row for the command's lock id when the caller found one; only a locked track needs it. */
+	heldLock?: WorkerLock | null;
 }): DeductionDecision => {
-	const track = atomReplayAsNothing({
-		command,
-		customer: fullSubject.customer,
+	const track = asLockRetry({
+		fullSubject,
+		command: atomReplayAsNothing({ command, customer: fullSubject.customer }),
+		heldLock,
 	});
 	assertCommandSupported({ fullSubject, command: track });
-
-	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
-	const lockId = track.lock?.lockId;
-	const holdsLock = fullSubject.open_locks.some(
-		(openLock) => openLock.lock_id === lockId,
-	);
-	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
 
 	const outcome = deduct({
 		fullSubject,
@@ -64,11 +91,6 @@ export const computeTrackDecision = ({
 	};
 };
 
-export const computeTrack = ({
-	fullSubject,
-	command,
-}: {
-	fullSubject: WorkerFullSubject;
-	command: TrackCommand;
-}): SubjectStateMutation =>
-	computeTrackDecision({ fullSubject, command }).mutation;
+export const computeTrack = (
+	params: Parameters<typeof computeTrackDecision>[0],
+): SubjectStateMutation => computeTrackDecision(params).mutation;

@@ -26,6 +26,7 @@ export const trackLockToRowChange = ({
 		customer_id: command.identity.customerId,
 		entity_id: command.identity.entityId,
 		feature_id: command.featureId,
+		value: command.value,
 		overage_behavior: command.overageBehavior,
 		properties: command.properties,
 		deltas: outcome.deltas,

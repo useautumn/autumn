@@ -1,6 +1,6 @@
 import {
-	LockAlreadyExistsError,
 	LockNotFoundError,
+	LockTermsConflictError,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import {
@@ -78,11 +78,12 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			code: "COMMAND_CONFLICT",
 			message: "Command id reused with a different request",
 		};
-	} else if (cause instanceof LockAlreadyExistsError) {
+	} else if (cause instanceof LockTermsConflictError) {
 		status = 409;
 		error = {
-			code: "LOCK_ALREADY_EXISTS",
-			message: "The customer already holds an open lock under this id",
+			code: "LOCK_TERMS_CONFLICT",
+			message:
+				"The customer holds an open lock under this id, taken on other terms",
 		};
 	} else if (cause instanceof LockNotFoundError) {
 		status = 404;

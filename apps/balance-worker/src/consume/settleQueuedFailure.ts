@@ -1,6 +1,6 @@
 import {
-	LockAlreadyExistsError,
 	LockNotFoundError,
+	LockTermsConflictError,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import type { CommandRecord } from "@autumn/kafka";
@@ -29,7 +29,7 @@ const isAlreadyApplied = (cause: unknown): boolean =>
 const isRefused = (cause: unknown): boolean =>
 	cause instanceof UnsupportedCommandError ||
 	cause instanceof SubjectNotFoundError ||
-	cause instanceof LockAlreadyExistsError ||
+	cause instanceof LockTermsConflictError ||
 	cause instanceof LockNotFoundError ||
 	cause instanceof FlushRecordRefusedError ||
 	cause instanceof PartitionWriterStateNotFoundError ||

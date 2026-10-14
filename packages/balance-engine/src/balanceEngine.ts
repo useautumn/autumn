@@ -82,6 +82,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { retriesOpenLock } from "./commands/track/retriesOpenLock.js";
 export {
 	isLandedSeq,
 	trackOfNothing,
@@ -115,8 +116,8 @@ export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
 export {
 	CatalogRowMissingError,
-	LockAlreadyExistsError,
 	LockNotFoundError,
+	LockTermsConflictError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
 	StaleMutationError,
