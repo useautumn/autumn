@@ -53,6 +53,8 @@ const answerFields = ({
 			atom_allowed: allowedOf(atom),
 			api_remaining: remainingOf(api),
 			atom_remaining: remainingOf(atom),
+			atom_limit_type: reply?.kind === "answered" ? reply.limitType : null,
+			atom_deny_reason: reply?.kind === "answered" ? reply.denyReason : null,
 		};
 	} catch {
 		return {};
