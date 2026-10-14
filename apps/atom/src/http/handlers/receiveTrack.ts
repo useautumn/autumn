@@ -8,6 +8,7 @@ export async function receiveTrack(context: Context<AtomHttpEnv>) {
 	const request = trackCallToRequest({
 		body: context.get("body"),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
+		movedFrom: context.get("movedFrom") ?? null,
 		...arrivalOf(context),
 	});
 	context.set("idempotencyKey", request.idempotencyKey);

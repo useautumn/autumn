@@ -30,6 +30,5 @@ export const receiveJournalHandoff = ({
 			.get("slots")
 			.processorFor({ customerId })
 			.receiveHandoff({ customerId, entries: entries as HandedEntry[] });
-		ctx.peer.barrier?.arrived({ customerId });
 		return context.json(held);
 	};

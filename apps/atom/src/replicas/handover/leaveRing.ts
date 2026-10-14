@@ -17,6 +17,8 @@ export type LeaveRingContext = {
 	membership: Membership;
 	/** This thread's folders: whose journals it hands over. */
 	folders: Pick<ReplicaFolders, "all">;
+	/** The replica's threads, each of which leaves and hands off on its own; the peers wait for all of them. */
+	threads: number;
 	peer: { port: number; secret: string; fetch?: typeof fetch };
 	logger: Pick<AutumnLogger, "info" | "warn">;
 };
@@ -24,12 +26,15 @@ export type LeaveRingContext = {
 const announceTo = async ({
 	ctx,
 	peer,
+	handedOff = false,
 }: {
 	ctx: LeaveRingContext;
 	peer: string;
+	handedOff?: boolean;
 }): Promise<boolean> => {
 	const body = JSON.stringify({
 		address: ctx.ring.self,
+		...(handedOff && { handedOff: { threads: ctx.threads } }),
 	} satisfies LeavingAnnouncement);
 	try {
 		const reply = await (ctx.peer.fetch ?? fetch)(
@@ -83,4 +88,9 @@ export const leaveRing = async ({
 		"This replica left the ring: its customers are owned by its peers",
 	);
 	await handOffJournals({ ctx });
+	await Promise.all(
+		peers
+			.filter((_, index) => told[index])
+			.map((peer) => announceTo({ ctx, peer, handedOff: true })),
+	);
 };

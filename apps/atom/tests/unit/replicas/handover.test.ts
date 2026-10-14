@@ -362,6 +362,24 @@ describe("the leaving replica's owed entries", () => {
 		expect(await remainingAt(b)).toBe(8);
 	});
 
+	test("a moved customer that owed nothing is answered at once, once the leaver has said it handed everything", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+
+		await a.leave();
+		const startedAt = performance.now();
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+		const waitedMs = performance.now() - startedAt;
+
+		expect((await reply.json()).balance.remaining).toBe(10);
+		expect(waitedMs).toBeLessThan(40);
+		expect(b.membership.isHandoffComplete(A)).toBe(true);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+
 	test("a moved customer's first request inside the barrier is answered with the handed entries", async () => {
 		const { a, b } = await agreeingPair();
 		await deductOnA({ a, times: 2 });

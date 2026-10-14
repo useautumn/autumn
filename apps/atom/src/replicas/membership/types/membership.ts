@@ -18,6 +18,9 @@ export type Membership = {
 	markLeaving(address: string): void;
 	/** When the peer announced leaving, in ms; null unless it is leaving. */
 	leavingSince(address: string): number | null;
+	/** One of the leaver's threads handed everything it owed; true once all `threads` of them have. */
+	handoffCompleted(params: { address: string; threads: number }): boolean;
+	isHandoffComplete(address: string): boolean;
 	/** Forgotten once the service name has dropped it, so a replica back at the same address starts over. */
 	forget(address: string): void;
 	leaveSelf(): void;

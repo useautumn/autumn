@@ -81,6 +81,12 @@ export const createReplica = ({
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
+	const membership = createMembership({ self: address });
+	for (const peer of joined) {
+		membership.markReady(peer);
+		membership.markJoined(peer);
+	}
+	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const auth = createDeployedAuth({
 		journalForwarder,
 		dataDir,
@@ -90,6 +96,7 @@ export const createReplica = ({
 		held: freshHeld(),
 		now,
 		subjectPulls: noSubjectPulls,
+		barrier,
 	});
 	const replication = createReplication({
 		ctx: {
@@ -104,11 +111,6 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
-	const membership = createMembership({ self: address });
-	for (const peer of joined) {
-		membership.markReady(peer);
-		membership.markJoined(peer);
-	}
 	const ring = createReplicaRing({
 		ctx: {
 			resolver: { peers: async () => ringPeers },
@@ -133,13 +135,7 @@ export const createReplica = ({
 		loop: loopOnTime,
 		replication,
 		stopping,
-		peer: {
-			port: PEER_PORT,
-			secret,
-			ring,
-			membership,
-			barrier: createHandoffBarrier({ ctx: { counters } }),
-		},
+		peer: { port: PEER_PORT, secret, ring, membership },
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -173,6 +169,7 @@ export const createReplica = ({
 					ring,
 					membership,
 					folders: createDeployedFolders({ slots: auth.slots }),
+					threads: 1,
 					peer: { port: PEER_PORT, secret },
 					logger: quiet,
 				},
