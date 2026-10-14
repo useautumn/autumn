@@ -5,10 +5,12 @@ export const applyProration = ({
 	now,
 	billingPeriod,
 	amount,
+	endsAt,
 }: {
 	now: number;
 	billingPeriod: BillingPeriod;
 	amount: number;
+	endsAt?: number;
 }) => {
 	const { start, end } = billingPeriod;
 
@@ -18,7 +20,7 @@ export const applyProration = ({
 		throw new Error("Billing period is incorrect (start and end are the same)");
 	}
 
-	const num = new Decimal(end).minus(now);
+	const num = new Decimal(Math.min(end, endsAt ?? end)).minus(now);
 
 	return num.div(denom).mul(amount).toNumber();
 };

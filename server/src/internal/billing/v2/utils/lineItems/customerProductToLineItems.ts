@@ -5,6 +5,7 @@
 import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
+	type BillingPeriod,
 	billingContextToCurrency,
 	cusPriceToCusEnt,
 	customerProductToEntity,
@@ -25,6 +26,21 @@ import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingConte
 import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
+
+/** A charge on a product that ends mid-period (e.g. set to cancel) only covers time until it ends, as Stripe does. */
+const getChargeEndsAt = ({
+	customerProduct,
+	direction,
+	billingPeriod,
+}: {
+	customerProduct: FullCusProduct;
+	direction: "charge" | "refund";
+	billingPeriod?: BillingPeriod;
+}) => {
+	const endedAt = customerProduct.ended_at;
+	if (direction !== "charge" || !billingPeriod || !endedAt) return undefined;
+	return endedAt < billingPeriod.end ? endedAt : undefined;
+};
 
 /**
  * Generates line items for a customer product.
@@ -133,6 +149,9 @@ export const customerProductToLineItems = ({
 			customerPrice: cusPrice,
 			effectivePeriod: backdatedLineItemContext?.effectivePeriod,
 			backdate: backdatedLineItemContext?.backdate,
+			endsAt: backdatedLineItemContext
+				? undefined
+				: getChargeEndsAt({ customerProduct, direction, billingPeriod }),
 		};
 
 		if (isFixedPrice(price)) {
