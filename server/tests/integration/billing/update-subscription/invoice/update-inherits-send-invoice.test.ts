@@ -10,6 +10,7 @@ import {
 	BillingInterval,
 	CusProductStatus,
 } from "@autumn/shared";
+import { expectInvoiceSentOnTerms } from "@tests/integration/billing/utils/expectInvoiceSentOnTerms";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -61,12 +62,8 @@ const expectUpdateInvoiced = async ({
 	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 		result.invoice!.stripe_id,
 	);
-	expect(stripeInvoice.collection_method).toBe("send_invoice");
-	expect(stripeInvoice.status).toBe("open");
+	expectInvoiceSentOnTerms({ stripeInvoice, netTermsDays: NET_TERMS_DAYS });
 	expect(stripeInvoice.total / 100).toBeCloseTo(preview.total, 2);
-	expect(
-		stripeInvoice.due_date! - stripeInvoice.created,
-	).toBeGreaterThanOrEqual((NET_TERMS_DAYS - 1) * 86_400);
 
 	const fullCustomer = await CusService.getFull({
 		ctx,
