@@ -22,11 +22,13 @@ export const createBenchProcessor = async ({
 	partition,
 	latency,
 	serialize,
+	writerLimits: limitOverrides,
 }: {
 	scenario: Scenario;
 	partition: number;
 	latency: BenchLatency;
 	serialize: boolean;
+	writerLimits?: { maxBatchSize?: number; commitLingerMs?: number };
 }) => {
 	const topic = "bench-metering";
 	let appended = 0;
@@ -89,6 +91,7 @@ export const createBenchProcessor = async ({
 		maxBatchSize: 100,
 		maxPendingCommands: 1_000_000,
 		maxPendingCommandsPerCustomer: 1_000_000,
+		...limitOverrides,
 	};
 	const processor = createPartitionProcessor({
 		ctx: {

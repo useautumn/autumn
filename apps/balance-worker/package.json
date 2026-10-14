@@ -19,6 +19,7 @@
 		"benchmark:snapshots": "bun --config=./bunfig.toml tests/benchmarks/subject-snapshot-flush/run.ts",
 		"benchmark:effects": "bun --config=./bunfig.toml tests/benchmarks/track-effects/run.ts",
 		"benchmark:track": "bun --config=./bunfig.toml tests/benchmarks/track-throughput/run.ts",
+		"benchmark:queued-atom-track": "bun --config=./bunfig.toml tests/benchmarks/queued-atom-track/run.ts",
 		"benchmark:warm-track": "bun --config=./bunfig.toml tests/benchmarks/warm-track/run.ts",
 		"benchmark:warm-track:steps": "bun --config=./bunfig.toml tests/benchmarks/warm-track/steps.ts",
 		"benchmark:warm-track:decide-steps": "bun --config=./bunfig.toml tests/benchmarks/warm-track/decideSteps.ts",
