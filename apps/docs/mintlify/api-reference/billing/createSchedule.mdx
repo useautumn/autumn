@@ -104,7 +104,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
-  Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
+  Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).
 </DynamicParamField>
 
 <DynamicParamField body="no_billing_changes" type="boolean">

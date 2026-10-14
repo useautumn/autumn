@@ -606,7 +606,7 @@ export type AttachInvoiceMode = {
 };
 
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export const AttachProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -614,7 +614,7 @@ export const AttachProrationBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export type AttachProrationBehavior = ClosedEnum<
   typeof AttachProrationBehavior
@@ -1079,7 +1079,7 @@ export type AttachParams = {
    */
   invoiceMode?: AttachInvoiceMode | undefined;
   /**
-   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
    */
   prorationBehavior?: AttachProrationBehavior | undefined;
   /**
