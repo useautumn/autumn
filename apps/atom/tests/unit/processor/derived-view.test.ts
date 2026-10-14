@@ -157,7 +157,7 @@ describe("the view is memoised", () => {
 	test("memo: 10k reads on a customer with an empty journal never call replay", async () => {
 		const { processor, ctx } = openSlot();
 		await pushBalance({ processor, balance: 900 });
-		const replayed = spyOn(replay, "replayOwed");
+		const replayed = spyOn(replay, "replayOwedSteps");
 		cleanups.push(() => replayed.mockRestore());
 
 		for (let read = 0; read < 10_000; read++)
@@ -170,7 +170,7 @@ describe("the view is memoised", () => {
 		const { processor, ctx, journal } = openSlot();
 		await pushBalance({ processor, balance: 900 });
 		await owe({ journal, value: 10 });
-		const replayed = spyOn(replay, "replayOwed");
+		const replayed = spyOn(replay, "replayOwedSteps");
 		cleanups.push(() => replayed.mockRestore());
 
 		const first = readCurrentSubject({
@@ -295,7 +295,7 @@ describe("the view is incremental between pushes", () => {
 		expect([next.computeTrack, balanceOf({ ctx })]).toEqual([1, 435]);
 	});
 
-	test("a reconciled entry forces a full fold over what is still owed", async () => {
+	test("a reconciled entry replays nothing: the fold kept the rows after it, and the push matches them", async () => {
 		const { processor, ctx, journal } = openSlot();
 		await pushBalance({ processor, balance: 1000 });
 		await owe({ journal, value: 10 });
@@ -312,7 +312,7 @@ describe("the view is incremental between pushes", () => {
 			read({ ctx });
 		});
 
-		expect([steps.computeTrack, balanceOf({ ctx })]).toEqual([1, 970]);
+		expect([steps.computeTrack, balanceOf({ ctx })]).toEqual([0, 970]);
 	});
 });
 

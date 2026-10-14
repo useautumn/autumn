@@ -3,11 +3,12 @@ import {
 	findStructuralDifference,
 	findSubjectStateDifference,
 	type StructuralDifference,
+	type SubjectState,
 	subjectStateRowsOf,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
-import { replayOwed } from "./replayOwed.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The entries a fold applied: the journal may have grown its array since. */
@@ -54,7 +55,10 @@ export const foldAcrossPush = ({
 	const trimmed = trimmedCountOf({ fold, owed });
 	if (trimmed === null) return { rebuiltFor: "trim", difference: null };
 	// Bun's compare decides; the path finder, ten times slower, runs only to name what differs.
-	if (!Bun.deepEquals(fold.current.catalog, catalog))
+	const isSameCatalog = timeStage("engineFoldCheck", () =>
+		Bun.deepEquals(fold.current.catalog, catalog),
+	);
+	if (!isSameCatalog)
 		return {
 			rebuiltFor: "catalog",
 			difference: findStructuralDifference({
@@ -62,21 +66,18 @@ export const foldAcrossPush = ({
 				right: catalog,
 			}),
 		};
+	// The fold replayed the trimmed entries one by one as they were appended, so the push is compared to the rows it kept.
 	const acknowledged =
 		trimmed === 0
 			? fold.customer.state
-			: replayOwed({
-					owed: fold.owed.slice(0, trimmed),
-					state: fold.customer.state,
-					catalog,
-					stage: "engineFoldCheck",
-				});
-	if (
-		!Bun.deepEquals(
+			: (fold.statesAfter[trimmed - 1] as SubjectState);
+	const isSameState = timeStage("engineFoldCheck", () =>
+		Bun.deepEquals(
 			subjectStateRowsOf(acknowledged),
 			subjectStateRowsOf(customer.state),
-		)
-	)
+		),
+	);
+	if (!isSameState)
 		return {
 			rebuiltFor: "state",
 			difference: findSubjectStateDifference({
@@ -98,6 +99,7 @@ export const foldAcrossPush = ({
 				},
 			},
 			applied: fold.applied - trimmed,
+			statesAfter: fold.statesAfter.slice(trimmed),
 			fullSubject: null,
 		},
 	};
