@@ -18,12 +18,6 @@ export type LockReceipt = {
 	items: MutationLogItem[];
 };
 
-export const lockNotFoundError = ({ lockId }: { lockId: string }) =>
-	new RecaseError({
-		message: `Lock not found for ID: ${lockId}`,
-		code: ErrCode.InvalidRequest,
-	});
-
 const fetchAndClaimLockReceiptV2FromCandidates = async ({
 	ctx,
 	lockId,
@@ -63,7 +57,12 @@ export const fetchLockReceipt = async ({
 		lockId,
 	});
 
-	if (!v2Result.found) throw lockNotFoundError({ lockId });
+	if (!v2Result.found) {
+		throw new RecaseError({
+			message: `Lock not found for ID: ${lockId}`,
+			code: ErrCode.InvalidRequest,
+		});
+	}
 
 	return {
 		receipt: v2Result.receipt,
