@@ -1330,6 +1330,39 @@ test("the metering consumer settles a command batch through the command topic's 
 	await consumer.stop();
 });
 
+test("the metering consumer begins a command batch through the command topic's own handler, before its records", async () => {
+	const fixture = createConsumerFixture();
+	const commandTopic = "commands";
+	const events: string[] = [];
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord: () => undefined },
+			secondaryHandlers: {
+				[commandTopic]: {
+					readResumeOffset,
+					beginBatch: ({ topic: begunTopic, messages }) => {
+						events.push(`begin:${begunTopic}:${messages.length}`);
+					},
+					applyRecord: () => {
+						events.push("apply");
+						return applyRecord();
+					},
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		topic: commandTopic,
+		records: [createRecord("0")],
+	});
+	expect(events).toEqual([`begin:${commandTopic}:1`, "apply"]);
+	await consumer.stop();
+});
+
 test("a handler that declines a position gets the record passed without decoding it", async () => {
 	const fixture = createConsumerFixture();
 	const records = createMeteringRecords();
