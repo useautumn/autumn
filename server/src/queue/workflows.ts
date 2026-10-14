@@ -70,6 +70,8 @@ export type ExpireLockReceiptPayload = {
 	customerId: string;
 	lockId: string;
 	hashedKey: string;
+	/** Set when the timer was armed for one lock row: it expires that row, never a later lock under the same id. */
+	lockRowId?: string;
 };
 
 // ============ Workflow Registry ============

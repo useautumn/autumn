@@ -9,10 +9,10 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import {
-	type AtomFinalizeBatch,
-	consumeAtomFinalize,
-	prepareAtomFinalizeBatch,
-} from "../../consume/consumeAtomFinalize.js";
+	type PreparedBatch,
+	prepareCommandBatch,
+} from "../../consume/batchPreparers.js";
+import { consumeAtomFinalize } from "../../consume/consumeAtomFinalize.js";
 import { consumeEvict } from "../../consume/consumeEvict.js";
 import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
@@ -48,7 +48,7 @@ type ParsedRecord = { command: CommandRecord } | { unreadable: unknown };
 /** A batch read once before its records apply: each record parsed by offset, and what each command type prepared for it. */
 type CommandBatch = {
 	parsed: Map<string, ParsedRecord>;
-	atomFinalize: AtomFinalizeBatch;
+	prepared: PreparedBatch;
 };
 
 const parseRecord = ({
@@ -107,11 +107,11 @@ export function createCommandRecordHandler({
 		const commands = [...parsed.values()].flatMap((record) =>
 			"command" in record ? [record.command] : [],
 		);
-		const atomFinalize = await prepareAtomFinalizeBatch({
+		const prepared = await prepareCommandBatch({
 			commands,
 			process: (run) => runtime.process(run),
 		});
-		batchesByPartition.set(partition, { parsed, atomFinalize });
+		batchesByPartition.set(partition, { parsed, prepared });
 	}
 
 	async function settleBatch({
@@ -229,7 +229,7 @@ export function createCommandRecordHandler({
 					queued = await consumeAtomFinalize({
 						ctx: consumeCtx,
 						command,
-						batch: batch?.atomFinalize,
+						batch: batch?.prepared.atomFinalize,
 					});
 					break;
 				default:

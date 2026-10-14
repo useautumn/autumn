@@ -45,6 +45,11 @@ async function landAtomSeqOnly({
 	return { decided };
 }
 
+/** Its expiry timer may have fired before the row landed, so the lock would be held with nothing left to release it. */
+const isReleaseLockPastExpiry = ({ command }: { command: TrackCommand }) =>
+	command.lock?.expiryAction === "release" &&
+	command.lock.expiresAt <= Date.now();
+
 /** A queued track: claim the item's key, then decide it in arrival order. Null when another item holds the key. */
 export async function consumeTrack({
 	ctx,
@@ -53,6 +58,8 @@ export async function consumeTrack({
 	ctx: ConsumeContext;
 	command: TrackCommand;
 }): Promise<QueuedCommand | null> {
+	if (command.source && isReleaseLockPastExpiry({ command }))
+		return landAtomSeqOnly({ ctx, command });
 	const claim = claimOf({ command });
 	let decided: QueuedCommand["decided"] | null;
 	try {
