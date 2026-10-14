@@ -4,6 +4,11 @@ import {
 	type HandOffContext,
 	handOffJournals,
 } from "../handover/handOffJournals.js";
+import {
+	handOffKeysUpToNow,
+	handOffOlderKeys,
+	KEYS_BEFORE_SWITCH_MS,
+} from "../handover/handOffKeys.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import type { Membership } from "./types/membership.js";
 
@@ -12,6 +17,8 @@ export const PROBE_EVERY_MS = 1_000;
 const PROBE_TIMEOUT_MS = 1_000;
 /** A listed peer that has answered no probe for this long is worth a line: both replicas may be owning everything. */
 const UNPROBED_WARN_MS = 60_000;
+/** Probes a peer waits uncounted for its customers' keys to land before it is counted without them. */
+const KEY_HANDOFF_PROBES = 10;
 
 export type ReadinessProberContext = Omit<HandOffContext, "ring"> & {
 	ring: ReplicaRing;
@@ -68,6 +75,8 @@ export const startReadinessProber = ({
 	/** When each listed peer was first seen unready, until it answers; warned about once. */
 	const unreadySince = new Map<string, number>();
 	let stopped = false;
+	/** Probes each ready peer has waited for its keys, while a batch to it fails. */
+	const keyHandoffTries = new Map<string, number>();
 
 	const noteUnready = (peer: string) => {
 		const since = unreadySince.get(peer) ?? Date.now();
@@ -104,6 +113,58 @@ export const startReadinessProber = ({
 		ctx.membership.forget(peer);
 	}
 
+	/** True once the peer holds the keys of the customers moving to it, or it has waited KEY_HANDOFF_PROBES probes for them. */
+	async function handOffKeysTo({
+		peer,
+		switchedAt,
+	}: {
+		peer: string;
+		switchedAt: number;
+	}): Promise<boolean> {
+		const keys = await handOffKeysUpToNow({
+			ctx,
+			since: switchedAt - KEYS_BEFORE_SWITCH_MS,
+			ownerOf: ({ customerId }) =>
+				ctx.ring.ownerOnceJoined({ customerId, peer }),
+		});
+		if (keys.complete) {
+			keyHandoffTries.delete(peer);
+			return true;
+		}
+		const tries = (keyHandoffTries.get(peer) ?? 0) + 1;
+		keyHandoffTries.set(peer, tries);
+		if (keys.failed > 0 && tries < KEY_HANDOFF_PROBES) return false;
+		keyHandoffTries.delete(peer);
+		ctx.logger.warn(
+			{
+				type: "atom_keys_unhanded",
+				data: { peer, failed: keys.failed, tries },
+			},
+			`${peer} is counted without every caller key of the customers moving to it: a retry there may deduct again`,
+		);
+		return true;
+	}
+
+	/** After the switch, in the background: the probes go on while an hour of keys streams to the peer. */
+	async function handOffOlderKeysTo({
+		peer,
+		switchedAt,
+	}: {
+		peer: string;
+		switchedAt: number;
+	}): Promise<void> {
+		const older = await handOffOlderKeys({
+			ctx,
+			switchedAt,
+			ownerOf: ({ customerId }) =>
+				ctx.ring.ownerOnceJoined({ customerId, peer }),
+		});
+		ctx.logger.info(
+			{ type: "atom_older_keys_handed", data: { peer, ...older } },
+			`Handed ${peer} the older caller keys of the customers moving to it`,
+		);
+	}
+
 	async function probeOnce(): Promise<void> {
 		const listed = (await ctx.replication.peers().catch(() => [])).filter(
 			(peer) => peer !== ctx.ring.self,
@@ -117,16 +178,24 @@ export const startReadinessProber = ({
 				ctx.membership.hasHandedOff({ address: peer, thread: ctx.thread })
 			)
 				continue;
+			const switchedAt = Date.now();
 			await handOffJournals({
 				ctx,
 				ownerOf: (customerId) => ctx.ring.ownerOnceJoined({ customerId, peer }),
 			});
+			if (!(await handOffKeysTo({ peer, switchedAt }))) continue;
 			ctx.onHandedOff?.(peer);
 			const joined = ctx.membership.handedOff({
 				address: peer,
 				thread: ctx.thread,
 				threads: ctx.threads,
 			});
+			void handOffOlderKeysTo({ peer, switchedAt }).catch((error) =>
+				ctx.logger.warn(
+					{ type: "atom_older_keys_failed", error, data: { peer } },
+					`Could not hand ${peer} the older caller keys: a retry of one there may deduct again`,
+				),
+			);
 			if (joined)
 				ctx.logger.info(
 					{ type: "atom_peer_joined", data: { peer } },

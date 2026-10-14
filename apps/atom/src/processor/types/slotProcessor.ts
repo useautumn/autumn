@@ -4,6 +4,7 @@ import type { TrackResponseV3 } from "@autumn/shared";
 import type { HandoffBarrier } from "../../replicas/handover/createHandoffBarrier.js";
 import type {
 	HandedEntry,
+	HandedKey,
 	Journal,
 } from "../../state/journal/types/journal.js";
 import type {
@@ -57,12 +58,13 @@ export type SlotProcessor = {
 		customerId: string;
 		body: string;
 	}): Promise<PushedSubject>;
-	/** Customers' owed entries another replica handed over with them: held in this slot's journal, in one transaction, under their own writers. */
+	/** Customers' owed entries, or their recent keys, another replica handed over with them: held in this slot's journal, in one transaction. */
 	receiveHandoff(params: {
 		handoffs: {
 			customerId: string;
 			entries: HandedEntry[];
 			locks: OpenLock[];
 		}[];
+		keys: HandedKey[];
 	}): Promise<{ held: number }>;
 };

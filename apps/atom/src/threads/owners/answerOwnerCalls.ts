@@ -43,11 +43,11 @@ const runOwnerCall = async ({
 	if (!slots) throw new Error(`This Atom holds no folder ${call.atomId}`);
 	if (call.type === "setCatalog") return slots.setCatalog(call.catalog);
 	if (call.type === "receiveHandoff") {
-		const [first] = call.handoffs;
-		if (!first) return { held: 0 };
+		const customerId = (call.handoffs[0] ?? call.keys[0])?.customerId;
+		if (!customerId) return { held: 0 };
 		return slots
-			.processorFor({ customerId: first.customerId })
-			.receiveHandoff({ handoffs: call.handoffs });
+			.processorFor({ customerId })
+			.receiveHandoff({ handoffs: call.handoffs, keys: call.keys });
 	}
 	if (call.type === "installCatalog") return slots.installCatalog(call.catalog);
 	if (call.type === "setSubject")
