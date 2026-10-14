@@ -63,6 +63,7 @@ const proberOf = ({
 								{
 									handoffs: async () => [],
 									dropHandedOff() {},
+									keysSince: async () => [],
 								},
 							],
 							ownedOpenLocks: () => [],
