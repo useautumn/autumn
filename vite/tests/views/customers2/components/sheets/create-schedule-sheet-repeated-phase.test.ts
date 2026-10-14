@@ -122,6 +122,7 @@ test("a saved phase that repeats the one before it reopens as its own phase", ()
 		NEXT_PHASE,
 		LATER_PHASE,
 	]);
+	expect(form.phases[2]?.keepsCycleAnchor).toBe(false);
 	expect(
 		form.phases.map((phase) =>
 			phase.plans.map(({ productId, entityId }) => ({ productId, entityId })),

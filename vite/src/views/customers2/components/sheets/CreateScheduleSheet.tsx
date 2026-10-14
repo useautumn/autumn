@@ -154,9 +154,14 @@ export function buildInitialValues({
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
 		const laterPhaseStartsAt = index > 0 ? phase.startsAt : null;
+		// A repeated phase only merges into the row it continues when saved on its phase_start anchor.
 		const keepsCycleAnchor =
 			laterPhaseStartsAt != null &&
-			!resetsBillingCycleAt({ customerProducts, startsAt: laterPhaseStartsAt });
+			!resetsBillingCycleAt({
+				customerProducts,
+				startsAt: laterPhaseStartsAt,
+			}) &&
+			!seededState.repeatedPhaseStarts.includes(laterPhaseStartsAt);
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
@@ -262,13 +267,16 @@ function customerProductsToSetPlansState({
 		...[...new Set([...rowStarts, ...repeatedStarts])].sort((a, b) => a - b),
 	];
 
-	return customerProductsToCustomerState({
-		customerProducts,
-		phaseStarts,
-		canUnschedule: phaseStarts.length > 1,
-		entities,
-		products,
-	});
+	return {
+		...customerProductsToCustomerState({
+			customerProducts,
+			phaseStarts,
+			canUnschedule: phaseStarts.length > 1,
+			entities,
+			products,
+		}),
+		repeatedPhaseStarts: repeatedStarts,
+	};
 }
 
 function ScheduleSendInvoiceContent() {
