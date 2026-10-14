@@ -68,8 +68,11 @@ export const BALANCE_WORKER_CATALOG_TTL_MS = 300_000;
 export const BALANCE_WORKER_CATALOG_RECHECK_MS = BALANCE_WORKER_CATALOG_TTL_MS;
 /** Shared per worker rather than per partition. Staging evicted rows out from
  *  under in-flight decisions at 256 MiB, which surfaces as NOT_READY responses
- *  the caller cannot do anything useful with. */
-export const BALANCE_WORKER_CATALOG_MAX_BYTES = 536_870_912;
+ *  the caller cannot do anything useful with. Idle expiry now keeps the cache
+ *  near its working set, so the cap is a backstop; watch NOT_READY if lowering. */
+export const BALANCE_WORKER_CATALOG_MAX_BYTES = 134_217_728;
+/** Rows unread this long are purged, so a long-lived worker stops keeping every customer it ever served. */
+export const BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS = 3_600_000;
 
 /** An eighth of the task: 512 MiB on a 4 GiB worker, growing with the task size. */
 export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;

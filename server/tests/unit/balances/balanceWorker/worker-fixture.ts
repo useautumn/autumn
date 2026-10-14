@@ -73,7 +73,11 @@ export function createWorkerFixture({
 			catalogCache: createCatalogCache({
 				ctx: {
 					db,
-					config: { mutableRowTtlMs: 60_000, maxSizeBytes: 1_000_000 },
+					config: {
+						mutableRowTtlMs: 60_000,
+						maxSizeBytes: 1_000_000,
+						idleExpiryMs: 3_600_000,
+					},
 				},
 			}),
 			receiptPolicy: { retentionMs: 86_400_000, now: () => now },
