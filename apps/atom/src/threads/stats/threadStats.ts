@@ -25,6 +25,9 @@ export const THREAD_STAT_FIELDS = [
 	"tracksAppended",
 	"appendFailed",
 	"journalForwardFailed",
+	/** Pushes that replaced the copy of a customer still owing deductions: its view's fold continued, or replayed from the push. */
+	"viewFoldKept",
+	"viewFoldRebuilt",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
