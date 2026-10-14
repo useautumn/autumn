@@ -9,6 +9,8 @@ import type {
 
 /** Tracks per `tracks.append` request. */
 const MAX_TRACKS_PER_REQUEST = 500;
+/** A batch short of the cap waits this long for the deductions right behind it: a burst becomes one call, not one each. */
+const LINGER_MS = 20;
 /** A batch Autumn did not take is sent again after this, doubling up to the last. */
 const FIRST_RETRY_MS = 1_000;
 const LAST_RETRY_MS = 30_000;
@@ -69,8 +71,11 @@ export const createJournalForwarder = ({
 		const { journal, tokenHash, isStopped } = draining;
 		let retryMs = FIRST_RETRY_MS;
 		while (!isStopped()) {
+			const waiting = journal.unsent({ limit: MAX_TRACKS_PER_REQUEST }).length;
+			if (waiting === 0) return;
+			if (waiting < MAX_TRACKS_PER_REQUEST) await Bun.sleep(LINGER_MS);
+			if (isStopped()) return;
 			const batch = journal.unsent({ limit: MAX_TRACKS_PER_REQUEST });
-			if (batch.length === 0) return;
 			try {
 				await ctx.autumnClient.appendTracks({
 					tokenHash: tokenHash(),
