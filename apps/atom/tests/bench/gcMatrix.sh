@@ -33,6 +33,8 @@ for arm in "${arms[@]}"; do
 		rate=${cell##*:}
 		bgRate=0
 		[ "$bg" -gt 0 ] && bgRate=500
+		# A replica a previous cell left behind would hold the ports.
+		for pid in $(pgrep -f "bench/[g]cBench.ts replica" ; pgrep -f "bench/[m]ultiWorkerAutumn.ts"); do kill -9 "$pid" 2>/dev/null; done
 		# shellcheck disable=SC2046
 		env $(envOf "$arm") GC_LOG_PATH="$out/$arm-bg$bg-r$rate.gclog" timeout 300 bun run bench:gc "$rate" "$seconds" "$bg" "$bgRate" 2>/dev/null | tail -1 >>"$jsonl"
 	done

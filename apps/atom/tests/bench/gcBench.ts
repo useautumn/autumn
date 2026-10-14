@@ -622,6 +622,8 @@ const drive = async ({
 	);
 	replica.kill("SIGTERM");
 	autumn.kill();
+	await Promise.race([replica.exited, Bun.sleep(2_000)]);
+	replica.kill("SIGKILL");
 	rmSync(folder, { recursive: true, force: true });
 	process.exit(0);
 };
