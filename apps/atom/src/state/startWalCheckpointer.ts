@@ -10,7 +10,18 @@ const TICK_MS = 1000;
  * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
  */
 export const TICKS_PER_FILE = 30;
+/** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
+ * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
+export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
 const WAL_SUFFIX = "-wal";
+
+const walBytes = ({ path }: { path: string }): number => {
+	try {
+		return statSync(`${path}${WAL_SUFFIX}`).size;
+	} catch {
+		return 0;
+	}
+};
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
 	try {
@@ -75,7 +86,8 @@ export const startWalCheckpointer = ({
 				open.delete(path);
 			}
 		paths.forEach((path, index) => {
-			if (index % TICKS_PER_FILE === tick % TICKS_PER_FILE)
+			const itsTurn = index % TICKS_PER_FILE === tick % TICKS_PER_FILE;
+			if (itsTurn || walBytes({ path }) > CHECKPOINT_WAL_BYTES)
 				checkpointOne({ path });
 		});
 		tick += 1;
