@@ -83,24 +83,24 @@ const amountLabel = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-/** Line items accordion plus totals rows, with no section chrome of its own. */
-/** Index of the added line a preview line came from, matched by description. */
-const addedLineIndexes = <T extends BillingLineItem>({
-	items,
+/** Server appends add_lines in request order, so the nth custom line is the nth added line. */
+const addedLineIndexByItem = <T extends BillingLineItem>({
+	lineItems = [],
 	lineEdits,
 }: {
-	items: T[];
+	lineItems?: T[];
 	lineEdits?: InvoiceLineEditsController;
 }) => {
-	const used = new Set<number>();
-	return items.map((item) => {
-		if (!lineEdits || !item.custom) return -1;
-		const index = lineEdits.added.findIndex(
-			(line, i) => !used.has(i) && line.description === item.description,
-		);
-		if (index !== -1) used.add(index);
-		return index;
-	});
+	const indexByItem = new Map<T, number>();
+	if (!lineEdits) return indexByItem;
+	let customIndex = 0;
+	for (const item of lineItems) {
+		if (!item.custom) continue;
+		if (customIndex < lineEdits.added.length)
+			indexByItem.set(item, customIndex);
+		customIndex += 1;
+	}
+	return indexByItem;
 };
 
 const RowIconButton = ({
@@ -149,7 +149,7 @@ export function LineItemsContent<T extends BillingLineItem>({
 			!item.remove_line ||
 			!removedSelectors.has(JSON.stringify(item.remove_line)),
 	);
-	const addedIndexes = addedLineIndexes({ items: filteredItems, lineEdits });
+	const addedIndexByItem = addedLineIndexByItem({ lineItems, lineEdits });
 	const removedLines = lineEdits?.removed ?? [];
 	const showLineList =
 		filteredItems.length > 0 || removedLines.length > 0 || !!lineEdits;
@@ -178,7 +178,7 @@ export function LineItemsContent<T extends BillingLineItem>({
 						<AccordionContent className="pb-2 pt-1">
 							<div className="space-y-2">
 								{filteredItems.map((item, itemIndex) => {
-									const addedIndex = addedIndexes[itemIndex];
+									const addedIndex = addedIndexByItem.get(item) ?? -1;
 									const removeLine = linesRemovable ? item.remove_line : null;
 									return (
 										<div

@@ -24,6 +24,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -158,7 +159,9 @@ test.concurrent(
 	`${chalk.yellowBright("attach add_lines 3: edits that net to zero create no invoice")}`,
 	async () => {
 		const customerId = "attach-add-lines-zero";
-		const { autumnV2_5, pro, premium } = await setupProUpgrade({ customerId });
+		const { autumnV2_5, ctx, pro, premium } = await setupProUpgrade({
+			customerId,
+		});
 
 		// Keep only pro's -$20 credit, then add $20 back.
 		const params: AttachParamsV1Input = {
@@ -183,5 +186,19 @@ test.concurrent(
 		const result = await autumnV2_5.billing.attach<AttachParamsV1Input>(params);
 		expect(result.invoice).toBeUndefined();
 		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+
+		// Nothing left pending for the next invoice either.
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const stripeCustomerId = fullCustomer.processor?.id;
+		if (!stripeCustomerId) throw new Error("Missing Stripe customer ID");
+		const pending = await ctx.stripeCli.invoiceItems.list({
+			customer: stripeCustomerId,
+			pending: true,
+			limit: 100,
+		});
+		expect(pending.data).toHaveLength(0);
 	},
 );

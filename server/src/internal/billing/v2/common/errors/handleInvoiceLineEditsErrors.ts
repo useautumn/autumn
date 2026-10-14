@@ -180,11 +180,10 @@ export const handleInvoiceLineEditsErrors = ({
 		);
 	}
 
-	// An otherwise unchanged subscription under "none" needs no invoice at all.
+	// "none" on an existing subscription drops every line billed now, edits included.
 	if (
 		skipsInvoiceLineEdits({ billingContext }) &&
-		billingContext.stripeSubscription &&
-		!billingPlan.stripe?.subscriptionAction
+		billingContext.stripeSubscription
 	) {
 		return;
 	}

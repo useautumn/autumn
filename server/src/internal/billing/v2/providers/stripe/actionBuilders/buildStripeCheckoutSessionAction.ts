@@ -64,16 +64,14 @@ export const buildStripeCheckoutSessionAction = ({
 			(lineItem) =>
 				isCustomLineItem(lineItem) &&
 				lineItem.chargeImmediately &&
-				lineItem.amountAfterDiscounts !== 0,
+				lineItem.amount !== 0,
 		)
 		.map((lineItem) => ({
 			price_data: {
 				currency,
 				product_data: { name: lineItem.description },
-				unit_amount: atmnToStripeAmount({
-					amount: lineItem.amountAfterDiscounts,
-					currency,
-				}),
+				// Checkout applies the session's discounts itself.
+				unit_amount: atmnToStripeAmount({ amount: lineItem.amount, currency }),
 			},
 			quantity: 1,
 		}));

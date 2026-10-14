@@ -68,6 +68,7 @@ export function AddInvoiceLineForm({
 				inputMode="decimal"
 				onChange={(event) => setAmount(event.target.value)}
 				placeholder="Amount"
+				step="any"
 				type="number"
 				value={amount}
 			/>
