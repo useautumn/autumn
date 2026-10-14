@@ -11,7 +11,11 @@ import {
 import { consumeEvict } from "../../consume/consumeEvict.js";
 import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
-import { consumeTrack } from "../../consume/consumeTrack.js";
+import {
+	claimTrackBatch,
+	consumeTrack,
+	type TrackClaims,
+} from "../../consume/consumeTrack.js";
 import { consumeUpdateBalance } from "../../consume/consumeUpdateBalance.js";
 import {
 	classifyQueuedFailure,
@@ -64,6 +68,7 @@ export function createCommandRecordHandler({
 	>();
 	/** Per partition, the Atom tracks this batch landed as nothing: a resend can be a whole journal, so one line per batch. */
 	const atomTracksOfNothing = new Map<number, number>();
+	const trackClaimsByPartition = new Map<number, TrackClaims>();
 
 	function deferredLogsOf({
 		partition,
@@ -81,6 +86,31 @@ export function createCommandRecordHandler({
 		return logs;
 	}
 
+	/** Claims the batch's track keys together before its first record applies; a record the bookmark skips claims nothing. */
+	function beginBatch({
+		partition,
+		messages,
+	}: {
+		partition: number;
+		messages: TopicRecord["message"][];
+	}): void {
+		const bookmark = ctx.readCommandNextOffset({ partition });
+		const tracks = messages.flatMap((message) => {
+			const offset = parseKafkaOffset({ offset: message.offset });
+			if (bookmark !== null && offset < bookmark) return [];
+			try {
+				const command = parseCommandRecord(message);
+				return command.type === "track" ? [command] : [];
+			} catch {
+				return [];
+			}
+		});
+		trackClaimsByPartition.set(
+			partition,
+			claimTrackBatch({ ctx, commands: tracks }),
+		);
+	}
+
 	async function settleBatch({
 		topic,
 		partition,
@@ -88,6 +118,7 @@ export function createCommandRecordHandler({
 		topic: string;
 		partition: number;
 	}): Promise<void> {
+		trackClaimsByPartition.delete(partition);
 		const deferred = deferredLogsByPartition.get(partition);
 		if (!deferred) return;
 		deferredLogsByPartition.delete(partition);
@@ -175,7 +206,11 @@ export function createCommandRecordHandler({
 		try {
 			switch (command.type) {
 				case "track":
-					queued = await consumeTrack({ ctx: consumeCtx, command });
+					queued = await consumeTrack({
+						ctx: consumeCtx,
+						command,
+						claims: trackClaimsByPartition.get(position.partition),
+					});
 					break;
 				case "reset":
 					queued = await consumeReset({ ctx: consumeCtx, command });
@@ -294,5 +329,5 @@ export function createCommandRecordHandler({
 		return undefined;
 	}
 
-	return { readResumeOffset, applyRecord, settleBatch };
+	return { readResumeOffset, beginBatch, applyRecord, settleBatch };
 }

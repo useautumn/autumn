@@ -2,6 +2,8 @@ import { type TrackCommand, trackOfNothing } from "@autumn/balance-engine";
 import {
 	buildIdempotencyStorageKey,
 	type IdempotencyClaim,
+	type IdempotencyClaimResult,
+	type IdempotencyKeyStore,
 	withIdempotencyKey,
 } from "@autumn/dynamodb";
 import { classifyQueuedFailure } from "./settleQueuedFailure.js";
@@ -27,6 +29,49 @@ const claimOf = ({
 	};
 };
 
+/** A Kafka batch's claims in flight, by storage key; each track takes its own as it decides. */
+export type TrackClaims = Map<
+	string,
+	{ owner?: string; outcome: Promise<IdempotencyClaimResult> }
+>;
+
+/** Sends every key's claim at once, so a batch waits one store round trip instead of one per track.
+ *  A key the batch repeats is left to its turn, so the earlier item still wins it. */
+export function claimTrackBatch({
+	ctx,
+	commands,
+}: {
+	ctx: Pick<ConsumeContext, "idempotencyKeys">;
+	commands: TrackCommand[];
+}): TrackClaims {
+	const claims: TrackClaims = new Map();
+	for (const command of commands) {
+		const claim = claimOf({ command });
+		if (!claim || claims.has(claim.storageKey)) continue;
+		const outcome = ctx.idempotencyKeys.claim(claim);
+		// A batch cut short never takes its later claims; their owner resumes them on redelivery.
+		outcome.catch(() => undefined);
+		claims.set(claim.storageKey, { owner: claim.owner, outcome });
+	}
+	return claims;
+}
+
+/** The store, answering this claim from the batch's when the batch sent it. */
+const storeFor = ({
+	ctx,
+	claim,
+	claims,
+}: {
+	ctx: ConsumeContext;
+	claim: IdempotencyClaim | undefined;
+	claims: TrackClaims | undefined;
+}): IdempotencyKeyStore => {
+	const sent = claim && claims?.get(claim.storageKey);
+	if (!claim || !sent || sent.owner !== claim.owner) return ctx.idempotencyKeys;
+	claims?.delete(claim.storageKey);
+	return { ...ctx.idempotencyKeys, claim: () => sent.outcome };
+};
+
 const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
@@ -49,15 +94,17 @@ async function landAtomSeqOnly({
 export async function consumeTrack({
 	ctx,
 	command,
+	claims,
 }: {
 	ctx: ConsumeContext;
 	command: TrackCommand;
+	claims?: TrackClaims;
 }): Promise<QueuedCommand | null> {
 	const claim = claimOf({ command });
 	let decided: QueuedCommand["decided"] | null;
 	try {
 		decided = await withIdempotencyKey({
-			store: ctx.idempotencyKeys,
+			store: storeFor({ ctx, claim, claims }),
 			claim,
 			run: () => ctx.processor.decideTrack({ command }),
 			onDuplicate: () => null,

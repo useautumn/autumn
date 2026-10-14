@@ -151,12 +151,12 @@ const handler = createCommandRecordHandler({
 		readCommandNextOffset: () => null,
 		idempotencyKeys,
 		logger: {
-			info: (message: string) => {
+			info: (message: unknown) => {
 				if (message !== "Queued Atom track applied") return;
 				applied += 1;
 				appliedAt.push(performance.now());
 			},
-			warn: (message: string, fields?: unknown) =>
+			warn: (message: unknown, fields?: unknown) =>
 				console.error(message, fields),
 		},
 	},
