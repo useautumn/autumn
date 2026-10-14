@@ -1,0 +1,51 @@
+name: Atom bench arm64 vs x86 (throwaway)
+
+on:
+  push:
+    branches: [bench/atom-arm-bench]
+
+jobs:
+  bench:
+    name: bench ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [blacksmith-4vcpu-ubuntu-2404-arm, blacksmith-4vcpu-ubuntu-2404]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Machine
+        run: |
+          uname -a
+          bun --version
+          nproc
+          lscpu | head -20
+
+      - run: bun install --frozen-lockfile
+
+      - name: bench:hot 500/1000/1500 × 20 s, pushLag 1500, 3 each
+        working-directory: apps/atom
+        run: |
+          for rate in 500 1000 1500; do
+            for i in 1 2 3; do
+              echo "== rate=$rate run=$i"
+              bun run bench:hot "$rate" 20 1500 | tee -a "$RUNNER_TEMP/hot.jsonl"
+            done
+          done
+
+      - name: bench:replicas 300 30 0.2 43
+        working-directory: apps/atom
+        run: bun run bench:replicas 300 30 0.2 43 | tee "$RUNNER_TEMP/replicas.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}/hot.jsonl
+            ${{ runner.temp }}/replicas.txt
