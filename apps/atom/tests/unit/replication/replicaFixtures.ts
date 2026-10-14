@@ -17,6 +17,7 @@ import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createHandoffBarrier } from "../../../src/replicas/handover/createHandoffBarrier.js";
 import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
 import { createMembership } from "../../../src/replicas/membership/createMembership.js";
+import { startReadinessProber } from "../../../src/replicas/membership/startReadinessProber.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -40,6 +41,8 @@ export const ATOM_TOKEN = "atom_token_1";
 export const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
 export const PEER_SECRET = "p".repeat(64);
 export const PEER_PORT = 8002;
+/** Where a replica's public app answers, /health included; any other port on an address is its peer app. */
+export const PUBLIC_PORT = 8001;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
 export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
@@ -63,6 +66,7 @@ export const createReplica = ({
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
 	ringPeers = [],
+	joined = ringPeers,
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
 }: {
@@ -74,13 +78,19 @@ export const createReplica = ({
 	now?: () => number;
 	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
 	ringPeers?: string[];
+	/** Which of them have joined (ready and handed their customers' entries); all of them by default. */
+	joined?: string[];
 	journalForwarder?: typeof forwardingNowhere;
 	/** True from the moment the thread starts stopping, as its server's stop sets it. */
 	stopping?: () => boolean;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
-	const membership = createMembership({ self: address, now });
+	const membership = createMembership({ self: address });
+	for (const peer of joined) {
+		membership.markReady({ address: peer, boot: "fixture" });
+		membership.markJoined(peer);
+	}
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const auth = createDeployedAuth({
 		journalForwarder,
@@ -169,6 +179,21 @@ export const createReplica = ({
 					logger: quiet,
 				},
 			}),
+		/** One pass over the listed peers: a ready one gets its customers' entries and then counts as an owner. */
+		probeOnce: () =>
+			startReadinessProber({
+				ctx: {
+					ring,
+					membership,
+					replication: { peers: async () => ringPeers },
+					folders: createDeployedFolders({ slots: auth.slots }),
+					thread: 0,
+					threads: 1,
+					publicPort: PUBLIC_PORT,
+					peer: { port: PEER_PORT, secret },
+					logger: quiet,
+				},
+			}).probeOnce(),
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
