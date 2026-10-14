@@ -1,6 +1,5 @@
 import { autumnHandler } from "autumn-js/hono";
 import { Hono } from "hono";
-import { compress } from "hono/compress";
 import { internalTrmnlRouter } from "@/internal/misc/trmnl/trmnlRouter.js";
 import { adminAuthMiddleware } from "../honoMiddlewares/adminAuthMiddleware";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware";
@@ -30,8 +29,6 @@ import { workbenchRouter } from "../internal/workbench/workbenchRouter";
 
 export const internalRouter = new Hono<HonoEnv>();
 
-// Dashboard payloads (plan lists, customers) are JSON-heavy; gzip them past 1KB.
-internalRouter.use("*", compress());
 // Internal/dashboard routes - use betterAuthMiddleware for session auth
 internalRouter.use("*", betterAuthMiddleware);
 internalRouter.use("*", orgConfigMiddleware);
