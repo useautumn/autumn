@@ -28,6 +28,13 @@ export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export { atomFinalizeToFinalize } from "./commands/atomFinalize/atomFinalizeToFinalize.js";
+export { atomFinalizeToTrackOfNothing } from "./commands/atomFinalize/atomFinalizeToTrackOfNothing.js";
+export {
+	computeAtomFinalize,
+	computeAtomFinalizeDecision,
+} from "./commands/atomFinalize/computeAtomFinalize.js";
+export type { AtomFinalizeCommand } from "./commands/atomFinalize/types/atomFinalizeCommand.js";
 export {
 	type CheckAfterDeduction,
 	checkAfterDeduction,
@@ -124,7 +131,7 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
-export type { AtomFinalizeCommand } from "./models/command/atomFinalizeCommand.js";
+
 export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";

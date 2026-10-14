@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
 	type AtomFinalizeCommand,
 	type EvictCommand,
-	type FinalizeCommand,
 	parseAtomFinalizeCommand,
 	parseEvictCommand,
 	parseResetCommand,
@@ -54,7 +53,7 @@ function createFixture({
 	lockRows?: WorkerLock[];
 } = {}) {
 	const lockReads: string[][] = [];
-	const finalized: FinalizeCommand[] = [];
+	const settledFrom: (string | null)[] = [];
 	const tracked: TrackCommand[] = [];
 	const evicted: EvictCommand[] = [];
 	const sources: unknown[] = [];
@@ -104,9 +103,11 @@ function createFixture({
 					return lockRows;
 				},
 				pendingLockRow: () => null,
-				readSubjectState: async () => ({ state: { customer: {} } }),
-				decideFinalize: async (params: { command: FinalizeCommand }) => {
-					finalized.push(params.command);
+				decideAtomFinalize: async (params: {
+					command: AtomFinalizeCommand;
+					lock: WorkerLock | null;
+				}) => {
+					settledFrom.push(params.lock?.lock_id ?? null);
 					return {
 						kind: "write",
 						waitForCommit: async () => ({ mutation: { result: {} } }),
@@ -156,7 +157,7 @@ function createFixture({
 		committed,
 		keys,
 		lockReads,
-		finalized,
+		settledFrom,
 	};
 }
 
@@ -258,8 +259,8 @@ const lockRowOf = ({ lockId }: { lockId: string }): WorkerLock => ({
 });
 
 describe("command record handler", () => {
-	test("a begun batch reads its Atom finalizes' locks in one query and settles each from it; once settled the batch is forgotten", async () => {
-		const { handler, lockReads, finalized } = createFixture({
+	test("a begun batch lets the Atom finalizes prepare once, and each settles from what was prepared; once settled the batch is forgotten", async () => {
+		const { handler, lockReads, settledFrom } = createFixture({
 			lockRows: [lockRowOf({ lockId: "L1" }), lockRowOf({ lockId: "L2" })],
 		});
 		const batch = [
@@ -288,7 +289,7 @@ describe("command record handler", () => {
 		);
 
 		expect(lockReads).toEqual([["L1", "L2"]]);
-		expect(finalized.map(({ lock }) => lock.lock_id)).toEqual(["L1", "L2"]);
+		expect(settledFrom).toEqual(["L1", "L2", null]);
 	});
 
 	test("a queued track reaches the partition's processor and resolves with no reply", async () => {

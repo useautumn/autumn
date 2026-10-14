@@ -1,5 +1,6 @@
 import type {
 	ApplyBillingPlanRequest,
+	AtomFinalizeCommand,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
 	DeleteBalanceCommand,
@@ -103,6 +104,11 @@ export type PartitionProcessor = {
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {
 		command: FinalizeCommand;
+	}): Promise<DecidedMutation<never>>;
+	/** An Atom's queued finalize, settled from `lock`, Autumn's own row, when it is still open and the one named. */
+	decideAtomFinalize(params: {
+		command: AtomFinalizeCommand;
+		lock: WorkerLock | null;
 	}): Promise<DecidedMutation<never>>;
 	confirmExpiredLock(params: {
 		command: ConfirmExpiredLockCommand;
