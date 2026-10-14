@@ -1,4 +1,4 @@
-import type { TrackCommand } from "@autumn/balance-engine";
+import { type TrackCommand, trackOfNothing } from "@autumn/balance-engine";
 import {
 	buildIdempotencyStorageKey,
 	type IdempotencyClaim,
@@ -40,13 +40,7 @@ async function landAtomSeqOnly({
 }): Promise<QueuedCommand | null> {
 	if (!command.source) return null;
 	const decided = await ctx.processor.decideTrack({
-		command: {
-			...command,
-			value: 0,
-			usageEvent: null,
-			enforceOverdueBlock: false,
-			idempotency: undefined,
-		},
+		command: trackOfNothing({ command }),
 	});
 	return { decided };
 }
