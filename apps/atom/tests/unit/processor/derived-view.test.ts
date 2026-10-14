@@ -60,7 +60,7 @@ const pushBalance = async ({
 	readAt?: number;
 	atomSeqs?: Record<string, number> | null;
 }) => {
-	return processor.setSubject(
+	const { stored } = await processor.setSubject(
 		subjectPushOf({
 			subject: withAtomSeqs({
 				subject: storedSubjectWith({ balance, readAt }),
@@ -68,6 +68,7 @@ const pushBalance = async ({
 			}),
 		}),
 	);
+	return stored;
 };
 
 const remainingOf = async ({

@@ -37,11 +37,12 @@ export const createSlotProcessor = ({
 		},
 		setSubject: async (params) => {
 			try {
-				const stored = timeStage("pushApply", () =>
-					setSubject({ ctx, subject: subjectPushToStoredSubject(params) }),
-				);
-				unwritten.delete(params.customerId);
-				return stored;
+				return timeStage("pushApply", () => {
+					const subject = subjectPushToStoredSubject(params);
+					const stored = setSubject({ ctx, subject });
+					unwritten.delete(params.customerId);
+					return { stored, entityId: subject.state.identity.entityId ?? null };
+				});
 			} catch (error) {
 				unwritten.add(params.customerId);
 				throw error;
