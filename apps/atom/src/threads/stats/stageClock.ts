@@ -12,10 +12,12 @@ export const STAGES = [
 	"hopServe",
 	/** The engine's decision on a check: computeCheck. */
 	"engineDecision",
-	/** A fold's replay of owed deductions onto a view, an append's continuation included: computeTrack, applyMutation. */
+	/** A fold continued: each appended deduction replayed onto the cached view (computeTrack, applyMutation). */
 	"engineFoldStep",
 	/** The replay of a push's acknowledged deductions onto the old copy, to tell whether the fold carries across it. */
 	"engineFoldCheck",
+	/** A fold rebuilt from the stored copy: every deduction still owed replayed. */
+	"engineFoldRebuild",
 	/** A customer's view joined, compared across a push, and rendered in the API's shape. */
 	"viewRender",
 	/** The journal's group commit, its fsync included. */

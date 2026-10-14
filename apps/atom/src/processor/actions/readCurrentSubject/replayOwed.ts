@@ -27,7 +27,7 @@ export const replayOwed = ({
 	/** `state` already joined to `catalog`, when a cached view holds it: the first step need not build it again. */
 	fullSubject?: WorkerFullSubject | null;
 	/** Which engine stage the replay counts to: a view's fold, or the check whether a fold carries across a push. */
-	stage?: "engineFoldStep" | "engineFoldCheck";
+	stage?: "engineFoldStep" | "engineFoldCheck" | "engineFoldRebuild";
 }): SubjectState =>
 	owed.reduce((current, { command }) => {
 		const fullSubject =
