@@ -5,6 +5,7 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
+import { PRUNE_CHUNK } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
@@ -20,6 +21,10 @@ const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
 export const MAX_OWED_PER_CUSTOMER = 20_000;
 export const MAX_UNSENT_AGE_MS = 5 * 60_000;
 export const MAX_UNSENT_PER_THREAD = 50_000;
+
+/** A caller's key is held this long after its append; past it the row is only waiting for the prune. */
+export const KEY_ROW_TTL_MS = 90 * 60_000;
+const PRUNE_EVERY_MS = 60_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
 let unsentOnThread = 0;
@@ -266,12 +271,31 @@ export const openJournal = ({
 		for (const entry of owed({ customerId })) releaseUnsent(entry);
 		unsentByCustomer.delete(customerId);
 		setOwed({ customerId, entries: [] });
-		return file
-			.write("deleteCustomerJournalEntries", customerId)
-			.then(() => {});
+		return Promise.all([
+			file.write("deleteCustomerJournalEntries", customerId),
+			file.write("deleteCustomerJournalKeys", customerId),
+		]).then(() => {});
 	}
 
+	let closed = false;
+	/** One chunk per writer round trip, until a chunk comes back short. */
+	async function pruneKeys(): Promise<void> {
+		const appendedBefore = String(now() - KEY_ROW_TTL_MS);
+		while (!closed) {
+			const pruned = await file.write("pruneJournalKeys", appendedBefore);
+			if (Number(pruned) < PRUNE_CHUNK) return;
+		}
+	}
+	// A failed prune is retried the next minute; a writer that died ends the thread anyway.
+	const pruneTimer = setInterval(
+		() => void pruneKeys().catch(() => {}),
+		PRUNE_EVERY_MS,
+	);
+	pruneTimer.unref();
+
 	function close(): void {
+		closed = true;
+		clearInterval(pruneTimer);
 		for (const entry of [...unsent]) releaseUnsent(entry);
 		unsentByJournal.delete(unsent);
 		file.close();

@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "../openSqliteDatabase.js";
+import { createJournalKeysTable } from "../repos/journalKeys.js";
 
 /** A file of another version is emptied on open, and with it what was owed: bump only with a migration of the rows. */
 const JOURNAL_SCHEMA_VERSION = 1;
@@ -8,6 +9,7 @@ const dropJournalSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS journal_entries");
 	database.run("DROP TABLE IF EXISTS journal_seqs");
 	database.run("DROP TABLE IF EXISTS journal_meta");
+	database.run("DROP TABLE IF EXISTS journal_keys");
 };
 
 const createJournalSchema = ({ database }: { database: Database }) => {
@@ -44,10 +46,13 @@ export const openJournalDatabase = ({
 	databasePath,
 }: {
 	databasePath: string;
-}): Database =>
-	openSqliteDatabase({
+}): Database => {
+	const database = openSqliteDatabase({
 		databasePath,
 		schemaVersion: JOURNAL_SCHEMA_VERSION,
 		dropSchema: dropJournalSchema,
 		createSchema: createJournalSchema,
 	});
+	createJournalKeysTable({ database });
+	return database;
+};

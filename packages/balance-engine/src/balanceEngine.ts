@@ -80,6 +80,7 @@ export type {
 	ResetResult,
 	ResetRow,
 } from "./commands/reset/types/resetResult.js";
+export { callerKeyOf } from "./commands/track/callerKeyOf.js";
 export {
 	computeTrack,
 	computeTrackDecision,
