@@ -15,7 +15,7 @@ import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
-import { foldAcrossPush } from "./foldAcrossPush.js";
+import { type FoldRebuilt, foldAcrossPush } from "./foldAcrossPush.js";
 import { freshestCatalog } from "./freshestCatalog.js";
 import { replayOwed } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
@@ -98,14 +98,69 @@ const subjectJoinCache = new WeakMap<StoredSubject, ViewFold>();
 /** A customer's own fold, keyed by the last entry it applied: it outlives the copy a push replaces, and leaves with that entry. */
 const foldByLastEntry = new WeakMap<JournalEntry, ViewFold>();
 
-/** Pushes that replaced a customer's copy while it owed: the fold continued, or replayed from the push. Module state is the thread's own. */
+/** One line per thread this often names why folds are replayed, so a busy thread cannot flood the logs. */
+const REBUILT_WARN_EVERY_MS = 60_000;
+/** Enough of each side to tell which field differs and how. */
+const LOGGED_VALUE_CHARS = 80;
+
+type RebuildReason = FoldRebuilt["rebuiltFor"] | "noFold";
+
+/** Pushes that replaced a customer's copy while it owed: the fold continued, or replayed from the push, by why. Module state is the thread's own. */
 let viewFoldKept = 0;
-let viewFoldRebuilt = 0;
+const viewFoldRebuilt: Record<RebuildReason, number> = {
+	noFold: 0,
+	trim: 0,
+	revision: 0,
+	catalog: 0,
+	state: 0,
+};
+let rebuiltWarnedAt = Number.NEGATIVE_INFINITY;
 
 export const readViewFoldThreadStats = () => ({
 	viewFoldKept,
-	viewFoldRebuilt,
+	viewFoldRebuilt: Object.values(viewFoldRebuilt).reduce(
+		(sum, count) => sum + count,
+		0,
+	),
+	viewFoldRebuiltNoFold: viewFoldRebuilt.noFold,
+	viewFoldRebuiltTrim: viewFoldRebuilt.trim,
+	viewFoldRebuiltRevision: viewFoldRebuilt.revision,
+	viewFoldRebuiltCatalog: viewFoldRebuilt.catalog,
+	viewFoldRebuiltState: viewFoldRebuilt.state,
 });
+
+const loggedValueOf = (value: unknown): string =>
+	(JSON.stringify(value) ?? "undefined").slice(0, LOGGED_VALUE_CHARS);
+
+/** Counts why the fold was replayed; where Autumn's copy differs is logged once a minute per thread. */
+const countRebuilt = ({
+	ctx,
+	customerId,
+	rebuilt,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	rebuilt: FoldRebuilt | null;
+}): void => {
+	viewFoldRebuilt[rebuilt?.rebuiltFor ?? "noFold"]++;
+	const difference = rebuilt?.difference;
+	const now = performance.now();
+	if (!difference || now - rebuiltWarnedAt < REBUILT_WARN_EVERY_MS) return;
+	rebuiltWarnedAt = now;
+	ctx.logger.warn(
+		{
+			type: "atom_view_fold_rebuilt",
+			data: {
+				customerId,
+				reason: rebuilt.rebuiltFor,
+				path: difference.path,
+				held: loggedValueOf(difference.left),
+				pushed: loggedValueOf(difference.right),
+			},
+		},
+		`A push replaced ${customerId}'s copy with more than its own deductions acknowledged (${rebuilt.rebuiltFor} differs at ${difference.path}); its view was replayed`,
+	);
+};
 
 /** The customer's fold whose last applied entry is still owed: the newest one, so found from the end. */
 const foldStillOwed = ({
@@ -159,11 +214,18 @@ export const readCurrentSubject = ({
 	// A customer's own fold survives a new copy: a push that only acknowledged its deductions replays nothing.
 	const isOwedOnNewCopy = !entity && !isSameCopy && owed.length > 0;
 	const carried = isOwedOnNewCopy ? foldStillOwed({ owed }) : null;
-	const carriedBase = carried
+	const acrossPush = carried
 		? foldAcrossPush({ fold: carried, customer, owed, catalog })
 		: null;
+	const carriedBase =
+		acrossPush && "kept" in acrossPush ? acrossPush.kept : null;
 	if (isOwedOnNewCopy && carriedBase) viewFoldKept++;
-	else if (isOwedOnNewCopy) viewFoldRebuilt++;
+	else if (isOwedOnNewCopy)
+		countRebuilt({
+			ctx,
+			customerId,
+			rebuilt: acrossPush && "rebuiltFor" in acrossPush ? acrossPush : null,
+		});
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
 		carriedBase ??

@@ -1,7 +1,7 @@
 import { readViewFoldThreadStats } from "../../processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import { readJournalThreadStats } from "../../state/journal/openJournal.js";
-import type { ThreadCounters } from "./threadStats.js";
+import type { ThreadCounters, ThreadStatField } from "./threadStats.js";
 
 const TICK_MS = 1000;
 /** A tick this late means the loop was busy with one thing for that long: a stall worth counting. */
@@ -33,9 +33,8 @@ export const startThreadStatsTick = ({
 		counters.set("journalOldestUnsentMs", journals.journalOldestUnsentMs);
 		counters.set("tracksAppended", journals.tracksAppended);
 		counters.set("appendFailed", journals.appendFailed);
-		const folds = readViewFoldThreadStats();
-		counters.set("viewFoldKept", folds.viewFoldKept);
-		counters.set("viewFoldRebuilt", folds.viewFoldRebuilt);
+		for (const [field, value] of Object.entries(readViewFoldThreadStats()))
+			counters.set(field as ThreadStatField, value);
 	}, TICK_MS);
 	timer.unref();
 	return { stop: () => clearInterval(timer) };
