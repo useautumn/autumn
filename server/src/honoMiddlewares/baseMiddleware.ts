@@ -60,7 +60,6 @@ const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
  * Sets up: db, logger, id, timestamp
  */
 export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
-	// const env = (c.req.header("app_env") as AppEnv) || AppEnv.Sandbox;
 	const id =
 		c.req.header("rndr-id") ||
 		c.req.header("X-Amzn-Trace-Id") ||
@@ -198,8 +197,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 					: {},
 		},
 	});
-
-	// childLogger.info(`${method} ${path}`);
 
 	await next();
 

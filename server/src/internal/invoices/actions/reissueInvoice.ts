@@ -27,6 +27,7 @@ import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { expirePendingPlanForVoidedInvoice } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanForVoidedInvoice";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
 	addStripeInvoiceLines,
@@ -46,6 +47,10 @@ import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOve
 import { buildReissueLines } from "./reissue/buildReissueLines";
 import { previewReissue } from "./reissue/previewReissue";
 import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
+import {
+	type ReissueSubscription,
+	resolveReissueSubscription,
+} from "./reissue/resolveReissueSubscription";
 import { resolveReissueTax } from "./reissue/resolveReissueTax";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
@@ -205,6 +210,7 @@ const createReplacementDraft = async ({
 	overrides,
 	lines,
 	dropDeferredPointer,
+	subscription,
 }: {
 	ctx: AutumnContext;
 	stripeCli: Stripe;
@@ -217,8 +223,9 @@ const createReplacementDraft = async ({
 	overrides?: ReissueInvoiceOverrides;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
 	dropDeferredPointer: boolean;
+	subscription: ReissueSubscription;
 }) => {
-	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	const { stripeSubId, subscriptionEnded, endedPaymentMethodId } = subscription;
 	const stripeCusId = stripeRefToId(stripeInvoice.customer);
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
@@ -252,7 +259,11 @@ const createReplacementDraft = async ({
 				? (paymentMethodTypes as never)
 				: undefined,
 		metadata: {
-			...inheritedMetadata({ stripeInvoice, dropDeferredPointer }),
+			...inheritedMetadata({
+				stripeInvoice,
+				// With the subscription gone there is no plan left to fulfil.
+				dropDeferredPointer: dropDeferredPointer || subscriptionEnded,
+			}),
 			autumn_reissued_from: stripeInvoice.id,
 			autumn_source_billing_reason: stripeInvoice.billing_reason ?? "",
 		},
@@ -273,6 +284,9 @@ const createReplacementDraft = async ({
 			: {}),
 		...(overrides?.account_tax_ids !== undefined
 			? { account_tax_ids: overrides.account_tax_ids }
+			: {}),
+		...(collectionMethod === "charge_automatically" && endedPaymentMethodId
+			? { default_payment_method: endedPaymentMethodId }
 			: {}),
 	};
 	// The draft exists from here on, so anything that fails must take it with it.
@@ -348,6 +362,12 @@ const issueReplacement = async ({
 	customerAdjusted: boolean;
 	issueMethod?: InvoiceIssueMethod;
 }): Promise<{ issued: Stripe.Invoice; creditNoteId: string | null }> => {
+	const subscription = await resolveReissueSubscription({
+		stripeCli,
+		stripeInvoice,
+	});
+	// With the subscription ended, the original's pending plan is expired by its void, not moved.
+	const repointsDeferred = !subscription.subscriptionEnded;
 	const draft = await createReplacementDraft({
 		ctx,
 		stripeCli,
@@ -363,6 +383,7 @@ const issueReplacement = async ({
 		overrides,
 		lines,
 		dropDeferredPointer: creditOriginal,
+		subscription,
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.
@@ -408,19 +429,27 @@ const issueReplacement = async ({
 	}
 
 	try {
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: stripeInvoice.id,
-			toStripeInvoiceId: issued.id,
-		});
+		if (repointsDeferred) {
+			await repointDeferredReferences({
+				ctx,
+				fromStripeInvoiceId: stripeInvoice.id,
+				toStripeInvoiceId: issued.id,
+			});
+		}
 		if (!originalIsDraft) await voidInvoice({ ctx, invoiceId });
+		// A parked draft is never voided, so its pending plan is expired here instead.
+		if (originalIsDraft && !repointsDeferred) {
+			await expirePendingPlanForVoidedInvoice({ ctx, stripeInvoice });
+		}
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: issued.id,
-			toStripeInvoiceId: stripeInvoice.id,
-		}).catch(() => undefined);
+		if (repointsDeferred) {
+			await repointDeferredReferences({
+				ctx,
+				fromStripeInvoiceId: issued.id,
+				toStripeInvoiceId: stripeInvoice.id,
+			}).catch(() => undefined);
+		}
 		if (originalIsDraft) {
 			await unparkDraftOriginal({ stripeCli, stripeInvoice }).catch(
 				() => undefined,
@@ -860,7 +889,8 @@ const storeReplacementInAutumn = async ({
  * Retires the original (void, a credit note when paid, or parked when a draft) and replaces it with a
  * copy issued per issue_method. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
- * effect the original payment would have had.
+ * effect the original payment would have had. Once that subscription has ended,
+ * the replacement is issued standalone and voiding the original expires its pending plan.
  *
  * A sent or finalized replacement is issued before the original is voided, so a
  * failure never leaves the customer without a payable invoice.

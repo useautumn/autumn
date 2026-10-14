@@ -110,7 +110,6 @@ export const cusProductToExistingUsages = ({
 				cusEnt: cusEntWithCusProduct,
 			});
 			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
-				// Usage = startingBalance + adjustment - currentBalance
 				const entityUsage = new Decimal(startingBalance)
 					.add(entityBalance.adjustment ?? 0)
 					.sub(entityBalance.balance)

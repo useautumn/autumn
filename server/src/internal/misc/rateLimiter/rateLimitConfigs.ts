@@ -64,7 +64,6 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/billing.update" }),
 
 			route({ method: "POST", url: "/v1/billing.setup_payment" }),
-			// route({ method: "POST", url: "/v1/billing.open_customer_portal" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals_v2" }),
 			route({ method: "POST", url: "/v1/billing.sync" }),
@@ -247,8 +246,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		store: "memory",
 		orgLimit: RateLimitType.TrackOrg,
 	},
-	// Org windows are 60s, sized ~1.5-2x the highest legit per-org peak over 7d
-	// of prod traffic (check 157k/min, track 60k/min, entities.get 53k/min).
 	[RateLimitType.TrackOrg]: {
 		limit: 120_000,
 		windowMs: 60_000,

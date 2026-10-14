@@ -18,10 +18,7 @@ import {
 	expectLicenseLinkCorrect,
 	expectLicenseLinkMissing,
 } from "../utils/expectLicenseLinkCorrect.js";
-import {
-	messagesItem,
-	withCatalogPlans,
-} from "../utils/seedLicensePlans.js";
+import { messagesItem, withCatalogPlans } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan-licenses: create parent + child with licenses:[child]")}`,

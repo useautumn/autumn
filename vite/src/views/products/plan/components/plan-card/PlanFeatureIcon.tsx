@@ -31,7 +31,6 @@ const getBillingType = (
 		return "included";
 	}
 
-	// Check for prepaid model
 	if (item.usage_model === UsageModel.Prepaid) {
 		return "prepaid";
 	}

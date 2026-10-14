@@ -76,6 +76,7 @@ export const eventsAggregateParamsOutboundSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	max_groups: z.union([z.number(), z.undefined()]).optional(),
+	measure: z.union([z.string(), z.undefined()]).optional(),
 	aggregate_on: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -86,6 +87,8 @@ const openEnumSchema = z.any();
 export const aggregateEventsRangeSchema = closedEnumSchema;
 
 export const binSizeSchema = closedEnumSchema;
+
+export const measureSchema = closedEnumSchema;
 
 export const aggregateOnSchema = closedEnumSchema;
 
@@ -104,6 +107,7 @@ export const eventsAggregateParamsSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	maxGroups: z.union([z.number(), z.undefined()]).optional(),
+	measure: z.union([measureSchema, z.undefined()]).optional(),
 	aggregateOn: z.union([aggregateOnSchema, z.undefined()]).optional(),
 });
 

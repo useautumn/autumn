@@ -1,5 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { SandboxBanner, SandboxBannerAction } from "@autumn/ui";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -8,7 +9,9 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
+import { useActiveOrgId } from "@/hooks/common/useActiveOrgId";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useFontsReady } from "@/hooks/common/useFontsReady";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
@@ -25,7 +28,9 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { LeafPanel } from "@/views/chat/LeafPanel";
 import CommandBar from "@/views/command-bar/CommandBar";
+import { CustomersListPrefetch } from "@/views/customers/CustomersListPrefetch";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import { CustomerFiltersProvider } from "@/views/customers/hooks/useCustomerFilters";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
@@ -35,11 +40,15 @@ import { MobileSidebar } from "@/views/main-sidebar/MobileSidebar";
 import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
 import { SettingsViewSkeleton } from "@/views/settings/SettingsView";
 import { AppContext } from "./AppContext";
+import { usePrefetchCurrentRoute } from "./usePrefetchCurrentRoute";
 
 export function MainLayout() {
 	const { handleApiError } = useGlobalErrorHandler();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+	const queryClient = useQueryClient();
+	// Mounted (so data keeps loading) but hidden until fonts land, so the first paint doesn't shift.
+	const fontsReady = useFontsReady();
 
 	// Global error handler for API errors
 	useEffect(() => {
@@ -56,21 +65,29 @@ export function MainLayout() {
 	return (
 		<AutumnProvider
 			backendUrl={import.meta.env.VITE_BACKEND_URL}
-			// backendUrl="http://localhost:8080"
 			includeCredentials={true}
 		>
-			<NuqsAdapter>
-				<PortalContainerContext.Provider value={containerRef}>
-					<div className="w-screen h-screen flex bg-outer-background">
-						<CustomToaster />
-						<DashboardShell
-							containerRef={containerRef}
-							mobileSidebarOpen={mobileSidebarOpen}
-							onMobileSidebarOpenChange={setMobileSidebarOpen}
-						/>
-					</div>
-				</PortalContainerContext.Provider>
-			</NuqsAdapter>
+			{/* AutumnProvider brings its own client; re-provide the app's persisted one so the
+			dashboard and DashboardGate share one cache. */}
+			<QueryClientProvider client={queryClient}>
+				<NuqsAdapter>
+					<PortalContainerContext.Provider value={containerRef}>
+						<div
+							className={cn(
+								"w-screen h-screen flex bg-outer-background",
+								!fontsReady && "invisible",
+							)}
+						>
+							<CustomToaster />
+							<DashboardShell
+								containerRef={containerRef}
+								mobileSidebarOpen={mobileSidebarOpen}
+								onMobileSidebarOpenChange={setMobileSidebarOpen}
+							/>
+						</div>
+					</PortalContainerContext.Provider>
+				</NuqsAdapter>
+			</QueryClientProvider>
 		</AutumnProvider>
 	);
 }
@@ -85,8 +102,11 @@ const DashboardShell = ({
 	onMobileSidebarOpenChange: (open: boolean) => void;
 }) => {
 	const { sandboxUrlResolved } = useSyncSandboxFromUrl();
+	// Scoped query keys carry the org id, so hold the shell until one is known;
+	// otherwise every early query refetches once it arrives.
+	const { activeOrgId, sessionPending } = useActiveOrgId();
 
-	if (!sandboxUrlResolved) {
+	if (!sandboxUrlResolved || (sessionPending && !activeOrgId)) {
 		return <LoadingScreen fullPage />;
 	}
 
@@ -138,8 +158,9 @@ const MainContent = ({
 	useFeaturesQuery();
 	useRewardsQuery();
 	useEventNames({ enabled: !isCapyDev });
+	const { isCustomersList, routeChunkReady } = usePrefetchCurrentRoute();
 
-	const showLoading = orgLoading || !org;
+	const showLoading = orgLoading || !org || !routeChunkReady;
 
 	const switchToProduction = () => {
 		setActiveSandbox(null);
@@ -148,6 +169,11 @@ const MainContent = ({
 
 	return (
 		<AppContext.Provider value={{}}>
+			{isCustomersList && (
+				<CustomerFiltersProvider>
+					<CustomersListPrefetch />
+				</CustomerFiltersProvider>
+			)}
 			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden sm:py-3 sm:pr-3 relative",

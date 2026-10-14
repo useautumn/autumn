@@ -74,9 +74,6 @@ export const CusProductSchema = z.object({
 			current_period_end: z.number().nullish(),
 			// Store purchase this plan came from; only set for RevenueCat plans.
 			original_transaction_id: z.string().nullish(),
-			// subscription_id: z.string().optional().nullable(),
-			// subscription_schedule_id: z.string().optional().nullable(),
-			// last_invoice_id: z.string().optional().nullable(),
 		})
 		.nullish(),
 

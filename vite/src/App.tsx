@@ -7,7 +7,14 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
+import {
+	CustomersListRoute,
+	CustomerViewRoute,
+	PlanEditorRoute,
+	ProductsListRoute,
+} from "./app/routeChunks";
 import { useSession } from "./lib/auth-client";
+import { queryPersistOptions } from "./lib/queryPersistence";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
 import LoadingScreen from "./views/general/LoadingScreen";
@@ -65,9 +72,6 @@ const SsoCallback = React.lazy(() =>
 		default: SsoCallback,
 	})),
 );
-const CustomersPage = React.lazy(
-	() => import("./views/customers/CustomersPage"),
-);
 const AnalyticsView = React.lazy(() =>
 	import("./views/customers/customer/analytics/AnalyticsView").then(
 		({ AnalyticsView }) => ({ default: AnalyticsView }),
@@ -77,9 +81,6 @@ const LogsView = React.lazy(() =>
 	import("./views/event-logs/LogsView").then(({ LogsView }) => ({
 		default: LogsView,
 	})),
-);
-const CustomerView2 = React.lazy(
-	() => import("./views/customers2/customer/CustomerView2"),
 );
 const CustomerPlanEditor = React.lazy(
 	() => import("./views/customers2/customer-plan/CustomerPlanEditor"),
@@ -116,10 +117,6 @@ const OnboardingView = React.lazy(
 const QuickstartView = React.lazy(
 	() => import("./views/onboarding4/QuickstartView"),
 );
-const ProductsView = React.lazy(() => import("./views/products/ProductsView"));
-const PlanEditorView = React.lazy(
-	() => import("./views/products/plan/PlanEditorView"),
-);
 const TerminalView = React.lazy(() =>
 	import("./views/TerminalView").then(({ TerminalView }) => ({
 		default: TerminalView,
@@ -150,7 +147,11 @@ const envRoutes = (
 ];
 
 export default function App() {
-	const { data } = useSession();
+	const { data, isPending } = useSession();
+
+	useEffect(() => {
+		if (!isPending && !data) void queryPersistOptions.persister.removeClient();
+	}, [isPending, data]);
 
 	useEffect(() => {
 		if (data?.user) {
@@ -212,8 +213,8 @@ export default function App() {
 
 							{envRoutes(
 								"products",
-								<ProductsView env={AppEnv.Live} />,
-								<ProductsView env={AppEnv.Sandbox} />,
+								<ProductsListRoute env={AppEnv.Live} />,
+								<ProductsListRoute env={AppEnv.Sandbox} />,
 							)}
 							{envRoutes("migrations", <MigrationsView />)}
 							{envRoutes("migrations/:migration_id", <MigrationView />)}
@@ -222,12 +223,12 @@ export default function App() {
 							{envRoutes(
 								"products/:product_id",
 								<SquircleProvider>
-									<PlanEditorView />
+									<PlanEditorRoute />
 								</SquircleProvider>,
 							)}
 
-							{envRoutes("customers", <CustomersPage />)}
-							{envRoutes("customers/:customer_id", <CustomerView2 />)}
+							{envRoutes("customers", <CustomersListRoute />)}
+							{envRoutes("customers/:customer_id", <CustomerViewRoute />)}
 							{envRoutes(
 								"customers/:customer_id/:product_id",
 								<CustomerPlanEditor />,

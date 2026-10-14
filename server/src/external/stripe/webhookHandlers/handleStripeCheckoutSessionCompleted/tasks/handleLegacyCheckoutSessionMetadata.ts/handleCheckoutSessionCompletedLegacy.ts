@@ -80,8 +80,6 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 		return null;
 	}
 
-	// const checkoutSub = stripeSubscription ?? null;
-
 	if (stripeSubscription) {
 		const activeCusProducts = await CusProductService.getByStripeSubId({
 			db: ctx.db,

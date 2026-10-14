@@ -43,5 +43,10 @@ export const createSubjectMapBudget = ({
 			},
 		};
 	};
-	return { totalBytes, members: () => holders.size, join };
+	const usedBytes = () => {
+		let used = 0;
+		for (const holder of holders) used += holder.sizeBytes();
+		return used;
+	};
+	return { totalBytes, members: () => holders.size, usedBytes, join };
 };

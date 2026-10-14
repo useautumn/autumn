@@ -233,10 +233,6 @@ export const featureItemsAreSame = ({
 				(item2.config?.threshold_billing?.threshold ?? null),
 			message: `Threshold billing different: ${JSON.stringify(item1.config?.threshold_billing)} !== ${JSON.stringify(item2.config?.threshold_billing)}`,
 		},
-		// config: {
-		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
-		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
-		// },
 	};
 
 	const same = Object.values(checks).every((d) => d.condition);
@@ -351,8 +347,6 @@ export const featurePriceItemsAreSame = ({
 	item2: FeaturePriceItem;
 	logDifferences?: boolean;
 }) => {
-	// console.log("Item 1 config:", item1.config);
-	// console.log("Item 2 config:", item2.config);
 	const entsSame = {
 		included_usage: {
 			// Normalize null/undefined to 0 for comparison since they're semantically equivalent
@@ -410,11 +404,6 @@ export const featurePriceItemsAreSame = ({
 			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
 			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
-
-		// config: {
-		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
-		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
-		// },
 	};
 
 	const pricesSame = {

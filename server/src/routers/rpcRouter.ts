@@ -28,17 +28,6 @@ import { customerRpcRouter } from "../internal/customers/cusRouter";
 
 export const rpcRouter = new Hono<HonoEnv>();
 
-// rpcRouter.use("*", responseFilterMiddleware);
-// rpcRouter.use("*", secretKeyMiddleware);
-// rpcRouter.use("*", orgConfigMiddleware);
-// rpcRouter.use("*", apiVersionMiddleware);
-// rpcRouter.use("*", refreshCacheMiddleware);
-// rpcRouter.use("*", refreshProductsCacheMiddleware);
-// rpcRouter.use("*", analyticsMiddleware);
-// rpcRouter.use("*", rateLimitMiddleware);
-// rpcRouter.use("*", queryMiddleware());
-// rpcRouter.use("*", idempotencyMiddleware);
-
 rpcRouter.route("", customerRpcRouter);
 rpcRouter.route("", listPlansRpcRouter);
 rpcRouter.route("", agentRulesRpcRouter);

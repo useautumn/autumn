@@ -1,6 +1,7 @@
 import { $ } from "bun";
 import { logger } from "../../../lib/logger.js";
 import { setEmbeddedEveStatus } from "./embeddedStatus.js";
+import { logProcessMemory } from "./logProcessMemory.js";
 import { verifyNotifyDelivery } from "./verifyNotifyDelivery.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
@@ -120,6 +121,7 @@ export const startEmbeddedEveServer = async () => {
 		stdout: "inherit",
 	});
 	void waitForEveReady();
+	logProcessMemory({ evePid: eve.pid });
 	eve.exited.then(async (code) => {
 		setEmbeddedEveStatus("down");
 		logger.error(

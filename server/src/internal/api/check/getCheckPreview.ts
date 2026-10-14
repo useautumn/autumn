@@ -218,7 +218,6 @@ export const getCheckPreview = async ({
 		feature_id: feature.id,
 		feature_name: feature.name,
 		products: v2Prods,
-		// next_tier: nextTierResponse,
 
 		// Will depracate
 		upgrade_product_id: nextTier?.id || null,

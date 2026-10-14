@@ -5,8 +5,6 @@ export const Version = {
 	14: 1.4,
 } as const;
 
-// export type ApiVersion = (typeof V)[keyof typeof V];
-
 export enum LegacyVersion {
 	v1 = 1,
 	v1_1 = 1.1,

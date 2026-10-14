@@ -38,11 +38,6 @@ export const CheckResponseV3Schema = z.object({
 		description: "The flag associated with this check, if any.",
 	}),
 
-	// lock_id: z.string().optional().meta({
-	// 	description:
-	// 		"The lock ID associated with this check when lock mode is enabled.",
-	// }),
-
 	preview: CheckFeaturePreviewSchema.optional().meta({
 		description:
 			"Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.",

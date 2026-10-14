@@ -82,7 +82,9 @@ test.concurrent(
 				},
 			);
 			expect(createRes.status).toBe(200);
-			const created = (await createRes.json()) as { billingPlan?: { id?: string } };
+			const created = (await createRes.json()) as {
+				billingPlan?: { id?: string };
+			};
 			expect(created.billingPlan?.id).toBe(newId);
 
 			const cusProducts = await CusProductService.list({

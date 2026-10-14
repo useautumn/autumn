@@ -276,8 +276,4 @@ export const handleAttachErrors = async ({
 		config,
 		useCheckout: onlyCheckout,
 	});
-
-	// await handleUpdateQuantityErrors({
-	//   attachParams,
-	// });
 };

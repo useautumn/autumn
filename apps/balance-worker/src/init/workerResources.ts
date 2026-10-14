@@ -172,6 +172,7 @@ export async function openWorkerResources({
 				config: {
 					mutableRowTtlMs: env.BALANCE_WORKER_CATALOG_TTL_MS,
 					maxSizeBytes: env.BALANCE_WORKER_CATALOG_MAX_BYTES,
+					idleExpiryMs: env.BALANCE_WORKER_CATALOG_IDLE_EXPIRY_MS,
 				},
 			},
 		});

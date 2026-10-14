@@ -20,6 +20,7 @@ import {
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
+import { invoiceModeToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
@@ -81,23 +82,28 @@ export const executeStripeSubscriptionAction = async ({
 	});
 
 	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
-	// or the public invoice_mode.finalize for the other actions (updateSubscription,
-	// multiAttach, createSchedule) that don't wire setupFinalizeFirstInvoice.
+	// or invoice mode's issue method for the other actions (updateSubscription,
+	// multiAttach, createSchedule, setPlans) that don't wire setupFinalizeFirstInvoice.
 	const shouldFinalize =
 		billingContext.shouldFinalizeFirstInvoice ??
 		billingContext.invoiceMode?.finalizeInvoice ??
 		false;
 
-	// Invoice-mode drafts (finalize: false) must stay in draft for manual
-	// review. Stripe creates subscription invoices with auto_advance on and
-	// would otherwise finalize and email them ~1 hour later.
-	const shouldKeepDraft =
-		Boolean(billingContext.invoiceMode) &&
-		!shouldFinalize &&
+	// Invoice mode lets Stripe email and collect (fires invoice.sent) only when the issue method is send.
+	const { invoiceMode } = billingContext;
+	const autoAdvances = invoiceMode
+		? shouldFinalize && invoiceModeToIssueMethod({ invoiceMode }) === "send"
+		: false;
+
+	// Stripe creates subscription invoices with auto_advance on, and ignores auto_advance: false at
+	// finalization, so drafts and silent finalizes turn it off first.
+	const shouldDisableAutoAdvance =
+		Boolean(invoiceMode) &&
+		!autoAdvances &&
 		latestStripeInvoice?.status === "draft" &&
 		latestStripeInvoice.auto_advance === true;
 
-	if (latestStripeInvoice && shouldKeepDraft) {
+	if (latestStripeInvoice && shouldDisableAutoAdvance) {
 		logger.debug(`[execSubAction] Disabling auto_advance on draft invoice`);
 		latestStripeInvoice = await updateStripeInvoice({
 			stripeCli,
@@ -115,8 +121,7 @@ export const executeStripeSubscriptionAction = async ({
 		latestStripeInvoice = await finalizeStripeInvoice({
 			stripeCli,
 			invoiceId: latestStripeInvoice.id,
-			// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
-			autoAdvance: Boolean(billingContext.invoiceMode),
+			autoAdvance: autoAdvances,
 		});
 	}
 

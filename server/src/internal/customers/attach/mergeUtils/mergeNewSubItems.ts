@@ -38,8 +38,6 @@ export const mergeNewSubItems = ({
 		newSubItems[i] = {
 			id: existingItem.id,
 			quantity: (existingItem.quantity || 0) + (newItem.quantity || 0),
-			// price: newItem.price,
-			// autumnPrice: newItem.autumnPrice,
 		};
 	}
 

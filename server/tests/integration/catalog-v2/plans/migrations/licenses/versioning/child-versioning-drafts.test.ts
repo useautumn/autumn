@@ -102,7 +102,10 @@ test.concurrent(
 				await seedVersionableCustomer({ ctx, planId: childId, version: 1 });
 				await seedVersionableCustomer({ ctx, planId: teamId, version: 1 });
 
-				const childFilter = versionPinnedFilter({ planId: childId, version: 1 });
+				const childFilter = versionPinnedFilter({
+					planId: childId,
+					version: 1,
+				});
 				const teamFilter = versionPinnedFilter({ planId: teamId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
@@ -252,7 +255,8 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: { license_parents: [{ plan_id: teamId, version: 1 }] },
 						},
 					],

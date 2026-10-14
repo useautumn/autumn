@@ -1120,6 +1120,14 @@ class PreviewUpdateCustomize(BaseModel):
         return m
 
 
+PreviewUpdateIssueMethod = Literal[
+    "draft",
+    "finalize",
+    "send",
+]
+r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
+
+
 PreviewUpdatePaymentMethodType = Literal[
     "card",
     "customer_balance",
@@ -1139,7 +1147,9 @@ class PreviewUpdateInvoiceModeTypedDict(TypedDict):
     enable_plan_immediately: NotRequired[bool]
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+    issue_method: NotRequired[PreviewUpdateIssueMethod]
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
     invoice_template_id: NotRequired[str]
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
     net_terms_days: NotRequired[int]
@@ -1157,8 +1167,11 @@ class PreviewUpdateInvoiceMode(BaseModel):
     enable_plan_immediately: Optional[bool] = False
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
 
-    finalize: Optional[bool] = True
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    finalize: Optional[bool] = None
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+
+    issue_method: Optional[PreviewUpdateIssueMethod] = None
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
 
     invoice_template_id: Optional[str] = None
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
@@ -1175,6 +1188,7 @@ class PreviewUpdateInvoiceMode(BaseModel):
             [
                 "enable_plan_immediately",
                 "finalize",
+                "issue_method",
                 "invoice_template_id",
                 "net_terms_days",
                 "payment_method_types",
@@ -1199,7 +1213,7 @@ PreviewUpdateProrationBehavior = Literal[
     "none",
     "bill_difference",
 ]
-r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
 
 PreviewUpdateRedirectMode = Literal[
@@ -1272,6 +1286,397 @@ class PreviewUpdateCustomLineItem(BaseModel):
 
     description: str
     r"""Description for the line item."""
+
+
+PreviewUpdateDirection = Literal[
+    "charge",
+    "refund",
+]
+r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+
+PreviewUpdatePriceRemoveLineInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class PreviewUpdatePriceRemoveLineTypedDict(TypedDict):
+    interval: NotRequired[PreviewUpdatePriceRemoveLineInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class PreviewUpdatePriceRemoveLine(BaseModel):
+    interval: Optional[PreviewUpdatePriceRemoveLineInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdatePriceUnionTypedDict = TypeAliasType(
+    "PreviewUpdatePriceUnionTypedDict",
+    Union[PreviewUpdatePriceRemoveLineTypedDict, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+PreviewUpdatePriceUnion = TypeAliasType(
+    "PreviewUpdatePriceUnion", Union[PreviewUpdatePriceRemoveLine, bool]
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+PreviewUpdateBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+PreviewUpdateFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class PreviewUpdateRemoveLineFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: PreviewUpdateBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[PreviewUpdateFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class PreviewUpdateRemoveLineFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: PreviewUpdateBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[PreviewUpdateFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdatePriceLicenseQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class PreviewUpdatePriceLicenseQuantityTypedDict(TypedDict):
+    interval: NotRequired[PreviewUpdatePriceLicenseQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class PreviewUpdatePriceLicenseQuantity(BaseModel):
+    interval: Optional[PreviewUpdatePriceLicenseQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewUpdateLicenseQuantityPriceUnionTypedDict = TypeAliasType(
+    "PreviewUpdateLicenseQuantityPriceUnionTypedDict",
+    Union[PreviewUpdatePriceLicenseQuantityTypedDict, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+PreviewUpdateLicenseQuantityPriceUnion = TypeAliasType(
+    "PreviewUpdateLicenseQuantityPriceUnion",
+    Union[PreviewUpdatePriceLicenseQuantity, bool],
+)
+r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+
+PreviewUpdateLicenseQuantityBillingBehavior = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+
+PreviewUpdateLicenseQuantityFeatureQuantityInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+
+class PreviewUpdateLicenseQuantityFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose line to remove."""
+    billing_behavior: PreviewUpdateLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+    interval: NotRequired[PreviewUpdateLicenseQuantityFeatureQuantityInterval]
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+    interval_count: NotRequired[int]
+    r"""Only match the price billed every this many intervals."""
+
+
+class PreviewUpdateLicenseQuantityFeatureQuantity(BaseModel):
+    feature_id: str
+    r"""The feature whose line to remove."""
+
+    billing_behavior: PreviewUpdateLicenseQuantityBillingBehavior
+    r"""Which of the feature's prices to match: 'prepaid' or 'usage_based'."""
+
+    interval: Optional[PreviewUpdateLicenseQuantityFeatureQuantityInterval] = None
+    r"""Only match the price billed on this interval. Needed when the same price exists on more than one interval."""
+
+    interval_count: Optional[int] = None
+    r"""Only match the price billed every this many intervals."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval", "interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateRemoveLineLicenseQuantityTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+    price: NotRequired[PreviewUpdateLicenseQuantityPriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[
+        List[PreviewUpdateLicenseQuantityFeatureQuantityTypedDict]
+    ]
+
+
+class PreviewUpdateRemoveLineLicenseQuantity(BaseModel):
+    license_plan_id: str
+    r"""The license plan linked to the parent plan."""
+
+    price: Optional[PreviewUpdateLicenseQuantityPriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[PreviewUpdateLicenseQuantityFeatureQuantity]] = (
+        None
+    )
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_quantities"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateRemoveLineTypedDict(TypedDict):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+    direction: NotRequired[PreviewUpdateDirection]
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+    price: NotRequired[PreviewUpdatePriceUnionTypedDict]
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+    feature_quantities: NotRequired[
+        List[PreviewUpdateRemoveLineFeatureQuantityTypedDict]
+    ]
+    license_quantities: NotRequired[
+        List[PreviewUpdateRemoveLineLicenseQuantityTypedDict]
+    ]
+
+
+class PreviewUpdateRemoveLine(BaseModel):
+    r"""Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed."""
+
+    plan_id: str
+    r"""The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
+
+    direction: Optional[PreviewUpdateDirection] = None
+    r"""Only remove charges or only remove refunds (credits). Omit to remove both."""
+
+    price: Optional[PreviewUpdatePriceUnion] = None
+    r"""Remove the base price line. Pass true, or an object to narrow by interval."""
+
+    feature_quantities: Optional[List[PreviewUpdateRemoveLineFeatureQuantity]] = None
+
+    license_quantities: Optional[List[PreviewUpdateRemoveLineLicenseQuantity]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "entity_id",
+                "direction",
+                "price",
+                "feature_quantities",
+                "license_quantities",
+            ]
+        )
+        nullable_fields = set(["entity_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class PreviewUpdateAddLineTypedDict(TypedDict):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+    period_start: NotRequired[int]
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+    period_end: NotRequired[int]
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+
+class PreviewUpdateAddLine(BaseModel):
+    r"""A line added to this invoice. The amount is billed as passed; the period is only printed on the line."""
+
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["period_start", "period_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 PreviewUpdateCancelAction = Literal[
@@ -1385,7 +1790,7 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     invoice_mode: NotRequired[PreviewUpdateInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
     proration_behavior: NotRequired[PreviewUpdateProrationBehavior]
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
     redirect_mode: NotRequired[PreviewUpdateRedirectMode]
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     subscription_id: NotRequired[str]
@@ -1396,6 +1801,10 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
     custom_line_items: NotRequired[List[PreviewUpdateCustomLineItemTypedDict]]
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
+    remove_lines: NotRequired[List[PreviewUpdateRemoveLineTypedDict]]
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+    add_lines: NotRequired[List[PreviewUpdateAddLineTypedDict]]
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     billing_cycle_anchor: NotRequired[PreviewUpdateBillingCycleAnchorTypedDict]
@@ -1440,7 +1849,7 @@ class PreviewUpdateParams(BaseModel):
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
 
     proration_behavior: Optional[PreviewUpdateProrationBehavior] = None
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
     redirect_mode: Optional[PreviewUpdateRedirectMode] = "if_required"
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
@@ -1456,6 +1865,12 @@ class PreviewUpdateParams(BaseModel):
 
     custom_line_items: Optional[List[PreviewUpdateCustomLineItem]] = None
     r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
+
+    remove_lines: Optional[List[PreviewUpdateRemoveLine]] = None
+    r"""Lines to remove from the invoice this request creates. Never changes the subscription or later invoices."""
+
+    add_lines: Optional[List[PreviewUpdateAddLine]] = None
+    r"""Lines to add to the invoice this request creates. Never changes the subscription or later invoices."""
 
     cancel_action: Optional[PreviewUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
@@ -1498,6 +1913,8 @@ class PreviewUpdateParams(BaseModel):
                 "discounts",
                 "remove_discounts",
                 "custom_line_items",
+                "remove_lines",
+                "add_lines",
                 "cancel_action",
                 "billing_cycle_anchor",
                 "no_billing_changes",

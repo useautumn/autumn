@@ -26,6 +26,7 @@ import {
 	StackIcon,
 	TicketIcon,
 } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -36,7 +37,6 @@ import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -298,7 +298,7 @@ export default function PlanChangeDialog({
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { products, invalidate: invalidateProducts } = useProductsQuery();
-	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
+	const queryClient = useQueryClient();
 	const { invalidate: invalidateMigrations } = useMigrationMutations();
 	const { org } = useOrg();
 
@@ -487,7 +487,7 @@ export default function PlanChangeDialog({
 			});
 			if (licenses) {
 				commitLicenseChanges();
-				void invalidateLicenseProducts();
+				void queryClient.invalidateQueries({ queryKey: ["license_products"] });
 			}
 			markSaved();
 			toast.success(

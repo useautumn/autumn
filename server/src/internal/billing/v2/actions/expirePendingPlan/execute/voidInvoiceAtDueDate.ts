@@ -4,11 +4,16 @@ import type Stripe from "stripe";
 import type { RepoContext } from "@/db/repoContext";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-const PENDING_PAYMENT_ERROR = "pending payments waiting to clear";
+// Stripe's legacy and current wording for a void blocked by a clearing payment.
+const PENDING_PAYMENT_ERRORS = [
+	"pending payments waiting to clear",
+	"payment on it is still pending",
+];
 const UNPAID_CLOSED_STATUSES = new Set(["void", "uncollectible"]);
 
-const isPendingPaymentError = (error: unknown) =>
-	error instanceof Error && error.message.includes(PENDING_PAYMENT_ERROR);
+export const isPendingPaymentError = (error: unknown) =>
+	error instanceof Error &&
+	PENDING_PAYMENT_ERRORS.some((message) => error.message.includes(message));
 
 /** Returns whether the invoice is now closed unpaid; a clearing payment defers cleanup a day. */
 export const voidInvoiceAtDueDate = async ({

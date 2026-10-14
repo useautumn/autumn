@@ -91,7 +91,6 @@ const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
-		// stripe_price_id: item.stripe_price_id ?? null,
 		stripe_product_id: null,
 		stripe_price_id: undefined,
 		feature_id: null,

@@ -359,7 +359,6 @@ export async function updateConfigInPlace({
 		// Keep imports and other blocks as-is
 		if (block.type === "import") {
 			const importText = block.lines.join("\n");
-			// Check if this is the atmn import
 			if (/from\s+['"]atmn['"]/.test(importText)) {
 				hasAtmnImport = true;
 				outputBlocks.push(ensureAtmnImports(importText, requiredImports));

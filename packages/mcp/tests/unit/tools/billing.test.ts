@@ -28,3 +28,24 @@ describe("setPlans schema", () => {
 		}
 	});
 });
+
+describe("paid schedule invoice mode", () => {
+	const paidSchedule = (invoiceMode: Record<string, unknown>) => ({
+		...request,
+		enable_plan_immediately: true,
+		redirect_mode: "if_required",
+		invoice_mode: { enabled: true, ...invoiceMode },
+	});
+
+	test("accepts only a draft invoice, resolving issue_method over finalize", () => {
+		const accepts = (invoiceMode: Record<string, unknown>) =>
+			schemaByTool.setPlans.safeParse(paidSchedule(invoiceMode)).success;
+
+		expect(accepts({ finalize: false })).toBe(true);
+		expect(accepts({ issue_method: "draft" })).toBe(true);
+		expect(accepts({ finalize: true, issue_method: "draft" })).toBe(true);
+		expect(accepts({ finalize: false, issue_method: "send" })).toBe(false);
+		expect(accepts({ finalize: false, issue_method: "finalize" })).toBe(false);
+		expect(accepts({})).toBe(false);
+	});
+});

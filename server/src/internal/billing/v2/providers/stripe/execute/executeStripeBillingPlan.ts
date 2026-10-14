@@ -61,7 +61,12 @@ export const executeStripeBillingPlan = async ({
 		validatePromotionCodeMinimums({ ctx, billingContext, billingPlan });
 	}
 
-	if (stripeInvoiceAction && !resumeAfterInvoiceAction) {
+	// Both resume points come after the invoice stage, which already ran.
+	if (
+		stripeInvoiceAction &&
+		!resumeAfterInvoiceAction &&
+		!resumeAfterSubscriptionAction
+	) {
 		invoiceResult = await executeStripeInvoiceAction({
 			ctx,
 			billingPlan,

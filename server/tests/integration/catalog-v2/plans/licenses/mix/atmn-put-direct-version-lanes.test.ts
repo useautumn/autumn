@@ -121,8 +121,7 @@ const expectExplicitDashboardPreview = ({
 			},
 		});
 		const parentRow = preview.plans.find(
-			(row) =>
-				row.plan_id === parentId && row.version === currentVersion,
+			(row) => row.plan_id === parentId && row.version === currentVersion,
 		);
 		expect(
 			parentRow?.plan_change?.license_changes?.some(

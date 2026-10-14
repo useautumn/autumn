@@ -36,7 +36,6 @@ export async function headlessCustomersCommand(
 	const limit = options.limit ?? 50;
 
 	try {
-		// Create controller
 		const controller = await createCustomersController(environment, {
 			pageSize: limit,
 			initialPage: page,

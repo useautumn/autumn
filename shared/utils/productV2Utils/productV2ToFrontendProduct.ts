@@ -31,7 +31,6 @@ export const productV2ToPlanType = ({
 }: {
 	product: ProductV2 | FrontendProduct;
 }): FrontendProduct["planType"] => {
-	// return product.planType;
 	if ("planType" in product) {
 		return product.planType;
 	}
@@ -66,11 +65,3 @@ export const productV2ToFrontendProduct = ({
 					: null,
 	};
 };
-
-// export const productV2ToBasePriceType = ({
-// 	product,
-// }: {
-// 	product: ProductV2;
-// }) => {
-// 	return product.basePriceType;
-// };

@@ -81,7 +81,7 @@ export type BillingUpdateFreeTrialParams = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const BillingUpdatePriceInterval = {
+export const BillingUpdatePriceCustomizeInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -92,8 +92,8 @@ export const BillingUpdatePriceInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type BillingUpdatePriceInterval = ClosedEnum<
-  typeof BillingUpdatePriceInterval
+export type BillingUpdatePriceCustomizeInterval = ClosedEnum<
+  typeof BillingUpdatePriceCustomizeInterval
 >;
 
 export type BillingUpdateAdditionalCurrency = {
@@ -118,7 +118,7 @@ export type BillingUpdateBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: BillingUpdatePriceInterval;
+  interval: BillingUpdatePriceCustomizeInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -208,10 +208,16 @@ export type BillingUpdateItemPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const BillingUpdateItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type BillingUpdateItemTierBehavior = ClosedEnum<
   typeof BillingUpdateItemTierBehavior
 >;
@@ -264,6 +270,9 @@ export type BillingUpdateItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<BillingUpdateItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: BillingUpdateItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -800,10 +809,16 @@ export type BillingUpdateAddItemPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const BillingUpdateAddItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type BillingUpdateAddItemTierBehavior = ClosedEnum<
   typeof BillingUpdateAddItemTierBehavior
 >;
@@ -858,6 +873,9 @@ export type BillingUpdateAddItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<BillingUpdateAddItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: BillingUpdateAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1852,10 +1870,16 @@ export type BillingUpdateUpsertLicensePriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const BillingUpdateUpsertLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type BillingUpdateUpsertLicenseTierBehavior = ClosedEnum<
   typeof BillingUpdateUpsertLicenseTierBehavior
 >;
@@ -1910,6 +1934,9 @@ export type BillingUpdateUpsertLicensePrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<BillingUpdateUpsertLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: BillingUpdateUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -2100,9 +2127,9 @@ export function billingUpdateFreeTrialParamsToJSON(
 }
 
 /** @internal */
-export const BillingUpdatePriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdatePriceInterval
-> = z.enum(BillingUpdatePriceInterval);
+export const BillingUpdatePriceCustomizeInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdatePriceCustomizeInterval
+> = z.enum(BillingUpdatePriceCustomizeInterval);
 
 /** @internal */
 export type BillingUpdateAdditionalCurrency$Outbound = {
@@ -2146,7 +2173,7 @@ export const BillingUpdateBasePrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: BillingUpdatePriceInterval$outboundSchema,
+    interval: BillingUpdatePriceCustomizeInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => BillingUpdateAdditionalCurrency$outboundSchema)),

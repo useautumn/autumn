@@ -14,6 +14,8 @@ export const workerPooledContributionSchema = z
 		current_contribution: finiteNumberSchema,
 		next_cycle_contribution: finiteNumberSchema,
 		effective_at: finiteNumberSchema.nullable(),
+		competes: z.boolean().optional(),
+		unlimited: z.boolean().optional(),
 		created_at: finiteNumberSchema,
 		updated_at: finiteNumberSchema,
 	})
