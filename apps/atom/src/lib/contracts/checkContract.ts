@@ -29,6 +29,7 @@ export const checkCallToRequest = ({
 	idempotencyKey,
 	requestId,
 	occurredAt,
+	movedFrom = null,
 }: {
 	body: unknown;
 	query: Record<string, string>;
@@ -37,6 +38,7 @@ export const checkCallToRequest = ({
 	idempotencyKey: string | undefined;
 	requestId: string;
 	occurredAt: number;
+	movedFrom?: string | null;
 }): CheckRequest => {
 	const params = CheckParamsSchema.safeParse(body);
 	const parsedQuery = CheckQuerySchema.safeParse(query);
@@ -52,5 +54,6 @@ export const checkCallToRequest = ({
 		params: params.data,
 		query: parsedQuery.data,
 		apiVersion,
+		movedFrom,
 	};
 };

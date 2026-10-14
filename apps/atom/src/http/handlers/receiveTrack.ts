@@ -9,6 +9,7 @@ export async function receiveTrack(context: Context<AtomHttpEnv>) {
 		body: context.get("body"),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		...arrivalOf(context),
+		movedFrom: context.get("movedFrom") ?? null,
 	});
 	context.set("idempotencyKey", request.idempotencyKey);
 	const answer = await context

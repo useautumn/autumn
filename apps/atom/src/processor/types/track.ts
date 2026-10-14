@@ -9,6 +9,8 @@ export type TrackRequest = {
 	idempotencyKey: string | null;
 	params: TrackParams;
 	apiVersion: ApiVersionClass;
+	/** The leaving replica this customer just moved here from, whose handoff the deduction waits for; null otherwise. */
+	movedFrom: string | null;
 };
 
 /** A track Atom deducts itself: one feature of one customer, queued, by a positive value. */

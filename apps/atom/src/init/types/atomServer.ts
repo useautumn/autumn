@@ -3,6 +3,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
 import type { JournalForwarder } from "../../journalForwarder/types/journalForwarder.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
+import type { Membership } from "../../replicas/membership/types/membership.js";
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
 import type { Replication } from "../../replication/types/replication.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
@@ -28,8 +29,8 @@ export type AtomServerDependencies = {
 	replication: Replication;
 	/** Hands Autumn what this thread's journals hold; drained before the files close. */
 	journalForwarder: Pick<JournalForwarder, "drainAll">;
-	/** The replica's membership table, shared by its threads (createMembership). */
-	membershipTable: Int32Array;
+	/** Which listed peers count as ring members, over the table the replica's threads share. */
+	membership: Membership;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };

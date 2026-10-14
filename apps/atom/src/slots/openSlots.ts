@@ -6,6 +6,7 @@ import type {
 } from "../journalForwarder/types/journalForwarder.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
+import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
@@ -57,6 +58,7 @@ export const openSlots = ({
 	now = Date.now,
 	pulls,
 	journalForwarder,
+	barrier,
 }: {
 	folder: string;
 	slotCount: number;
@@ -71,6 +73,8 @@ export const openSlots = ({
 	pulls: { subjectPulls: SubjectPulls; tokenHash: () => string };
 	/** This thread's way to hand Autumn what its slots' journals hold. */
 	journalForwarder: JournalForwarder;
+	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
+	barrier?: HandoffBarrier;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -122,6 +126,7 @@ export const openSlots = ({
 					subjectPulls,
 					journal,
 					openLocks: createOpenLocks(),
+					barrier,
 				},
 			}),
 		};
