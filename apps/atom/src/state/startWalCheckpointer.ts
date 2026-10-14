@@ -2,7 +2,6 @@ import type { Database } from "bun:sqlite";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { newSqliteConnection } from "./newSqliteConnection.js";
-import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
 const TICK_MS = 1000;
 /**
@@ -13,6 +12,9 @@ export const TICKS_PER_FILE = 30;
 /** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
  * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
 export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
+/** BENCH ONLY (#369 pacing spike, never merge): log bytes copied per tick on average, so the copies never burst past
+ * the volume's throughput; a tick may overdraw, and the next ones wait until the budget recovers. */
+const COPY_BYTES_PER_TICK = 48 * 1024 * 1024;
 const WAL_SUFFIX = "-wal";
 
 const walBytesOf = ({ path }: { path: string }): number => {
@@ -60,11 +62,9 @@ export const startWalCheckpointer = ({
 				});
 				open.set(path, database);
 			}
-			// Passive never waits on a reader or writer: what it cannot copy now it copies next time.
+			// Passive never waits on a reader or writer: what it cannot copy now it copies next time. The log is never cut
+			// here: the writer reuses its blocks from the start, so no checkpoint regrows it.
 			database.run("PRAGMA wal_checkpoint(PASSIVE)");
-			// A log past its limit is cut by the next write; a file nobody writes to any more is cut here instead.
-			if (statSync(`${path}${WAL_SUFFIX}`).size > JOURNAL_SIZE_LIMIT_BYTES)
-				database.run("PRAGMA wal_checkpoint(TRUNCATE)");
 			failing.delete(path);
 		} catch (error) {
 			open.get(path)?.close();
@@ -79,6 +79,9 @@ export const startWalCheckpointer = ({
 	}
 
 	let tick = 0;
+	/** Files whose turn came while the budget was spent: copied first, oldest turn first, once it recovers. */
+	const due = new Set<string>();
+	let budget = COPY_BYTES_PER_TICK;
 
 	function checkpoint(): void {
 		const paths = listWalDatabases({ dataDir }).sort();
@@ -94,15 +97,26 @@ export const startWalCheckpointer = ({
 		let walBytes = 0;
 		let maxMs = 0;
 		paths.forEach((path, index) => {
-			const size = walBytesOf({ path });
-			const itsTurn = index % TICKS_PER_FILE === tick % TICKS_PER_FILE;
-			if (!itsTurn && size <= CHECKPOINT_WAL_BYTES) return;
+			if (index % TICKS_PER_FILE === tick % TICKS_PER_FILE) due.add(path);
+		});
+		budget = Math.min(budget + COPY_BYTES_PER_TICK, 2 * COPY_BYTES_PER_TICK);
+		const sizes = new Map(paths.map((path) => [path, walBytesOf({ path })]));
+		const early = paths.filter(
+			(path) => !due.has(path) && (sizes.get(path) ?? 0) > CHECKPOINT_WAL_BYTES,
+		);
+		for (const path of [...early, ...due]) {
+			if (budget <= 0) break;
+			due.delete(path);
+			if (!listed.has(path)) continue;
+			const size = sizes.get(path) ?? 0;
+			if (size === 0) continue;
 			const fileStartedAt = performance.now();
 			walBytes += size;
+			budget -= size;
 			checkpointOne({ path });
 			files++;
 			maxMs = Math.max(maxMs, performance.now() - fileStartedAt);
-		});
+		}
 		const ms = performance.now() - startedAt;
 		if (ms >= 20)
 			logger.info?.(
@@ -111,6 +125,7 @@ export const startWalCheckpointer = ({
 					data: {
 						tick,
 						files,
+						due: due.size,
 						walBytes,
 						ms: Math.round(ms),
 						maxMs: Math.round(maxMs),

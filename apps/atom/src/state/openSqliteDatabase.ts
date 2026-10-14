@@ -5,7 +5,8 @@ import { newSqliteConnection } from "./newSqliteConnection.js";
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
 /** A completed checkpoint cuts the log back to this, so 128 logs never sit at their high-water mark. */
-export const JOURNAL_SIZE_LIMIT_BYTES = 1024 * 1024;
+// BENCH ONLY (#369 pacing spike, never merge): 16 MB, so a restarted log reuses its blocks instead of being cut and regrown.
+export const JOURNAL_SIZE_LIMIT_BYTES = 16 * 1024 * 1024;
 
 /** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
 const WAL_SWITCH_ATTEMPTS = 50;
