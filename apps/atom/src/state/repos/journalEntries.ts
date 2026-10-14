@@ -10,14 +10,28 @@ type JournalEntryRow = {
 	commandJson: string;
 };
 
+/** One string for the writer thread: each entry's fields and command JSON, NUL-separated (JSON escapes any NUL it holds). */
+export const encodeJournalEntries = ({
+	entries,
+}: {
+	entries: JournalEntry[];
+}): string =>
+	entries
+		.map(
+			({ customerId, seq, appendedAt, command }) =>
+				`${customerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}`,
+		)
+		.join("\u0000");
+
 /** Every entry or none, with each customer's highest seq raised in the same transaction. */
 export const insertJournalEntries = ({
 	ctx,
-	entries,
+	payload,
 }: {
 	ctx: JournalContext;
-	entries: JournalEntry[];
-}): void => {
+	payload: string;
+}): string => {
+	const fields = payload.split("\u0000");
 	const insertEntry = ctx.sqliteDb.query(
 		`INSERT INTO journal_entries (customer_id, seq, appended_at, command_json)
 		VALUES ($customerId, $seq, $appendedAt, $commandJson)`,
@@ -27,16 +41,19 @@ export const insertJournalEntries = ({
 		ON CONFLICT (customer_id) DO UPDATE SET last_seq = max(last_seq, excluded.last_seq)`,
 	);
 	ctx.sqliteDb.transaction(() => {
-		for (const { customerId, seq, appendedAt, command } of entries) {
+		for (let at = 0; at < fields.length; at += 4) {
+			const customerId = fields[at] as string;
+			const seq = Number(fields[at + 1]);
 			insertEntry.run({
 				customerId,
 				seq,
-				appendedAt,
-				commandJson: JSON.stringify(command),
+				appendedAt: Number(fields[at + 2]),
+				commandJson: fields[at + 3] as string,
 			});
 			raiseLastSeq.run({ customerId, seq });
 		}
 	})();
+	return "";
 };
 
 /** Rows were built by this Atom as the worker's commands, so reading only parses JSON. */
@@ -88,28 +105,29 @@ export const readJournalWriterId = ({
 
 export const deleteJournalEntriesUpTo = ({
 	ctx,
-	customerId,
-	seq,
+	payload,
 }: {
 	ctx: JournalContext;
-	customerId: string;
-	seq: number;
-}): void => {
+	payload: string;
+}): string => {
+	const [customerId, seq] = payload.split("\u0000");
 	ctx.sqliteDb
 		.query(
 			"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq <= $seq",
 		)
-		.run({ customerId, seq });
+		.run({ customerId: customerId as string, seq: Number(seq) });
+	return "";
 };
 
 export const deleteCustomerJournalEntries = ({
 	ctx,
-	customerId,
+	payload: customerId,
 }: {
 	ctx: JournalContext;
-	customerId: string;
-}): void => {
+	payload: string;
+}): string => {
 	ctx.sqliteDb
 		.query("DELETE FROM journal_entries WHERE customer_id = $customerId")
 		.run({ customerId });
+	return "";
 };
