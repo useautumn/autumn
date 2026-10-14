@@ -4,8 +4,8 @@ import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js
 import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
-import { atomSourceToRowChange } from "../common/atomSourceToRowChange.js";
 import { trackLockToRowChange } from "./trackLockToRowChange.js";
+import { trackSourceToRowChange } from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** Wraps what the deduction decided into the one mutation: command, changes, result. */
@@ -35,7 +35,7 @@ export const trackOutcomeToMutation = ({
 			: [];
 	const sourceChange =
 		command.source &&
-		atomSourceToRowChange({
+		trackSourceToRowChange({
 			source: command.source,
 			customer: fullSubject.customer,
 		});

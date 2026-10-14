@@ -30,7 +30,7 @@ export const subjectRowsEnvelopeSchema = z.object({
 	pooled_balances: z.array(PooledBalanceSchema),
 	/** License pools on the customer's products: seat counters the worker serves on `customers.get`. */
 	customer_licenses: z.array(CustomerLicenseRowSchema),
-	/** Whole rows: an Atom's finalize names only its lock and is settled from the row the worker holds. */
+	/** Whole rows, held in memory so a finalize can be settled without reading Postgres. */
 	open_locks: z.array(z.record(z.string(), z.unknown())),
 	entity: EntitySchema.nullable(),
 });

@@ -78,11 +78,7 @@ const recordToReportedUsage = ({
 		};
 	}
 
-	if (
-		command.type === "finalize" &&
-		command.lock &&
-		result.type === "finalize"
-	) {
+	if (command.type === "finalize" && result.type === "finalize") {
 		if (result.status !== "applied") return null;
 		// The lock already reported what it took; a finalize reports only the difference, and none when there is none.
 		const difference = new Decimal(result.finalValue).minus(result.lockValue);

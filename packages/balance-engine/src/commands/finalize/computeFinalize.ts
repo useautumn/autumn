@@ -7,36 +7,15 @@ import {
 } from "../../deduction/deduct.js";
 import { setupDeductionContext } from "../../deduction/setup/setupDeductionContext.js";
 import { toDeductionSelection } from "../../deduction/toDeductionSelection.js";
-import type { FinalizeDecision } from "../../deduction/types/deductionDecision.js";
+import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { LockNotFoundError } from "../../errors.js";
-import type { LockRowChange } from "../../models/mutation/rowChange.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
-import type { WorkerLock } from "../../models/subject/rows/workerLock.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
-import {
-	atomSourceToRowChange,
-	isAtomReplay,
-} from "../common/atomSourceToRowChange.js";
-import { finalizeOfNothing } from "./finalizeOfNothing.js";
 import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
 import { unwindLock } from "./unwindLock/unwindLock.js";
-
-/** The lock a finalize settles while Autumn still holds it open: the row the API passed, or an Atom's lock from state. */
-const heldLockOf = ({
-	fullSubject,
-	command: { lock, lockId },
-}: {
-	fullSubject: WorkerFullSubject;
-	command: FinalizeCommand;
-}): WorkerLock | null => {
-	const openLock = fullSubject.open_locks.find((candidate) =>
-		lock ? candidate.id === lock.id : candidate.lock_id === lockId,
-	);
-	return openLock ? (lock ?? openLock) : null;
-};
 
 /**
  * Settles a lock: give back what the final value does not need, newest bucket first, then take whatever it
@@ -48,25 +27,16 @@ export const computeFinalizeDecision = ({
 }: {
 	fullSubject: WorkerFullSubject;
 	command: FinalizeCommand;
-}): FinalizeDecision => {
+}): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
-	const { source } = command;
-	// Checked before anything moves: a lock already settled, or expired, is simply gone.
-	const lock = heldLockOf({ fullSubject, command });
+	const { lock } = command;
 
-	// An Atom's finalize for a lock Autumn no longer holds, or one it already applied, settles nothing but its seq.
-	if (
-		source &&
-		(!lock || isAtomReplay({ source, customer: fullSubject.customer }))
-	)
-		return {
-			mutation: finalizeOfNothing({ command, lock, source, fullSubject }),
-			outcome: null,
-		};
-	if (!lock)
-		throw new LockNotFoundError({
-			lockId: command.lock?.lock_id ?? command.lockId ?? "",
-		});
+	// Checked before anything moves: a lock already settled, or expired, is simply gone.
+	const isOpen = fullSubject.open_locks.some(
+		(openLock) => openLock.id === lock.id,
+	);
+
+	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
 
 	const lockValue = lock.deltas
 		.reduce((total, delta) => total.minus(delta.valueDelta), new Decimal(0))
@@ -123,8 +93,6 @@ export const computeFinalizeDecision = ({
 	const outcome = deductionStateToOutcome({ context, deductionState, request });
 
 	const { rejected } = outcome;
-	const sourceChange =
-		source && atomSourceToRowChange({ source, customer: fullSubject.customer });
 	const mutation: SubjectStateMutation = {
 		schemaVersion: 1,
 		type: "mutation",
@@ -135,22 +103,11 @@ export const computeFinalizeDecision = ({
 			before: fullSubject.revision,
 			after: fullSubject.revision + 1,
 		},
-		// The log records the row Autumn settled, as the API's finalize carries the row it read.
-		command: { ...command, lock },
+		command,
 		// A rejected confirm moves nothing and leaves the lock open for another attempt.
-		changes: [
-			...(rejected
-				? []
-				: [
-						...outcome.changes,
-						{
-							table: "locks",
-							op: "delete",
-							id: lock.id,
-						} satisfies LockRowChange,
-					]),
-			...(sourceChange ? [sourceChange] : []),
-		],
+		changes: rejected
+			? []
+			: [...outcome.changes, { table: "locks", op: "delete", id: lock.id }],
 		result: {
 			type: "finalize",
 			status: rejected ? "rejected" : "applied",

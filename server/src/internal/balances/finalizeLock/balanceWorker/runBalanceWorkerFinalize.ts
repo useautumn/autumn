@@ -30,14 +30,13 @@ type FinalizeClient = Pick<BalanceWorkerClient, "finalize" | "queue">;
 const finalizeOnWorker = async ({
 	ctx,
 	command,
-	lock,
 	client,
 }: {
 	ctx: AutumnContext;
 	command: FinalizeCommand;
-	lock: WorkerLock;
 	client: FinalizeClient;
 }): Promise<{ success: true }> => {
+	const { lock } = command;
 	try {
 		const { result } = await client.finalize({ command });
 		if (result.status === "rejected")
@@ -106,7 +105,7 @@ export async function runBalanceWorkerFinalize({
 		ctx,
 		source: "finalize",
 		commandId: command.commandId,
-		run: () => finalizeOnWorker({ ctx, command, lock, client }),
+		run: () => finalizeOnWorker({ ctx, command, client }),
 		// An unconfirmed finalize may have been rejected; queueing it would answer success for a verdict never heard.
 		fallback: ({ error, reason }) =>
 			reason === "balance_worker_result_unknown"

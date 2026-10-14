@@ -13,7 +13,7 @@ const mutationToTrackedFeatureId = ({
 }): string | null => {
 	const { command } = mutation;
 	if (command.type === "track") return command.featureId;
-	if (command.type === "finalize") return command.lock?.feature_id ?? null;
+	if (command.type === "finalize") return command.lock.feature_id;
 	return null;
 };
 

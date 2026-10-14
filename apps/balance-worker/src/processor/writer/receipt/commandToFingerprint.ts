@@ -41,7 +41,7 @@ export const commandToFingerprint = ({
 		case "finalize":
 			return JSON.stringify([
 				...identityKey,
-				command.lock?.id ?? command.lockId,
+				command.lock.id,
 				command.finalValue,
 				command.properties && Object.keys(command.properties).length > 0
 					? canonicalizeJsonValue(command.properties)

@@ -10,8 +10,8 @@ import type { SubjectStateMutation } from "../../models/mutation/subjectStateMut
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
-import { atomReplayAsNothing } from "./trackOfNothing.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
+import { atomReplayAsNothing } from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** No grant funds the feature; an overdue block that removed every grant is a refusal instead. */

@@ -97,7 +97,7 @@ const applyToCustomer = ({
 	return { ...customer, ...change.after };
 };
 
-/** Memory keeps an open lock's whole row: an Atom's finalize names only the lock, and is settled from it. */
+/** Memory keeps an open lock's whole row, so a finalize can be settled from state without reading Postgres. */
 const applyToOpenLocks = ({
 	openLocks,
 	change,

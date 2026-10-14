@@ -5,21 +5,12 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	type FinalizeCommand,
-	parseTrackCommand,
-	type TrackCommand,
-	type WorkerLock,
-} from "@autumn/balance-engine";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import {
 	createCommandPipeline,
 	STARTING_BALANCE,
 } from "../../fixtures/commandPipeline.js";
-import {
-	finalizeOf,
-	takeLock,
-	trackOf,
-} from "../../fixtures/queuedCommands.js";
+import { trackOf } from "../../fixtures/queuedCommands.js";
 
 const customerId = "cus_1";
 const writerId = "w_1";
@@ -115,73 +106,6 @@ describe("an Atom's resent journal entries", () => {
 				balance: STARTING_BALANCE - 20,
 				atomSeqs: { atom_1: { [writerId]: 5 } },
 			});
-		} finally {
-			await pipeline.close();
-		}
-	});
-});
-
-/** The Atom's release of `lock` as journal entry `seq`, naming only the lock; `sent` varies only its command id. */
-const releasedBy = ({
-	lock,
-	seq,
-	sent = "",
-}: {
-	lock: WorkerLock;
-	seq: number;
-	sent?: string;
-}): FinalizeCommand => ({
-	...finalizeOf({
-		lock,
-		finalValue: 0,
-		commandId: `atom_release_${seq}${sent}`,
-	}),
-	lock: null,
-	lockId: lock.lock_id,
-	source: { atomId: "atom_1", writerId, seq },
-});
-
-describe("an Atom's handed-in finalize", () => {
-	test("for a lock Autumn no longer holds, it is consumed and lands its seq", async () => {
-		const pipeline = createCommandPipeline();
-		try {
-			const lock = await takeLock({ pipeline, customerId, lockId: "L1" });
-			await pipeline.consumeBatch({
-				commands: [
-					finalizeOf({ lock, finalValue: 0 }),
-					releasedBy({ lock, seq: 1 }),
-				],
-			});
-			await pipeline.drain();
-
-			expect(readCustomer({ pipeline })).toEqual({
-				balance: STARTING_BALANCE,
-				atomSeqs: { atom_1: { [writerId]: 1 } },
-			});
-			expect(pipeline.parked).toEqual([]);
-		} finally {
-			await pipeline.close();
-		}
-	});
-
-	test("resent where nothing remembers it, it settles nothing again", async () => {
-		const pipeline = createCommandPipeline();
-		try {
-			const lock = await takeLock({ pipeline, customerId, lockId: "L1" });
-			await pipeline.consumeBatch({ commands: [releasedBy({ lock, seq: 1 })] });
-			await pipeline.drain();
-			const again = await takeLock({ pipeline, customerId, lockId: "L2" });
-			await pipeline.consumeBatch({
-				commands: [releasedBy({ lock: again, seq: 1, sent: "_again" })],
-				firstOffset: 1,
-			});
-			await pipeline.drain();
-
-			expect(readCustomer({ pipeline })).toEqual({
-				balance: STARTING_BALANCE - 10,
-				atomSeqs: { atom_1: { [writerId]: 1 } },
-			});
-			expect(pipeline.readState({ customerId })?.openLocks).toHaveLength(1);
 		} finally {
 			await pipeline.close();
 		}

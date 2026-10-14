@@ -47,6 +47,6 @@ export type WorkerFullSubject = {
 	pooled_customer_entitlements: WorkerFullCustomerEntitlement[];
 	/** Windowed-cap counters, customer-scoped or the entity's own. */
 	usage_windows: WorkerUsageWindow[];
-	/** The customer's open locks: what a lock decision refuses a duplicate against, and an Atom's finalize settles. */
+	/** The customer's open locks, whole rows: what a lock decision refuses a duplicate against. */
 	open_locks: WorkerLock[];
 };

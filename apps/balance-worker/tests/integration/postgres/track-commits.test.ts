@@ -7,7 +7,6 @@ import {
 	type CheckCommand,
 	parseCheckCommand,
 	parseEvictCommand,
-	parseFinalizeCommand,
 	parseReadSubjectStateCommand,
 	parseResetCommand,
 	parseTrackCommand,
@@ -1034,16 +1033,10 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
-		test("an open lock is read back whole from Postgres after an evict, and an Atom's finalize naming it settles Autumn's row", async () => {
+		test("an open lock is read back whole from Postgres after an evict: the worker holds its full row, deltas included", async () => {
 			const first = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(first)) workers.push(first);
 			const locking = await seedCustomer({ postgres, balance: 100 });
-			const readLockIds = async () =>
-				(
-					await postgres.db.execute(
-						sql`SELECT lock_id FROM balance_locks WHERE internal_customer_id = ${locking.internalCustomerId}`,
-					)
-				).rows.map((row) => row.lock_id);
 			try {
 				await trackOrExplain(
 					harness,
@@ -1066,7 +1059,11 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(await waitForBalance({ customer: locking, balance: 92 })).toBe(
 					92,
 				);
-				expect(await readLockIds()).toEqual(["L_hydrate"]);
+				const [stored] = (
+					await postgres.db.execute(
+						sql`SELECT id, lock_id, customer_id, feature_id, overage_behavior, deltas FROM balance_locks WHERE internal_customer_id = ${locking.internalCustomerId}`,
+					)
+				).rows;
 
 				await harness.client.evict({
 					command: evictCommand({
@@ -1075,36 +1072,15 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						env: locking.env,
 					}),
 				});
-				await harness.client.enqueue({
-					commands: [
-						parseFinalizeCommand({
-							input: {
-								schemaVersion: 1,
-								type: "finalize",
-								requestId: "req_atom_release_1",
-								commandId: "atom_release_1",
-								occurredAt: Date.now(),
-								identity: locking.identity,
-								org: trackCommand({
-									customer: locking,
-									commandId: "org_of",
-									value: 0,
-								}).org,
-								lock: null,
-								lockId: "L_hydrate",
-								internalFeatureId: locking.internalFeatureId,
-								finalValue: 0,
-								properties: null,
-								source: { atomId: "atom_1", writerId: "w_1", seq: 1 },
-							},
-						}),
-					],
+				const read = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: locking,
+						requestId: "read_locks",
+					}),
 				});
 
-				expect(await waitForBalance({ customer: locking, balance: 100 })).toBe(
-					100,
-				);
-				expect(await readLockIds()).toEqual([]);
+				expect(stored).toMatchObject({ lock_id: "L_hydrate" });
+				expect(read.state.openLocks).toEqual([expect.objectContaining(stored)]);
 			} finally {
 				await locking.cleanup();
 			}

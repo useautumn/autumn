@@ -26,7 +26,7 @@ export const subjectStateSchema = z
 		/** Read for `customers.get` only; states stored before replaceables were held have none. */
 		replaceables: z.array(workerReplaceableSchema).default([]),
 		usageWindows: z.array(workerUsageWindowSchema),
-		/** The customer's open locks, ids only; states stored before locks existed have none. */
+		/** The customer's open locks, whole rows; states stored before locks existed have none. */
 		openLocks: z.array(workerLockSchema).default([]),
 		/** The pools behind the customer's pooled rows; states stored before pools existed have none. */
 		pooledBalances: z.array(workerPooledBalanceSchema).default([]),

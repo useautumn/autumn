@@ -75,7 +75,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
-export { trackOfNothing } from "./commands/track/trackOfNothing.js";
+export { trackOfNothing } from "./commands/track/trackSourceToRowChange.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -96,10 +96,7 @@ export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest
 // deduction
 export { deduct } from "./deduction/deduct.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
-export type {
-	DeductionDecision,
-	FinalizeDecision,
-} from "./deduction/types/deductionDecision.js";
+export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
@@ -124,7 +121,6 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
-export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
