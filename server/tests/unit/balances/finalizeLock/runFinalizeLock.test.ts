@@ -201,15 +201,14 @@ describe("runFinalizeLock with a customer_id (API 2.6)", () => {
 		]);
 	});
 
-	test("a legacy lock of another customer is not found, its claim is released, and nothing is finalized", async () => {
-		await expect(
-			runFinalizeLock({
-				ctx,
-				params: { ...(params as object), customer_id: "cus_other" } as never,
-			}),
-		).rejects.toMatchObject({ message: "Lock not found for ID: lock_123" });
-		expect(mockState.finalizeV2Calls).toHaveLength(0);
-		expect(mockState.releaseClaimCalls).toEqual([{ ctx, lockId: "lock_123" }]);
+	test("a Redis lock is finalized by its lock_id whatever customer the finalize names, as before 2.6", async () => {
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "cus_other" } as never,
+		});
+
+		expect(mockState.finalizeV2Calls).toHaveLength(1);
+		expect(mockState.releaseClaimCalls).toEqual([]);
 	});
 });
 
