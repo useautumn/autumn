@@ -21,6 +21,8 @@ export type PooledBalanceComputeContext = {
 		MutablePooledCustomerEntitlement
 	>;
 	pooledBalanceIdsWithRemovedContributions: Set<string>;
+	/** Pools a plan leaving this transition took a share from; excludes shares only converted to competing. */
+	pooledBalanceIdsWithReplacedContributions: Set<string>;
 	/** Competing shares as the customer held them before this transition, by source customer entitlement. */
 	competingContributionsBySourceId: Map<string, DbPooledBalanceContribution>;
 };

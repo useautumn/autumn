@@ -91,7 +91,11 @@ export const computePooledBalanceTransitionPlan = ({
 		]),
 	})) {
 		// An additive share from before the switch leaves first, then rejoins as a competing one.
-		applyOutgoingPooledBalanceSources({ computeContext, customerProduct });
+		applyOutgoingPooledBalanceSources({
+			computeContext,
+			customerProduct,
+			convertingToCompeting: true,
+		});
 		applyIncomingPooledBalanceSources({
 			ctx,
 			computeContext,

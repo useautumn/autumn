@@ -78,6 +78,7 @@ const transitionContext = ({
 	pooledCustomerEntitlementByPoolId: new Map(),
 	pooledCustomerEntitlementByIdentity: new Map(),
 	pooledBalanceIdsWithRemovedContributions: new Set(),
+	pooledBalanceIdsWithReplacedContributions: new Set(),
 	competingContributionsBySourceId: new Map(),
 });
 

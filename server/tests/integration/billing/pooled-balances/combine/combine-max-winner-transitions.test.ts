@@ -7,12 +7,15 @@
  *   - The winner leaves → granted back to 1,000, usage kept; usage above the new
  *     grant leaves the balance negative until the next reset (decision 1).
  *   - A manual balance edit lands on the pool (PRD case 17).
+ *   - Raising the competing grant in place (1,000 → 2,000, 300 used) leaves
+ *     1,700: the old allowance is not counted as usage.
  */
 
 import { test } from "bun:test";
-import type {
-	AttachParamsV1Input,
-	UpdateSubscriptionV1ParamsInput,
+import {
+	type AttachParamsV1Input,
+	ResetInterval,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -172,6 +175,58 @@ test.concurrent(
 			granted: 5000,
 			balance: 3500,
 			competingContributions: [1000, 5000],
+		});
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright(
+		"combine max: raising a competing grant in place keeps its usage, not its old allowance",
+	),
+	async () => {
+		const customerId = "combine-max-edit-grant";
+		const pro = products.base({
+			id: "combine-max-edit-pro",
+			items: [messages(1000)],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.CombineMaxMessages, value: 300 }),
+			],
+		});
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId: TestFeature.CombineMaxMessages,
+			granted: 1000,
+			balance: 700,
+		});
+
+		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: {
+				items: [
+					{
+						feature_id: TestFeature.CombineMaxMessages,
+						included: 2000,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+			},
+		});
+
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId: TestFeature.CombineMaxMessages,
+			granted: 2000,
+			balance: 1700,
+			competingContributions: [2000],
 		});
 	},
 );

@@ -76,6 +76,7 @@ export const setupPooledBalanceComputeContext = ({
 			]),
 		),
 		pooledBalanceIdsWithRemovedContributions: new Set(),
+		pooledBalanceIdsWithReplacedContributions: new Set(),
 		competingContributionsBySourceId: competingContributionsOf({
 			customerProducts,
 		}),
