@@ -61,14 +61,24 @@ test.skipIf(!isBalanceWorkerRoute())(
 			postAsAtom({ autumn, path: ATOM_TRACKS_APPEND_PATH, tokenHash, body });
 
 		const batch = {
-			writer: "w_1",
-			tracks: [{ seq: 1, command: atomTrack({ customerId, value: 30 }) }],
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					command: atomTrack({ customerId, value: 30 }),
+				},
+			],
 		};
 		const first = await append(batch);
 		const resent = await append(batch);
 		const next = await append({
-			writer: "w_1",
-			tracks: [{ seq: 2, command: atomTrack({ customerId, value: 5 }) }],
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 2,
+					command: atomTrack({ customerId, value: 5 }),
+				},
+			],
 		});
 
 		expect([first.status, resent.status, next.status]).toEqual([204, 204, 204]);
@@ -151,9 +161,9 @@ test.skipIf(!isBalanceWorkerRoute())(
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash: atomTokenToHash({ token: atom.token }),
 			body: {
-				writer: "w_1",
 				tracks: [
 					{
+						writerId: "w_1",
 						seq: 1,
 						command: {
 							...atomTrack({ customerId, value: 120 }),
@@ -199,13 +209,15 @@ test(`${chalk.yellowBright("atom-tracks3: an unreadable body is 400 unreadable; 
 		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: atomTokenToHash({ token: atom.token }),
-		body: { writer: "w_1", tracks: [{ seq: 1, command: { type: "track" } }] },
+		body: {
+			tracks: [{ writerId: "w_1", seq: 1, command: { type: "track" } }],
+		},
 	});
 	const unknownAtom = await postAsAtom({
 		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: "f".repeat(64),
-		body: { writer: "w_1", tracks: [] },
+		body: { tracks: [] },
 	});
 
 	expect(unreadable.status).toBe(400);
