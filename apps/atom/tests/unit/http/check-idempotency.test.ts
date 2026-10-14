@@ -89,7 +89,7 @@ describe("a deducting check's idempotency key at Autumn", () => {
 		}
 	});
 
-	test("is not deduplicated by the Atom: the same key twice deducts twice here, under two owners, so Autumn keeps one", async () => {
+	test("is deduplicated by the Atom per customer: the same key again is 409 in the API's words and journals once", async () => {
 		const { replica, appended } = await loneReplica();
 
 		const replies = [];
@@ -100,18 +100,15 @@ describe("a deducting check's idempotency key at Autumn", () => {
 					deductingCheck({ idempotencyKey: "key_from_client" }),
 				),
 			);
-		await until(() => appended.length === 2);
+		await until(() => appended.length === 1);
 
-		expect(
-			await Promise.all(
-				replies.map(async (reply) => (await reply.json()).balance.remaining),
-			),
-		).toEqual([9, 8]);
-		expect(appended.map(({ key }) => key)).toEqual([
-			"key_from_client",
-			"key_from_client",
-		]);
-		expect(appended[0]?.owner).not.toBe(appended[1]?.owner);
+		expect(replies.map(({ status }) => status)).toEqual([200, 409]);
+		expect(await replies[1]?.json()).toEqual({
+			code: "duplicate_idempotency_key",
+			message:
+				"Another request with idempotency key key_from_client has already been received",
+		});
+		expect(appended.map(({ key }) => key)).toEqual(["key_from_client"]);
 	});
 
 	test("survives the hop: a check the owner answers for another replica keeps the client's key", async () => {

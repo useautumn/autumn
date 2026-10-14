@@ -1,3 +1,4 @@
+import { callerKeyOf } from "@autumn/balance-engine";
 import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import {
@@ -6,7 +7,7 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK } from "../repos/journalKeys.js";
+import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
@@ -107,6 +108,8 @@ export const openJournal = ({
 		{ entries: JournalEntry[]; head: number }
 	>();
 	let notifyCommitted = () => {};
+	/** By customer, the caller keys appended whose commit has not settled: their rows are not in the file yet. */
+	const inFlightKeys = new Map<string, Set<string>>();
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
@@ -204,6 +207,8 @@ export const openJournal = ({
 		lastSeqs.set(customerId, seq);
 		const entry = { customerId, seq, appendedAt: now(), command };
 		owe({ entry });
+		const key = command.type === "track" ? callerKeyOf({ command }) : null;
+		if (key) holdInFlight({ customerId, key });
 		try {
 			await groupCommit.add(entry);
 			return entry;
@@ -214,6 +219,8 @@ export const openJournal = ({
 				entries: owed({ customerId }).filter((held) => held !== entry),
 			});
 			throw error;
+		} finally {
+			if (key) releaseInFlight({ customerId, key });
 		}
 	}
 
@@ -278,6 +285,48 @@ export const openJournal = ({
 		]).then(() => {});
 	}
 
+	function holdInFlight({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): void {
+		const keys = inFlightKeys.get(customerId);
+		if (keys) keys.add(key);
+		else inFlightKeys.set(customerId, new Set([key]));
+	}
+
+	function releaseInFlight({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): void {
+		const keys = inFlightKeys.get(customerId);
+		keys?.delete(key);
+		if (keys?.size === 0) inFlightKeys.delete(customerId);
+	}
+
+	function holdsKey({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}): boolean {
+		return (
+			inFlightKeys.get(customerId)?.has(key) === true ||
+			readJournalKey({
+				ctx,
+				customerId,
+				key,
+				appendedSince: now() - KEY_ROW_TTL_MS,
+			})
+		);
+	}
+
 	let closed = false;
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
@@ -329,5 +378,6 @@ export const openJournal = ({
 		reconcile,
 		forget,
 		close,
+		holdsKey,
 	};
 };

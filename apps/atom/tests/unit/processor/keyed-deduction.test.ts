@@ -87,7 +87,7 @@ const answerOf = async (run: () => unknown) => {
 };
 
 const duplicateOf = (key: string) => ({
-	status: 409,
+	status: 409 as const,
 	code: "duplicate_idempotency_key",
 	message: `Another request with idempotency key ${key} has already been received`,
 });
@@ -120,7 +120,7 @@ describe("a keyed deduction on the Atom", () => {
 
 	test("a keyed lock check retried is 409, not the lock retry's allowed", async () => {
 		const { processor, journal } = await openKeyedSlot();
-		const lock = { lock: { enabled: true, lock_id: "lock_1" } };
+		const lock = { lock: { enabled: true as const, lock_id: "lock_1" } };
 
 		await checkResponseOf({
 			processor,

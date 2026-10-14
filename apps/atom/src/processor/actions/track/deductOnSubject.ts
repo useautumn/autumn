@@ -1,6 +1,7 @@
 import {
 	type CheckCommand,
 	type CheckResult,
+	callerKeyOf,
 	computeCheck,
 	computeTrackDecision,
 	findLockInsertInMutation,
@@ -12,6 +13,7 @@ import {
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { DuplicateIdempotencyKeyError } from "./duplicateIdempotencyKeyError.js";
 import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**
@@ -57,13 +59,22 @@ export const deductOnSubject = ({
 	subject,
 	command,
 	track,
+	idempotencyKey,
 }: {
 	ctx: SlotProcessorContext;
 	subject: CurrentSubject;
 	command: CheckCommand;
 	track: TrackCommand;
+	/** As the caller sent it, for the 409's message. */
+	idempotencyKey: string | null;
 }): { result: CheckResult; committed: Promise<unknown> } => {
 	const { customerId } = command.identity;
+	// First, as the API's middleware runs first: a duplicate never reaches the API through a backlog, nor D2's allowed.
+	const claimKey = callerKeyOf({ command: track });
+	if (claimKey && ctx.journal.holdsKey({ customerId, key: claimKey }))
+		throw new DuplicateIdempotencyKeyError({
+			key: idempotencyKey ?? claimKey,
+		});
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
